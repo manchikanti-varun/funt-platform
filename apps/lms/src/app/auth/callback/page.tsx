@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { setToken } from "@/lib/api";
 import { parseJwtPayload } from "@/lib/auth";
 import { ROLE } from "@funt-platform/constants";
