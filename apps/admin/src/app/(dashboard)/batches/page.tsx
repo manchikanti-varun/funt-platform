@@ -29,7 +29,7 @@ export default function BatchesPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [trainerOnly, setTrainerOnly] = useState(false);
   useEffect(() => {
-    setTrainerOnly(isTrainerOnly(parseJwtPayload(getToken())?.roles));
+    setTrainerOnly(isTrainerOnly(parseJwtPayload(getToken() ?? "")?.roles));
   }, []);
 
   const sortedList = useMemo(() => {

@@ -30,7 +30,7 @@ export default function GlobalAssignmentsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
   useEffect(() => {
-    setReadOnly(isTrainerOnly(parseJwtPayload(getToken())?.roles));
+    setReadOnly(isTrainerOnly(parseJwtPayload(getToken() ?? "")?.roles));
   }, []);
 
   const sortedList = useMemo(() => {
