@@ -33,8 +33,8 @@ export default function CoursesPage() {
   const sortedList = useMemo(() => {
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
-      let av: unknown = (a as Record<string, unknown>)[sortKey];
-      let bv: unknown = (b as Record<string, unknown>)[sortKey];
+      let av: unknown = (a as unknown as Record<string, unknown>)[sortKey];
+      let bv: unknown = (b as unknown as Record<string, unknown>)[sortKey];
       if (sortKey === "modules") {
         av = Array.isArray(a.modules) ? a.modules.length : 0;
         bv = Array.isArray(b.modules) ? b.modules.length : 0;
