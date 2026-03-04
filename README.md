@@ -75,31 +75,23 @@ Then edit:
 
 ### Admin (`apps/admin/.env.local`)
 
-Create `apps/admin/.env.local` from `apps/admin/.env.local.example`:
+Copy `apps/admin/.env.example` to `apps/admin/.env.local` (do not commit `.env.local`):
 
 ```bash
-cp apps/admin/.env.local.example apps/admin/.env.local
+cp apps/admin/.env.example apps/admin/.env.local
 ```
 
-Set:
-
-- `NEXT_PUBLIC_API_URL`
-  - Local: `http://localhost:38472` (or your backend port)
-  - Production: `https://<your-backend>.up.railway.app`
+Set `NEXT_PUBLIC_API_URL` in `.env.local`: local `http://localhost:38472`, production `https://<your-backend>.up.railway.app`.
 
 ### LMS (`apps/lms/.env.local`)
 
-Create `apps/lms/.env.local` from `apps/lms/.env.local.example`:
+Copy `apps/lms/.env.example` to `apps/lms/.env.local` (do not commit `.env.local`):
 
 ```bash
-cp apps/lms/.env.local.example apps/lms/.env.local
+cp apps/lms/.env.example apps/lms/.env.local
 ```
 
-Set:
-
-- `NEXT_PUBLIC_API_URL`
-  - Local: `http://localhost:38472`
-  - Production: `https://<your-backend>.up.railway.app`
+Set `NEXT_PUBLIC_API_URL` in `.env.local`: local `http://localhost:38472`, production `https://<your-backend>.up.railway.app`.
 
 ---
 
@@ -135,7 +127,7 @@ Or run apps individually:
 - Start command (backend service): `npm run start:backend`.
 - Configure env vars in Railway backend service:
   - `MONGO_URI`, `JWT_SECRET`, `BACKEND_PUBLIC_URL`, `FRONTEND_ADMIN_URL`, `FRONTEND_LMS_URL`, `CORS_ORIGINS`, Google OAuth, etc.
-- See `docs/RAILWAY_DEPLOY.md` for a detailed guide, including running Admin and LMS as separate services if you want them on Railway too.
+- See `docs/DEPLOYMENT.md` for a detailed deployment checklist (Railway backend + Vercel frontends).
 
 ### Admin & LMS on Vercel
 
