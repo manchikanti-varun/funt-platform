@@ -40,6 +40,10 @@ const SUBMISSION_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: SUBMISSION_TYPE.LINK, label: "Link" },
 ];
 
+function toSubmissionType(raw: string): SUBMISSION_TYPE {
+  return raw === SUBMISSION_TYPE.LINK ? SUBMISSION_TYPE.LINK : raw === SUBMISSION_TYPE.FILE ? SUBMISSION_TYPE.FILE : SUBMISSION_TYPE.TEXT;
+}
+
 function stripHtml(html: string): string {
   if (!html || typeof html !== "string") return "";
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
@@ -78,10 +82,7 @@ export default function AssignmentsPage() {
         .then(([assignRes, subsRes]) => {
           if (assignRes.success && assignRes.data) {
             setModuleAssignment(assignRes.data);
-            const raw = assignRes.data.submissionType;
-            const st: SUBMISSION_TYPE =
-              raw === SUBMISSION_TYPE.LINK ? SUBMISSION_TYPE.LINK : raw === SUBMISSION_TYPE.FILE ? SUBMISSION_TYPE.FILE : SUBMISSION_TYPE.TEXT;
-            setSubmissionType(st);
+            setSubmissionType(toSubmissionType(assignRes.data.submissionType));
           }
           if (subsRes.success && subsRes.data) setMySubmissions(subsRes.data);
         })
@@ -114,7 +115,7 @@ export default function AssignmentsPage() {
   const handleAssignmentChange = (id: string) => {
     setAssignmentId(id);
     const a = assignments.find((x) => x.id === id);
-    if (a) setSubmissionType(a.submissionType);
+    if (a) setSubmissionType(toSubmissionType(a.submissionType));
   };
 
   const resetForm = () => {
