@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import type { User } from "@funt-platform/types";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
@@ -22,6 +21,10 @@ router.get("/", (_req, res) => {
     timestamp: new Date().toISOString(),
     service: systemUser,
   });
+});
+
+router.get("/ping", (_req, res) => {
+  res.status(200).json({ ok: true });
 });
 
 export const healthRouter = router;
