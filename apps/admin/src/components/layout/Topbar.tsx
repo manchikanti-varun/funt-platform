@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { clearToken, api } from "@/lib/api";
-import { QRCodeSVG } from "qrcode.react";
 import { ROLE } from "@funt-platform/constants";
 
 interface TopbarProps {
@@ -143,7 +142,6 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 export function Topbar({ user, onMenuClick }: TopbarProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [showQr, setShowQr] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -238,30 +236,6 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
                   type="button"
                   onClick={() => {
                     setOpen(false);
-                    setShowQr(true);
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
-                >
-                  <svg
-                    className="h-5 w-5 shrink-0 text-slate-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5h4v4H3V5zm7 0h4v4h-4V5zm7 0h4v4h-4v-4zM3 12h4v4H3v-4zm7 0h4v4h-4v-4zm7 0h4v4h-4v-4zM3 19h4v4H3v-4zm7 0h4v4h-4v-4zm7 0h4v4h-4v-4z"
-                    />
-                  </svg>
-                  Admin QR
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
                     setShowChangePassword(true);
                   }}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
@@ -308,41 +282,6 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
           )}
         </div>
       </header>
-
-      {showQr && (
-        <div
-          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 p-4"
-          onClick={() => setShowQr(false)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Admin QR code"
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-slate-400/20 ring-1 ring-slate-200/60"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-center text-lg font-semibold text-slate-800">
-              Admin QR
-            </h3>
-            <p className="mt-1 text-center text-sm text-slate-600">
-              Scan to share FUNT ID
-            </p>
-            <p className="mt-1 text-center font-mono text-sm font-medium text-slate-800">
-              {user.funtId}
-            </p>
-            <div className="mt-6 flex justify-center rounded-xl bg-white p-4">
-              <QRCodeSVG value={user.funtId} size={220} level="H" />
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowQr(false)}
-              className="mt-6 w-full rounded-xl bg-slate-100 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-200"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
 
       {showChangePassword && (
         <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
