@@ -41,6 +41,11 @@ export function CourseCard({
         <h3 className="mt-3 line-clamp-2 text-center text-sm font-bold text-slate-900">
           {title}
         </h3>
+        {batchName && (
+          <p className="mt-1 line-clamp-1 text-center text-xs text-slate-500">
+            {batchName}
+          </p>
+        )}
       </div>
 
       {/* Footer: modules + status */}
