@@ -266,8 +266,6 @@ export default function AssignmentSubmissionsPage() {
                 </div>
                 <input
                   type="text"
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
                   placeholder="Optional feedback for all"
                   value={bulkFeedback}
                   onChange={(e) => setBulkFeedback(e.target.value)}
