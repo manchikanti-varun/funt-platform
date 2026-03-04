@@ -35,8 +35,8 @@ export default function GlobalModulesPage() {
   const sortedList = useMemo(() => {
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
-      const av = (a as Record<string, unknown>)[sortKey];
-      const bv = (b as Record<string, unknown>)[sortKey];
+      const av = (a as unknown as Record<string, unknown>)[sortKey];
+      const bv = (b as unknown as Record<string, unknown>)[sortKey];
       const aVal = typeof av === "string" ? av.toLowerCase() : av ?? "";
       const bVal = typeof bv === "string" ? bv.toLowerCase() : bv ?? "";
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
