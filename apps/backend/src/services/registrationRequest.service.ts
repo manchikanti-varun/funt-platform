@@ -1,7 +1,3 @@
-/**
- * Registration request service – submit, list, approve, reject Admin/Super Admin requests.
- * Request is sent to all Super Admins; any one can approve; account is created with temp password = FUNT ID.
- */
 
 import { RegistrationRequestModel } from "../models/RegistrationRequest.model.js";
 import { UserModel } from "../models/User.model.js";

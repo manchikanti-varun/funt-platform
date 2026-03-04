@@ -141,7 +141,7 @@ export default function ProfileSearchPage() {
 
       {profile && (
         <div className="space-y-6 rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
-          {/* User card */}
+          {}
           <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-teal-50/30 px-6 py-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -210,10 +210,10 @@ export default function ProfileSearchPage() {
             )}
           </div>
 
-          {/* Student-only: full profile dashboard */}
+          {}
           {profile.user.roles.includes(ROLE.STUDENT) && (
             <div className="px-6 pb-6 space-y-6">
-              {/* Has access = Paid callout */}
+              {}
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-800">Has access to batch = Paid</p>
                 <p className="text-xs text-emerald-700 mt-0.5">
@@ -221,7 +221,7 @@ export default function ProfileSearchPage() {
                 </p>
               </div>
 
-              {/* Stats */}
+              {}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3">
                   <p className="text-2xl font-bold text-slate-800">{profile.enrollments?.length ?? 0}</p>
@@ -241,7 +241,7 @@ export default function ProfileSearchPage() {
                 </div>
               </div>
 
-              {/* Enrollments: batch access = paid */}
+              {}
               {profile.enrollments && profile.enrollments.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Batch access (enrolled = paid)</h3>
@@ -287,7 +287,7 @@ export default function ProfileSearchPage() {
                 </section>
               )}
 
-              {/* Attendance summary */}
+              {}
               {profile.attendanceSummary && profile.attendanceSummary.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Attendance by batch</h3>
@@ -326,7 +326,7 @@ export default function ProfileSearchPage() {
                 </section>
               )}
 
-              {/* Certificates */}
+              {}
               {profile.certificates && profile.certificates.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Certificates</h3>
@@ -350,7 +350,7 @@ export default function ProfileSearchPage() {
             </div>
           )}
 
-          {/* Non-student (super admin view): just user info */}
+          {}
           {!profile.user.roles.includes(ROLE.STUDENT) && (
             <div className="px-6 pb-6">
               <p className="text-sm text-slate-500">This user is not a student. Only basic profile is shown.</p>

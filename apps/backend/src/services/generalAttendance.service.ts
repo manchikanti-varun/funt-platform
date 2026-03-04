@@ -1,6 +1,4 @@
-/**
- * General (event) attendance – create event, mark present by FUNT IDs, list events.
- */
+
 
 import { GeneralAttendanceModel } from "../models/GeneralAttendance.model.js";
 import { UserModel } from "../models/User.model.js";
@@ -104,7 +102,7 @@ export async function addPresentToGeneralAttendance(
   };
 }
 
-/** List events where the given student was present (for student-facing "my general attendance"). */
+
 export async function getMyGeneralAttendance(studentId: string) {
   const list = await GeneralAttendanceModel.find({ presentStudentIds: studentId })
     .sort({ eventDate: -1 })

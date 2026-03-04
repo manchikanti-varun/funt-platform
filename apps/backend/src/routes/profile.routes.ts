@@ -1,6 +1,4 @@
-/**
- * Profile routes – lookup user by FUNT ID for admin dashboard.
- */
+
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

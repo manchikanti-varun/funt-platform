@@ -1,6 +1,3 @@
-/**
- * User controller: get current user (me).
- */
 
 import type { Request, Response } from "express";
 import { UserModel } from "../models/User.model.js";

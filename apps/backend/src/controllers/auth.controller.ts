@@ -1,6 +1,3 @@
-/**
- * Auth controller: login, parent login, Google OAuth.
- */
 
 import type { Request, Response } from "express";
 import { login as loginService, parentLogin as parentLoginService, createStudent, changePassword as changePasswordService } from "../services/auth.service.js";
@@ -62,7 +59,6 @@ export const parentLogin = asyncHandler(async (req: Request, res: Response): Pro
   res.status(200).json(result);
 });
 
-/** Returns the exact redirect_uri this app sends to Google. Use this to add the same URI in Google Console. */
 export const googleRedirectUri = (req: Request, res: Response): void => {
   const { backendPublicUrl } = getEnv();
   const baseUrl = backendPublicUrl.trim() || req.protocol + "://" + req.get("host");
@@ -73,7 +69,6 @@ export const googleRedirectUri = (req: Request, res: Response): void => {
   });
 };
 
-/** Redirect to Google consent. Query: app=admin|lms, redirect=optional path. */
 export const googleRedirect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { googleClientId, backendPublicUrl } = getEnv();
   if (!googleClientId) {
@@ -90,7 +85,6 @@ export const googleRedirect = asyncHandler(async (req: Request, res: Response): 
   res.redirect(302, url);
 });
 
-/** Google OAuth callback: exchange code, find user by email, redirect to frontend with token. */
 export const googleCallback = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { googleClientId, googleClientSecret, jwtSecret, jwtExpiresIn, frontendAdminUrl, frontendLmsUrl, backendPublicUrl } = getEnv();
   if (!googleClientId || !googleClientSecret) {
@@ -169,7 +163,6 @@ function validateSignupPassword(password: string): void {
   }
 }
 
-/** Preview signup: verify signup token and return email/name for the form (read-only email). */
 export const googleSignupPreview = (req: Request, res: Response): void => {
   const { jwtSecret } = getEnv();
   const token = (req.query.token as string)?.trim();
@@ -257,7 +250,6 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
   res.status(201).json({ token, user });
 });
 
-/** Preview admin signup: reuse same signup token payload (email, name). */
 export const googleAdminSignupPreview = (req: Request, res: Response): void => {
   const { jwtSecret } = getEnv();
   const token = (req.query.token as string)?.trim();

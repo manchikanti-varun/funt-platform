@@ -1,7 +1,3 @@
-/**
- * Full dev: backend on port 38473 (never freed — avoids Windows TIME_WAIT).
- * Frontend ports 3000, 3001 are freed. Admin + LMS use NEXT_PUBLIC_API_URL=http://localhost:38473.
- */
 const { execSync, spawn } = require("child_process");
 const path = require("path");
 

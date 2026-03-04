@@ -1,6 +1,3 @@
-/**
- * Enrollment routes – create (admin), my enrollments (student).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

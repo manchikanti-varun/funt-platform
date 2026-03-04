@@ -1,6 +1,3 @@
-/**
- * Assignment routes – submit (student), review & list (admin/trainer).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

@@ -1,6 +1,3 @@
-/**
- * Certificate entity – issued completion certificate.
- */
 
 export interface Certificate {
   id: string;

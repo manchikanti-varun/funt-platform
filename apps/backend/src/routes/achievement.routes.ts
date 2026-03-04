@@ -1,6 +1,3 @@
-/**
- * Achievement routes – list my badges (student).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

@@ -1,6 +1,3 @@
-/**
- * Certificate service – eligibility, generate, public verify.
- */
 
 import { CertificateModel } from "../models/Certificate.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
@@ -70,7 +67,6 @@ export async function checkEligibility(
   return { eligible: true };
 }
 
-/** List issued certificates for a student (for LMS "My certificates"). */
 export async function listCertificatesForStudent(studentId: string) {
   const certs = await CertificateModel.find({ studentId, status: CERTIFICATE_STATUS.ISSUED })
     .sort({ issuedAt: -1 })
@@ -169,7 +165,6 @@ export async function verifyCertificatePublic(certificateId: string) {
   };
 }
 
-/** Get certificate doc by certificateId (for auth check). */
 export async function getCertificateByCertificateId(certificateId: string) {
   const cert = await CertificateModel.findOne({
     certificateId,
@@ -181,7 +176,6 @@ export async function getCertificateByCertificateId(certificateId: string) {
   return cert;
 }
 
-/** Get certificate data for PDF (by certificateId). Returns null if not found or revoked. */
 export async function getCertificateDataForPdf(certificateId: string) {
   const cert = await CertificateModel.findOne({
     certificateId,
@@ -205,7 +199,6 @@ export async function getCertificateDataForPdf(certificateId: string) {
   };
 }
 
-/** Generate PDF buffer for certificate. */
 export async function generateCertificatePdfBuffer(certificateId: string): Promise<Buffer | null> {
   const data = await getCertificateDataForPdf(certificateId);
   if (!data) return null;
@@ -218,7 +211,6 @@ export async function generateCertificatePdfBuffer(certificateId: string): Promi
   });
 }
 
-/** List enrolled students for a batch with certificate status and progress (for admin batch certificates page). */
 export async function listStudentsWithCertificateStatus(batchId: string) {
   const batch = await findBatchByParam(batchId);
   if (!batch) return [];
@@ -275,7 +267,6 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
   return result;
 }
 
-/** Bulk generate certificates for a batch. Returns generated and errors. */
 export async function bulkGenerateCertificates(
   batchId: string,
   studentIds: string[],
@@ -294,7 +285,6 @@ export async function bulkGenerateCertificates(
   return { generated, errors };
 }
 
-/** Get PDF buffers for certificates that belong to the batch (for zip download). */
 export async function getCertificatePdfBuffersForBatch(
   batchId: string,
   certificateIds: string[]

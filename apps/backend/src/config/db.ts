@@ -1,7 +1,3 @@
-/**
- * MongoDB connection via Mongoose.
- * Connection must succeed before server starts listening.
- */
 
 import mongoose from "mongoose";
 

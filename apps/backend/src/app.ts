@@ -1,8 +1,3 @@
-/**
- * Express application configuration.
- * Production: CORS from env, rate limiting, security headers, no sensitive data in errors.
- */
-
 import express from "express";
 import cors from "cors";
 import { getEnv } from "./config/env.js";

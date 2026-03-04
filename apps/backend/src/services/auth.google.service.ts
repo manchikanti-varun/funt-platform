@@ -1,6 +1,3 @@
-/**
- * Google OAuth: authorization URL, token exchange, profile, and login by email.
- */
 
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/User.model.js";
@@ -99,7 +96,6 @@ export async function getGoogleProfile(accessToken: string): Promise<{ email: st
   return { email: data.email, name: data.name };
 }
 
-/** Find user by email, validate status, record login, return JWT and user. */
 export async function loginWithGoogleEmail(
   email: string,
   jwtSecret: string,

@@ -1,6 +1,3 @@
-/**
- * Achievement model – badges awarded to students.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { BADGE_TYPE } from "@funt-platform/constants";

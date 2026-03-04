@@ -1,6 +1,3 @@
-/**
- * Attendance routes – mark (admin/trainer), list by batch, my (student).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

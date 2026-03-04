@@ -1,6 +1,3 @@
-/**
- * User routes – protected by JWT.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

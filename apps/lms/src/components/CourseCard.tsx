@@ -33,7 +33,7 @@ export function CourseCard({
       href={href}
       className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl ${borderClass} bg-white shadow-lg shadow-slate-200/25 ring-1 ring-slate-100/80 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-300/30 hover:ring-slate-200/80`}
     >
-      {/* Top: icon + title */}
+      {}
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-4">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 shadow-inner ring-1 ring-slate-200/60">
           <IconBook className="h-5 w-5 text-slate-600" />
@@ -48,7 +48,7 @@ export function CourseCard({
         )}
       </div>
 
-      {/* Footer: modules + status */}
+      {}
       <div className="flex w-full items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3.5 ring-1 ring-slate-100/80 ring-inset">
         <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
           <svg className="h-3.5 w-3.5 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>

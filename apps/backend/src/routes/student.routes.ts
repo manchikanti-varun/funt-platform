@@ -1,6 +1,3 @@
-/**
- * Student routes – course access, assignment submit. Protected by JWT + STUDENT role.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

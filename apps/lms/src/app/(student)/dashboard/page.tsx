@@ -45,7 +45,6 @@ const BADGE_COLORS = [
   { bg: "bg-sky-100", icon: "text-sky-700" },
 ];
 
-/** Renders icon by key from DB (assignment, streak, course, attendance, star). */
 function getAchievementIcon(iconKey: string, sizeClass = "h-9 w-9") {
   const key = (iconKey || "star").toLowerCase();
   if (key === "assignment") {
@@ -219,9 +218,9 @@ export default function StudentDashboardPage() {
           <div className="mt-5 flex min-h-0 flex-1 flex-col items-center justify-center">
             <div className="h-20 w-32 shrink-0 sm:h-24 sm:w-40">
               <svg viewBox="0 0 100 50" className="h-full w-full" aria-hidden>
-                {/* Grey track: full arc left to right */}
+                {}
                 <path d="M 10 45 A 40 40 0 0 1 90 45" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
-                {/* Green fill: only from left (large gap so it doesn't repeat on the right) */}
+                {}
                 <path
                   d="M 10 45 A 40 40 0 0 1 90 45"
                   fill="none"

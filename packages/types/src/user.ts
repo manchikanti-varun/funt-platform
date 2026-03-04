@@ -1,6 +1,3 @@
-/**
- * User entity – identity and account contract.
- */
 
 import type { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 

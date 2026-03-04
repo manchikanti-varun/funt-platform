@@ -58,7 +58,7 @@ export function Sidebar({ roles }: SidebarProps) {
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/90 bg-white shadow-xl shadow-slate-300/10 ring-1 ring-slate-100/80">
       <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-5 py-7 ring-1 ring-slate-100/50 ring-inset">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {}
         <img
           src="/funt-logo.png"
           alt="FUNT"

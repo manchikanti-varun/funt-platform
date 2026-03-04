@@ -1,6 +1,3 @@
-/**
- * Custom application error for consistent error handling.
- */
 
 export class AppError extends Error {
   constructor(

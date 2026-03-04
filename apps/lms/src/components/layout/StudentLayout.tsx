@@ -260,7 +260,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   const sidebar = (
     <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/90 bg-white shadow-xl shadow-slate-300/10 ring-1 ring-slate-100/80">
       <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100 bg-gradient-to-b from-teal-50/40 to-white px-5 py-7 ring-1 ring-slate-100/50 ring-inset">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {}
         <img src="/funt-logo.png" alt="FUNT Learn" className="h-12 w-auto object-contain sm:h-14" />
         <span className="mt-2.5 font-brand-learn text-lg font-semibold tracking-[0.2em] text-slate-700 sm:text-xl">Learn</span>
       </div>
@@ -289,9 +289,9 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50/80">
-      {/* Desktop sidebar - fixed height, does not scroll */}
+      {}
       <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
-      {/* Mobile overlay */}
+      {}
       {sidebarOpen && (
         <>
           <div

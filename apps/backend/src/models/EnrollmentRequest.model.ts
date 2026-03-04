@@ -1,6 +1,4 @@
-/**
- * Enrollment request – student requests access to a batch; admin who created the batch can see and act on it.
- */
+
 
 import mongoose, { Schema } from "mongoose";
 

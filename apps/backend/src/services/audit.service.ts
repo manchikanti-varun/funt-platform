@@ -1,7 +1,3 @@
-/**
- * Audit logging service – records actions for governance.
- * List response enriches performedBy and targetId with FUNT display IDs where applicable.
- */
 
 import mongoose from "mongoose";
 import { AuditLogModel } from "../models/AuditLog.model.js";

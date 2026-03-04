@@ -1,6 +1,3 @@
-/**
- * Certificate model – certificateId, student, course, batch, issuedBy, status.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { CERTIFICATE_STATUS } from "@funt-platform/constants";

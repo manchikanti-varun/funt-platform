@@ -15,17 +15,12 @@ interface CourseModule {
   content?: string;
   youtubeUrl?: string;
   videoUrl?: string;
-  /** Optional link to other resources (e.g. Drive, slides). */
-  resourceLinkUrl?: string;
+    resourceLinkUrl?: string;
   linkedAssignmentId?: string;
-  /** Override assignment title for this course only. */
-  linkedAssignmentTitleOverride?: string;
-  /** Override assignment instructions for this course only. */
-  linkedAssignmentInstructionsOverride?: string;
-  /** Override assignment submission type for this course only. */
-  linkedAssignmentSubmissionTypeOverride?: string;
-  /** Override assignment skill tags for this course only. */
-  linkedAssignmentSkillTagsOverride?: string[];
+    linkedAssignmentTitleOverride?: string;
+    linkedAssignmentInstructionsOverride?: string;
+    linkedAssignmentSubmissionTypeOverride?: string;
+    linkedAssignmentSkillTagsOverride?: string[];
   order: number;
 }
 

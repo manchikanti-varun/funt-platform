@@ -80,7 +80,7 @@ return (
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 min-h-min">
-      {/* Header */}
+      {}
       <div className="shrink-0 space-y-1">
         <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Progress</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Skill Radar</h1>
@@ -112,7 +112,7 @@ return (
         </div>
       ) : (
         <>
-          {/* Summary stats */}
+          {}
           <div className="shrink-0 flex flex-wrap gap-4">
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-lg shadow-slate-200/25 ring-1 ring-slate-100">
               <p className="text-2xl font-bold tabular-nums text-teal-600">{avgScore}%</p>
@@ -157,7 +157,7 @@ return (
             </div>
           </div>
 
-          {/* Breakdown */}
+          {}
           <div className="flex-1">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/30 ring-1 ring-slate-100">
               <div className="mb-4 flex items-center gap-2">

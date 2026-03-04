@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  // Content overview bar data
+  
   const contentBarData = [
     { name: "Courses", count: courses.length, fill: COLORS[0] },
     { name: "Batches", count: batches.length, fill: COLORS[1] },
@@ -97,7 +97,7 @@ export default function AnalyticsPage() {
     { name: "Global Assignments", count: assignmentsCount, fill: COLORS[3] },
   ];
 
-  // Batch status pie
+  
   const batchActive = batches.filter((b) => b.status === "active").length;
   const batchArchived = batches.filter((b) => b.status === "archived").length;
   const batchStatusData = [
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
   ].filter((d) => d.value > 0);
   if (batchStatusData.length === 0) batchStatusData.push({ name: "No batches", value: 1, color: "#94a3b8" });
 
-  // Course status pie
+  
   const courseActive = courses.filter((c) => c.status === "active").length;
   const courseArchived = courses.filter((c) => c.status === "archived").length;
   const courseStatusData = [
@@ -115,7 +115,7 @@ export default function AnalyticsPage() {
   ].filter((d) => d.value > 0);
   if (courseStatusData.length === 0) courseStatusData.push({ name: "No courses", value: 1, color: "#94a3b8" });
 
-  // Batches by month (from startDate)
+  
   const monthCount: Record<string, number> = {};
   batches.forEach((b) => {
     const d = b.startDate ? (typeof b.startDate === "string" ? b.startDate.slice(0, 7) : "") : "";
@@ -146,7 +146,7 @@ export default function AnalyticsPage() {
         <p className="mt-1 text-sm text-slate-600">Overview of content and batches. Data from existing APIs.</p>
       </div>
 
-      {/* Summary cards */}
+      {}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-teal-500">
           <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Courses</p>
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Content overview bar chart */}
+      {}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-slate-800">Content overview</h2>
         <div className="h-72 w-full">
@@ -191,7 +191,7 @@ export default function AnalyticsPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Batch status pie */}
+        {}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-slate-800">Batch status</h2>
           <div className="h-72 w-full">
@@ -219,7 +219,7 @@ export default function AnalyticsPage() {
           </div>
         </section>
 
-        {/* Course status pie */}
+        {}
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-slate-800">Course status</h2>
           <div className="h-72 w-full">
@@ -248,7 +248,7 @@ export default function AnalyticsPage() {
         </section>
       </div>
 
-      {/* Batches by month */}
+      {}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-slate-800">Batches started by month</h2>
         <div className="h-72 w-full">
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Modules per course (top 8) */}
+      {}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-slate-800">Modules per course (top 8)</h2>
         <div className="h-72 w-full">

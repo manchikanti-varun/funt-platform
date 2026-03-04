@@ -1,6 +1,3 @@
-/**
- * Auth routes: login, parent login (public), Google OAuth, change-password (protected).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

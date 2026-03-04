@@ -1,7 +1,3 @@
-/**
- * Role-based access control middleware.
- * Denies access if request user does not have one of the allowed roles.
- */
 
 import type { Request, Response, NextFunction } from "express";
 import type { ROLE } from "@funt-platform/constants";

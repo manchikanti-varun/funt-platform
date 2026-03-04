@@ -1,7 +1,3 @@
-/**
- * Achievement badges – award and list. Auto-award on first submission, course complete, etc.
- * Badge display names and icons come from BadgeTypeDefinition (DB).
- */
 
 import { AchievementModel } from "../models/Achievement.model.js";
 import { BadgeTypeDefinitionModel } from "../models/BadgeTypeDefinition.model.js";
@@ -46,7 +42,6 @@ export async function ensureSevenDayStreakBadge(studentId: string): Promise<void
   await awardBadge(studentId, BADGE_TYPE.SEVEN_DAY_STREAK);
 }
 
-/** Badge type definitions from DB (displayName, icon). */
 export async function listBadgeTypeDefinitions() {
   const list = await BadgeTypeDefinitionModel.find({}).lean().exec();
   return list.map((d) => ({

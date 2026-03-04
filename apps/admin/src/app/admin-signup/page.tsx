@@ -147,7 +147,7 @@ function AdminSignupForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
         <div className="mb-6 flex flex-col items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {}
           <img
             src={typeof logoSrc === "string" ? logoSrc : (logoSrc as { src: string }).src}
             alt="FUNT ADMIN"

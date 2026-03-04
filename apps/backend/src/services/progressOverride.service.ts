@@ -1,6 +1,3 @@
-/**
- * Manual progress override – Admin marks module complete (e.g. offline submission).
- */
 
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";

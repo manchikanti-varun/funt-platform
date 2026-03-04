@@ -69,8 +69,7 @@ export default function CourseViewerPage() {
   const [requestingEnroll, setRequestingEnroll] = useState(false);
   const [requestEnrollSent, setRequestEnrollSent] = useState(false);
   const [requestEnrollError, setRequestEnrollError] = useState<string | null>(null);
-  /** Track part just marked complete so UI switches to "Completed" immediately before refetch. */
-  const [completedJustNow, setCompletedJustNow] = useState<{ moduleOrder: number; part: "content" | "video" | "youtube" } | null>(null);
+    const [completedJustNow, setCompletedJustNow] = useState<{ moduleOrder: number; part: "content" | "video" | "youtube" } | null>(null);
 
   const fetchCourse = (): Promise<void> => {
     if (!courseId) return Promise.resolve();

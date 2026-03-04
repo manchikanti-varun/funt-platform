@@ -1,7 +1,3 @@
-/**
- * Counter collection for unique FUNT ID generation.
- * One document per (prefix + year) for incremental IDs.
- */
 
 import mongoose, { Schema } from "mongoose";
 

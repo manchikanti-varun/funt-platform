@@ -1,6 +1,3 @@
-/**
- * Attendance controller – mark (admin/trainer), list by batch, my stats (student).
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/attendance.service.js";

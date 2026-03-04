@@ -1,9 +1,3 @@
-/**
- * Environment variable validation.
- * Server fails to start if required variables are missing.
- * Production: set NODE_ENV=production and CORS_ORIGINS to restrict origins.
- */
-
 const required = ["MONGO_URI", "JWT_SECRET"] as const;
 const optional = { PORT: "38472" } as const;
 
@@ -26,7 +20,6 @@ export function validateEnv(): void {
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
 
-/** Parse CORS_ORIGINS (comma-separated). If unset, dev defaults to localhost:3000,3001; production has no default (must set). */
 function getCorsOrigins(): string[] {
   const raw = process.env.CORS_ORIGINS?.trim();
   if (raw) {
@@ -47,9 +40,8 @@ export function getEnv() {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    /** Base URL for OAuth redirect (must match exactly what you add in Google Console). */
     backendPublicUrl: process.env.BACKEND_PUBLIC_URL ?? "",
-    frontendAdminUrl: process.env.FRONTEND_ADMIN_URL ?? "http://localhost:3000",
+    frontendAdminUrl: process.env.FRONTEND_ADMIN_URL ?? "http:
     frontendLmsUrl: process.env.FRONTEND_LMS_URL ?? "http://localhost:3001",
     nodeEnv,
     isProduction,

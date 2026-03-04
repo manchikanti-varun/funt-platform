@@ -1,6 +1,3 @@
-/**
- * Course service – snapshot-based CRUD, reorder, duplicate, archive.
- */
 
 import { CourseModel } from "../models/Course.model.js";
 import { BatchModel } from "../models/Batch.model.js";
@@ -14,7 +11,6 @@ import { generateCourseId } from "../utils/funtIdGenerator.js";
 const ENTITY_COURSE = "Course";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-/** Resolve course by MongoDB _id or human courseId (e.g. CRS-26-00001). */
 export async function findCourseByParam(id: string) {
   if (!id?.trim()) return null;
   const t = id.trim();
@@ -22,7 +18,6 @@ export async function findCourseByParam(id: string) {
   return CourseModel.findOne({ courseId: t }).exec();
 }
 
-/** Creator, course moderator, or batch moderator (of any batch containing this course) can edit/duplicate. */
 async function assertCanEditCourseAsync(
   userId: string,
   course: { _id: unknown; createdBy: string; moderatorIds?: string[] | null }
@@ -74,17 +69,12 @@ export interface UpdateCourseModuleInput {
   content?: string;
   youtubeUrl?: string;
   videoUrl?: string;
-  /** Optional link to other resources (e.g. Drive, slides). */
-  resourceLinkUrl?: string;
+    resourceLinkUrl?: string;
   linkedAssignmentId?: string;
-  /** Override assignment title for this course only. */
-  linkedAssignmentTitleOverride?: string;
-  /** Override assignment instructions for this course only. */
-  linkedAssignmentInstructionsOverride?: string;
-  /** Override assignment submission type for this course only. */
-  linkedAssignmentSubmissionTypeOverride?: string;
-  /** Override assignment skill tags for this course only. */
-  linkedAssignmentSkillTagsOverride?: string[];
+    linkedAssignmentTitleOverride?: string;
+    linkedAssignmentInstructionsOverride?: string;
+    linkedAssignmentSubmissionTypeOverride?: string;
+    linkedAssignmentSkillTagsOverride?: string[];
 }
 
 function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: string; description: string; modules: unknown[]; version: number; status: string; createdBy: string; moderatorIds?: string[] | null; createdAt: Date; updatedAt: Date }) {
@@ -220,7 +210,6 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 
-/** Update a single module snapshot in the course (edit content without changing the global module). */
 export async function updateCourseModule(
   id: string,
   moduleIndex: number,

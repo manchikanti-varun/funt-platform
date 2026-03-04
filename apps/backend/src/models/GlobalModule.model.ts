@@ -1,7 +1,3 @@
-/**
- * GlobalModule Mongoose model – aligned with shared GlobalModule type.
- * versionSnapshots stores copies of previous versions when content is updated.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { MODULE_STATUS } from "@funt-platform/constants";
@@ -24,8 +20,7 @@ const versionSnapshotSchema = new Schema(
 
 const globalModuleSchema = new Schema(
   {
-    /** Unique human-readable module ID (e.g. MOD-26-00001). Generated at creation. */
-    moduleId: { type: String, required: false, unique: true, sparse: true },
+        moduleId: { type: String, required: false, unique: true, sparse: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
     content: { type: String, required: true },
@@ -34,8 +29,7 @@ const globalModuleSchema = new Schema(
     resourceLinkUrl: { type: String, required: false },
     version: { type: Number, required: true, default: 1 },
     linkedAssignmentId: { type: String, required: false },
-    /** Last N version copies (saved when content is updated). Newest at end. */
-    versionSnapshots: { type: [versionSnapshotSchema], required: true, default: [] },
+        versionSnapshots: { type: [versionSnapshotSchema], required: true, default: [] },
     status: {
       type: String,
       required: true,

@@ -1,6 +1,3 @@
-/**
- * Audit controller – list logs (Super Admin full; Admin limited optional).
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/audit.service.js";

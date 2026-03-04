@@ -1,6 +1,3 @@
-/**
- * Auth helpers – decode JWT payload for role (client-side only, not for verification).
- */
 
 import { ROLE } from "@funt-platform/constants";
 
@@ -27,7 +24,6 @@ export function isTokenExpired(payload: JwtPayload): boolean {
   return payload.exp * 1000 < Date.now();
 }
 
-/** True if user is trainer and not admin/super admin (read-only content, can edit assigned batches only). */
 export function isTrainerOnly(roles: string[] | undefined): boolean {
   if (!Array.isArray(roles)) return false;
   return roles.includes(ROLE.TRAINER) && !roles.includes(ROLE.ADMIN) && !roles.includes(ROLE.SUPER_ADMIN);

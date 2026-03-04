@@ -1,8 +1,3 @@
-/**
- * Shared TypeScript types for FUNT Platform.
- * Single source of truth for data contracts.
- * Used by backend, admin, and lms apps.
- */
 
 export type { User } from "./user";
 export type { GlobalModule } from "./global-module";

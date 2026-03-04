@@ -1,6 +1,3 @@
-/**
- * Standardized API response format.
- */
 
 import type { Response } from "express";
 

@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 
-/** Course-centric: one per course (batch not shown to user). */
 interface MyCourse {
   courseId: string;
   courseTitle: string;
@@ -13,7 +12,6 @@ interface MyCourse {
   batchId: string;
 }
 
-/** Course-centric: unique courses for explore (batch not shown). */
 interface ExploreCourse {
   courseId: string;
   courseTitle: string;
@@ -123,7 +121,7 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {}
       <div className="shrink-0 flex gap-1 rounded-2xl border border-slate-200/90 bg-slate-50/90 p-1.5 shadow-lg shadow-slate-200/15 ring-1 ring-slate-100/80">
         <button
           type="button"
@@ -149,7 +147,7 @@ export default function CoursesPage() {
         </button>
       </div>
 
-      {/* Content */}
+      {}
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/25 ring-1 ring-slate-100/80 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
         {activeTab === "my" ? (
           <>

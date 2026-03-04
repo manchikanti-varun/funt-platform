@@ -1,6 +1,3 @@
-/**
- * Global Module controller – CRUD + archive. Admin/Super Admin only.
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/globalModule.service.js";

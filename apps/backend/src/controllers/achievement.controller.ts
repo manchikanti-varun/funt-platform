@@ -1,6 +1,3 @@
-/**
- * Achievement controller – list my badges; list badge type definitions (from DB).
- */
 
 import type { Request, Response } from "express";
 import { listAchievements, listBadgeTypeDefinitions } from "../services/achievement.service.js";

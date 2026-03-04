@@ -1,7 +1,3 @@
-/**
- * Dummy file to demonstrate shared types import in backend.
- * Used only for Step 2 validation — no business logic.
- */
 import type { User } from "@funt-platform/types";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 

@@ -1,6 +1,3 @@
-/**
- * Parent routes – placeholder. Protected by JWT + PARENT role (read-only).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

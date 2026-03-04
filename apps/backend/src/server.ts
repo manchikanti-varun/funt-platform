@@ -1,8 +1,3 @@
-/**
- * Server bootstrap: bind port first, then DB.
- * Uses http.createServer + reuseAddress so we can bind after port was freed (TIME_WAIT).
- */
-
 import "dotenv/config";
 import http from "http";
 import app from "./app.js";
@@ -27,6 +22,7 @@ function listen(): Promise<http.Server> {
     );
   });
 }
+
 
 async function start(): Promise<void> {
   const server = await listen();

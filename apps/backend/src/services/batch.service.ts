@@ -1,6 +1,3 @@
-/**
- * Batch service – snapshot-based. Batch holds full courseSnapshot copy.
- */
 
 import { BatchModel } from "../models/Batch.model.js";
 import { CourseModel } from "../models/Course.model.js";
@@ -11,7 +8,6 @@ import { generateBatchId } from "../utils/funtIdGenerator.js";
 
 const ENTITY_BATCH = "Batch";
 
-/** Creator, assigned trainer, or moderator can edit/duplicate; only creator can archive. */
 function assertCanEditBatch(userId: string, batch: { createdBy?: string | null; moderatorIds?: string[] | null; trainerId?: string | null }) {
   const createdBy = batch.createdBy ?? "";
   const mods = batch.moderatorIds ?? [];
@@ -65,7 +61,6 @@ type BatchDoc = {
   moderatorIds?: string[] | null;
 };
 
-/** Normalize to array: use courseSnapshots if present, else [courseSnapshot] for legacy. */
 export function getBatchCourseSnapshots(doc: BatchDoc): unknown[] {
   const snapshots = (doc as { courseSnapshots?: unknown[] }).courseSnapshots;
   if (Array.isArray(snapshots) && snapshots.length > 0) return snapshots;
@@ -74,7 +69,6 @@ export function getBatchCourseSnapshots(doc: BatchDoc): unknown[] {
   return [];
 }
 
-/** Get assignment overrides for a module in a batch (from course copy). */
 export async function getModuleAssignmentOverrides(
   batchId: string,
   courseId: string | undefined,
@@ -208,14 +202,12 @@ export async function listBatches(filters?: { status?: string; trainerId?: strin
   return list.map((d) => toBatchResponse(d as unknown as Parameters<typeof toBatchResponse>[0]));
 }
 
-/** All batches for student explore – no status or access filter; includes batches student is not enrolled in. */
 export async function listAllBatchesForExplore() {
   const list = await BatchModel.find({}).sort({ createdAt: -1 }).lean().exec();
   return list.map((d) => toBatchResponse(d as unknown as Parameters<typeof toBatchResponse>[0]));
 }
 
 const BATCH_OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
-/** Resolve batch by MongoDB _id or human batchId (e.g. BT-26-00001). */
 export async function findBatchByParam(id: string) {
   if (!id?.trim()) return null;
   const t = id.trim();

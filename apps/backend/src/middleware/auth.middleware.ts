@@ -1,7 +1,3 @@
-/**
- * JWT authentication middleware.
- * Validates token, attaches user to request, enforces ACTIVE status.
- */
 
 import type { Request, Response, NextFunction } from "express";
 import { UserModel } from "../models/User.model.js";

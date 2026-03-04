@@ -1,7 +1,4 @@
-/**
- * Profile service – lookup user by ID or FUNT ID for admin/super-admin.
- * Admin: students only. Super admin: any user (students, admins, trainers, super admins).
- */
+
 
 import { UserModel } from "../models/User.model.js";
 import { ROLE } from "@funt-platform/constants";
@@ -67,11 +64,7 @@ export interface ProfileResult {
   attendanceSummary?: StudentAttendanceSummaryItem[];
 }
 
-/**
- * Get full profile for admin dashboard.
- * - Admin: only students (by student ID / FUNT ID). Throws 403 if user is not a student.
- * - Super admin: any user (students, admins, trainers, super admins). For non-students, only user info is returned.
- */
+
 export async function getProfileForAdmin(identifier: string, isSuperAdmin: boolean): Promise<ProfileResult> {
   const user = await resolveUserByIdentifier(identifier);
   if (!user) throw new AppError("User not found", 404);

@@ -1,6 +1,3 @@
-/**
- * Global assignment entity – reusable assignment template.
- */
 
 import type { ASSIGNMENT_STATUS, SKILL_TAG } from "@funt-platform/constants";
 

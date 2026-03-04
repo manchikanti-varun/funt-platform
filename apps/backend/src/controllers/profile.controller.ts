@@ -1,6 +1,4 @@
-/**
- * Profile controller – lookup user profile for admin dashboard.
- */
+
 
 import type { Request, Response } from "express";
 import * as profileService from "../services/profile.service.js";
@@ -9,7 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 import { ROLE } from "@funt-platform/constants";
 
-/** GET /api/profile/lookup?q=userIdOrFuntId – admin: students only; super admin: any user. */
+
 export const lookupProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
   const q = (req.query.q as string)?.trim();

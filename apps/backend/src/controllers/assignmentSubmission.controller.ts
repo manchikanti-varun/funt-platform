@@ -1,6 +1,3 @@
-/**
- * Assignment submission controller – submit (student), review (admin/trainer), list.
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/assignmentSubmission.service.js";

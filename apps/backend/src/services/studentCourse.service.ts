@@ -1,8 +1,3 @@
-/**
- * Student course access – batch course with module unlock status.
- * Returns course info for both enrolled and unenrolled; hasAccess indicates enrollment.
- * Module completion is per-part: content, video, youtube, assignment; next module unlocks when previous is fully completed.
- */
 
 import { BatchModel } from "../models/Batch.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
@@ -195,7 +190,6 @@ export async function getMyCoursesForStudent(studentId: string) {
   return result;
 }
 
-/** Get course content by courseId (and optional batchId). Resolves to a batch the student is enrolled in, or preview. */
 export async function getCourseForStudentByCourseId(studentId: string, courseId: string, batchId?: string) {
   const normalizedCourseId = typeof courseId === "string" ? courseId.split("&")[0].trim() : "";
   if (!normalizedCourseId) throw new AppError("Course not found", 404);
@@ -234,7 +228,6 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
   return { ...data, courseId: normalizedCourseId, hasPendingRequest };
 }
 
-/** List all unique courses for explore (one per courseId; batchId is one batch that has it). Only active batches. */
 export async function listCoursesForExplore() {
   const batches = await BatchModel.find({ status: { $ne: BATCH_STATUS.ARCHIVED } })
     .sort({ createdAt: -1 })
@@ -264,10 +257,8 @@ export async function listCoursesForExplore() {
   }));
 }
 
-/** Parts a student can mark complete (assignment is set when admin approves). */
 export type ModulePart = "content" | "video" | "youtube";
 
-/** Student marks one part of a module as complete (content, video, or youtube). Sets completedAt when all required parts are done. */
 export async function markModulePartComplete(
   studentId: string,
   batchId: string,
@@ -331,7 +322,6 @@ export async function markModulePartComplete(
   return { batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder, part, completed: true, moduleCompleted: allDone };
 }
 
-/** Student marks a module as complete (legacy: sets full module complete). Prefer markModulePartComplete for per-part tracking. */
 export async function markModuleComplete(studentId: string, batchId: string, moduleOrder: number, courseId?: string) {
   const batch = await findBatchByParam(batchId);
   if (!batch) throw new AppError("Batch not found", 404);

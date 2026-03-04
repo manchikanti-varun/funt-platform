@@ -1,6 +1,3 @@
-/**
- * Attendance model – session-based attendance per batch.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { ATTENDANCE_STATUS } from "@funt-platform/constants";

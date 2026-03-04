@@ -1,8 +1,3 @@
-/**
- * One-time seed for Super Admin. Run manually when no Super Admin exists.
- * Usage: npx tsx src/scripts/seedSuperAdmin.ts
- * Set env SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, SUPER_ADMIN_NAME, SUPER_ADMIN_MOBILE.
- */
 
 import "dotenv/config";
 import mongoose from "mongoose";

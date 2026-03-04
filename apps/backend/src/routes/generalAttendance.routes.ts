@@ -1,6 +1,4 @@
-/**
- * General (event) attendance routes.
- */
+
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

@@ -1,6 +1,3 @@
-/**
- * Global assignment submission – student submits to a global (in-class) assignment.
- */
 
 import { GlobalAssignmentSubmissionModel } from "../models/GlobalAssignmentSubmission.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
@@ -112,7 +109,6 @@ export async function listGlobalSubmissions(filters?: ListGlobalSubmissionsFilte
   }));
 }
 
-/** List general (in-class) submissions by a student for "my submissions" with feedback. */
 export async function listGeneralSubmissionsByStudentId(studentId: string) {
   const list = await GlobalAssignmentSubmissionModel.find({ studentId })
     .sort({ submittedAt: -1 })

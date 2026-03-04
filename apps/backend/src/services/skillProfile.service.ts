@@ -1,6 +1,3 @@
-/**
- * Skill radar – aggregate skill scores from approved assignments.
- */
 
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";

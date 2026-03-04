@@ -1,7 +1,3 @@
-/**
- * Centralized API client for admin portal.
- * Uses backend at NEXT_PUBLIC_API_URL with JWT from localStorage.
- */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 

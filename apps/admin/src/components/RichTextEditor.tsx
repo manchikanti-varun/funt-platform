@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 const ReactQuill = dynamic(() => import("react-quill"), { ssr: false });
 import "react-quill/dist/quill.snow.css";
 
-/** Extended toolbar: headers, bold, italic, underline, strike, lists, indent, link, blockquote, code. */
+
 const QUILL_MODULES = {
   toolbar: [
     [{ header: [1, 2, 3, false] }],
@@ -31,7 +31,7 @@ const EDITOR_BASE =
 export interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
-  /** Min height for the editor area (default 120px). Use e.g. 200 or 320 for larger. */
+  
   minHeight?: number;
   placeholder?: string;
   className?: string;

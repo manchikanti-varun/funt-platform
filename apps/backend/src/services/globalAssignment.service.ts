@@ -1,6 +1,3 @@
-/**
- * Global Assignment service – CRUD, soft archive, access (general type), moderators.
- */
 
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
 import { UserModel } from "../models/User.model.js";
@@ -140,7 +137,6 @@ function toAssignmentResponse(d: { _id: unknown; assignmentId?: string | null; t
   };
 }
 
-/** Resolve assignment by MongoDB _id or human assignmentId (e.g. ASG-26-00001). */
 export async function findAssignmentByParam(id: string) {
   if (!id?.trim()) return null;
   const t = id.trim();
@@ -148,9 +144,6 @@ export async function findAssignmentByParam(id: string) {
   return GlobalAssignmentModel.findOne({ assignmentId: t }).exec();
 }
 
-/** Published general assignments for a student (only those where student is in allowedStudentIds).
- * Matches by both user _id and funtId so access works whether admins stored id or FUNT ID.
- * Shows assignments that are not archived (ACTIVE or legacy DRAFT/PUBLISHED/DUE/CLOSED). */
 export async function listPublishedForStudent(studentId: string) {
   const id = (studentId && String(studentId).trim()) || "";
   if (!id) return [];
@@ -256,8 +249,6 @@ export async function duplicateAssignment(id: string, performedBy: string) {
   return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
 }
 
-/** Add one student to allowed list (by FUNT ID or user ID). For type=general only.
- * Stores both user _id and funtId so student list matches whether JWT sends id or funtId. */
 export async function addAllowedStudent(assignmentId: string, funtIdOrUserId: string, performedBy: string) {
   const doc = await findAssignmentByParam(assignmentId);
   if (!doc) throw new AppError("Assignment not found", 404);

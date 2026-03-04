@@ -1,6 +1,3 @@
-/**
- * Global Module routes – RESTful CRUD + archive. Protected: SUPER_ADMIN, ADMIN only.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

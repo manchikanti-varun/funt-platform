@@ -1,7 +1,3 @@
-/**
- * User Mongoose model – aligned with shared User type.
- * Includes password hash, login attempts, and device history for identity layer.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";

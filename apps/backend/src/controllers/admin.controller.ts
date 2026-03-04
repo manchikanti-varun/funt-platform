@@ -1,7 +1,3 @@
-/**
- * Admin controller: create users (Student, Trainer, Admin, Parent), reset login.
- * Super Admin can create Admin; Admin can create Student and Trainer.
- */
 
 import type { Request, Response } from "express";
 import {

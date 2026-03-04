@@ -1,6 +1,4 @@
-/**
- * General (event) attendance controller.
- */
+
 
 import type { Request, Response } from "express";
 import * as service from "../services/generalAttendance.service.js";

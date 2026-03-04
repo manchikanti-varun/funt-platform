@@ -1,6 +1,3 @@
-/**
- * Certificate routes – generate (admin), eligibility, list. Public verify on separate router.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
@@ -21,7 +18,7 @@ router.use(authMiddleware);
 
 router.get("/eligibility", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.STUDENT), checkEligibility);
 router.post("/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), generateCertificate);
-// Batch-scoped routes (must be before /:certificateId/pdf)
+
 router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listBatchCertificateStatus);
 router.post("/batch/:batchId/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkGenerateBatchCertificates);
 router.get("/batch/:batchId/zip", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadBatchCertificatesZip);

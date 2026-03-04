@@ -166,7 +166,7 @@ export default function BatchAttendancePage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto space-y-6">
-        {/* Mark attendance: date + paste FUNT IDs */}
+        {}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
           <div className="border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-white px-6 py-6">
             <h1 className="text-xl font-bold tracking-tight text-slate-900">Mark attendance</h1>
@@ -210,7 +210,7 @@ export default function BatchAttendancePage() {
           </form>
         </div>
 
-        {/* Existing sessions – Edit / Add remaining */}
+        {}
         {sessions.length > 0 && (
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
             <div className="border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white px-6 py-6">
@@ -273,7 +273,7 @@ export default function BatchAttendancePage() {
           </div>
         )}
 
-        {/* Attendance by student */}
+        {}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
           <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
             <h2 className="text-xl font-bold tracking-tight text-slate-900">Attendance by student</h2>

@@ -1,6 +1,3 @@
-/**
- * Global Module service – CRUD, version control, soft archive.
- */
 
 import { GlobalModuleModel } from "../models/GlobalModule.model.js";
 import { MODULE_STATUS } from "@funt-platform/constants";

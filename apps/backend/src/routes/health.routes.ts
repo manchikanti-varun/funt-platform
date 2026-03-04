@@ -1,6 +1,3 @@
-/**
- * Health check route.
- */
 
 import { Router } from "express";
 import type { User } from "@funt-platform/types";

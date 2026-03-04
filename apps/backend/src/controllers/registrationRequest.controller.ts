@@ -1,6 +1,3 @@
-/**
- * Registration request controller – submit, list, approve, reject (Super Admin only).
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/registrationRequest.service.js";
@@ -14,7 +11,6 @@ function getUserId(req: Request): string {
   return id;
 }
 
-/** POST /api/admin/requests/admin – submit Admin request (Super Admin only). Body: { name, email, mobile, city? } */
 export const submitAdminRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = getUserId(req);
   const { name, email, mobile, city } = req.body ?? {};
@@ -31,7 +27,6 @@ export const submitAdminRequest = asyncHandler(async (req: Request, res: Respons
   res.status(201).json(result);
 });
 
-/** POST /api/admin/requests/super-admin – submit Super Admin request (Super Admin only). Body: { name, email, mobile, city? } */
 export const submitSuperAdminRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = getUserId(req);
   const { name, email, mobile, city } = req.body ?? {};
@@ -48,7 +43,6 @@ export const submitSuperAdminRequest = asyncHandler(async (req: Request, res: Re
   res.status(201).json(result);
 });
 
-/** GET /api/admin/requests?roleType=ADMIN|SUPER_ADMIN&status=PENDING – list requests (Super Admin only). */
 export const listRequests = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const roleType = req.query.roleType as string | undefined;
   const status = req.query.status as string | undefined;
@@ -60,7 +54,6 @@ export const listRequests = asyncHandler(async (req: Request, res: Response): Pr
   successRes(res, list);
 });
 
-/** POST /api/admin/requests/:requestId/approve – approve request (Super Admin only). */
 export const approveRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = getUserId(req);
   const requestId = req.params.requestId;
@@ -69,7 +62,6 @@ export const approveRequest = asyncHandler(async (req: Request, res: Response): 
   res.json(result);
 });
 
-/** POST /api/admin/requests/:requestId/reject – reject request (Super Admin only). Body: { reason? } */
 export const rejectRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = getUserId(req);
   const requestId = req.params.requestId;

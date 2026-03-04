@@ -1,6 +1,3 @@
-/**
- * Re-export all models.
- */
 
 export { UserModel } from "./User.model.js";
 export { GlobalModuleModel } from "./GlobalModule.model.js";

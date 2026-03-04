@@ -1,6 +1,5 @@
 const path = require('path');
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['@funt-platform/types', '@funt-platform/constants', 'qrcode.react'],
   webpack: (config) => {

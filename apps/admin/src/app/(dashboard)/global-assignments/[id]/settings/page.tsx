@@ -3,7 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-/** Redirect legacy /settings to /student-access so old links still work. */
 export default function GlobalAssignmentSettingsRedirect() {
   const params = useParams();
   const router = useRouter();

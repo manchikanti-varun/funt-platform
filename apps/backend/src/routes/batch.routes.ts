@@ -1,6 +1,3 @@
-/**
- * Batch routes – CRUD, duplicate, archive. Admin/Super Admin manage; Trainer can view assigned.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

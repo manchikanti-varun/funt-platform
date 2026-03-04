@@ -1,6 +1,3 @@
-/**
- * JWT token generation and verification.
- */
 
 import jwt from "jsonwebtoken";
 import type { ROLE } from "@funt-platform/constants";

@@ -1,6 +1,3 @@
-/**
- * Course routes – CRUD, reorder, duplicate, archive. Admin/Super Admin only.
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

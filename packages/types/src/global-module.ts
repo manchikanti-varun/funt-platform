@@ -1,6 +1,3 @@
-/**
- * Global module entity – reusable learning content.
- */
 
 import type { MODULE_STATUS } from "@funt-platform/constants";
 

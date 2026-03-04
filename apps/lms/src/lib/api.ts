@@ -1,6 +1,3 @@
-/**
- * Centralized API client for LMS (Student + Parent).
- */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 

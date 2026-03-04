@@ -1,6 +1,3 @@
-/**
- * Skill profile controller – get skill radar for student.
- */
 
 import type { Request, Response } from "express";
 import { calculateSkillProfile } from "../services/skillProfile.service.js";

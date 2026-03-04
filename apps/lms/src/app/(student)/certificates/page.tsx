@@ -68,7 +68,7 @@ export default function CertificatesPage() {
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6">
-      {/* Header */}
+      {}
       <div className="shrink-0 rounded-2xl border border-slate-200/90 bg-white px-5 py-5 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
         <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Achievements</p>
         <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">Certificates</h1>
@@ -77,7 +77,7 @@ export default function CertificatesPage() {
         </p>
       </div>
 
-      {/* Verify banner + optional stat */}
+      {}
       <div className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/verify"
@@ -110,7 +110,7 @@ export default function CertificatesPage() {
         </div>
       )}
 
-      {/* Certificate list */}
+      {}
       <div className="min-h-0 flex-1 overflow-auto">
         {list.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white px-6 py-16 text-center shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">

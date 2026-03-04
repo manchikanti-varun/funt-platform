@@ -61,7 +61,7 @@ export default function AttendancePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
-      {/* Page header */}
+      {}
       <header className="shrink-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Attendance</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Attendance</h1>
@@ -70,7 +70,7 @@ export default function AttendancePage() {
         </p>
       </header>
 
-      {/* Session Attendance */}
+      {}
       <section className="shrink-0 space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-600">Session Attendance</h2>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/20 ring-1 ring-slate-100 overflow-hidden">
@@ -177,7 +177,7 @@ export default function AttendancePage() {
         </div>
       </section>
 
-      {/* Events Attended */}
+      {}
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-600">Events Attended</h2>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/20 ring-1 ring-slate-100 overflow-hidden">

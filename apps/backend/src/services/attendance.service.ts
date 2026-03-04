@@ -1,6 +1,3 @@
-/**
- * Attendance service – mark session, list by batch, student's own stats.
- */
 
 import { AttendanceModel } from "../models/Attendance.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
@@ -14,7 +11,6 @@ import { AppError } from "../utils/AppError.js";
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-/** Resolve FUNT IDs or user IDs to a list of user IDs. Returns { resolvedIds, notFound }. */
 export async function resolveFuntIdsToStudentIds(
   identifiers: string[]
 ): Promise<{ studentIds: string[]; notFound: string[] }> {
@@ -44,8 +40,7 @@ export interface MarkAttendanceInput {
   sessionDate: string | Date;
   attendanceRecords: Array<{ studentId: string; status: "PRESENT" | "ABSENT" }>;
   markedBy: string;
-  /** If true, allow editing even when session was created by another user (Super Admin override). */
-  isSuperAdminOverride?: boolean;
+    isSuperAdminOverride?: boolean;
 }
 
 export async function markAttendance(input: MarkAttendanceInput) {
@@ -179,7 +174,6 @@ export async function markBatchAttendanceByFuntIds(
   return { ...result, notFound: notFound.length ? notFound : undefined };
 }
 
-/** Add more students as present to an existing batch session. No duplicates for already-marked. */
 export async function addPresentToBatchSession(
   batchId: string,
   sessionDate: string | Date,
@@ -248,7 +242,6 @@ export interface StudentAttendanceSummary {
   percentage: number;
 }
 
-/** Get per-student attendance for a batch (for "individual student attendance" view). */
 export async function getAttendanceByStudentsForBatch(batchId: string): Promise<StudentAttendanceSummary[]> {
   const [enrollments, sessions] = await Promise.all([
     listEnrollmentsByBatch(batchId),
@@ -299,7 +292,6 @@ export interface StudentAttendanceSummaryItem {
   percentage: number;
 }
 
-/** Get attendance summary for a student across all their enrolled batches (for admin profile). */
 export async function getAttendanceSummaryForStudent(studentId: string): Promise<StudentAttendanceSummaryItem[]> {
   const { BatchModel } = await import("../models/Batch.model.js");
   const enrollments = await EnrollmentModel.find({ studentId }).select("batchId").lean().exec();

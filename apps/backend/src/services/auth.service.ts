@@ -1,6 +1,3 @@
-/**
- * Auth service: user creation, login, parent login, lockout.
- */
 
 import bcrypt from "bcrypt";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
@@ -17,7 +14,7 @@ import { AppError } from "../utils/AppError.js";
 
 const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 60 * 60 * 1000; // 1 hour
+const LOCK_DURATION_MS = 60 * 60 * 1000; 
 
 export interface CreateStudentInput {
   name: string;
@@ -58,12 +55,9 @@ export interface CreateParentInput {
 }
 
 export interface LoginInput {
-  /** Login by FUNT ID (e.g. FS-26-00001, AD-26-0001, SAD-26-01) + password */
-  funtId?: string;
-  /** @deprecated Prefer funtId. Kept for backward compatibility. */
-  email?: string;
-  /** @deprecated Prefer funtId. Kept for backward compatibility. */
-  mobile?: string;
+    funtId?: string;
+    email?: string;
+    mobile?: string;
   password: string;
 }
 
@@ -139,7 +133,6 @@ export async function createAdmin(input: CreateAdminInput): Promise<{ id: string
   return { id: String(user._id), funtId: user.funtId };
 }
 
-/** Super Admin: manual seed only. Call directly when seeding. */
 export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; funtId: string }> {
   const funtId = await generateSuperAdminId();
   const passwordHash = await hashPassword(input.password);
@@ -155,7 +148,6 @@ export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ 
   return { id: String(user._id), funtId: user.funtId };
 }
 
-/** Create Admin with temporary password = FUNT ID (for approval flow). User must change password after first login. */
 export async function createAdminWithTemporaryPassword(input: { name: string; email: string; mobile: string; city?: string }): Promise<{ id: string; funtId: string }> {
   const funtId = await generateAdminId();
   const passwordHash = await hashPassword(funtId);
@@ -206,12 +198,10 @@ export async function createParent(input: CreateParentInput): Promise<{ id: stri
   return { id: String(user._id), funtId: user.funtId };
 }
 
-/** Find user by FUNT ID for login */
 async function findUserByFuntId(funtId: string) {
   return UserModel.findOne({ funtId: funtId.trim() }).select("+passwordHash +loginAttempts +lockedUntil +loginHistory");
 }
 
-/** Find user by email or mobile (legacy) */
 async function findUserByEmailOrMobile(email?: string, mobile?: string) {
   if (email) {
     return UserModel.findOne({ email }).select("+passwordHash +loginAttempts +lockedUntil +loginHistory");
@@ -348,7 +338,6 @@ export async function parentLogin(
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-/** Resolve FUNT ID or MongoDB _id to user's MongoDB _id. Throws if not found. */
 export async function resolveUserIdFromIdentifier(identifier: string): Promise<string> {
   const v = (identifier ?? "").trim();
   if (!v) throw new AppError("User identifier (FUNT ID or user ID) is required", 400);
@@ -362,7 +351,6 @@ export async function resolveUserIdFromIdentifier(identifier: string): Promise<s
   return String(user._id);
 }
 
-/** Change password for the logged-in user. Verifies current password then sets new. */
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
   if (!currentPassword?.trim()) throw new AppError("Current password is required", 400);
   if (!newPassword?.trim()) throw new AppError("New password is required", 400);
@@ -376,7 +364,6 @@ export async function changePassword(userId: string, currentPassword: string, ne
   await UserModel.updateOne({ _id: userId }, { $set: { passwordHash } }).exec();
 }
 
-/** Admin: reset login (clear lockout) and set password to FUNT ID. Accepts FUNT ID or MongoDB _id. */
 export async function resetLoginAttempts(userIdentifier: string): Promise<void> {
   const v = (userIdentifier ?? "").trim();
   if (!v) throw new AppError("User identifier (FUNT ID or user ID) is required", 400);

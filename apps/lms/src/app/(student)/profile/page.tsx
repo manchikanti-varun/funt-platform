@@ -165,7 +165,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
-        {/* Profile card */}
+        {}
         <section className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-teal-600">Identity</p>
           <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Profile</h2>
@@ -183,7 +183,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Badges card */}
+        {}
         <section className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-amber-600">Badges</p>
           <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Achievements</h2>
@@ -195,7 +195,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Contact & account */}
+        {}
         <section className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Details</p>
           <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Contact & account</h2>
@@ -221,10 +221,10 @@ export default function ProfilePage() {
           </dl>
         </section>
 
-        {/* Change password */}
+        {}
         <ChangePasswordSection />
 
-        {/* Last login + Login history combined - spans full width on second row */}
+        {}
         <section className="flex min-h-0 flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:col-span-3 lg:p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Activity</p>
           <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Last login & history</h2>

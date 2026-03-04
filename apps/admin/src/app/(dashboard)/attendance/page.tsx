@@ -133,7 +133,7 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-10">
-      {/* Page header */}
+      {}
       <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-teal-50 via-white to-slate-50 px-6 py-8 shadow-sm">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-600">
@@ -150,7 +150,7 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Create event */}
+      {}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Create event</h2>
@@ -228,7 +228,7 @@ export default function AttendancePage() {
         </form>
       </div>
 
-      {/* Events list */}
+      {}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Events</h2>
@@ -311,7 +311,7 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* Event detail: who was present + add remaining */}
+      {}
       {detail && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
           <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-5 flex flex-wrap items-center justify-between gap-4">

@@ -1,6 +1,3 @@
-/**
- * Global Assignment controller – CRUD + archive. Admin/Super Admin only.
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/globalAssignment.service.js";
@@ -131,7 +128,6 @@ export const reviewGlobalSubmission = asyncHandler(async (req: Request, res: Res
   successRes(res, data, "Submission reviewed");
 });
 
-/** Bulk approve or reject global assignment submissions. Body: { submissionIds: string[], status: "APPROVED" | "REJECTED", feedback?: string }. */
 export const bulkReviewGlobalSubmissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const reviewedBy = getUserId(req);
   const { submissionIds, status, feedback } = req.body ?? {};
@@ -151,7 +147,6 @@ export const bulkReviewGlobalSubmissions = asyncHandler(async (req: Request, res
   successRes(res, data, "Bulk review completed");
 });
 
-/** List submissions for one assignment. Only general submissions when type=general; module-linked are reviewed in Batches. */
 export const getSubmissionsForAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const assignmentId = req.params.id;
   if (!assignmentId) throw new AppError("Assignment ID is required", 400);
@@ -175,7 +170,6 @@ export const getSubmissionsForAssignment = asyncHandler(async (req: Request, res
   });
 });
 
-/** List students who have access to this assignment (type=general). */
 export const listAssignmentAccess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   if (!id) throw new AppError("Assignment ID is required", 400);
@@ -183,7 +177,6 @@ export const listAssignmentAccess = asyncHandler(async (req: Request, res: Respo
   successRes(res, data);
 });
 
-/** Add one student to assignment access by FUNT ID or user ID. */
 export const addAssignmentAccess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
@@ -195,7 +188,6 @@ export const addAssignmentAccess = asyncHandler(async (req: Request, res: Respon
   successRes(res, data, "Student added to access list");
 });
 
-/** Remove one student from assignment access. */
 export const removeAssignmentAccess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const studentId = req.params.studentId;
@@ -206,7 +198,6 @@ export const removeAssignmentAccess = asyncHandler(async (req: Request, res: Res
   successRes(res, data, "Student removed from access list");
 });
 
-/** Bulk add students to assignment access (body: { identifiers: string[] } – FUNT IDs or user IDs). */
 export const bulkAddAssignmentAccess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

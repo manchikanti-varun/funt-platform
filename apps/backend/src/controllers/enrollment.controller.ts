@@ -1,6 +1,3 @@
-/**
- * Enrollment controller – create (admin), my enrollments (student), batch course (student).
- */
 
 import type { Request, Response } from "express";
 import * as enrollmentService from "../services/enrollment.service.js";
@@ -28,7 +25,6 @@ export const createEnrollment = asyncHandler(async (req: Request, res: Response)
   successRes(res, data, "Enrollment created", 201);
 });
 
-/** Admin: bulk enroll students in a batch (JSON body: batchId, studentFuntIds). */
 export const postBulkEnrollment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
   const { batchId, studentFuntIds } = req.body ?? {};
@@ -52,14 +48,12 @@ export const getBatchCourse = asyncHandler(async (req: Request, res: Response): 
   successRes(res, data);
 });
 
-/** List my courses (course-centric; one per course; batch not exposed to user). */
 export const getMyCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const data = await getMyCoursesForStudent(studentId);
   successRes(res, data);
 });
 
-/** Get course by courseId (and optional batchId when batch has multiple courses). */
 export const getCourseByCourseId = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const courseId = req.params.courseId;
@@ -69,26 +63,22 @@ export const getCourseByCourseId = asyncHandler(async (req: Request, res: Respon
   successRes(res, data);
 });
 
-/** List all courses for explore (unique by course; batch hidden). */
 export const getExploreCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const data = await listCoursesForExplore();
   successRes(res, data);
 });
 
-/** List all batches for student explore – legacy; prefer getExploreCourses. */
 export const getExploreBatches = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const data = await batchService.listAllBatchesForExplore();
   successRes(res, data);
 });
 
-/** List published general assignments for this student (only those they have access to). */
 export const getGeneralAssignments = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const data = await globalAssignmentService.listPublishedForStudent(studentId);
   successRes(res, data);
 });
 
-/** Get one assignment by id (for in-module submit form: title, instructions, submissionType). Optional query: batchId, courseId, moduleOrder to apply assignment copy overrides from the course. */
 export const getAssignmentForStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const assignmentId = req.params.assignmentId;
   const batchId = req.query.batchId as string | undefined;
@@ -114,7 +104,6 @@ export const getAssignmentForStudent = asyncHandler(async (req: Request, res: Re
   successRes(res, data);
 });
 
-/** Student marks current module (or one part) as complete. Body: { moduleOrder, part?, courseId? }. */
 export const postMarkModuleComplete = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const batchId = req.params.batchId;
@@ -135,14 +124,12 @@ export const postMarkModuleComplete = asyncHandler(async (req: Request, res: Res
   successRes(res, data, "Module marked as complete");
 });
 
-/** List all trainers (id, funtId, name) for student dropdown. */
 export const getTrainers = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const list = await UserModel.find({ roles: ROLE.TRAINER }).select("funtId name").lean().exec();
   const data = list.map((u) => ({ id: String(u._id), funtId: u.funtId, name: u.name }));
   successRes(res, data);
 });
 
-/** Student requests enrollment (by batchId or courseId; request goes to admin who created the batch). */
 export const postEnrollmentRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const { batchId, courseId } = req.body ?? {};
@@ -150,7 +137,6 @@ export const postEnrollmentRequest = asyncHandler(async (req: Request, res: Resp
   successRes(res, data, data.message, 201);
 });
 
-/** Admin: list pending enrollment requests for batches they created. Optional ?batchId= to filter by batch. */
 export const getEnrollmentRequestsForAdmin = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const adminId = getUserId(req);
   const batchId = typeof req.query.batchId === "string" ? req.query.batchId : undefined;
@@ -158,7 +144,6 @@ export const getEnrollmentRequestsForAdmin = asyncHandler(async (req: Request, r
   successRes(res, data);
 });
 
-/** Admin: approve or reject an enrollment request. */
 export const respondToEnrollmentRequest = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const adminId = getUserId(req);
   const requestId = req.params.id;
@@ -169,7 +154,6 @@ export const respondToEnrollmentRequest = asyncHandler(async (req: Request, res:
   successRes(res, data, data.message, 200);
 });
 
-/** Student submits to a global (in-class) assignment. */
 export const postSubmitGlobalAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const { assignmentId, submissionType, submissionContent } = req.body ?? {};
@@ -185,7 +169,6 @@ export const postSubmitGlobalAssignment = asyncHandler(async (req: Request, res:
   successRes(res, data, "Successfully submitted", 201);
 });
 
-/** Student: list my submissions (module + general) with feedback for viewing. */
 export const getMySubmissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const [moduleSubmissions, generalSubmissions] = await Promise.all([

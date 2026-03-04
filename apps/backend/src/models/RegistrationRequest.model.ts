@@ -1,6 +1,4 @@
-/**
- * Registration request – Admin or Super Admin account request; Super Admin approves to create account.
- */
+
 
 import mongoose, { Schema } from "mongoose";
 

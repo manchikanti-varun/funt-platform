@@ -1,7 +1,3 @@
-/**
- * Generate certificate PDF from template (JSON layout) or built-in default.
- * Template can be provided via file at templates/certificate.json (see CertificateLayoutTemplate type).
- */
 
 import { createRequire } from "module";
 import { readFileSync, existsSync } from "fs";
@@ -20,37 +16,25 @@ export interface CertificatePdfData {
   issuedAt: Date;
 }
 
-/** Placeholders allowed in template blocks: {{studentName}}, {{courseName}}, {{certificateId}}, {{issuedDate}} */
 export type CertificatePlaceholder = "studentName" | "courseName" | "certificateId" | "issuedDate";
 
 export interface CertificateLayoutBlock {
-  /** Static text or placeholder key (e.g. "studentName") wrapped as {{key}} in final text */
-  type: "text";
-  /** Optional static label before the placeholder (e.g. "Certificate ID: ") */
-  label?: string;
-  /** Placeholder key – value is inserted here. Use one of: studentName, courseName, certificateId, issuedDate */
-  placeholder?: CertificatePlaceholder;
-  /** Full static text (no placeholder). If set, label/placeholder are ignored. */
-  text?: string;
+    type: "text";
+    label?: string;
+    placeholder?: CertificatePlaceholder;
+    text?: string;
   fontSize?: number;
   align?: "left" | "center" | "right";
-  /** Extra space below this block (in points, approximate) */
-  marginBottom?: number;
+    marginBottom?: number;
 }
 
 export interface CertificateLayoutTemplate {
-  /** Page size: A4 or letter */
-  size?: "A4" | "letter";
-  /** Margin in points (default 72) */
-  margin?: number;
-  /** Organization/school name at top */
-  organization?: string;
-  /** Main title (e.g. "Certificate of Completion") */
-  title?: string;
-  /** Ordered blocks to render (text lines with optional placeholders) */
-  blocks: CertificateLayoutBlock[];
-  /** Footer line (e.g. "Verify at: /verify/{{certificateId}}") – can use {{certificateId}} */
-  footer?: string;
+    size?: "A4" | "letter";
+    margin?: number;
+    organization?: string;
+    title?: string;
+    blocks: CertificateLayoutBlock[];
+    footer?: string;
 }
 
 const DEFAULT_TEMPLATE: CertificateLayoutTemplate = {
@@ -78,12 +62,11 @@ const DEFAULT_TEMPLATE: CertificateLayoutTemplate = {
 };
 
 function getTemplatePath(): string {
-  // From dist/utils go up to backend root so templates/certificate.json is backend/templates/certificate.json
+  
   const backendRoot = join(__dirname, "..", "..");
   return join(backendRoot, "templates", "certificate.json");
 }
 
-/** Load template from file if it exists; otherwise return default. */
 export function loadCertificateTemplate(): CertificateLayoutTemplate {
   const path = getTemplatePath();
   if (existsSync(path)) {
@@ -101,7 +84,7 @@ export function loadCertificateTemplate(): CertificateLayoutTemplate {
         };
       }
     } catch {
-      // fall back to default
+      
     }
   }
   return DEFAULT_TEMPLATE;

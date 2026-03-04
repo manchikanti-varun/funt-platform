@@ -1,6 +1,3 @@
-/**
- * Progress override controller – Admin only, manual module completion.
- */
 
 import type { Request, Response } from "express";
 import { overrideProgress } from "../services/progressOverride.service.js";

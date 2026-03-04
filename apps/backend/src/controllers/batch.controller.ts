@@ -1,6 +1,3 @@
-/**
- * Batch controller – CRUD, duplicate, archive. Admin/Super Admin manage; Trainer view own.
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/batch.service.js";
@@ -106,7 +103,6 @@ export const archiveBatch = asyncHandler(async (req: Request, res: Response): Pr
   successRes(res, data, "Batch archived");
 });
 
-/** List students in this batch (for batch settings). */
 export const getBatchStudents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   if (!id) throw new AppError("Batch ID is required", 400);
@@ -114,7 +110,6 @@ export const getBatchStudents = asyncHandler(async (req: Request, res: Response)
   successRes(res, data);
 });
 
-/** Add one student to batch by FUNT ID or user ID. */
 export const addBatchStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
@@ -125,7 +120,6 @@ export const addBatchStudent = asyncHandler(async (req: Request, res: Response):
   successRes(res, data, "Student added to batch", 201);
 });
 
-/** Bulk add students to batch (body: { identifiers: string[] } or { studentFuntIds: string[] }). */
 export const bulkAddBatchStudents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
@@ -136,7 +130,6 @@ export const bulkAddBatchStudents = asyncHandler(async (req: Request, res: Respo
   successRes(res, data, "Bulk add completed");
 });
 
-/** Remove a student from the batch. */
 export const removeBatchStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const studentId = req.params.studentId;

@@ -1,6 +1,3 @@
-/**
- * Assignment submission – submit, review, and module completion on approval.
- */
 
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { BatchModel } from "../models/Batch.model.js";
@@ -316,7 +313,6 @@ export async function listModuleSubmissionsByStudentId(studentId: string) {
   }));
 }
 
-/** List all module-linked submissions for a given assignment (across batches). */
 export async function listSubmissionsByAssignmentId(assignmentId: string) {
   const assignment = await findAssignmentByParam(assignmentId);
   if (!assignment) return [];

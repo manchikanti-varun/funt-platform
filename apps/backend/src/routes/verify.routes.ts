@@ -1,6 +1,3 @@
-/**
- * Public verification – no auth. GET /verify/:certificateId
- */
 
 import { Router } from "express";
 import { verifyCertificatePublic } from "../controllers/certificate.controller.js";

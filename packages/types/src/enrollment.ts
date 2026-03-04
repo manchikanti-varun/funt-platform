@@ -1,6 +1,3 @@
-/**
- * Enrollment entity – student enrollment in a batch.
- */
 
 import type { ENROLLMENT_STATUS } from "@funt-platform/constants";
 

@@ -1,6 +1,3 @@
-/**
- * Batch entity – course run with trainer and schedule.
- */
 
 import type { BATCH_STATUS } from "@funt-platform/constants";
 

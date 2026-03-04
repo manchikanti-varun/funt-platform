@@ -1,6 +1,3 @@
-/**
- * Enrollment request – student requests access; admin who created the batch sees the request.
- */
 
 import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
 import { BatchModel } from "../models/Batch.model.js";
@@ -11,7 +8,6 @@ import * as enrollmentService from "./enrollment.service.js";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 
-/** Resolve batchId from either batchId or courseId (course-centric: pick one batch for the course). Returns MongoDB _id. */
 export async function resolveBatchForRequest(batchId?: string, courseId?: string): Promise<string> {
   if (batchId?.trim()) {
     const batch = await findBatchByParam(batchId.trim());
@@ -77,7 +73,6 @@ export async function createEnrollmentRequest(studentId: string, batchIdOrCourse
   };
 }
 
-/** List pending enrollment requests for batches created by this admin. Optionally filter by batchId (human or Mongo). */
 export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: string) {
   const batches = await BatchModel.find({ createdBy: adminId }).lean().exec();
   let batchIds = batches.map((b) => String(b._id));
@@ -125,7 +120,6 @@ export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: 
   });
 }
 
-/** Approve or reject an enrollment request. Only batch creator (or moderator) can respond. */
 export async function respondToEnrollmentRequest(
   requestId: string,
   action: "APPROVE" | "REJECT",

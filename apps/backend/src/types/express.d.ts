@@ -1,6 +1,3 @@
-/**
- * Express request extension for authenticated user.
- */
 
 import type { ROLE } from "@funt-platform/constants";
 

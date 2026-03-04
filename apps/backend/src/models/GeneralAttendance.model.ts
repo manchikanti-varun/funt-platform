@@ -1,7 +1,4 @@
-/**
- * General (event) attendance – not tied to a batch.
- * One document per event: date, optional title, list of present student IDs.
- */
+
 
 import mongoose, { Schema } from "mongoose";
 

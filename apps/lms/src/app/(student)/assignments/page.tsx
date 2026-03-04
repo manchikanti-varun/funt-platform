@@ -34,7 +34,6 @@ interface MySubmissionItem {
   reviewedAt?: string;
 }
 
-/** Only Text and Link for user-friendly submission. */
 const SUBMISSION_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: SUBMISSION_TYPE.TEXT, label: "Text" },
   { value: SUBMISSION_TYPE.LINK, label: "Link" },
@@ -433,7 +432,7 @@ export default function AssignmentsPage() {
           )}
         </section>
 
-        {/* Submissions (module + general) */}
+        {}
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Submissions</h2>
           {mySubmissions && (mySubmissions.moduleSubmissions.length > 0 || mySubmissions.generalSubmissions.length > 0) ? (

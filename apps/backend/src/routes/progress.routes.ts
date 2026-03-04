@@ -1,6 +1,3 @@
-/**
- * Progress routes – manual override (Admin only).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

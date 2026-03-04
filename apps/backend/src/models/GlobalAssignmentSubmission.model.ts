@@ -1,7 +1,3 @@
-/**
- * Global assignment submission – student submission for a global (in-class) assignment.
- * Not tied to a batch/module; trainerId optional (no longer required from student).
- */
 
 import mongoose, { Schema } from "mongoose";
 import { SUBMISSION_TYPE, SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";

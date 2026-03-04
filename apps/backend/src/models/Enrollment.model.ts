@@ -1,6 +1,3 @@
-/**
- * Enrollment Mongoose model – aligned with shared Enrollment type.
- */
 
 import mongoose, { Schema } from "mongoose";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";

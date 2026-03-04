@@ -1,6 +1,3 @@
-/**
- * Skill profile routes – my profile (student), or by studentId (admin).
- */
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";

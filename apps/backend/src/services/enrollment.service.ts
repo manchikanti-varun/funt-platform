@@ -1,6 +1,3 @@
-/**
- * Enrollment service – create enrollment, list my enrollments, validate access.
- */
 
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { BatchModel } from "../models/Batch.model.js";
@@ -18,7 +15,6 @@ export interface CreateEnrollmentInput {
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-/** Resolve to MongoDB _id from either MongoDB _id or FUNT ID (e.g. FS-26-00001). Never use FUNT ID with findById. */
 async function resolveStudentId(studentIdOrFuntId: string): Promise<string> {
   if (!studentIdOrFuntId?.trim()) throw new AppError("studentId or funtId is required", 400);
   const v = studentIdOrFuntId.trim();
@@ -132,7 +128,6 @@ export interface BulkEnrollmentResult {
   errors: Array<{ identifier: string; message: string }>;
 }
 
-/** Enroll multiple students in a batch by FUNT ID or MongoDB _id. Skips already enrolled; returns counts and any not-found/errors. */
 export async function bulkEnroll(
   batchId: string,
   studentFuntIdsOrIds: string[],
@@ -185,14 +180,13 @@ export async function bulkEnroll(
   return result;
 }
 
-/** List enrollments for a batch (for batch settings UI). Returns students with id, funtId, name, enrolledAt. */
 export async function listEnrollmentsByBatch(batchId: string) {
   const batch = await findBatchByParam(batchId);
   if (!batch) return [];
   const batchMongoId = String((batch as { _id: unknown })._id);
   const humanBatchId = (batch as { batchId?: string }).batchId;
 
-  // Build match list: string mongo id, human batchId if different, and ObjectId so we match regardless of how batchId was stored
+  
   const matchValues: unknown[] = [batchMongoId, batchId.trim()];
   if (humanBatchId && humanBatchId !== batchMongoId) matchValues.push(humanBatchId);
   if (OBJECT_ID_REGEX.test(batchMongoId)) {
@@ -200,11 +194,11 @@ export async function listEnrollmentsByBatch(batchId: string) {
       const mongoose = await import("mongoose");
       matchValues.push(new mongoose.default.Types.ObjectId(batchMongoId));
     } catch {
-      // ignore
+      
     }
   }
 
-  // Use native collection.find to avoid Mongoose casting batchId to string only (DB may have ObjectId)
+  
   const cursor = EnrollmentModel.collection.find({
     batchId: { $in: matchValues },
   } as Record<string, unknown>);

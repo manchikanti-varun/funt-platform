@@ -1,6 +1,3 @@
-/**
- * Certificate controller – generate (admin), eligibility check, public verify (no auth).
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/certificate.service.js";
@@ -63,14 +60,12 @@ export const downloadCertificatePdf = asyncHandler(async (req: Request, res: Res
   res.send(buffer);
 });
 
-/** Student: list my certificates. */
 export const getMyCertificates = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const data = await service.listCertificatesForStudent(studentId);
   successRes(res, data);
 });
 
-/** Student: generate certificate for self (after course completion). */
 export const postGenerateMyCertificate = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const { batchId } = req.body ?? {};
@@ -79,7 +74,6 @@ export const postGenerateMyCertificate = asyncHandler(async (req: Request, res: 
   successRes(res, data, "Certificate generated", 201);
 });
 
-/** GET /api/certificates/batch/:batchId/students – list students with certificate status (admin). */
 export const listBatchCertificateStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const batchId = req.params.batchId;
   if (!batchId) throw new AppError("batchId is required", 400);
@@ -87,7 +81,6 @@ export const listBatchCertificateStatus = asyncHandler(async (req: Request, res:
   successRes(res, data);
 });
 
-/** POST /api/certificates/batch/:batchId/generate – bulk generate (admin). */
 export const bulkGenerateBatchCertificates = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const batchId = req.params.batchId;
   const issuedBy = getUserId(req);
@@ -98,7 +91,6 @@ export const bulkGenerateBatchCertificates = asyncHandler(async (req: Request, r
   successRes(res, result, "Bulk generate completed");
 });
 
-/** GET /api/certificates/batch/:batchId/zip?certificateIds=id1,id2 – download certificates as ZIP (admin). */
 export const downloadBatchCertificatesZip = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const batchId = req.params.batchId;
   const raw = (req.query.certificateIds as string) ?? "";

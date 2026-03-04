@@ -1,6 +1,3 @@
-/**
- * AuditLog Mongoose model – aligned with shared AuditLog type.
- */
 
 import mongoose, { Schema } from "mongoose";
 

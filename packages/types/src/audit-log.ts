@@ -1,6 +1,3 @@
-/**
- * Audit log entity – action trail for governance.
- */
 
 export interface AuditLog {
   id: string;

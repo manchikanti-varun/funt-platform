@@ -1,7 +1,3 @@
-/**
- * Free backend port, wait until it's free (Windows TIME_WAIT), then start backend only.
- * Usage: npm run dev:backend
- */
 const { execSync, spawn } = require("child_process");
 const path = require("path");
 

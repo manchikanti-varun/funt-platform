@@ -1,7 +1,3 @@
-/**
- * Centralized error handling middleware.
- * Production: never expose stack traces or internal details; log without sensitive data.
- */
 
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError.js";

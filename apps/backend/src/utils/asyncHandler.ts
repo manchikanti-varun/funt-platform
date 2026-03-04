@@ -1,6 +1,3 @@
-/**
- * Async route handler wrapper – catches promise rejections for global error middleware.
- */
 
 import type { Request, Response, NextFunction } from "express";
 

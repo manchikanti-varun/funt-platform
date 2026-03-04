@@ -1,6 +1,3 @@
-/**
- * Course controller – CRUD, reorder, duplicate, archive. Admin/Super Admin only.
- */
 
 import type { Request, Response } from "express";
 import * as service from "../services/course.service.js";
