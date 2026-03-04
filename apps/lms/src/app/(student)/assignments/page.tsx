@@ -78,7 +78,10 @@ export default function AssignmentsPage() {
         .then(([assignRes, subsRes]) => {
           if (assignRes.success && assignRes.data) {
             setModuleAssignment(assignRes.data);
-            setSubmissionType((assignRes.data.submissionType as string) || SUBMISSION_TYPE.TEXT);
+            const raw = assignRes.data.submissionType;
+            const st: SUBMISSION_TYPE =
+              raw === SUBMISSION_TYPE.LINK ? SUBMISSION_TYPE.LINK : raw === SUBMISSION_TYPE.FILE ? SUBMISSION_TYPE.FILE : SUBMISSION_TYPE.TEXT;
+            setSubmissionType(st);
           }
           if (subsRes.success && subsRes.data) setMySubmissions(subsRes.data);
         })
