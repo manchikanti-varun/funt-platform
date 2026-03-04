@@ -41,7 +41,7 @@ export function getEnv() {
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
     backendPublicUrl: process.env.BACKEND_PUBLIC_URL ?? "",
-    frontendAdminUrl: process.env.FRONTEND_ADMIN_URL ?? "http:
+    frontendAdminUrl: process.env.FRONTEND_ADMIN_URL ?? "http://localhost:3000",
     frontendLmsUrl: process.env.FRONTEND_LMS_URL ?? "http://localhost:3001",
     nodeEnv,
     isProduction,
