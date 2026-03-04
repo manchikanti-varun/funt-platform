@@ -36,8 +36,8 @@ export default function GlobalAssignmentsPage() {
   const sortedList = useMemo(() => {
     if (!sortKey) return list;
     return [...list].sort((a, b) => {
-      let av: unknown = (a as Record<string, unknown>)[sortKey];
-      let bv: unknown = (b as Record<string, unknown>)[sortKey];
+      let av: unknown = (a as unknown as Record<string, unknown>)[sortKey];
+      let bv: unknown = (b as unknown as Record<string, unknown>)[sortKey];
       if (sortKey === "skillTags") {
         av = Array.isArray(av) ? av.join(" ") : "";
         bv = Array.isArray(bv) ? bv.join(" ") : "";
