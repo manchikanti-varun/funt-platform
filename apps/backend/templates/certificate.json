@@ -1,0 +1,23 @@
+{
+  "size": "A4",
+  "margin": 72,
+  "organization": "FUNT Robotics Academy",
+  "title": "Certificate of Completion",
+  "blocks": [
+    { "type": "text", "text": "{{organization}}", "fontSize": 24, "align": "center", "marginBottom": 8 },
+    { "type": "text", "text": "{{title}}", "fontSize": 18, "align": "center", "marginBottom": 24 },
+    {
+      "type": "text",
+      "label": "This is to certify that ",
+      "placeholder": "studentName",
+      "text": " has successfully completed the course:",
+      "fontSize": 12,
+      "align": "center",
+      "marginBottom": 8
+    },
+    { "type": "text", "placeholder": "courseName", "fontSize": 14, "align": "center", "marginBottom": 24 },
+    { "type": "text", "label": "Certificate ID: ", "placeholder": "certificateId", "fontSize": 10, "align": "center", "marginBottom": 4 },
+    { "type": "text", "label": "Issue Date: ", "placeholder": "issuedDate", "fontSize": 10, "align": "center", "marginBottom": 48 }
+  ],
+  "footer": "Verify at: /verify/{{certificateId}}"
+}

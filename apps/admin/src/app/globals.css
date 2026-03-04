@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50/80 text-slate-800 antialiased;
+  }
+  /* Premium typography scale */
+  h1 { @apply tracking-tight; }
+  h2 { @apply tracking-tight; }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm ring-1 ring-slate-100/80 transition duration-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 focus:ring-offset-0;
+  }
+  .btn-primary {
+    @apply rounded-xl bg-teal-600 px-4 py-2.5 font-medium text-white shadow-lg shadow-teal-900/10 transition duration-200 hover:bg-teal-500 hover:shadow-xl hover:shadow-teal-900/15 active:scale-[0.98] disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50/80 hover:text-teal-700 hover:shadow-md;
+  }
+  .badge {
+    @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  .badge-success {
+    @apply badge bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200/50;
+  }
+  .badge-warning {
+    @apply badge bg-amber-100 text-amber-800 ring-1 ring-amber-200/50;
+  }
+  .badge-gold {
+    @apply badge bg-violet-100 text-violet-800 ring-1 ring-violet-200/50;
+  }
+  .badge-info {
+    @apply badge bg-sky-100 text-sky-800 ring-1 ring-sky-200/50;
+  }
+  .badge-danger {
+    @apply badge bg-red-100 text-red-800 ring-1 ring-red-200/50;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/50 transition duration-200 hover:shadow-xl hover:shadow-slate-300/25 hover:ring-slate-200/60;
+  }
+  .card-elevated {
+    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/80;
+  }
+  .card-premium {
+    @apply rounded-2xl border-2 border-teal-200/80 bg-white p-6 shadow-xl shadow-teal-900/5 ring-1 ring-teal-100/50;
+  }
+  .card-colored {
+    @apply rounded-2xl border-0 bg-white p-6 shadow-xl ring-1 ring-slate-100/50;
+  }
+}

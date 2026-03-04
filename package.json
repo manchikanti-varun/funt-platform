@@ -1,0 +1,25 @@
+{
+  "name": "funt-platform",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "node scripts/dev.js",
+    "dev:backend": "node scripts/start-backend-only.js",
+    "free-ports": "powershell -ExecutionPolicy Bypass -File ./scripts/free-ports.ps1",
+    "free-ports:frontend": "powershell -ExecutionPolicy Bypass -File ./scripts/free-ports-frontend.ps1",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
