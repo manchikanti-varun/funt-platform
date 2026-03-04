@@ -29,7 +29,12 @@ export async function api<T>(
   };
   if (token) (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  } catch (err) {
+    return { success: false, message: "Network error. Check that the API URL is correct and CORS allows this origin." };
+  }
   const json = await res.json().catch(() => ({}));
 
   if (!res.ok) {
@@ -37,7 +42,8 @@ export async function api<T>(
       clearToken();
       if (typeof window !== "undefined") window.location.href = "/login";
     }
-    return { success: false, message: (json as { message?: string }).message ?? "Request failed" };
+    const msg = (json as { message?: string }).message ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
+    return { success: false, message: msg };
   }
   return { success: true, data: json.data ?? json, message: json.message };
 }
