@@ -1,11 +1,18 @@
-
 import { ROLE } from "@funt-platform/constants";
 
 export interface JwtPayload {
   userId: string;
-  funtId: string;
+  username: string;
   roles: string[];
   exp?: number;
+}
+
+/** True when the user is a trainer but not admin/super-admin (read-only in some admin screens). */
+export function isTrainerOnly(roles: string[] | undefined): boolean {
+  if (!roles?.length) return false;
+  const hasTrainer = roles.includes(ROLE.TRAINER);
+  const isStaff = roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN);
+  return hasTrainer && !isStaff;
 }
 
 export function parseJwtPayload(token: string): JwtPayload | null {
@@ -22,9 +29,4 @@ export function parseJwtPayload(token: string): JwtPayload | null {
 export function isTokenExpired(payload: JwtPayload): boolean {
   if (!payload.exp) return false;
   return payload.exp * 1000 < Date.now();
-}
-
-export function isTrainerOnly(roles: string[] | undefined): boolean {
-  if (!Array.isArray(roles)) return false;
-  return roles.includes(ROLE.TRAINER) && !roles.includes(ROLE.ADMIN) && !roles.includes(ROLE.SUPER_ADMIN);
 }

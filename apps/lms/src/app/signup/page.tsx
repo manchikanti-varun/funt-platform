@@ -8,7 +8,7 @@ import { setToken } from "@/lib/api";
 import logoSrc from "@/assets/funt-logo.png";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
-const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12"];
+const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12", "other"];
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return "Password must be at least 8 characters";
@@ -30,7 +30,11 @@ function SignupForm() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [username, setUsername] = useState("");
+  const [age, setAge] = useState("");
+  const [address, setAddress] = useState("");
   const [grade, setGrade] = useState("");
+  const [gradeOther, setGradeOther] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [city, setCity] = useState("");
   const [password, setPassword] = useState("");
@@ -77,8 +81,25 @@ function SignupForm() {
       setSubmitError("Parent phone number is required");
       return;
     }
+    if (!username.trim()) {
+      setSubmitError("Username is required");
+      return;
+    }
+    const ageNum = parseInt(age, 10);
+    if (!age || Number.isNaN(ageNum) || ageNum < 7) {
+      setSubmitError("Age is required (minimum 7 years)");
+      return;
+    }
+    if (!address.trim()) {
+      setSubmitError("Address is required");
+      return;
+    }
     if (!schoolName.trim()) {
-      setSubmitError("School name is required");
+      setSubmitError("School / college name is required");
+      return;
+    }
+    if (grade === "other" && !gradeOther.trim()) {
+      setSubmitError("Please enter your grade, degree, or year");
       return;
     }
     setStep(2);
@@ -103,10 +124,14 @@ function SignupForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signupToken: token,
+          username: username.trim(),
           name: name.trim(),
           email: email.trim(),
           mobile: mobile.trim(),
+          age: parseInt(age, 10),
+          address: address.trim(),
           class: grade || undefined,
+          gradeOther: grade === "other" ? gradeOther.trim() : undefined,
           schoolName: schoolName.trim(),
           city: city.trim() || undefined,
           password,
@@ -163,6 +188,18 @@ function SignupForm() {
         {step === 1 ? (
           <form onSubmit={handleStep1Next} className="mt-6 space-y-4">
             <div>
+              <label className="mb-1.5 block text-sm font-semibold text-funt-ink">Username (login)</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="input w-full"
+                placeholder="e.g. srikar.ch"
+                autoComplete="username"
+              />
+            </div>
+            <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Full Name (Required)</label>
               <input
                 type="text"
@@ -194,6 +231,29 @@ function SignupForm() {
               />
             </div>
             <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Age (years)</label>
+              <input
+                type="number"
+                min={7}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                required
+                className="input w-full"
+                placeholder="Minimum 7"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Address</label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                rows={2}
+                className="input w-full resize-y"
+                placeholder="Full address"
+              />
+            </div>
+            <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Class</label>
               <select
                 value={grade}
@@ -202,12 +262,26 @@ function SignupForm() {
               >
                 <option value="">Select class</option>
                 {CLASS_OPTIONS.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c === "other" ? "Other (above 12 / college)" : c}
+                  </option>
                 ))}
               </select>
             </div>
+            {grade === "other" && (
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Describe your grade / program</label>
+                <input
+                  type="text"
+                  value={gradeOther}
+                  onChange={(e) => setGradeOther(e.target.value)}
+                  className="input w-full"
+                  placeholder="e.g. B.Tech 2nd year"
+                />
+              </div>
+            )}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">School Name (Required)</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">School / college name (required)</label>
               <input
                 type="text"
                 value={schoolName}

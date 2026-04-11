@@ -13,6 +13,7 @@ const enrollmentSchema = new Schema(
       default: ENROLLMENT_STATUS.ACTIVE,
     },
     enrolledAt: { type: Date, required: true, default: Date.now },
+    accessBlocked: { type: Boolean, required: false, default: false },
     progressTracking: { type: Schema.Types.Mixed, required: false },
   },
   { timestamps: false }

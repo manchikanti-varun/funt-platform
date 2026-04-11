@@ -4,7 +4,9 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-slate-50 via-white to-teal-50/20 text-slate-800 antialiased min-h-screen;
+    @apply bg-white text-funt-ink antialiased min-h-screen;
+    background-image: radial-gradient(1200px 500px at 10% -10%, rgba(245, 196, 0, 0.18), transparent 55%),
+      radial-gradient(900px 400px at 100% 0%, rgba(254, 243, 199, 0.5), transparent 50%);
   }
   h1 { @apply tracking-tight; }
   h2 { @apply tracking-tight; }
@@ -12,42 +14,33 @@
 
 @layer components {
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm ring-1 ring-slate-100/80 transition duration-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 focus:ring-offset-0;
+    @apply w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-funt-ink placeholder-black/40 shadow-sm ring-1 ring-black/5 transition duration-200 focus:border-funt-gold focus:outline-none focus:ring-2 focus:ring-funt-gold/30 focus:ring-offset-0;
   }
   .btn-primary {
-    @apply rounded-xl bg-teal-600 px-4 py-2.5 font-medium text-white shadow-lg shadow-teal-900/10 transition duration-200 hover:bg-teal-500 hover:shadow-xl hover:shadow-teal-900/15 active:scale-[0.98] disabled:opacity-50;
+    @apply rounded-xl bg-funt-gold px-4 py-2.5 font-semibold text-black shadow-md transition duration-200 hover:bg-funt-gold-hover active:scale-[0.98] disabled:opacity-50;
   }
   .btn-secondary {
-    @apply rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50/80 hover:text-teal-700 hover:shadow-md;
+    @apply rounded-xl border border-black/15 bg-white px-4 py-2.5 font-medium text-funt-ink shadow-sm ring-1 ring-black/5 transition duration-200 hover:border-black/25 hover:bg-black/[0.03];
   }
   .badge {
     @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
   }
   .badge-success {
-    @apply badge bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200/50;
+    @apply badge bg-black text-white ring-1 ring-black/10;
   }
   .badge-warning {
-    @apply badge bg-amber-100 text-amber-800 ring-1 ring-amber-200/50;
-  }
-  .badge-gold {
-    @apply badge bg-violet-100 text-violet-800 ring-1 ring-violet-200/50;
-  }
-  .badge-info {
-    @apply badge bg-sky-100 text-sky-800 ring-1 ring-sky-200/50;
-  }
-  .badge-danger {
-    @apply badge bg-red-100 text-red-800 ring-1 ring-red-200/50;
+    @apply badge bg-funt-gold/25 text-black ring-1 ring-funt-gold/40;
   }
   .card {
-    @apply rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/50 transition duration-200 hover:shadow-xl hover:shadow-slate-300/25;
+    @apply rounded-2xl border border-black/10 bg-white p-6 shadow-md shadow-black/5 ring-1 ring-black/5 transition duration-200 hover:shadow-lg;
   }
   .card-elevated {
-    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/80;
+    @apply rounded-2xl border border-black/10 bg-white p-6 shadow-lg shadow-black/10 ring-1 ring-black/5;
   }
   .card-premium {
-    @apply rounded-2xl border-2 border-teal-200/80 bg-white p-6 shadow-xl shadow-teal-900/5 ring-1 ring-teal-100/50;
+    @apply rounded-2xl border-2 border-funt-gold/50 bg-white p-6 shadow-lg shadow-black/10;
   }
   .card-student {
-    @apply rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/50 transition duration-200 hover:border-teal-200 hover:shadow-xl hover:shadow-teal-900/5 hover:ring-teal-100/80;
+    @apply rounded-2xl border border-black/10 bg-white p-6 shadow-md shadow-black/5 transition duration-200 hover:border-funt-gold/40 hover:shadow-lg;
   }
 }

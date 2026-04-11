@@ -76,11 +76,20 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
       throw new AppError("Forbidden: you can only edit batches assigned to you", 403);
     }
   }
-  const { name, courseId, courseIds, trainerId, startDate, endDate, zoomLink, moderatorIds } = req.body ?? {};
+  const { name, courseId, courseIds, trainerId, startDate, endDate, zoomLink, moderatorIds, certificatePriceCoins } = req.body ?? {};
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : undefined);
   const data = await service.updateBatch(
     id,
-    { name, courseIds: ids, trainerId, startDate: startDate ? new Date(startDate) : undefined, endDate: endDate ? new Date(endDate) : undefined, zoomLink, moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined },
+    {
+      name,
+      courseIds: ids,
+      trainerId,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      zoomLink,
+      moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
+      certificatePriceCoins: certificatePriceCoins !== undefined ? Number(certificatePriceCoins) : undefined,
+    },
     performedBy
   );
   successRes(res, data, "Batch updated");
@@ -114,8 +123,8 @@ export const addBatchStudent = asyncHandler(async (req: Request, res: Response):
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Batch ID is required", 400);
-  const identifier = (req.body?.studentId ?? req.body?.funtId ?? req.body?.identifier) as string | undefined;
-  if (!identifier) throw new AppError("studentId or funtId is required", 400);
+  const identifier = (req.body?.studentId ?? req.body?.username ?? req.body?.identifier) as string | undefined;
+  if (!identifier) throw new AppError("studentId or username is required", 400);
   const data = await enrollmentService.createEnrollment({ studentId: identifier, batchId: id, createdBy: performedBy });
   successRes(res, data, "Student added to batch", 201);
 });
@@ -124,8 +133,8 @@ export const bulkAddBatchStudents = asyncHandler(async (req: Request, res: Respo
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Batch ID is required", 400);
-  const identifiers = (req.body?.identifiers ?? req.body?.studentFuntIds ?? req.body?.funtIds ?? []) as string[];
-  if (!Array.isArray(identifiers)) throw new AppError("identifiers or studentFuntIds must be an array", 400);
+  const identifiers = (req.body?.identifiers ?? req.body?.studentUsernames ?? req.body?.usernames ?? []) as string[];
+  if (!Array.isArray(identifiers)) throw new AppError("identifiers or studentUsernames must be an array", 400);
   const data = await enrollmentService.bulkEnroll(id, identifiers, performedBy);
   successRes(res, data, "Bulk add completed");
 });

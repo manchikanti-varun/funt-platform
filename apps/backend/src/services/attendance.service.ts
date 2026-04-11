@@ -11,26 +11,29 @@ import { AppError } from "../utils/AppError.js";
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-export async function resolveFuntIdsToStudentIds(
+export async function resolveUsernamesOrIdsToStudentIds(
   identifiers: string[]
 ): Promise<{ studentIds: string[]; notFound: string[] }> {
   const trimmed = [...new Set(identifiers.map((s) => s.trim()).filter(Boolean))];
   if (trimmed.length === 0) return { studentIds: [], notFound: [] };
   const objectIds = trimmed.filter((id) => OBJECT_ID_REGEX.test(id));
-  const funtIds = trimmed.filter((id) => !OBJECT_ID_REGEX.test(id));
+  const usernames = trimmed.filter((id) => !OBJECT_ID_REGEX.test(id)).map((s) => s.toLowerCase());
   const users = await UserModel.find({
     $or: [
       ...(objectIds.length ? [{ _id: { $in: objectIds } }] : []),
-      ...(funtIds.length ? [{ funtId: { $in: funtIds } }] : []),
+      ...(usernames.length ? [{ username: { $in: usernames } }] : []),
     ].filter(Boolean),
   })
-    .select("_id funtId")
+    .select("_id username")
     .lean()
     .exec();
   const resolved = new Set(users.map((u) => String(u._id)));
+  const usernameSet = new Set(
+    users.map((u) => (u as { username?: string }).username?.toLowerCase()).filter(Boolean) as string[]
+  );
   const notFound = trimmed.filter((id) => {
     if (OBJECT_ID_REGEX.test(id)) return !resolved.has(id);
-    return !users.some((u) => (u as { funtId?: string }).funtId === id);
+    return !usernameSet.has(id.toLowerCase());
   });
   return { studentIds: Array.from(resolved), notFound };
 }
@@ -150,16 +153,16 @@ export async function getMyAttendance(studentId: string) {
   });
 }
 
-/** Mark batch attendance by pasting FUNT IDs (or user IDs). Only listed students are marked PRESENT. */
-export async function markBatchAttendanceByFuntIds(
+/** Mark batch attendance by pasting usernames (or user IDs). Only listed students are marked PRESENT. */
+export async function markBatchAttendanceByUsernames(
   batchId: string,
   sessionDate: string | Date,
-  funtIdsOrUserIds: string[],
+  usernamesOrUserIds: string[],
   markedBy: string,
   isSuperAdminOverride?: boolean
 ) {
-  const { studentIds, notFound } = await resolveFuntIdsToStudentIds(funtIdsOrUserIds);
-  if (studentIds.length === 0) throw new AppError("No valid FUNT IDs or user IDs found", 400);
+  const { studentIds, notFound } = await resolveUsernamesOrIdsToStudentIds(usernamesOrUserIds);
+  if (studentIds.length === 0) throw new AppError("No valid usernames or user IDs found", 400);
   const attendanceRecords = studentIds.map((studentId) => ({
     studentId,
     status: ATTENDANCE_STATUS.PRESENT as const,
@@ -177,7 +180,7 @@ export async function markBatchAttendanceByFuntIds(
 export async function addPresentToBatchSession(
   batchId: string,
   sessionDate: string | Date,
-  funtIdsOrUserIds: string[],
+  usernamesOrUserIds: string[],
   markedBy: string,
   isSuperAdminOverride?: boolean
 ) {
@@ -191,7 +194,7 @@ export async function addPresentToBatchSession(
   if (existing.markedBy !== markedBy && !isSuperAdminOverride) {
     throw new AppError("Only the session creator or Super Admin can add to this session", 403);
   }
-  const { studentIds, notFound } = await resolveFuntIdsToStudentIds(funtIdsOrUserIds);
+  const { studentIds, notFound } = await resolveUsernamesOrIdsToStudentIds(usernamesOrUserIds);
   const existingPresentSet = new Set(
     existing.attendanceRecords.filter((r) => r.status === ATTENDANCE_STATUS.PRESENT).map((r) => r.studentId)
   );
@@ -234,7 +237,7 @@ export async function addPresentToBatchSession(
 
 export interface StudentAttendanceSummary {
   studentId: string;
-  funtId: string;
+  username: string;
   name: string;
   sessions: Array<{ date: string; status: string }>;
   presentCount: number;
@@ -250,11 +253,11 @@ export async function getAttendanceByStudentsForBatch(batchId: string): Promise<
   const studentIds = enrollments.map((e) => e.studentId);
   const byStudent = new Map<
     string,
-    { funtId: string; name: string; sessions: Array<{ date: string; status: string }>; presentCount: number }
+    { username: string; name: string; sessions: Array<{ date: string; status: string }>; presentCount: number }
   >();
   for (const e of enrollments) {
     byStudent.set(e.studentId, {
-      funtId: e.funtId,
+      username: e.username,
       name: e.name,
       sessions: [],
       presentCount: 0,
@@ -275,7 +278,7 @@ export async function getAttendanceByStudentsForBatch(batchId: string): Promise<
   const totalSessions = sessions.length;
   return Array.from(byStudent.entries()).map(([studentId, row]) => ({
     studentId,
-    funtId: row.funtId,
+    username: row.username,
     name: row.name,
     sessions: row.sessions.sort((a, b) => b.date.localeCompare(a.date)),
     presentCount: row.presentCount,

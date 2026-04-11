@@ -16,6 +16,9 @@ const certificateSchema = new Schema(
       enum: Object.values(CERTIFICATE_STATUS),
       default: CERTIFICATE_STATUS.ISSUED,
     },
+    coinReward: { type: Number, required: false, default: 0 },
+    coinRewardGrantedAt: { type: Date, required: false },
+    coinRewardGrantedBy: { type: String, required: false },
   },
   { timestamps: false }
 );

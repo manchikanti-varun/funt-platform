@@ -12,7 +12,7 @@ interface EnrollmentRequestRow {
   batchName: string;
   courseTitle: string;
   studentId: string;
-  studentFuntId?: string;
+  studentUsername?: string;
   studentName?: string;
   studentEmail?: string;
   requestedAt: string;
@@ -129,7 +129,7 @@ export default function BatchEnrollmentRequestsPage() {
                     <tr key={r.id} className="hover:bg-slate-50/50">
                       <td className="px-4 py-3 text-sm text-slate-800">{r.courseTitle}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className="font-mono font-medium text-slate-800">{r.studentFuntId ?? r.studentId}</span>
+                        <span className="font-mono font-medium text-slate-800">{r.studentUsername ?? r.studentId}</span>
                         {r.studentName && <span className="ml-1 text-slate-500">— {r.studentName}</span>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500">{new Date(r.requestedAt).toLocaleString()}</td>

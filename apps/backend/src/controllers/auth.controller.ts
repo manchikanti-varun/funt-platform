@@ -1,6 +1,12 @@
 
 import type { Request, Response } from "express";
-import { login as loginService, parentLogin as parentLoginService, createStudent, changePassword as changePasswordService } from "../services/auth.service.js";
+import {
+  login as loginService,
+  parentLogin as parentLoginService,
+  createStudent,
+  changePassword as changePasswordService,
+  lookupStudentUsernameByEmail,
+} from "../services/auth.service.js";
 import {
   getGoogleAuthUrl,
   exchangeCodeForTokens,
@@ -17,6 +23,13 @@ import { signToken } from "../utils/jwt.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 
+export const forgotStudentUsername = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body as { email?: string };
+  if (!email?.trim()) throw new AppError("Email is required", 400);
+  const data = await lookupStudentUsernameByEmail(email);
+  res.status(200).json({ success: true, data });
+});
+
 export const changePassword = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = (req as { user?: { userId?: string } }).user?.userId;
   if (!userId) throw new AppError("Unauthorized", 401);
@@ -26,15 +39,16 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
 });
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { funtId, password } = req.body as { funtId?: string; password: string };
-  if (!password || !funtId?.trim()) {
-    throw new AppError("FUNT ID and password are required", 400);
+  const { username, password } = req.body as { username?: string; password: string };
+  const ident = (username ?? "").trim();
+  if (!password || !ident) {
+    throw new AppError("Username and password are required", 400);
   }
   const { jwtSecret, jwtExpiresIn } = getEnv();
   const userAgent = req.headers["user-agent"];
   const ip = (req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress;
   const result = await loginService(
-    { funtId: funtId.trim(), password },
+    { username: ident, password },
     jwtSecret,
     jwtExpiresIn,
     { userAgent, ip }
@@ -43,15 +57,15 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
 });
 
 export const parentLogin = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { studentFuntId, mobile } = req.body as { studentFuntId: string; mobile: string };
-  if (!studentFuntId || !mobile) {
-    throw new AppError("Student FUNT ID and mobile are required", 400);
+  const { studentUsername, mobile } = req.body as { studentUsername: string; mobile: string };
+  if (!studentUsername || !mobile) {
+    throw new AppError("Student username and mobile are required", 400);
   }
   const { jwtSecret, jwtExpiresIn } = getEnv();
   const userAgent = req.headers["user-agent"];
   const ip = (req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress;
   const result = await parentLoginService(
-    { studentFuntId, mobile },
+    { studentUsername, mobile },
     jwtSecret,
     jwtExpiresIn,
     { userAgent, ip }
@@ -183,41 +197,62 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
   const { jwtSecret, jwtExpiresIn } = getEnv();
   const body = req.body as {
     signupToken?: string;
+    username?: string;
     name?: string;
     email?: string;
     mobile?: string;
+    age?: number;
+    address?: string;
     class?: string;
+    gradeOther?: string;
     schoolName?: string;
     city?: string;
     password?: string;
   };
   const {
     signupToken,
+    username,
     name,
     email,
     mobile,
+    age,
+    address,
     class: grade,
+    gradeOther,
     schoolName,
     city,
     password,
   } = body;
 
   if (!signupToken?.trim()) throw new AppError("signupToken is required", 400);
-  const payload = verifyGoogleSignupToken(signupToken.trim(), jwtSecret);
+  let payload: { email: string; name?: string };
+  try {
+    payload = verifyGoogleSignupToken(signupToken.trim(), jwtSecret);
+  } catch {
+    throw new AppError("Invalid or expired signup link. Please sign in with Google again.", 400);
+  }
+  if (!username?.trim()) throw new AppError("Username is required", 400);
   if (!name?.trim()) throw new AppError("Full name is required", 400);
   if (!email?.trim()) throw new AppError("Email is required", 400);
   if (email.trim().toLowerCase() !== payload.email.toLowerCase()) {
     throw new AppError("Email must match the Google account you signed in with", 400);
   }
   if (!mobile?.trim()) throw new AppError("Parent phone number is required", 400);
-  if (!schoolName?.trim()) throw new AppError("School name is required", 400);
+  if (age == null || Number.isNaN(Number(age)) || Number(age) < 7) {
+    throw new AppError("Age is required (minimum 7 years)", 400);
+  }
+  if (!address?.trim()) throw new AppError("Address is required", 400);
+  if (!schoolName?.trim()) throw new AppError("School / college name is required", 400);
   if (!password) throw new AppError("Password is required", 400);
   validateSignupPassword(password);
 
-  const validGrades = ["6", "7", "8", "9", "10", "11", "12"];
+  const validGrades = ["6", "7", "8", "9", "10", "11", "12", "other"];
   const gradeVal = grade?.trim();
   if (gradeVal && !validGrades.includes(gradeVal)) {
-    throw new AppError("Class must be between 6 and 12", 400);
+    throw new AppError("Invalid class selection", 400);
+  }
+  if (gradeVal === "other" && !gradeOther?.trim()) {
+    throw new AppError("Please enter your grade or program details", 400);
   }
 
   const existing = await UserModel.findOne({ email: email.trim().toLowerCase() }).exec();
@@ -225,24 +260,40 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     throw new AppError("An account with this email already exists. Please sign in.", 400);
   }
 
-  const { id, funtId } = await createStudent({
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    mobile: mobile.trim(),
-    password,
-    grade: gradeVal || undefined,
-    schoolName: schoolName.trim(),
-    city: city?.trim() || undefined,
-  });
+  let id: string;
+  let createdUsername: string;
+  try {
+    const result = await createStudent({
+      username: username.trim(),
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      mobile: mobile.trim(),
+      password,
+      age: Number(age),
+      address: address.trim(),
+      grade: gradeVal && gradeVal !== "other" ? gradeVal : gradeVal === "other" ? "other" : undefined,
+      gradeOther: gradeVal === "other" ? gradeOther!.trim() : undefined,
+      schoolName: schoolName.trim(),
+      city: city?.trim() || undefined,
+    });
+    id = result.id;
+    createdUsername = result.username;
+  } catch (err: unknown) {
+    const mongoErr = err as { code?: number };
+    if (mongoErr?.code === 11000) {
+      throw new AppError("An account with this email already exists. Please sign in.", 400);
+    }
+    throw err;
+  }
 
   const token = signToken(
-    { userId: id, funtId, roles: [ROLE.STUDENT] },
+    { userId: id, username: createdUsername, roles: [ROLE.STUDENT] },
     jwtSecret,
     jwtExpiresIn
   );
   const user = {
     id,
-    funtId,
+    username: createdUsername,
     name: name.trim(),
     roles: [ROLE.STUDENT],
     status: ACCOUNT_STATUS.ACTIVE,

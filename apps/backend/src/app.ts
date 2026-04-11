@@ -25,6 +25,7 @@ import { skillProfileRoutes } from "./routes/skillProfile.routes.js";
 import { achievementRoutes } from "./routes/achievement.routes.js";
 import { auditRoutes } from "./routes/audit.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
+import { shopRoutes } from "./routes/shop.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -65,6 +66,7 @@ app.use("/api/skills", skillProfileRoutes);
 app.use("/api/achievements", achievementRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/shop", shopRoutes);
 app.use("/verify", verifyRoutes);
 
 app.use(errorHandler);

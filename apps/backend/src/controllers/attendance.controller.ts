@@ -46,14 +46,18 @@ export const getMyAttendance = asyncHandler(async (req: Request, res: Response):
   successRes(res, data);
 });
 
-export const markBatchAttendanceByFuntIds = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+export const markBatchAttendanceByUsernames = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const markedBy = getUserId(req);
   const batchId = req.params.batchId as string;
   if (!batchId) throw new AppError("batchId is required", 400);
-  const { sessionDate, funtIds } = req.body ?? {};
+  const { sessionDate, usernames } = req.body ?? {};
   if (!sessionDate) throw new AppError("sessionDate is required", 400);
-  const ids = Array.isArray(funtIds) ? funtIds : typeof funtIds === "string" ? funtIds.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean) : [];
-  if (ids.length === 0) throw new AppError("funtIds (or CSV paste) is required", 400);
+  const ids = Array.isArray(usernames)
+    ? usernames
+    : typeof usernames === "string"
+      ? usernames.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+      : [];
+  if (ids.length === 0) throw new AppError("usernames (or CSV paste) is required", 400);
   const isTrainer = req.user?.roles?.includes(ROLE.TRAINER);
   const isSuperAdmin = req.user?.roles?.includes(ROLE.SUPER_ADMIN);
   if (isTrainer && !isSuperAdmin) {
@@ -62,7 +66,7 @@ export const markBatchAttendanceByFuntIds = asyncHandler(async (req: Request, re
       throw new AppError("You can only mark attendance for batches assigned to you", 403);
     }
   }
-  const data = await service.markBatchAttendanceByFuntIds(
+  const data = await service.markBatchAttendanceByUsernames(
     batchId,
     sessionDate,
     ids,
@@ -83,10 +87,14 @@ export const addPresentToBatchSession = asyncHandler(async (req: Request, res: R
   const markedBy = getUserId(req);
   const batchId = req.params.batchId as string;
   if (!batchId) throw new AppError("batchId is required", 400);
-  const { sessionDate, funtIds } = req.body ?? {};
+  const { sessionDate, usernames } = req.body ?? {};
   if (!sessionDate) throw new AppError("sessionDate is required", 400);
-  const ids = Array.isArray(funtIds) ? funtIds : typeof funtIds === "string" ? funtIds.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean) : [];
-  if (ids.length === 0) throw new AppError("funtIds (or CSV paste) is required", 400);
+  const ids = Array.isArray(usernames)
+    ? usernames
+    : typeof usernames === "string"
+      ? usernames.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+      : [];
+  if (ids.length === 0) throw new AppError("usernames (or CSV paste) is required", 400);
   const isTrainer = req.user?.roles?.includes(ROLE.TRAINER);
   const isSuperAdmin = req.user?.roles?.includes(ROLE.SUPER_ADMIN);
   if (isTrainer && !isSuperAdmin) {

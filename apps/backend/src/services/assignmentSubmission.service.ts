@@ -8,6 +8,7 @@ import { findBatchByParam, getBatchCourseSnapshots, getModuleAssignmentOverrides
 import { findAssignmentByParam } from "./globalAssignment.service.js";
 import { SUBMISSION_TYPE, SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { awardStudentXp } from "./studentCourse.service.js";
 import { requireActiveEnrollment } from "./enrollment.service.js";
 import { ensureFirstAssignmentBadge } from "./achievement.service.js";
 import { generateSubmissionId } from "../utils/funtIdGenerator.js";
@@ -130,6 +131,7 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
 
   if (input.status === "APPROVED") {
     await createAuditLog("ASSIGNMENT_APPROVED", input.reviewedBy, "AssignmentSubmission", String(sub._id));
+    await awardStudentXp(sub.studentId, 50).catch(() => {});
     await ensureFirstAssignmentBadge(sub.studentId).catch(() => {});
     const now = new Date();
     const subCourseId = (sub as { courseId?: string }).courseId;
@@ -236,15 +238,15 @@ export async function bulkReviewSubmissions(input: BulkReviewSubmissionsInput) {
   return result;
 }
 
-async function getStudentFuntIdMap(studentIds: string[]): Promise<Map<string, string>> {
+async function getStudentUsernameMap(studentIds: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(studentIds.filter(Boolean))];
   if (unique.length === 0) return new Map();
-  const users = await UserModel.find({ _id: { $in: unique } }).select("_id funtId").lean().exec();
+  const users = await UserModel.find({ _id: { $in: unique } }).select("_id username").lean().exec();
   const map = new Map<string, string>();
   for (const u of users) {
     const id = String(u._id);
-    const funtId = (u as { funtId?: string }).funtId;
-    if (funtId) map.set(id, funtId);
+    const username = (u as { username?: string }).username;
+    if (username) map.set(id, username);
   }
   return map;
 }
@@ -263,11 +265,11 @@ export async function listSubmissionsForBatch(
     query.$or = [{ courseId: options.courseId }, { courseId: null }, { courseId: { $exists: false } }];
   }
   const list = await AssignmentSubmissionModel.find(query).sort({ submittedAt: -1 }).lean().exec();
-  const funtIdMap = await getStudentFuntIdMap(list.map((d) => d.studentId));
+  const usernameMap = await getStudentUsernameMap(list.map((d) => d.studentId));
   return list.map((d) => ({
     id: String(d._id),
     submissionId: (d as { submissionId?: string }).submissionId,
-    studentId: funtIdMap.get(d.studentId) ?? d.studentId,
+    studentId: usernameMap.get(d.studentId) ?? d.studentId,
     batchId: d.batchId,
     courseId: (d as { courseId?: string }).courseId ?? undefined,
     moduleOrder: d.moduleOrder,
@@ -322,16 +324,16 @@ export async function listSubmissionsByAssignmentId(assignmentId: string) {
     .lean()
     .exec();
   const batchIds = [...new Set(list.map((d) => d.batchId))];
-  const [batches, funtIdMap] = await Promise.all([
+  const [batches, usernameMap] = await Promise.all([
     BatchModel.find({ _id: { $in: batchIds } }).select("_id name").lean().exec(),
-    getStudentFuntIdMap(list.map((d) => d.studentId)),
+    getStudentUsernameMap(list.map((d) => d.studentId)),
   ]);
   const batchMap = new Map(batches.map((b) => [String(b._id), (b as { name: string }).name]));
   return list.map((d) => ({
     id: String(d._id),
     submissionId: (d as { submissionId?: string }).submissionId,
     type: "module" as const,
-    studentId: funtIdMap.get(d.studentId) ?? d.studentId,
+    studentId: usernameMap.get(d.studentId) ?? d.studentId,
     batchId: d.batchId,
     batchName: batchMap.get(d.batchId) ?? d.batchId,
     moduleOrder: d.moduleOrder,

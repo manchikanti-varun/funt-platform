@@ -10,7 +10,7 @@ import { Topbar } from "./Topbar";
 
 interface UserMe {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   email?: string;
   mobile: string;
@@ -69,7 +69,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </>
       )}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar user={{ name: user.name, funtId: user.funtId, roles: user.roles }} onMenuClick={() => setSidebarOpen((o) => !o)} />
+        <Topbar user={{ name: user.name, username: user.username, roles: user.roles }} onMenuClick={() => setSidebarOpen((o) => !o)} />
         <main className="flex-1 overflow-auto bg-gradient-to-b from-slate-50/50 to-slate-100/30 p-4 text-slate-800 sm:p-6">{children}</main>
       </div>
     </div>

@@ -181,9 +181,8 @@ export const addAssignmentAccess = asyncHandler(async (req: Request, res: Respon
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Assignment ID is required", 400);
-  const { funtId } = req.body ?? {};
-  const identifier = (req.body?.studentId ?? funtId ?? req.body?.identifier) as string | undefined;
-  if (!identifier) throw new AppError("studentId or funtId is required", 400);
+  const identifier = (req.body?.studentId ?? req.body?.username ?? req.body?.identifier) as string | undefined;
+  if (!identifier) throw new AppError("studentId or username is required", 400);
   const data = await service.addAllowedStudent(id, identifier, performedBy);
   successRes(res, data, "Student added to access list");
 });
@@ -202,7 +201,7 @@ export const bulkAddAssignmentAccess = asyncHandler(async (req: Request, res: Re
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Assignment ID is required", 400);
-  const identifiers = (req.body?.identifiers ?? req.body?.funtIds ?? []) as string[];
+  const identifiers = (req.body?.identifiers ?? req.body?.usernames ?? []) as string[];
   if (!Array.isArray(identifiers)) throw new AppError("identifiers must be an array", 400);
   const data = await service.bulkAddAllowedStudents(id, identifiers, performedBy);
   successRes(res, data, "Bulk add completed");

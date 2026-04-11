@@ -10,7 +10,7 @@ import Link from "next/link";
 
 interface ProfileUser {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   email: string;
   mobile: string;
@@ -21,7 +21,7 @@ interface ProfileUser {
   city: string;
   createdAt?: string;
   updatedAt?: string;
-  linkedStudentFuntIds?: string[];
+  linkedStudentUsernames?: string[];
 }
 
 interface ProfileEnrollment {
@@ -108,19 +108,19 @@ export default function ProfileSearchPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Profile search</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Enter a student FUNT ID (e.g. FS-26-00001) to view their full profile: courses, batch access (paid), certificates, and attendance.
+          Enter a student username (e.g. srikar.ch) to view their full profile: courses, batch access (paid), certificates, and attendance.
           {isSuperAdmin && " As Super Admin you can search any user: students, admins, trainers, or super admins."}
         </p>
       </div>
 
       <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <label className="flex-1 min-w-[200px]">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Student FUNT ID</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700">Student username</span>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. FS-26-00001"
+            placeholder="e.g. srikar.ch"
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
           />
         </label>
@@ -146,7 +146,7 @@ export default function ProfileSearchPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{profile.user.name}</h2>
-                <p className="mt-1 font-mono text-sm text-slate-600">{profile.user.funtId}</p>
+                <p className="mt-1 font-mono text-sm text-slate-600">{profile.user.username}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {profile.user.roles.map((r) => (
                     <span
@@ -202,10 +202,10 @@ export default function ProfileSearchPage() {
                 </>
               )}
             </dl>
-            {profile.user.linkedStudentFuntIds && profile.user.linkedStudentFuntIds.length > 0 && (
+            {profile.user.linkedStudentUsernames && profile.user.linkedStudentUsernames.length > 0 && (
               <div className="mt-3">
-                <dt className="text-slate-500 text-sm">Linked students (FUNT IDs)</dt>
-                <dd className="mt-1 font-mono text-xs text-slate-600">{profile.user.linkedStudentFuntIds.join(", ")}</dd>
+                <dt className="text-slate-500 text-sm">Linked students (usernames)</dt>
+                <dd className="mt-1 font-mono text-xs text-slate-600">{profile.user.linkedStudentUsernames.join(", ")}</dd>
               </div>
             )}
           </div>

@@ -53,7 +53,7 @@ export default function AttendancePage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-500" />
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-funt-gold-deep" />
         <p className="text-sm text-slate-500">Loading attendance…</p>
       </div>
     );
@@ -72,17 +72,17 @@ export default function AttendancePage() {
 
       {}
       <section className="shrink-0 space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-600">Session Attendance</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-funt-gold-deep">Session Attendance</h2>
         <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/20 ring-1 ring-slate-100 overflow-hidden">
-          <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-5 py-5 sm:px-6 sm:py-6">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-funt-honey/60 to-white px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-wrap items-stretch gap-4 sm:gap-6">
               <div className="rounded-xl bg-white border border-slate-100 px-4 py-3 shadow-sm min-w-[120px]">
                 <p className="text-2xl font-bold tabular-nums text-slate-900 sm:text-3xl">{totalSessionsAttended}</p>
                 <p className="mt-1 text-xs font-medium text-slate-500">Sessions Attended</p>
               </div>
-              <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 shadow-sm min-w-[100px]">
-                <p className="text-2xl font-bold tabular-nums text-teal-700 sm:text-3xl">{overallPercentage}%</p>
-                <p className="mt-1 text-xs font-medium text-teal-600">Attendance</p>
+              <div className="rounded-xl bg-funt-honey/80 border border-funt-gold/30 px-4 py-3 shadow-sm min-w-[100px]">
+                <p className="text-2xl font-bold tabular-nums text-funt-gold-deep sm:text-3xl">{overallPercentage}%</p>
+                <p className="mt-1 text-xs font-medium text-funt-gold-deep">Attendance</p>
               </div>
               <div className="rounded-xl bg-white border border-slate-100 px-4 py-3 shadow-sm min-w-[100px]">
                 <p className="text-2xl font-bold tabular-nums text-slate-700 sm:text-3xl">{totalSessions}</p>
@@ -93,7 +93,7 @@ export default function AttendancePage() {
               <div className="mt-4">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-teal-500 transition-all duration-300"
+                    className="h-full rounded-full bg-funt-gold-deep transition-all duration-300"
                     style={{ width: `${Math.min(100, overallPercentage)}%` }}
                   />
                 </div>
@@ -162,7 +162,7 @@ export default function AttendancePage() {
                               key={d}
                               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700"
                             >
-                              <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                              <span className="h-1.5 w-1.5 rounded-full bg-funt-gold-deep" />
                               {formatDate(d)}
                             </span>
                           ))}

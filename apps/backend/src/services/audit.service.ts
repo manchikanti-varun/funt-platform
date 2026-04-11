@@ -42,6 +42,12 @@ export type AuditAction =
   | "ATTENDANCE_MARKED"
   | "GENERAL_ATTENDANCE_CREATED"
   | "CERTIFICATE_GENERATED"
+  | "CERTIFICATE_COIN_REWARD_SET"
+  | "CERTIFICATE_COINS_GRANTED"
+  | "SHOP_PRODUCT_CREATED"
+  | "SHOP_PRODUCT_UPDATED"
+  | "SHOP_PRODUCT_DELETED"
+  | "SHOP_PURCHASE"
   | "BADGE_AWARDED"
   | "SKILL_RECALCULATED"
   | "VERIFY_ACCESSED";
@@ -92,7 +98,10 @@ export async function listAuditLogs(
   let performedByFilter = filters.performedBy;
   if (performedByFilter?.trim()) {
     if (!isMongoId(performedByFilter)) {
-      const user = await UserModel.findOne({ funtId: performedByFilter.trim() }).select("_id").lean().exec();
+      const user = await UserModel.findOne({ username: performedByFilter.trim().toLowerCase() })
+        .select("_id")
+        .lean()
+        .exec();
       if (user) performedByFilter = String((user as { _id: unknown })._id);
     }
     query.performedBy = performedByFilter;
@@ -110,11 +119,11 @@ export async function listAuditLogs(
   const performedByIds = [...new Set(logs.map((d) => d.performedBy).filter(isMongoId))] as string[];
   const userMap = new Map<string, string>();
   if (performedByIds.length > 0) {
-    const users = await UserModel.find({ _id: { $in: performedByIds } }).select("_id funtId").lean().exec();
+    const users = await UserModel.find({ _id: { $in: performedByIds } }).select("_id username").lean().exec();
     for (const u of users) {
       const id = String((u as { _id: unknown })._id);
-      const funtId = (u as { funtId?: string }).funtId;
-      if (funtId) userMap.set(id, funtId);
+      const username = (u as { username?: string }).username;
+      if (username) userMap.set(id, username);
     }
   }
 

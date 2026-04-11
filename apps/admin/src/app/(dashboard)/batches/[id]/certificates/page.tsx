@@ -8,9 +8,12 @@ import { BackLink } from "@/components/ui/BackLink";
 
 interface StudentCertRow {
   studentId: string;
-  funtId: string;
+  username: string;
   name: string;
   certificateId: string | null;
+  coinReward: number;
+  coinRewardGrantedAt: string | null;
+  coinRewardPending: boolean;
   eligible: boolean;
   reason?: string;
   modulesCompleted?: number;
@@ -39,6 +42,9 @@ export default function BatchCertificatesPage() {
   const [bulkGenerateMessage, setBulkGenerateMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [defaultCoinReward, setDefaultCoinReward] = useState<string>("250");
+  const [rewardDraft, setRewardDraft] = useState<Record<string, string>>({});
+  const [grantLoadingId, setGrantLoadingId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     if (!id) return;
@@ -101,9 +107,10 @@ export default function BatchCertificatesPage() {
     if (studentIds.length === 0) return;
     setBulkGenerateLoading(true);
     setBulkGenerateMessage(null);
+    const coins = Math.max(0, Math.floor(Number(defaultCoinReward) || 0));
     const res = await api<{ generated: Array<{ studentId: string; certificateId: string }>; errors: Array<{ studentId: string; message: string }> }>(
       `/api/certificates/batch/${id}/generate`,
-      { method: "POST", body: JSON.stringify({ studentIds }) }
+      { method: "POST", body: JSON.stringify({ studentIds, ...(coins > 0 ? { coinReward: coins } : {}) }) }
     );
     setBulkGenerateLoading(false);
     if (res.success && res.data) {
@@ -163,11 +170,29 @@ export default function BatchCertificatesPage() {
 
   const generateOne = async (studentId: string) => {
     setGeneratingId(studentId);
+    const coins = Math.max(0, Math.floor(Number(defaultCoinReward) || 0));
     const res = await api(`/api/certificates/generate`, {
       method: "POST",
-      body: JSON.stringify({ studentId, batchId: id }),
+      body: JSON.stringify({ studentId, batchId: id, ...(coins > 0 ? { coinReward: coins } : {}) }),
     });
     setGeneratingId(null);
+    if (res.success) load();
+  };
+
+  const patchReward = async (certificateId: string) => {
+    const raw = rewardDraft[certificateId] ?? "";
+    const n = Math.max(0, Math.floor(Number(raw) || 0));
+    const res = await api(`/api/certificates/${encodeURIComponent(certificateId)}/coin-reward`, {
+      method: "PATCH",
+      body: JSON.stringify({ coinReward: n }),
+    });
+    if (res.success) load();
+  };
+
+  const grantCoins = async (certificateId: string) => {
+    setGrantLoadingId(certificateId);
+    const res = await api(`/api/certificates/${encodeURIComponent(certificateId)}/grant-coins`, { method: "POST" });
+    setGrantLoadingId(null);
     if (res.success) load();
   };
 
@@ -194,7 +219,10 @@ export default function BatchCertificatesPage() {
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-violet-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Certificates — {batchName || id}</h1>
-          <p className="mt-1 text-sm text-slate-500">Generate or download certificates for students who have completed the course.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Generate certificates for eligible students. Set FUNT coins to award per certificate — coins are credited only after you click{" "}
+            <strong>Grant coins</strong>.
+          </p>
         </div>
 
         <div className="p-6 space-y-4">
@@ -207,6 +235,22 @@ export default function BatchCertificatesPage() {
               {bulkGenerateMessage.text}
             </div>
           )}
+
+          <div className="flex flex-wrap items-end gap-4">
+            {eligibleNoCert.length > 0 && (
+              <label className="flex flex-col gap-1 text-sm text-slate-700">
+                <span className="font-medium">Coins to set on new certificates</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="w-36 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  value={defaultCoinReward}
+                  onChange={(e) => setDefaultCoinReward(e.target.value)}
+                />
+                <span className="text-xs text-slate-500">0 = no coin reward. Grant separately later.</span>
+              </label>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-3 items-center">
             {eligibleNoCert.length > 0 && (
@@ -280,18 +324,20 @@ export default function BatchCertificatesPage() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Student</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700">FUNT ID</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Username</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Progress</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-700">Certificate</th>
-                    <th className="px-4 py-3 text-left font-semibold text-slate-700 w-32">Actions</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Coins</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700 w-56">Coin reward</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700 w-40">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {rows.map((r) => (
                     <tr key={r.studentId} className="hover:bg-slate-50/50">
                       <td className="px-4 py-3 font-medium text-slate-800">{r.name || "—"}</td>
-                      <td className="px-4 py-3 text-slate-600">{r.funtId || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600">{r.username || "—"}</td>
                       <td className="px-4 py-3">
                         {r.totalModules != null && r.modulesCompleted != null ? (
                           <span className={`font-medium ${(r.progressPercent ?? 0) >= 100 ? "text-emerald-700" : "text-slate-600"}`}>
@@ -319,6 +365,59 @@ export default function BatchCertificatesPage() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {r.certificateId ? (
+                          <span className="tabular-nums font-medium">{r.coinReward}</span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {r.certificateId ? (
+                          <div className="flex flex-col gap-2">
+                            {r.coinRewardGrantedAt ? (
+                              <span className="text-xs text-emerald-700">
+                                Granted {new Date(r.coinRewardGrantedAt).toLocaleDateString()}
+                              </span>
+                            ) : (
+                              <>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    className="w-24 rounded border border-slate-200 px-2 py-1 text-xs"
+                                    value={rewardDraft[r.certificateId] ?? String(r.coinReward)}
+                                    onChange={(e) =>
+                                      setRewardDraft((d) => ({ ...d, [r.certificateId!]: e.target.value }))
+                                    }
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => patchReward(r.certificateId!)}
+                                    className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium hover:bg-slate-50"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                                {r.coinReward > 0 ? (
+                                  <button
+                                    type="button"
+                                    disabled={grantLoadingId === r.certificateId}
+                                    onClick={() => grantCoins(r.certificateId!)}
+                                    className="w-fit rounded bg-amber-600 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                                  >
+                                    {grantLoadingId === r.certificateId ? "…" : "Grant coins"}
+                                  </button>
+                                ) : (
+                                  <p className="text-xs text-slate-500">Set amount &gt; 0, Save, then grant.</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="px-4 py-3 flex flex-wrap gap-2">
                         {r.certificateId ? (
                           <>
@@ -335,7 +434,7 @@ export default function BatchCertificatesPage() {
                               onClick={() => downloadSinglePdf(r.certificateId!)}
                               className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                             >
-                              Download PDF
+                              PDF
                             </button>
                           </>
                         ) : r.eligible ? (

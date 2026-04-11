@@ -10,6 +10,8 @@ import {
   listBatchCertificateStatus,
   bulkGenerateBatchCertificates,
   downloadBatchCertificatesZip,
+  patchCertificateCoinReward,
+  grantCertificateCoins,
 } from "../controllers/certificate.controller.js";
 
 const router = Router();
@@ -22,6 +24,16 @@ router.post("/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), generateCer
 router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listBatchCertificateStatus);
 router.post("/batch/:batchId/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkGenerateBatchCertificates);
 router.get("/batch/:batchId/zip", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadBatchCertificatesZip);
+router.patch(
+  "/:certificateId/coin-reward",
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+  patchCertificateCoinReward
+);
+router.post(
+  "/:certificateId/grant-coins",
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+  grantCertificateCoins
+);
 router.get("/:certificateId/pdf", downloadCertificatePdf);
 
 export const certificateRoutes = router;

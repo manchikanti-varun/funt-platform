@@ -21,7 +21,6 @@ export async function authMiddleware(
 
     const { jwtSecret } = getEnv();
     const payload = verifyToken(token, jwtSecret);
-
     const user = await UserModel.findById(payload.userId).exec();
     if (!user) {
       throw new AppError("User not found", 401);
@@ -33,7 +32,7 @@ export async function authMiddleware(
 
     req.user = {
       userId: String(user._id),
-      funtId: user.funtId,
+      username: user.username ?? "",
       roles: user.roles as typeof payload.roles,
     };
     next();

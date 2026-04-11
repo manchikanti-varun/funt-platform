@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 
 interface LoginEntry {
@@ -11,12 +12,15 @@ interface LoginEntry {
 
 interface UserMe {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   email?: string;
   mobile: string;
   roles: string[];
   status: string;
+  studentXp?: number;
+  studentLevel?: number;
+  funtCoins?: number;
   lastLogin?: LoginEntry | null;
   loginHistory?: LoginEntry[];
 }
@@ -73,7 +77,7 @@ function ChangePasswordSection() {
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
             autoComplete="current-password"
           />
@@ -85,7 +89,7 @@ function ChangePasswordSection() {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
             minLength={6}
             autoComplete="new-password"
@@ -98,7 +102,7 @@ function ChangePasswordSection() {
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
             minLength={6}
             autoComplete="new-password"
@@ -112,7 +116,7 @@ function ChangePasswordSection() {
         <button
           type="submit"
           disabled={loading}
-          className="w-fit rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60"
+          className="w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-black shadow-sm hover:bg-funt-gold-hover disabled:opacity-60"
         >
           {loading ? "Updating…" : "Update password"}
         </button>
@@ -141,7 +145,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-funt-gold-deep" />
       </div>
     );
   }
@@ -160,27 +164,51 @@ export default function ProfilePage() {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
       <div className="shrink-0 pb-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Account</p>
-        <h1 className="mt-0.5 text-xl font-bold tracking-tight text-slate-800">Profile & settings</h1>
+        <p className="text-xs font-black uppercase tracking-wider text-black">Account</p>
+        <h1 className="mt-0.5 text-2xl font-black tracking-tight text-black">Profile &amp; settings</h1>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/progress" className="rounded-xl border-2 border-black bg-funt-gold px-4 py-2 text-xs font-bold text-black">
+            See full progress
+          </Link>
+          <Link href="/assignments" className="rounded-xl border-2 border-black/15 bg-white px-4 py-2 text-xs font-bold text-black hover:bg-funt-honey/50">
+            Projects / assignments
+          </Link>
+          <Link href="/skills" className="rounded-xl border-2 border-black/15 bg-white px-4 py-2 text-xs font-bold text-black hover:bg-funt-honey/50">
+            Skills
+          </Link>
+          <Link href="/certificates" className="rounded-xl border-2 border-black/15 bg-white px-4 py-2 text-xs font-bold text-black hover:bg-funt-honey/50">
+            Certificates
+          </Link>
+        </div>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
         {}
         <section className="flex flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-teal-600">Identity</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Identity</p>
           <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Profile</h2>
           <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-5">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-700 text-lg font-semibold text-white shadow-sm ring-2 ring-slate-100">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-funt-gold to-funt-gold-deep text-lg font-semibold text-black shadow-sm ring-2 ring-slate-100">
               {initials}
             </div>
             <div className="min-w-0 flex-1 text-center sm:text-left">
               <p className="truncate text-lg font-semibold text-slate-800">{user.name}</p>
-              <p className="mt-0.5 font-mono text-sm text-slate-500">{user.funtId}</p>
-              <span className="mt-2 inline-block rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <p className="mt-0.5 font-mono text-sm text-slate-500">{user.username}</p>
+              <span className="mt-2 inline-block rounded-full border border-black/15 bg-funt-gold/25 px-2.5 py-0.5 text-xs font-bold text-black">
                 {user.status}
               </span>
             </div>
           </div>
+        </section>
+
+        {}
+        <section className="flex flex-col rounded-2xl border-2 border-black/10 bg-funt-honey/40 p-5 shadow-lg lg:p-6">
+          <p className="text-xs font-black uppercase tracking-wider text-black">Rewards</p>
+          <h2 className="mt-0.5 text-base font-black tracking-tight text-black">FUNT coins</h2>
+          <p className="mt-3 text-4xl font-black tabular-nums text-black">{user.funtCoins ?? 0}</p>
+          <p className="mt-2 text-xs text-black/65">
+            Coin earning and redemption for kits/components will roll out in a future phase. Your balance may stay at 0 until then. XP and levels above stay active today.
+          </p>
         </section>
 
         {}

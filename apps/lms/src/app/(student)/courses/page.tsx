@@ -93,7 +93,7 @@ export default function CoursesPage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function CoursesPage() {
             placeholder="Search courses..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500/15"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-funt-gold focus:outline-none focus:ring-2 focus:ring-funt-gold/25"
           />
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function CoursesPage() {
         {activeTab === "my" ? (
           <>
             <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-teal-600">Enrolled</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
               <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Courses</h2>
             </div>
             {myCourses.length === 0 ? (
@@ -169,7 +169,7 @@ export default function CoursesPage() {
                   <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Course</th>
-                      <th className="px-6 py-3.5 font-semibold text-slate-700">Modules</th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-700">Chapters</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Status</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700 text-right">Action</th>
                     </tr>
@@ -180,12 +180,12 @@ export default function CoursesPage() {
                         <td className="px-6 py-3.5 font-medium text-slate-800">{c.courseTitle}</td>
                         <td className="px-6 py-3.5 text-slate-600">{c.moduleCount}</td>
                         <td className="px-6 py-3.5">
-                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Enrolled</span>
+                          <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
                         </td>
                         <td className="px-6 py-3.5 text-right">
                           <Link
                             href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 ring-1 ring-teal-700/30 transition duration-200 hover:bg-teal-700 hover:shadow-xl"
+                            className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover hover:shadow-xl"
                           >
                             Open
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -227,7 +227,7 @@ export default function CoursesPage() {
                   <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Course</th>
-                      <th className="px-6 py-3.5 font-semibold text-slate-700">Modules</th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-700">Chapters</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Status</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700 text-right">Action</th>
                     </tr>

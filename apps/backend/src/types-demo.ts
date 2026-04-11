@@ -4,7 +4,7 @@ import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 export function getPlaceholderUser(): User {
   return {
     id: "demo",
-    funtId: "FS-00-00000",
+    username: "demo@funt",
     name: "Demo",
     mobile: "",
     roles: [ROLE.ADMIN],

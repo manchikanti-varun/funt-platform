@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 
 interface AllowedStudent {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
 }
 
@@ -27,7 +27,7 @@ export default function AssignmentStudentAccessPage() {
   const id = params.id as string;
   const [assignment, setAssignment] = useState<AssignmentInfo | null>(null);
   const [allowedStudents, setAllowedStudents] = useState<AllowedStudent[]>([]);
-  const [accessFuntId, setAccessFuntId] = useState("");
+  const [accessUsername, setAccessUsername] = useState("");
   const [accessBulkText, setAccessBulkText] = useState("");
   const [loading, setLoading] = useState(true);
   const [accessLoading, setAccessLoading] = useState(false);
@@ -52,16 +52,16 @@ export default function AssignmentStudentAccessPage() {
   }, [id, assignment]);
 
   async function addAccess() {
-    if (!accessFuntId.trim()) return;
+    if (!accessUsername.trim()) return;
     setAccessLoading(true);
     setError("");
     const res = await api(`/api/global-assignments/${id}/access`, {
       method: "POST",
-      body: JSON.stringify({ funtId: accessFuntId.trim() }),
+      body: JSON.stringify({ username: accessUsername.trim() }),
     });
     setAccessLoading(false);
     if (res.success) {
-      setAccessFuntId("");
+      setAccessUsername("");
       const r = await api<AllowedStudent[]>(`/api/global-assignments/${id}/access`);
       if (r.success && Array.isArray(r.data)) setAllowedStudents(r.data);
     } else setError(res.message ?? "Failed to add.");
@@ -143,7 +143,7 @@ export default function AssignmentStudentAccessPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Student access</h1>
           <p className="mt-1 text-sm text-slate-600">{assignment.title}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Only students listed here can see and submit this assignment. Add by FUNT ID or bulk (one per line or comma-separated).
+            Only students listed here can see and submit this assignment. Add by username or bulk (one per line or comma-separated).
           </p>
         </div>
 
@@ -152,9 +152,9 @@ export default function AssignmentStudentAccessPage() {
             <div className="flex flex-wrap gap-2">
               <input
                 type="text"
-                value={accessFuntId}
-                onChange={(e) => setAccessFuntId(e.target.value)}
-                placeholder="Student FUNT ID"
+                value={accessUsername}
+                onChange={(e) => setAccessUsername(e.target.value)}
+                placeholder="Student username"
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
               <button
@@ -170,7 +170,7 @@ export default function AssignmentStudentAccessPage() {
               <textarea
                 value={accessBulkText}
                 onChange={(e) => setAccessBulkText(e.target.value)}
-                placeholder="Bulk: one FUNT ID per line or comma-separated"
+                placeholder="Bulk: one username per line or comma-separated"
                 rows={3}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
@@ -189,7 +189,7 @@ export default function AssignmentStudentAccessPage() {
                   key={s.id}
                   className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm"
                 >
-                  <span className="font-mono text-slate-700">{s.funtId || s.id}</span>
+                  <span className="font-mono text-slate-700">{s.username || s.id}</span>
                   <span className="text-slate-600">{s.name}</span>
                   <button
                     type="button"

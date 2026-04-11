@@ -97,7 +97,7 @@ export default function NewGlobalAssignmentPage() {
                   <span className="text-sm text-slate-700">General</span>
                 </label>
               </div>
-              <p className="mt-1 text-xs text-slate-500">Module = linked inside course modules. General = standalone; you give access to students by FUNT ID.</p>
+              <p className="mt-1 text-xs text-slate-500">Module = linked inside course modules. General = standalone; you give access to students by username.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>
@@ -141,8 +141,8 @@ export default function NewGlobalAssignmentPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (FUNT IDs)</label>
-              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated FUNT IDs.</p>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (user IDs or usernames)</label>
+              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated MongoDB user IDs or usernames.</p>
               <input
                 type="text"
                 value={moderatorIdsText}

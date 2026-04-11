@@ -8,7 +8,7 @@ import { BackLink } from "@/components/ui/BackLink";
 
 interface StudentAttendanceRow {
   studentId: string;
-  funtId: string;
+  username: string;
   name: string;
   sessions: Array<{ date: string; status: string }>;
   presentCount: number;
@@ -32,7 +32,7 @@ export default function BatchAttendancePage() {
   const id = params.id as string;
   const [batchName, setBatchName] = useState("");
   const [sessionDate, setSessionDate] = useState("");
-  const [funtIdsPaste, setFuntIdsPaste] = useState("");
+  const [usernamesPaste, setUsernamesPaste] = useState("");
   const [markLoading, setMarkLoading] = useState(false);
   const [markMessage, setMarkMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [byStudent, setByStudent] = useState<StudentAttendanceRow[]>([]);
@@ -82,14 +82,14 @@ export default function BatchAttendancePage() {
 
   async function markAttendance(e: React.FormEvent) {
     e.preventDefault();
-    const raw = funtIdsPaste.trim();
+    const raw = usernamesPaste.trim();
     if (!raw) {
-      setMarkMessage({ type: "error", text: "Paste at least one FUNT ID." });
+      setMarkMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
-    const funtIds = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    if (funtIds.length === 0) {
-      setMarkMessage({ type: "error", text: "Paste at least one FUNT ID." });
+    const usernames = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    if (usernames.length === 0) {
+      setMarkMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
     const date = sessionDate || new Date().toISOString().slice(0, 10);
@@ -97,7 +97,7 @@ export default function BatchAttendancePage() {
     setMarkMessage(null);
     const res = await api<{ notFound?: string[] }>(`/api/attendance/batch/${id}/mark-by-ids`, {
       method: "POST",
-      body: JSON.stringify({ sessionDate: date, funtIds }),
+      body: JSON.stringify({ sessionDate: date, usernames }),
     });
     setMarkLoading(false);
     if (res.success) {
@@ -107,7 +107,7 @@ export default function BatchAttendancePage() {
           ? `Marked present for ${date}. Not found: ${res.data.notFound.join(", ")}`
           : `Attendance marked for ${date}.`,
       });
-      setFuntIdsPaste("");
+      setUsernamesPaste("");
       loadSessions();
       loadByStudent();
     } else {
@@ -119,19 +119,19 @@ export default function BatchAttendancePage() {
     e.preventDefault();
     const raw = editPaste.trim();
     if (!raw) {
-      setAddPresentMessage({ type: "error", text: "Paste at least one FUNT ID." });
+      setAddPresentMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
-    const funtIds = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    if (funtIds.length === 0) {
-      setAddPresentMessage({ type: "error", text: "Paste at least one FUNT ID." });
+    const usernames = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    if (usernames.length === 0) {
+      setAddPresentMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
     setAddPresentLoading(true);
     setAddPresentMessage(null);
     const res = await api<{ addedCount?: number; alreadyMarkedCount?: number; notFound?: string[] }>(`/api/attendance/batch/${id}/add-present`, {
       method: "POST",
-      body: JSON.stringify({ sessionDate: sessionDateStr, funtIds }),
+      body: JSON.stringify({ sessionDate: sessionDateStr, usernames }),
     });
     setAddPresentLoading(false);
     if (res.success && res.data) {
@@ -172,7 +172,7 @@ export default function BatchAttendancePage() {
             <h1 className="text-xl font-bold tracking-tight text-slate-900">Mark attendance</h1>
             <p className="mt-1 text-sm text-slate-600">{batchName}</p>
             <p className="mt-2 text-sm text-slate-500">
-              Pick a session date and paste FUNT student IDs, one per line or comma-separated. Those listed will be marked present for this batch on that date.
+              Pick a session date and paste student usernames, one per line or comma-separated. Those listed will be marked present for this batch on that date.
             </p>
           </div>
           <form onSubmit={markAttendance} className="p-6 space-y-4">
@@ -186,11 +186,11 @@ export default function BatchAttendancePage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">FUNT student IDs</label>
+              <label className="mb-1 block text-sm font-semibold text-slate-700">Student usernames</label>
               <textarea
-                value={funtIdsPaste}
-                onChange={(e) => { setFuntIdsPaste(e.target.value); setMarkMessage(null); }}
-                placeholder="FS-26-00001, FS-26-00002&#10;or one per line"
+                value={usernamesPaste}
+                onChange={(e) => { setUsernamesPaste(e.target.value); setMarkMessage(null); }}
+                placeholder="student.one, student.two&#10;or one per line"
                 rows={5}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono placeholder:text-slate-400"
               />
@@ -202,7 +202,7 @@ export default function BatchAttendancePage() {
             )}
             <button
               type="submit"
-              disabled={markLoading || !funtIdsPaste.trim()}
+              disabled={markLoading || !usernamesPaste.trim()}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {markLoading ? "Marking…" : "Mark present"}
@@ -215,7 +215,7 @@ export default function BatchAttendancePage() {
           <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
             <div className="border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white px-6 py-6">
               <h2 className="text-lg font-bold tracking-tight text-slate-900">Existing sessions</h2>
-              <p className="mt-1 text-sm text-slate-600">Missed someone? Click Edit, paste the remaining FUNT IDs, and add. Already-marked students are not duplicated.</p>
+              <p className="mt-1 text-sm text-slate-600">Missed someone? Click Edit, paste the remaining usernames, and add. Already-marked students are not duplicated.</p>
             </div>
             <div className="p-6">
               <ul className="space-y-3">
@@ -243,7 +243,7 @@ export default function BatchAttendancePage() {
                       </div>
                       {isEditing && (
                         <form onSubmit={(e) => addRemainingPresent(s.sessionDate, e)} className="border-t border-slate-200 bg-white p-4 space-y-3">
-                          <label className="block text-sm font-semibold text-slate-700">Paste FUNT IDs to add (no duplicates for already marked)</label>
+                          <label className="block text-sm font-semibold text-slate-700">Paste usernames to add (no duplicates for already marked)</label>
                           <textarea
                             value={editPaste}
                             onChange={(e) => { setEditPaste(e.target.value); setAddPresentMessage(null); }}
@@ -321,7 +321,7 @@ export default function BatchAttendancePage() {
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50/80 text-left">
                       <th className="px-4 py-3.5 font-semibold text-slate-600">Student</th>
-                      <th className="px-4 py-3.5 font-semibold text-slate-600">FUNT ID</th>
+                      <th className="px-4 py-3.5 font-semibold text-slate-600">Username</th>
                       <th className="px-4 py-3.5 font-semibold text-slate-600 text-center w-24">Present</th>
                       <th className="px-4 py-3.5 font-semibold text-slate-600 text-center w-24">Sessions</th>
                       <th className="px-4 py-3.5 font-semibold text-slate-600 text-center w-32">Attendance</th>
@@ -335,7 +335,7 @@ export default function BatchAttendancePage() {
                           <td className="px-4 py-3.5">
                             <span className="font-medium text-slate-900">{row.name || "—"}</span>
                           </td>
-                          <td className="px-4 py-3.5 font-mono text-slate-600 text-xs">{row.funtId}</td>
+                          <td className="px-4 py-3.5 font-mono text-slate-600 text-xs">{row.username}</td>
                           <td className="px-4 py-3.5 text-center">
                             <span className="inline-flex items-center justify-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                               {row.presentCount}

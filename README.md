@@ -10,7 +10,7 @@ It supports multiple roles (Super Admin, Admin, Trainer, Student) and provides:
 - **Student LMS portal** – students see enrolled courses, modules, assignments and can submit work (text/link/file).
 - **Progress tracking** – per-student module and assignment progress, completion status, and audit-friendly IDs.
 - **Authentication & authorization** – secure login flows, role-based access, and Admin/Super Admin approval flows.
-- **FUNT IDs** – human-readable IDs for entities (e.g. FUNT IDs for users, SUB‑YY‑XXXXXXXX for submissions).
+- **Usernames** – students and staff sign in with unique usernames; other entities may use generated IDs (e.g. SUB‑YY‑XXXXXXXX for submissions, CERT‑… for certificates).
 
 The monorepo is built with:
 

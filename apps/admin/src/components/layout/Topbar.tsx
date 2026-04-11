@@ -6,7 +6,7 @@ import { clearToken, api } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 interface TopbarProps {
-  user: { name: string; funtId: string; roles: string[] };
+  user: { name: string; username: string; roles: string[] };
   onMenuClick?: () => void;
 }
 
@@ -206,7 +206,7 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
                 {user.name}
               </p>
               <p className="text-[11px] font-mono font-medium text-slate-500">
-                {user.funtId}
+                {user.username}
               </p>
             </div>
             <svg
@@ -226,7 +226,7 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
                 <p className="truncate text-sm font-semibold text-slate-800">
                   {user.name}
                 </p>
-                <p className="mt-1 font-mono text-xs text-slate-500">{user.funtId}</p>
+                <p className="mt-1 font-mono text-xs text-slate-500">{user.username}</p>
                 <p className="mt-1 text-[11px] capitalize text-slate-400">
                   {primaryRole.replace("_", " ")}
                 </p>

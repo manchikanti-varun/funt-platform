@@ -308,7 +308,7 @@ export default function BatchSubmissionsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     {hasPending ? <th className="w-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600"><span className="sr-only">Select</span></th> : null}
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Student (FUNT ID)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Student (username)</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Submission</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Submitted</th>

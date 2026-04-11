@@ -4,7 +4,7 @@ import type { ROLE } from "@funt-platform/constants";
 
 export interface JwtPayload {
   userId: string;
-  funtId: string;
+  username: string;
   roles: ROLE[];
   iat?: number;
   exp?: number;

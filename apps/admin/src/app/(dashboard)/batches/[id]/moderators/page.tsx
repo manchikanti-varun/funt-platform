@@ -118,7 +118,7 @@ export default function BatchModeratorsPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Moderators</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Add moderator FUNT IDs below; remove with the red delete icon.
+            Add moderator usernames or user IDs below; remove with the red delete icon.
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export default function BatchModeratorsPage() {
               type="text"
               value={moderatorIdsText}
               onChange={(e) => { setModeratorIdsText(e.target.value); setError(""); setSuccess(false); }}
-              placeholder="FUNT ID (comma-separated to add multiple)"
+              placeholder="Username or user id (comma-separated to add multiple)"
               className="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
             <button type="button" onClick={addModerators} disabled={actionLoading || !moderatorIdsText.trim()} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
@@ -149,7 +149,7 @@ export default function BatchModeratorsPage() {
             <h2 className="text-sm font-semibold text-slate-700">Current moderators</h2>
             <p className="mt-1 text-xs text-slate-500">Click the red delete icon to remove a moderator from this batch.</p>
             {moderatorsList.length === 0 ? (
-              <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-4 text-center text-sm text-slate-500">No moderators yet. Add FUNT IDs above and click Add.</p>
+              <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-4 text-center text-sm text-slate-500">No moderators yet. Add usernames or user IDs above and click Add.</p>
             ) : (
               <ul className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
                 {moderatorsList.map((mid) => (

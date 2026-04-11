@@ -18,16 +18,20 @@ import {
   IconSkills,
   IconCertificates,
   IconUser,
+  IconShop,
 } from "@/components/icons/NavIcons";
 
 interface UserMe {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   email?: string;
   mobile: string;
   roles: string[];
   status: string;
+  studentXp?: number;
+  studentLevel?: number;
+  funtCoins?: number;
 }
 
 function getInitials(name: string): string {
@@ -37,10 +41,13 @@ function getInitials(name: string): string {
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", Icon: IconOverview },
   { href: "/courses", label: "Courses", Icon: IconCourses },
+  { href: "/shop", label: "Shop", Icon: IconShop },
+  { href: "/progress", label: "Progress", Icon: IconSkills },
   { href: "/assignments", label: "Assignments", Icon: IconAssignment },
   { href: "/attendance", label: "Attendance", Icon: IconAttendance },
   { href: "/skills", label: "Skills", Icon: IconSkills },
   { href: "/certificates", label: "Certificates", Icon: IconCertificates },
+  { href: "/account", label: "My account", Icon: IconUser },
 ];
 
 function LMSTopbar({
@@ -67,12 +74,12 @@ function LMSTopbar({
   }, []);
   const initials = getInitials(user.name);
   return (
-    <header className="sticky top-0 z-30 flex h-[4.25rem] flex-wrap items-center justify-between gap-4 border-b border-slate-200/90 bg-white/98 px-4 shadow-lg shadow-slate-300/10 ring-1 ring-slate-100/80 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-30 flex h-[4.25rem] flex-wrap items-center justify-between gap-4 border-b border-black/10 bg-white/98 px-4 shadow-md shadow-black/5 ring-1 ring-black/5 backdrop-blur-md sm:px-6">
       <div className="flex min-w-0 flex-1 items-center gap-3 lg:flex-initial">
         <button
           type="button"
           onClick={onMenuClick}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 hover:text-slate-800 lg:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-black/60 transition hover:bg-black/5 hover:text-funt-ink lg:hidden"
           aria-label="Open menu"
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -80,8 +87,8 @@ function LMSTopbar({
           </svg>
         </button>
         <div className="min-w-0 flex-1 lg:flex-initial">
-          <p className="truncate text-base font-semibold tracking-tight text-slate-800 sm:text-lg">Hi, {user.name}</p>
-          <p className="hidden truncate text-xs font-medium text-slate-500 sm:block">FUNT Learn</p>
+          <p className="truncate text-base font-semibold tracking-tight text-funt-ink sm:text-lg">Hi, {user.name}</p>
+          <p className="hidden truncate text-xs font-medium text-black/50 sm:block">{user.username || "FUNT Learn"}</p>
         </div>
       </div>
       <div className="hidden w-full flex-1 max-w-sm px-2 md:block">
@@ -94,14 +101,32 @@ function LMSTopbar({
             placeholder="Search courses..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-slate-50/70 py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 transition focus:border-teal-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/15"
+            className="w-full rounded-xl border border-black/10 bg-white py-2.5 pl-10 pr-4 text-sm text-funt-ink placeholder-black/40 transition focus:border-funt-gold focus:outline-none focus:ring-2 focus:ring-funt-gold/25"
           />
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        <div
+          className="hidden items-center gap-2 rounded-xl border border-black/10 bg-white px-2.5 py-1.5 sm:flex"
+          title="Earn XP from chapters and assignments; level up when you complete a course (certificate)."
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wide text-black/55">XP</span>
+          <span className="text-sm font-bold tabular-nums text-funt-ink">{user.studentXp ?? 0}</span>
+          <span className="h-4 w-px bg-black/10" aria-hidden />
+          <span className="text-[10px] font-bold uppercase tracking-wide text-funt-gold-deep">Lv</span>
+          <span className="text-sm font-bold tabular-nums text-funt-ink">{user.studentLevel ?? 1}</span>
+        </div>
+        <div className="hidden items-center gap-0.5 rounded-xl border border-black/10 bg-white p-0.5 sm:flex">
+          <Link href="/shop?shelf=KITS" className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-funt-ink hover:bg-funt-gold/20">
+            Kits
+          </Link>
+          <Link href="/shop?shelf=COMPONENTS" className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-funt-ink hover:bg-funt-gold/20">
+            Components
+          </Link>
+        </div>
         <Link
           href="/profile"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-black/50 transition hover:bg-black/5 hover:text-funt-ink"
           aria-label="Settings"
         >
           <IconSettings className="h-5 w-5" />
@@ -110,46 +135,57 @@ function LMSTopbar({
           <button
             type="button"
             onClick={() => setOpen((o) => !o)}
-            className="flex items-center gap-2.5 rounded-xl py-2 pl-2 pr-3 transition hover:bg-slate-50"
+            className="flex items-center gap-2.5 rounded-xl py-2 pl-2 pr-3 transition hover:bg-black/[0.04]"
             aria-expanded={open}
             aria-haspopup="true"
             aria-label="Profile menu"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-600 to-teal-700 text-[11px] font-semibold text-white shadow-lg shadow-teal-900/25 ring-2 ring-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-funt-gold text-[11px] font-semibold text-black shadow-md ring-2 ring-white">
               {initials}
             </div>
-            <span className="hidden text-sm font-medium text-slate-700 md:inline-block">Profile</span>
-            <svg className={`h-4 w-4 text-slate-400 transition duration-200 ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <span className="hidden text-sm font-medium text-funt-ink md:inline-block">Menu</span>
+            <svg className={`h-4 w-4 text-black/40 transition duration-200 ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           {open && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-2xl border border-slate-200/90 bg-white py-2 shadow-2xl shadow-slate-400/20 ring-1 ring-slate-200/60">
-              <div className="border-b border-slate-100 px-4 py-3.5">
-                <p className="truncate text-sm font-semibold text-slate-800">{user.name}</p>
-                <p className="mt-1 font-mono text-xs text-slate-500">{user.funtId}</p>
-                <p className="mt-1.5 text-xs font-medium text-amber-600">{badgeCount} badge{badgeCount !== 1 ? "s" : ""}</p>
+            <div className="absolute right-0 top-full z-50 mt-2 w-60 rounded-2xl border border-black/10 bg-white py-2 shadow-2xl shadow-black/15 ring-1 ring-black/10">
+              <div className="border-b border-black/5 px-4 py-3.5">
+                <p className="truncate text-sm font-semibold text-funt-ink">{user.name}</p>
+                <p className="mt-1 font-mono text-xs text-black/50">{user.username}</p>
+                <p className="mt-1.5 text-xs font-medium text-funt-gold-deep">
+                  Lv {user.studentLevel ?? 1} · {user.studentXp ?? 0} XP · {badgeCount} medal
+                  {badgeCount !== 1 ? "s" : ""}
+                </p>
               </div>
               <div className="py-1.5">
                 <Link
+                  href="/account"
+                  onClick={() => setOpen(false)}
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-funt-ink transition hover:bg-funt-gold/10"
+                >
+                  <IconUser className="h-5 w-5 shrink-0 text-black/50" />
+                  My account
+                </Link>
+                <Link
                   href="/profile"
                   onClick={() => setOpen(false)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-funt-ink transition hover:bg-funt-gold/10"
                 >
-                  <IconUser className="h-5 w-5 shrink-0 text-slate-500" />
+                  <IconUser className="h-5 w-5 shrink-0 text-black/50" />
                   Profile
                 </Link>
                 <button
                   type="button"
                   onClick={() => { setOpen(false); setShowQr(true); }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-funt-ink transition hover:bg-funt-gold/10"
                 >
-                  <svg className="h-5 w-5 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <svg className="h-5 w-5 shrink-0 text-black/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                   </svg>
                   QR code
                 </button>
-                <div className="my-1.5 border-t border-slate-100" />
+                <div className="my-1.5 border-t border-black/5" />
                 <button
                   type="button"
                   onClick={() => { setOpen(false); onLogout(); }}
@@ -177,12 +213,12 @@ function LMSTopbar({
                 className="w-full max-w-sm shrink-0 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-2xl shadow-slate-400/20 ring-1 ring-slate-200/60"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h3 className="text-center text-lg font-semibold text-slate-800">FUNT ID</h3>
+                  <h3 className="text-center text-lg font-semibold text-slate-800">Username</h3>
                   <p className="mt-1 text-center text-sm text-slate-600">Scan to share</p>
-                  <p className="mt-1 text-center font-mono text-sm font-medium text-slate-800">{user.funtId}</p>
+                  <p className="mt-1 text-center font-mono text-sm font-medium text-slate-800">{user.username}</p>
                   <div className="mt-6 flex justify-center rounded-xl bg-white p-4">
                     <QRCodeSVG
-                      value={user.funtId}
+                      value={user.username}
                       size={220}
                       level="H"
                     />
@@ -249,8 +285,8 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="flex min-h-screen items-center justify-center bg-funt-paper">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
       </div>
     );
   }
@@ -258,11 +294,11 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   const isActive = (href: string) => pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
 
   const sidebar = (
-    <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/90 bg-white shadow-xl shadow-slate-300/10 ring-1 ring-slate-100/80">
-      <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100 bg-gradient-to-b from-teal-50/40 to-white px-5 py-7 ring-1 ring-slate-100/50 ring-inset">
+    <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-black/10 bg-white shadow-lg shadow-black/5 ring-1 ring-black/5">
+      <div className="flex shrink-0 flex-col items-center justify-center border-b border-black/5 bg-white px-5 py-7">
         {}
         <img src="/funt-logo.png" alt="FUNT Learn" className="h-12 w-auto object-contain sm:h-14" />
-        <span className="mt-2.5 font-brand-learn text-lg font-semibold tracking-[0.2em] text-slate-700 sm:text-xl">Learn</span>
+        <span className="mt-2.5 font-brand-learn text-lg font-semibold tracking-[0.2em] text-funt-ink sm:text-xl">Learn</span>
       </div>
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-5">
         {NAV_ITEMS.map((item) => {
@@ -274,8 +310,8 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
               href={item.href}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition duration-200 ${
                 active
-                  ? "bg-teal-600 text-white shadow-lg shadow-teal-900/15 ring-1 ring-teal-700/20"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:ring-1 hover:ring-slate-200/80"
+                  ? "bg-funt-gold text-black shadow-md ring-1 ring-black/10"
+                  : "text-black/70 hover:bg-black/[0.04] hover:text-funt-ink"
               }`}
             >
               <Icon className="h-5 w-5 shrink-0" />
@@ -288,14 +324,14 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50/80">
+    <div className="flex h-screen min-h-screen overflow-hidden bg-funt-paper">
       {}
       <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
       {}
       {sidebarOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
             onClick={() => setSidebarOpen(false)}
             aria-hidden
           />
@@ -311,7 +347,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
           onLogout={() => { clearToken(); router.push("/login"); }}
           onMenuClick={() => setSidebarOpen((o) => !o)}
         />
-        <main className="flex min-h-0 flex-1 flex-col overflow-auto bg-gradient-to-b from-slate-50/90 to-slate-100/60 p-4 text-slate-800 sm:p-6">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-auto bg-transparent p-4 text-funt-ink sm:p-6">{children}</main>
       </div>
     </div>
   );

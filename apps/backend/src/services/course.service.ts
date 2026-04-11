@@ -7,6 +7,7 @@ import { COURSE_STATUS, MODULE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateCourseId } from "../utils/funtIdGenerator.js";
+import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 
 const ENTITY_COURSE = "Course";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -204,7 +205,13 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   }
   if (input.title !== undefined) doc.title = input.title.trim();
   if (input.description !== undefined) doc.description = input.description.trim();
-  if (input.moderatorIds !== undefined) doc.moderatorIds = Array.isArray(input.moderatorIds) ? input.moderatorIds : [];
+  if (input.moderatorIds !== undefined) {
+    doc.moderatorIds = Array.isArray(input.moderatorIds)
+      ? input.moderatorIds.length > 0
+        ? await resolveStaffUserIds(input.moderatorIds)
+        : []
+      : [];
+  }
   await doc.save();
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);

@@ -8,6 +8,7 @@ import { parseJwtPayload } from "@/lib/auth";
 import { ROLE } from "@funt-platform/constants";
 
 import logoSrc from "@/assets/funt-logo.png";
+import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_DISPLAY, supportWhatsAppHref } from "@/lib/support";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 
@@ -17,7 +18,7 @@ function LoginForm() {
   const from = searchParams.get("from") ?? "/dashboard";
   const tokenFromQuery = searchParams.get("token");
   const errorFromQuery = searchParams.get("error");
-  const [funtId, setFuntId] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(errorFromQuery ?? "");
@@ -43,11 +44,11 @@ function LoginForm() {
     setLoading(true);
     const res = await api<{ token: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ funtId: funtId.trim(), password }),
+      body: JSON.stringify({ username: username.trim(), password }),
     });
     setLoading(false);
     if (!res.success || !res.data?.token) {
-      setError(res.message ?? "Invalid FUNT ID or password");
+      setError(res.message ?? "Invalid username or password");
       return;
     }
     setToken(res.data.token);
@@ -58,20 +59,29 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
+    <div className="min-h-screen flex items-center justify-center bg-funt-paper p-4">
+      <div className="w-full max-w-md rounded-3xl border border-black/10 bg-white p-8 shadow-soft">
         <div className="mb-8 flex flex-col items-center justify-center">
           <img src={typeof logoSrc === "string" ? logoSrc : (logoSrc as { src: string }).src} alt="FUNT Learn" className="h-14 w-auto object-contain" />
-          <span className="mt-2 font-brand-learn text-lg font-semibold tracking-[0.2em] text-slate-700 sm:text-xl">Learn</span>
+          <span className="mt-2 font-brand-learn text-lg font-semibold tracking-[0.2em] text-funt-ink sm:text-xl">Learn</span>
         </div>
-        <p className="mb-6 text-center text-sm font-medium text-slate-500">Sign in</p>
+        <p className="mb-2 text-center text-sm font-semibold text-black">Sign in with your username</p>
+        <p className="mb-6 text-center text-xs text-black/55">Students use a personal username (e.g. <span className="font-mono font-medium text-black">srikar.ch</span>). Staff admins use an <span className="font-mono">@funt</span> login.</p>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">FUNT ID</label>
-            <input type="text" value={funtId} onChange={(e) => setFuntId(e.target.value)} required className="input font-mono" placeholder="FUNT ID" />
+            <label className="mb-1.5 block text-sm font-semibold text-funt-ink">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              className="input"
+              placeholder="e.g. srikar.ch"
+              autoComplete="username"
+            />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+            <label className="mb-1.5 block text-sm font-semibold text-funt-ink">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -83,7 +93,7 @@ function LoginForm() {
               <button
                 type="button"
                 onClick={() => setShowPassword((p) => !p)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-black/40 hover:text-black/60"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -99,16 +109,41 @@ function LoginForm() {
               </button>
             </div>
           </div>
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="rounded-xl border-2 border-black bg-funt-honey px-3 py-2 text-sm font-medium text-black">{error}</p>}
           <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "Signing in…" : "Sign in"}</button>
+          <p className="text-center text-sm">
+            <Link href="/forgot-username" className="font-medium text-funt-ink underline decoration-funt-gold decoration-2 underline-offset-2">
+              Forgot username?
+            </Link>
+          </p>
           <div className="relative my-6">
-            <span className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200" /></span>
-            <span className="relative flex justify-center bg-white px-3 text-xs text-slate-400">or</span>
+            <span className="absolute inset-0 flex items-center"><span className="w-full border-t border-black/10" /></span>
+            <span className="relative flex justify-center bg-white px-3 text-xs text-black/40">or</span>
           </div>
-          <a href={`${API_BASE}/api/auth/google?app=lms`} className="btn-secondary flex w-full items-center justify-center gap-2">Sign in with Google</a>
+          <a href={`${API_BASE}/api/auth/google?app=lms`} className="btn-secondary flex w-full items-center justify-center gap-2">
+            Sign in with Google
+          </a>
         </form>
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Parent? <Link href="/parent/login" className="font-medium text-teal-600 hover:text-teal-700">Sign in as parent</Link>
+        <p className="mt-6 text-center text-sm text-black/55">
+          Parent?{" "}
+          <Link href="/parent/login" className="font-medium text-funt-ink underline decoration-funt-gold">
+            Sign in as parent
+          </Link>
+        </p>
+        <p className="mt-4 text-center text-xs leading-relaxed text-black/45">
+          Forgot password?{" "}
+          <a
+            href={supportWhatsAppHref("Hi, I need help with my FUNT Learn account password.")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-funt-ink underline decoration-funt-gold"
+          >
+            WhatsApp {SUPPORT_WHATSAPP_DISPLAY}
+          </a>{" "}
+          or{" "}
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium underline decoration-funt-gold">
+            {SUPPORT_EMAIL}
+          </a>
         </p>
       </div>
     </div>
@@ -117,7 +152,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-funt-paper"><div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" /></div>}>
       <LoginForm />
     </Suspense>
   );

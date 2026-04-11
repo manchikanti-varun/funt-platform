@@ -12,11 +12,13 @@ import {
   googleSignupComplete,
   googleAdminSignupPreview,
   googleAdminSignupComplete,
+  forgotStudentUsername,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
 
 router.post("/login", login);
+router.post("/forgot-username", forgotStudentUsername);
 router.post("/change-password", authMiddleware, changePassword);
 router.post("/parent-login", parentLogin);
 router.get("/google/redirect-uri", googleRedirectUri);

@@ -12,6 +12,9 @@ interface MyCertificate {
   courseId: string;
   courseName: string;
   issuedAt: string;
+  coinReward: number;
+  coinRewardGrantedAt: string | null;
+  coinRewardPending: boolean;
 }
 
 export default function CertificatesPage() {
@@ -61,7 +64,7 @@ export default function CertificatesPage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-funt-gold/30 border-t-funt-gold-deep" />
       </div>
     );
   }
@@ -69,11 +72,11 @@ export default function CertificatesPage() {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6">
       {}
-      <div className="shrink-0 rounded-2xl border border-slate-200/90 bg-white px-5 py-5 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-        <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Achievements</p>
-        <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">Certificates</h1>
-        <p className="mt-2 max-w-xl text-sm text-slate-600">
-          Certificates appear here after you complete a course and generate one from the course page. Download your copies below.
+      <div className="shrink-0 rounded-2xl border border-funt-gold/35 bg-gradient-to-br from-white via-funt-butter to-funt-honey/50 px-5 py-5 shadow-lg shadow-amber-900/10 ring-1 ring-funt-gold/25">
+        <p className="text-xs font-bold uppercase tracking-wider text-funt-gold-deep">Achievements</p>
+        <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-funt-ink">Certificates</h1>
+        <p className="mt-2 max-w-xl text-sm text-black/65">
+          When you finish a course, your instructor issues your certificate. FUNT coins are added only after they approve your reward — check status on each card below.
         </p>
       </div>
 
@@ -81,25 +84,25 @@ export default function CertificatesPage() {
       <div className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/verify"
-          className="inline-flex items-center gap-3 rounded-2xl border border-slate-200/90 bg-white px-5 py-4 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:shadow-xl hover:shadow-slate-300/25 hover:ring-teal-100/80"
+          className="inline-flex items-center gap-3 rounded-2xl border border-funt-gold/40 bg-white px-5 py-4 shadow-lg shadow-amber-900/10 ring-1 ring-funt-gold/20 transition duration-200 hover:border-funt-gold hover:shadow-xl"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-600">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-funt-honey text-funt-gold-deep">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </span>
           <div>
-            <p className="font-semibold text-slate-800">Verify any certificate</p>
-            <p className="text-sm text-slate-500">Anyone with the certificate ID can verify — no login required.</p>
+            <p className="font-semibold text-funt-ink">Verify any certificate</p>
+            <p className="text-sm text-black/55">Anyone with the certificate ID can verify — no login required.</p>
           </div>
-          <svg className="h-5 w-5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="h-5 w-5 shrink-0 text-black/35" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </Link>
         {list.length > 0 && (
-          <div className="shrink-0 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-amber-50 to-white px-6 py-4 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-            <p className="text-2xl font-bold tabular-nums text-amber-700">{list.length}</p>
-            <p className="text-sm font-medium text-slate-600">certificate{list.length !== 1 ? "s" : ""}</p>
+          <div className="shrink-0 rounded-2xl border border-funt-gold/40 bg-gradient-to-br from-funt-gold/30 to-funt-butter px-6 py-4 shadow-lg shadow-amber-900/10 ring-1 ring-funt-gold/25">
+            <p className="text-2xl font-bold tabular-nums text-funt-gold-deep">{list.length}</p>
+            <p className="text-sm font-medium text-funt-ink">certificate{list.length !== 1 ? "s" : ""}</p>
           </div>
         )}
       </div>
@@ -113,8 +116,8 @@ export default function CertificatesPage() {
       {}
       <div className="min-h-0 flex-1 overflow-auto">
         {list.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white px-6 py-16 text-center shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-400 shadow-inner ring-1 ring-slate-200/60">
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-funt-gold/40 bg-white/90 px-6 py-16 text-center shadow-lg shadow-amber-900/10 ring-1 ring-funt-gold/20">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-funt-honey text-funt-gold-deep/50 shadow-inner ring-1 ring-funt-gold/30">
               <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -125,7 +128,7 @@ export default function CertificatesPage() {
             </p>
             <Link
               href="/courses"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 ring-1 ring-teal-700/30 transition duration-200 hover:bg-teal-700 hover:shadow-xl hover:shadow-teal-900/25"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-900/20 ring-1 ring-funt-gold-deep/30 transition duration-200 hover:bg-funt-gold-hover"
             >
               Go to courses
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -138,27 +141,34 @@ export default function CertificatesPage() {
             {list.map((c) => (
               <article
                 key={c.certificateId}
-                className="flex flex-col rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/25 ring-1 ring-slate-100/80 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-300/30 hover:ring-slate-200/80"
+                className="flex flex-col rounded-2xl border border-funt-gold/30 bg-white shadow-lg shadow-amber-900/10 ring-1 ring-black/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:border-funt-gold/50"
               >
                 <div className="flex min-h-0 flex-1 flex-col p-5">
                   <div className="flex items-start gap-4">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 shadow-inner ring-1 ring-amber-200/60">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-funt-honey text-funt-gold-deep shadow-inner ring-1 ring-funt-gold/40">
                       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-slate-900">{c.courseName}</h3>
-                      <p className="mt-1 text-sm text-slate-500">{formatDate(c.issuedAt)}</p>
-                      <p className="mt-2 font-mono text-xs text-slate-400">{c.certificateId}</p>
+                      <h3 className="font-semibold text-funt-ink">{c.courseName}</h3>
+                      <p className="mt-1 text-sm text-black/55">{formatDate(c.issuedAt)}</p>
+                      <p className="mt-2 font-mono text-xs text-black/40">{c.certificateId}</p>
+                      {c.coinReward > 0 && (
+                        <p className="mt-2 text-sm font-medium text-funt-gold-deep">
+                          {c.coinRewardPending
+                            ? `${c.coinReward} FUNT coins pending instructor approval`
+                            : `You received ${c.coinReward} FUNT coins`}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+                  <div className="mt-5 flex items-center gap-3 border-t border-black/5 pt-4">
                     <button
                       type="button"
                       onClick={() => downloadPdf(c.certificateId)}
                       disabled={downloadingId === c.certificateId}
-                      className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 ring-1 ring-teal-700/30 transition duration-200 hover:bg-teal-700 hover:shadow-xl disabled:opacity-60"
+                      className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-md ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover disabled:opacity-60"
                     >
                       {downloadingId === c.certificateId ? (
                         <>
@@ -176,7 +186,7 @@ export default function CertificatesPage() {
                     </button>
                     <Link
                       href={`/verify?id=${encodeURIComponent(c.certificateId)}`}
-                      className="text-sm font-medium text-slate-500 hover:text-teal-600 hover:underline"
+                      className="text-sm font-medium text-funt-gold-deep hover:underline"
                     >
                       Verify
                     </Link>

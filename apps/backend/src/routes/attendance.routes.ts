@@ -5,7 +5,7 @@ import { requireRoles } from "../middleware/role.middleware.js";
 import { ROLE } from "@funt-platform/constants";
 import {
   markAttendance,
-  markBatchAttendanceByFuntIds,
+  markBatchAttendanceByUsernames,
   addPresentToBatchSession,
   getAttendanceForBatch,
   getAttendanceByStudentsForBatch,
@@ -17,7 +17,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), markAttendance);
-router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), markBatchAttendanceByFuntIds);
+router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), markBatchAttendanceByUsernames);
 router.post("/batch/:batchId/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), addPresentToBatchSession);
 router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceByStudentsForBatch);
 router.get("/batch/:batchId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceForBatch);

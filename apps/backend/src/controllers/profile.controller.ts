@@ -11,7 +11,7 @@ import { ROLE } from "@funt-platform/constants";
 export const lookupProfile = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
   const q = (req.query.q as string)?.trim();
-  if (!q) throw new AppError("Query parameter 'q' (FUNT ID) is required", 400);
+  if (!q) throw new AppError("Query parameter 'q' (username or user id) is required", 400);
   const isSuperAdmin = req.user.roles?.includes(ROLE.SUPER_ADMIN) ?? false;
   const data = await profileService.getProfileForAdmin(q, isSuperAdmin);
   successRes(res, data);

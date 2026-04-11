@@ -113,13 +113,13 @@ export default function NewBatchPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trainer FUNT ID</label>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trainer username or user ID</label>
               <input
                 required
                 value={trainerId}
                 onChange={(e) => setTrainerId(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                placeholder="e.g. TR-26-00001"
+                placeholder="e.g. trainer.jane or 24-char MongoDB id"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

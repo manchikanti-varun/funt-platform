@@ -5,6 +5,7 @@ import { BATCH_STATUS, COURSE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
+import { resolveStaffUserId, resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 
 const ENTITY_BATCH = "Batch";
 
@@ -42,6 +43,7 @@ export interface UpdateBatchInput {
   endDate?: Date;
   zoomLink?: string;
   moderatorIds?: string[];
+  certificatePriceCoins?: number;
 }
 
 type BatchDoc = {
@@ -59,6 +61,7 @@ type BatchDoc = {
   updatedAt?: Date;
   createdBy?: string | null;
   moderatorIds?: string[] | null;
+  certificatePriceCoins?: number;
 };
 
 export function getBatchCourseSnapshots(doc: BatchDoc): unknown[] {
@@ -107,6 +110,7 @@ function toBatchResponse(doc: BatchDoc) {
     status: doc.status,
     createdBy: doc.createdBy ?? undefined,
     moderatorIds: doc.moderatorIds ?? [],
+    certificatePriceCoins: Math.max(0, Math.floor(Number(doc.certificatePriceCoins ?? 0))),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
@@ -160,17 +164,23 @@ export async function createBatch(input: CreateBatchInput) {
 
   const batchId = await generateBatchId();
 
+  const trainerId = await resolveStaffUserId(input.trainerId);
+  const moderatorIds =
+    Array.isArray(input.moderatorIds) && input.moderatorIds.length > 0
+      ? await resolveStaffUserIds(input.moderatorIds)
+      : [];
+
   const doc = await BatchModel.create({
     batchId,
     name: input.name.trim(),
     courseSnapshots,
-    trainerId: input.trainerId,
+    trainerId,
     startDate: new Date(input.startDate),
     endDate: input.endDate ? new Date(input.endDate) : undefined,
     zoomLink: input.zoomLink?.trim() || undefined,
     status: BATCH_STATUS.ACTIVE,
     createdBy: input.createdBy,
-    moderatorIds: Array.isArray(input.moderatorIds) ? input.moderatorIds : [],
+    moderatorIds,
   });
 
   await createAuditLog("BATCH_CREATED", input.createdBy, ENTITY_BATCH, String(doc._id));
@@ -229,11 +239,20 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
   assertCanEditBatch(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
   const hadTrainer = doc.trainerId;
   if (input.name !== undefined) doc.name = input.name.trim();
-  if (input.trainerId !== undefined) doc.trainerId = input.trainerId;
+  if (input.trainerId !== undefined) doc.trainerId = await resolveStaffUserId(input.trainerId);
   if (input.startDate !== undefined) doc.startDate = new Date(input.startDate);
   if (input.endDate !== undefined) doc.endDate = input.endDate ? new Date(input.endDate) : undefined;
   if (input.zoomLink !== undefined) doc.zoomLink = input.zoomLink?.trim() || undefined;
-  if (input.moderatorIds !== undefined) (doc as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds) ? input.moderatorIds : [];
+  if (input.moderatorIds !== undefined) {
+    (doc as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds)
+      ? await resolveStaffUserIds(input.moderatorIds)
+      : [];
+  }
+  if (input.certificatePriceCoins !== undefined) {
+    const n = Math.floor(Number(input.certificatePriceCoins));
+    if (!Number.isFinite(n) || n < 0 || n > 1_000_000) throw new AppError("certificatePriceCoins must be 0–1,000,000", 400);
+    (doc as { certificatePriceCoins?: number }).certificatePriceCoins = n;
+  }
   if (input.courseIds !== undefined) {
     if (!Array.isArray(input.courseIds) || input.courseIds.length === 0) throw new AppError("At least one courseId is required", 400);
     const byMongo = input.courseIds.filter((x) => BATCH_OBJECT_ID_REGEX.test(String(x).trim()));
@@ -283,16 +302,19 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
   if (courseSnapshots.length === 0) throw new AppError("Batch has no courses to duplicate", 400);
   const batchId = await generateBatchId();
   const sourceDoc = source as { createdBy?: string };
+  const trainerId =
+    input.trainerId !== undefined ? await resolveStaffUserId(input.trainerId) : source.trainerId;
   const doc = await BatchModel.create({
     batchId,
     name: input.name?.trim() ?? `${source.name} (Copy)`,
     courseSnapshots,
-    trainerId: input.trainerId ?? source.trainerId,
+    trainerId,
     startDate: source.startDate,
     endDate: source.endDate,
     zoomLink: source.zoomLink,
     status: BATCH_STATUS.ACTIVE,
     createdBy: input.performedBy ?? sourceDoc.createdBy,
+    certificatePriceCoins: Math.max(0, Math.floor(Number((src as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0))),
   });
   await createAuditLog("BATCH_DUPLICATED", input.performedBy, ENTITY_BATCH, String(doc._id));
   return toBatchResponse(doc as unknown as BatchDoc);

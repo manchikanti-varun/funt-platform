@@ -17,14 +17,14 @@ interface EventDetail {
   eventDate: string;
   title?: string;
   markedBy: string;
-  presentStudents: Array<{ studentId: string; funtId: string; name: string }>;
+  presentStudents: Array<{ studentId: string; username: string; name: string }>;
   createdAt: string;
 }
 
 export default function AttendancePage() {
   const [eventDate, setEventDate] = useState("");
   const [title, setTitle] = useState("");
-  const [funtIdsPaste, setFuntIdsPaste] = useState("");
+  const [usernamesPaste, setUsernamesPaste] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
   const [createMessage, setCreateMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -60,14 +60,14 @@ export default function AttendancePage() {
 
   async function createEvent(e: React.FormEvent) {
     e.preventDefault();
-    const raw = funtIdsPaste.trim();
+    const raw = usernamesPaste.trim();
     if (!raw) {
-      setCreateMessage({ type: "error", text: "Paste at least one FUNT ID." });
+      setCreateMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
-    const funtIds = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    if (funtIds.length === 0) {
-      setCreateMessage({ type: "error", text: "Paste at least one FUNT ID." });
+    const usernames = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    if (usernames.length === 0) {
+      setCreateMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
     const date = eventDate || new Date().toISOString().slice(0, 10);
@@ -75,7 +75,7 @@ export default function AttendancePage() {
     setCreateMessage(null);
     const res = await api<{ notFound?: string[] }>("/api/general-attendance", {
       method: "POST",
-      body: JSON.stringify({ eventDate: date, title: title.trim() || undefined, funtIds }),
+      body: JSON.stringify({ eventDate: date, title: title.trim() || undefined, usernames }),
     });
     setCreateLoading(false);
     if (res.success) {
@@ -87,7 +87,7 @@ export default function AttendancePage() {
       });
       setEventDate("");
       setTitle("");
-      setFuntIdsPaste("");
+      setUsernamesPaste("");
       loadEvents();
     } else {
       setCreateMessage({ type: "error", text: res.message ?? "Failed to create event." });
@@ -99,19 +99,19 @@ export default function AttendancePage() {
     if (!detailId) return;
     const raw = addPresentPaste.trim();
     if (!raw) {
-      setAddPresentMessage({ type: "error", text: "Paste at least one FUNT ID." });
+      setAddPresentMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
-    const funtIds = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    if (funtIds.length === 0) {
-      setAddPresentMessage({ type: "error", text: "Paste at least one FUNT ID." });
+    const usernames = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    if (usernames.length === 0) {
+      setAddPresentMessage({ type: "error", text: "Paste at least one username." });
       return;
     }
     setAddPresentLoading(true);
     setAddPresentMessage(null);
     const res = await api<{ addedCount?: number; alreadyMarkedCount?: number; notFound?: string[] }>(`/api/general-attendance/${detailId}/add-present`, {
       method: "PATCH",
-      body: JSON.stringify({ funtIds }),
+      body: JSON.stringify({ usernames }),
     });
     setAddPresentLoading(false);
     if (res.success && res.data) {
@@ -144,7 +144,7 @@ export default function AttendancePage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Attendance</h1>
             <p className="mt-2 text-sm text-slate-600 max-w-2xl">
-              Create events by date and paste FUNT IDs to mark who was present.
+              Create events by date and paste student usernames to mark who was present.
             </p>
           </div>
         </div>
@@ -154,7 +154,7 @@ export default function AttendancePage() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Create event</h2>
-          <p className="mt-1 text-sm text-slate-600">Date, optional title, and FUNT IDs (comma or newline).</p>
+          <p className="mt-1 text-sm text-slate-600">Date, optional title, and usernames (comma or newline).</p>
         </div>
         <form onSubmit={createEvent} className="p-6 space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
@@ -179,11 +179,11 @@ export default function AttendancePage() {
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">FUNT student IDs</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Student usernames</label>
             <textarea
-              value={funtIdsPaste}
-              onChange={(e) => { setFuntIdsPaste(e.target.value); setCreateMessage(null); }}
-              placeholder="Paste CSV or one per line: FS-26-00001, FS-26-00002"
+              value={usernamesPaste}
+              onChange={(e) => { setUsernamesPaste(e.target.value); setCreateMessage(null); }}
+              placeholder="Paste CSV or one per line: student.one, student.two"
               rows={5}
               className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-mono placeholder:text-slate-400 shadow-sm transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
@@ -208,7 +208,7 @@ export default function AttendancePage() {
           )}
           <button
             type="submit"
-            disabled={createLoading || !funtIdsPaste.trim()}
+            disabled={createLoading || !usernamesPaste.trim()}
             className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50 disabled:pointer-events-none"
           >
             {createLoading ? (
@@ -343,14 +343,14 @@ export default function AttendancePage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-left">
                     <th className="px-4 py-3 font-semibold text-slate-600">Name</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 font-mono">FUNT ID</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 font-mono">Username</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {detail.presentStudents.map((s, i) => (
                     <tr key={s.studentId} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
                       <td className="px-4 py-3 font-medium text-slate-900">{s.name || "—"}</td>
-                      <td className="px-4 py-3 font-mono text-slate-600 text-xs">{s.funtId}</td>
+                      <td className="px-4 py-3 font-mono text-slate-600 text-xs">{s.username}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -364,7 +364,7 @@ export default function AttendancePage() {
                 </svg>
                 Add remaining present
               </h3>
-              <p className="mt-1 text-xs text-slate-600">Paste FUNT IDs to add more. Already marked are skipped (no duplicates).</p>
+              <p className="mt-1 text-xs text-slate-600">Paste usernames to add more. Already marked are skipped (no duplicates).</p>
               <form onSubmit={addRemainingToEvent} className="mt-4 space-y-3">
                 <textarea
                   value={addPresentPaste}

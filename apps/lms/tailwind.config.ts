@@ -12,6 +12,16 @@ const config: Config = {
         "brand-learn": ["var(--font-brand-learn)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
+        funt: {
+          paper: "#fffdf7",
+          ink: "#0a0a0a",
+          gold: "#f5c400",
+          "gold-hover": "#e6b800",
+          "gold-deep": "#ca8a04",
+          honey: "#fef3c7",
+          butter: "#fffbeb",
+          muted: "#404040",
+        },
         brand: {
           teal: "#0d9488",
           violet: "#7c3aed",

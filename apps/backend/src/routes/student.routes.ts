@@ -17,6 +17,7 @@ import {
   postEnrollmentRequest,
   getMySubmissions,
 } from "../controllers/enrollment.controller.js";
+import { postRedeemLicense, postSubmitPayment, getStudentPaymentPending } from "../controllers/studentAccess.controller.js";
 import { getMyCertificates, postGenerateMyCertificate } from "../controllers/certificate.controller.js";
 
 const router = Router();
@@ -30,6 +31,9 @@ router.get("/courses/explore", getExploreCourses);
 router.get("/courses/:courseId", getCourseByCourseId);
 router.post("/batches/:batchId/progress", postMarkModuleComplete);
 router.post("/enrollment-requests", postEnrollmentRequest);
+router.post("/enroll/license", postRedeemLicense);
+router.post("/payments", postSubmitPayment);
+router.get("/payments/pending", getStudentPaymentPending);
 router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);
 router.get("/assignments/:assignmentId", getAssignmentForStudent);

@@ -20,13 +20,16 @@ export const checkEligibility = asyncHandler(async (req: Request, res: Response)
 
 export const generateCertificate = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const issuedBy = getUserId(req);
-  const { studentId, batchId } = req.body ?? {};
+  const { studentId, batchId, coinReward } = req.body ?? {};
   if (!studentId || !batchId) throw new AppError("studentId and batchId are required", 400);
   const isStudent = req.user?.roles?.includes(ROLE.STUDENT);
   if (isStudent && req.user?.userId !== studentId) {
     throw new AppError("Students cannot generate certificates for others", 403);
   }
-  const data = await service.generateCertificate(studentId, batchId, issuedBy);
+  const isStaff = req.user?.roles?.includes(ROLE.ADMIN) || req.user?.roles?.includes(ROLE.SUPER_ADMIN);
+  const rewardOpt =
+    isStaff && coinReward != null ? { coinReward: Number(coinReward) } : undefined;
+  const data = await service.generateCertificate(studentId, batchId, issuedBy, rewardOpt);
   successRes(res, data, "Certificate generated", 201);
 });
 
@@ -68,9 +71,11 @@ export const getMyCertificates = asyncHandler(async (req: Request, res: Response
 
 export const postGenerateMyCertificate = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
-  const { batchId } = req.body ?? {};
+  const { batchId, couponCode } = req.body ?? {};
   if (!batchId) throw new AppError("batchId is required", 400);
-  const data = await service.generateCertificate(studentId, batchId, studentId);
+  const data = await service.generateCertificate(studentId, batchId, studentId, {
+    couponCode: typeof couponCode === "string" ? couponCode : undefined,
+  });
   successRes(res, data, "Certificate generated", 201);
 });
 
@@ -84,11 +89,30 @@ export const listBatchCertificateStatus = asyncHandler(async (req: Request, res:
 export const bulkGenerateBatchCertificates = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const batchId = req.params.batchId;
   const issuedBy = getUserId(req);
-  const { studentIds } = req.body ?? {};
+  const { studentIds, coinReward } = req.body ?? {};
   if (!batchId) throw new AppError("batchId is required", 400);
   const ids = Array.isArray(studentIds) ? studentIds.filter((id: unknown) => typeof id === "string") : [];
-  const result = await service.bulkGenerateCertificates(batchId, ids, issuedBy);
+  const opts = coinReward != null ? { coinReward: Number(coinReward) } : undefined;
+  const result = await service.bulkGenerateCertificates(batchId, ids, issuedBy, opts);
   successRes(res, result, "Bulk generate completed");
+});
+
+export const patchCertificateCoinReward = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const actor = getUserId(req);
+  const certificateId = req.params.certificateId;
+  const { coinReward } = req.body ?? {};
+  if (!certificateId) throw new AppError("certificateId is required", 400);
+  if (coinReward == null) throw new AppError("coinReward is required", 400);
+  const data = await service.setCertificateCoinReward(certificateId, Number(coinReward), actor);
+  successRes(res, data, "Coin reward updated");
+});
+
+export const grantCertificateCoins = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const grantedBy = getUserId(req);
+  const certificateId = req.params.certificateId;
+  if (!certificateId) throw new AppError("certificateId is required", 400);
+  const data = await service.grantCertificateCoinReward(certificateId, grantedBy);
+  successRes(res, data, "Coins granted to student");
 });
 
 export const downloadBatchCertificatesZip = asyncHandler(async (req: Request, res: Response): Promise<void> => {

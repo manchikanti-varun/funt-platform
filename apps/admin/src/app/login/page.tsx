@@ -13,7 +13,7 @@ function LoginForm() {
   const from = searchParams.get("from") ?? "/dashboard";
   const tokenFromQuery = searchParams.get("token");
   const errorFromQuery = searchParams.get("error");
-  const [funtId, setFuntId] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(errorFromQuery ?? "");
   const [loading, setLoading] = useState(false);
@@ -37,11 +37,11 @@ function LoginForm() {
     setLoading(true);
     const res = await api<{ token: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ funtId: funtId.trim(), password }),
+      body: JSON.stringify({ username: username.trim(), password }),
     });
     setLoading(false);
     if (!res.success || !res.data?.token) {
-      setError(res.message ?? "Invalid FUNT ID or password");
+      setError(res.message ?? "Invalid username or password");
       return;
     }
     setToken(res.data.token);
@@ -65,14 +65,15 @@ function LoginForm() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">FUNT ID</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Username</label>
             <input
               type="text"
-              value={funtId}
-              onChange={(e) => setFuntId(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               className="input font-mono"
-              placeholder="FUNT ID"
+              placeholder="e.g. srikar@funt"
+              autoComplete="username"
             />
           </div>
           <div>

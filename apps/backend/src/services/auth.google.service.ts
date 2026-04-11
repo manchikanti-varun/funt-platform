@@ -123,7 +123,11 @@ export async function loginWithGoogleEmail(
     }
   ).exec();
   const token = signToken(
-    { userId: String(user._id), funtId: user.funtId, roles: user.roles as ROLE[] },
+    {
+      userId: String(user._id),
+      username: user.username ?? "",
+      roles: user.roles as ROLE[],
+    },
     jwtSecret,
     expiresIn
   );
@@ -131,7 +135,7 @@ export async function loginWithGoogleEmail(
     token,
     user: {
       id: String(user._id),
-      funtId: user.funtId,
+      username: user.username ?? "",
       name: user.name,
       roles: user.roles,
       status: user.status,

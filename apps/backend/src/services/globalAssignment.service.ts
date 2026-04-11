@@ -5,6 +5,7 @@ import { ASSIGNMENT_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/co
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateAssignmentId } from "../utils/funtIdGenerator.js";
+import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 
 const ENTITY = "GlobalAssignment";
 const VALID_SUBMISSION_TYPES = Object.values(SUBMISSION_TYPE);
@@ -19,16 +20,16 @@ function assertCanEditAssignment(performedBy: string, doc: { createdBy?: string;
   }
 }
 
-async function resolveStudentId(funtIdOrUserId: string): Promise<string> {
-  const v = (funtIdOrUserId && String(funtIdOrUserId).trim()) || "";
-  if (!v) throw new AppError("Student FUNT ID or user ID is required", 400);
+async function resolveStudentId(usernameOrUserId: string): Promise<string> {
+  const v = (usernameOrUserId && String(usernameOrUserId).trim()) || "";
+  if (!v) throw new AppError("Student username or user ID is required", 400);
   if (OBJECT_ID_REGEX.test(v)) {
     const user = await UserModel.findById(v).exec();
     if (!user) throw new AppError("Student not found", 404);
     return String(user._id);
   }
-  const user = await UserModel.findOne({ funtId: v }).exec();
-  if (!user) throw new AppError("Student not found (invalid FUNT ID)", 404);
+  const user = await UserModel.findOne({ username: v.toLowerCase() }).exec();
+  if (!user) throw new AppError("Student not found (invalid username)", 404);
   return String(user._id);
 }
 
@@ -84,7 +85,10 @@ export async function createAssignment(input: CreateAssignmentInput) {
   const type =
     input.type != null && String(input.type).toLowerCase() === "general" ? "general" : "module";
   const allowedStudentIds = Array.isArray(input.allowedStudentIds) ? input.allowedStudentIds : [];
-  const moderatorIds = Array.isArray(input.moderatorIds) ? input.moderatorIds : [];
+  const moderatorIds =
+    Array.isArray(input.moderatorIds) && input.moderatorIds.length > 0
+      ? await resolveStaffUserIds(input.moderatorIds)
+      : [];
 
   const assignmentId = await generateAssignmentId();
   const doc = await GlobalAssignmentModel.create({
@@ -148,13 +152,16 @@ export async function listPublishedForStudent(studentId: string) {
   const id = (studentId && String(studentId).trim()) || "";
   if (!id) return [];
 
-  let user = await UserModel.findById(id).select("_id funtId").lean().exec();
+  let user = await UserModel.findById(id).select("_id username").lean().exec();
   if (!user && id.length > 0) {
-    user = await UserModel.findOne({ funtId: id }).select("_id funtId").lean().exec();
+    user = await UserModel.findOne({ username: id.toLowerCase() }).select("_id username").lean().exec();
   }
   const uid = user ? String((user as { _id: unknown })._id) : id;
-  const funtId = user && typeof (user as { funtId?: string }).funtId === "string" ? (user as { funtId: string }).funtId.trim() : "";
-  const idsToMatch = funtId && funtId !== uid ? [uid, id, funtId] : [uid, id];
+  const uname =
+    user && typeof (user as { username?: string }).username === "string"
+      ? (user as { username: string }).username.trim().toLowerCase()
+      : "";
+  const idsToMatch = uname && uname !== uid ? [uid, id, uname] : [uid, id];
   const uniqueIds = [...new Set(idsToMatch)];
 
   const list = await GlobalAssignmentModel.find({
@@ -204,7 +211,13 @@ export async function updateAssignment(
     (existing as { type?: string }).type =
       String(input.type).toLowerCase() === "general" ? "general" : "module";
   if (input.allowedStudentIds !== undefined) (existing as { allowedStudentIds?: string[] }).allowedStudentIds = Array.isArray(input.allowedStudentIds) ? input.allowedStudentIds : [];
-  if (input.moderatorIds !== undefined) (existing as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds) ? input.moderatorIds : [];
+  if (input.moderatorIds !== undefined) {
+    (existing as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds)
+      ? input.moderatorIds.length > 0
+        ? await resolveStaffUserIds(input.moderatorIds)
+        : []
+      : [];
+  }
   await existing.save();
 
   await createAuditLog("ASSIGNMENT_UPDATED", performedBy, ENTITY, id);
@@ -249,15 +262,18 @@ export async function duplicateAssignment(id: string, performedBy: string) {
   return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
 }
 
-export async function addAllowedStudent(assignmentId: string, funtIdOrUserId: string, performedBy: string) {
+export async function addAllowedStudent(assignmentId: string, usernameOrUserId: string, performedBy: string) {
   const doc = await findAssignmentByParam(assignmentId);
   if (!doc) throw new AppError("Assignment not found", 404);
   assertCanEditAssignment(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
-  const studentId = await resolveStudentId(funtIdOrUserId);
-  const user = await UserModel.findById(studentId).select("funtId").lean().exec();
-  const funtId = user && typeof (user as { funtId?: string }).funtId === "string" ? (user as { funtId: string }).funtId.trim() : "";
+  const studentId = await resolveStudentId(usernameOrUserId);
+  const user = await UserModel.findById(studentId).select("username").lean().exec();
+  const uname =
+    user && typeof (user as { username?: string }).username === "string"
+      ? (user as { username: string }).username.trim().toLowerCase()
+      : "";
   const allowed = (doc as { allowedStudentIds?: string[] }).allowedStudentIds ?? [];
-  const toAdd = funtId && funtId !== studentId ? [studentId, funtId] : [studentId];
+  const toAdd = uname && uname !== studentId ? [studentId, uname] : [studentId];
   const nextAllowed = [...allowed];
   for (const v of toAdd) {
     if (!nextAllowed.includes(v)) nextAllowed.push(v);
@@ -268,28 +284,31 @@ export async function addAllowedStudent(assignmentId: string, funtIdOrUserId: st
   return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
 }
 
-/** Remove one student from allowed list (by _id or FUNT ID; removes both from array). */
-export async function removeAllowedStudent(assignmentId: string, studentIdOrFuntId: string, performedBy: string) {
+/** Remove one student from allowed list (by _id or username; removes matching entries). */
+export async function removeAllowedStudent(assignmentId: string, studentIdOrUsername: string, performedBy: string) {
   const doc = await findAssignmentByParam(assignmentId);
   if (!doc) throw new AppError("Assignment not found", 404);
   assertCanEditAssignment(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
   let uid: string;
-  let funtId = "";
+  let uname = "";
   try {
-    uid = await resolveStudentId(studentIdOrFuntId);
-    const user = await UserModel.findById(uid).select("funtId").lean().exec();
-    funtId = user && typeof (user as { funtId?: string }).funtId === "string" ? (user as { funtId: string }).funtId.trim() : "";
+    uid = await resolveStudentId(studentIdOrUsername);
+    const user = await UserModel.findById(uid).select("username").lean().exec();
+    uname =
+      user && typeof (user as { username?: string }).username === "string"
+        ? (user as { username: string }).username.trim().toLowerCase()
+        : "";
   } catch {
-    uid = studentIdOrFuntId;
+    uid = studentIdOrUsername;
   }
-  const toRemove = funtId && funtId !== uid ? [uid, funtId, studentIdOrFuntId] : [uid, studentIdOrFuntId];
+  const toRemove = uname && uname !== uid ? [uid, uname, studentIdOrUsername] : [uid, studentIdOrUsername];
   const allowed = (doc as { allowedStudentIds?: string[] }).allowedStudentIds ?? [];
   (doc as { allowedStudentIds: string[] }).allowedStudentIds = allowed.filter((id) => !toRemove.includes(id));
   await doc.save();
   return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
 }
 
-/** Bulk add students by FUNT IDs or user IDs (JSON array or CSV line). */
+/** Bulk add students by usernames or user IDs (JSON array or CSV line). */
 export async function bulkAddAllowedStudents(
   assignmentId: string,
   identifiers: string[],
@@ -305,11 +324,18 @@ export async function bulkAddAllowedStudents(
     if (!v) continue;
     try {
       const studentId = await resolveStudentId(v);
-      if (allowed.has(studentId)) {
+      const user = await UserModel.findById(studentId).select("username").lean().exec();
+      const uname =
+        user && typeof (user as { username?: string }).username === "string"
+          ? (user as { username: string }).username.trim().toLowerCase()
+          : "";
+      const toAdd = uname && uname !== studentId ? [studentId, uname] : [studentId];
+      const already = toAdd.every((x) => allowed.has(x));
+      if (already) {
         result.skipped += 1;
         continue;
       }
-      allowed.add(studentId);
+      for (const x of toAdd) allowed.add(x);
       result.added += 1;
     } catch {
       result.notFound.push(v);
@@ -320,21 +346,23 @@ export async function bulkAddAllowedStudents(
   return result;
 }
 
-/** List allowed students (id, funtId, name) for an assignment.
- * allowedStudentIds may contain MongoDB _id (24-char hex) or FUNT ID; query by both. */
+/** List allowed students (id, username, name) for an assignment.
+ * allowedStudentIds may contain MongoDB _id (24-char hex) or username. */
 export async function listAllowedStudents(assignmentId: string) {
   const doc = await findAssignmentByParam(assignmentId);
   if (!doc) throw new AppError("Assignment not found", 404);
   const ids = (doc as { allowedStudentIds?: string[] }).allowedStudentIds ?? [];
   if (ids.length === 0) return [];
   const objectIds = ids.filter((id) => OBJECT_ID_REGEX.test(String(id)));
-  const funtIds = ids.filter((id) => !OBJECT_ID_REGEX.test(String(id)));
-  const conditions: { _id?: { $in: string[] }; funtId?: { $in: string[] } }[] = [];
+  const usernames = ids
+    .filter((id) => !OBJECT_ID_REGEX.test(String(id)))
+    .map((s) => String(s).toLowerCase());
+  const conditions: { _id?: { $in: string[] }; username?: { $in: string[] } }[] = [];
   if (objectIds.length) conditions.push({ _id: { $in: objectIds } });
-  if (funtIds.length) conditions.push({ funtId: { $in: funtIds } });
+  if (usernames.length) conditions.push({ username: { $in: usernames } });
   if (conditions.length === 0) return [];
   const users = await UserModel.find(conditions.length === 1 ? conditions[0] : { $or: conditions })
-    .select("_id funtId name")
+    .select("_id username name")
     .lean()
     .exec();
   const seen = new Set<string>();
@@ -347,7 +375,7 @@ export async function listAllowedStudents(assignmentId: string) {
     })
     .map((u) => ({
       id: String(u._id),
-      funtId: (u as { funtId?: string }).funtId ?? "",
+      username: (u as { username?: string }).username ?? "",
       name: (u as { name?: string }).name ?? "",
     }));
 }

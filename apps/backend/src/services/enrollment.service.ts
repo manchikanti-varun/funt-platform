@@ -15,21 +15,21 @@ export interface CreateEnrollmentInput {
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-async function resolveStudentId(studentIdOrFuntId: string): Promise<string> {
-  if (!studentIdOrFuntId?.trim()) throw new AppError("studentId or funtId is required", 400);
-  const v = studentIdOrFuntId.trim();
+async function resolveStudentId(studentIdOrUsername: string): Promise<string> {
+  if (!studentIdOrUsername?.trim()) throw new AppError("studentId or username is required", 400);
+  const v = studentIdOrUsername.trim();
   if (OBJECT_ID_REGEX.test(v)) {
     const user = await UserModel.findById(v).exec();
     if (!user) throw new AppError("Student not found", 404);
     return String(user._id);
   }
-  const user = await UserModel.findOne({ funtId: v }).exec();
-  if (!user) throw new AppError("Student not found (invalid FUNT ID or user ID)", 404);
+  const user = await UserModel.findOne({ username: v.toLowerCase() }).exec();
+  if (!user) throw new AppError("Student not found (invalid username or user ID)", 404);
   return String(user._id);
 }
 
 export async function createEnrollment(input: CreateEnrollmentInput) {
-  if (!input.studentId) throw new AppError("studentId or funtId is required", 400);
+  if (!input.studentId) throw new AppError("studentId or username is required", 400);
   if (!input.batchId) throw new AppError("batchId is required", 400);
 
   const studentId = await resolveStudentId(input.studentId);
@@ -88,6 +88,7 @@ export async function getMyEnrollments(studentId: string) {
         courseId,
         status: e.status,
         enrolledAt: e.enrolledAt,
+        accessBlocked: !!(e as { accessBlocked?: boolean }).accessBlocked,
         batch: batch
           ? {
               id: String(batch._id),
@@ -106,6 +107,16 @@ export async function getMyEnrollments(studentId: string) {
     });
 }
 
+export async function setEnrollmentAccessBlocked(enrollmentId: string, blocked: boolean) {
+  const doc = await EnrollmentModel.findByIdAndUpdate(
+    enrollmentId,
+    { $set: { accessBlocked: blocked } },
+    { new: true }
+  ).exec();
+  if (!doc) throw new AppError("Enrollment not found", 404);
+  return doc;
+}
+
 export async function requireActiveEnrollment(studentId: string, batchId: string) {
   const batch = await findBatchByParam(batchId);
   if (!batch) throw new AppError("Batch not found", 404);
@@ -117,6 +128,9 @@ export async function requireActiveEnrollment(studentId: string, batchId: string
   if (!enrollment) throw new AppError("Not enrolled in this batch", 403);
   if (enrollment.status !== ENROLLMENT_STATUS.ACTIVE) {
     throw new AppError("Enrollment is not active", 403);
+  }
+  if ((enrollment as { accessBlocked?: boolean }).accessBlocked) {
+    throw new AppError("Access to this course has been disabled", 403);
   }
   return enrollment;
 }
@@ -130,7 +144,7 @@ export interface BulkEnrollmentResult {
 
 export async function bulkEnroll(
   batchId: string,
-  studentFuntIdsOrIds: string[],
+  studentUsernamesOrIds: string[],
   createdBy: string
 ): Promise<BulkEnrollmentResult> {
   if (!batchId?.trim()) throw new AppError("batchId is required", 400);
@@ -142,7 +156,7 @@ export async function bulkEnroll(
   const seen = new Set<string>();
   const toCreate: string[] = [];
 
-  for (const raw of studentFuntIdsOrIds) {
+  for (const raw of studentUsernamesOrIds) {
     const v = (raw && String(raw).trim()) || "";
     if (!v || seen.has(v)) continue;
     seen.add(v);
@@ -206,20 +220,24 @@ export async function listEnrollmentsByBatch(batchId: string) {
   if (rawEnrollments.length === 0) return [];
 
   const enrollments = rawEnrollments.map((e) => ({
+    enrollmentId: String((e as { _id: unknown })._id),
     studentId: String(e.studentId),
     batchId: String(e.batchId),
     enrolledAt: e.enrolledAt instanceof Date ? e.enrolledAt : new Date(e.enrolledAt as string | number),
+    accessBlocked: !!(e as { accessBlocked?: boolean }).accessBlocked,
   }));
   const userIds = [...new Set(enrollments.map((e) => e.studentId))];
-  const users = await UserModel.find({ _id: { $in: userIds } }).select("_id funtId name").lean().exec();
+  const users = await UserModel.find({ _id: { $in: userIds } }).select("_id username name").lean().exec();
   const userMap = new Map(users.map((u) => [String(u._id), u]));
   return enrollments.map((e) => {
     const u = userMap.get(e.studentId);
     return {
+      enrollmentId: e.enrollmentId,
       studentId: e.studentId,
-      funtId: (u as { funtId?: string } | undefined)?.funtId ?? "",
+      username: (u as { username?: string } | undefined)?.username ?? "",
       name: (u as { name?: string } | undefined)?.name ?? "",
       enrolledAt: e.enrolledAt,
+      accessBlocked: e.accessBlocked,
     };
   });
 }

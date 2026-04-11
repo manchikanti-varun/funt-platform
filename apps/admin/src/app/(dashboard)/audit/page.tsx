@@ -87,7 +87,7 @@ export default function AuditLogPage() {
           className="input w-48"
         />
         <input
-          placeholder="Performed by (FUNT ID or user id)"
+          placeholder="Performed by (username or user id)"
           value={performedBy}
           onChange={(e) => setPerformedBy(e.target.value)}
           className="input w-48"

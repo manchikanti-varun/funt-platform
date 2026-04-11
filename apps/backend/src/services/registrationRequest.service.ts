@@ -145,14 +145,17 @@ export async function listRegistrationRequests(
   return list.map((d: unknown) => toDto(d as RequestDoc));
 }
 
-export async function approveRequest(requestId: string, approvedByUserId: string): Promise<{ funtId: string; message: string }> {
+export async function approveRequest(
+  requestId: string,
+  approvedByUserId: string
+): Promise<{ username: string; temporaryPassword: string; message: string }> {
   const req = await RegistrationRequestModel.findById(requestId).exec();
   if (!req) throw new AppError("Request not found", 404);
   if (req.status !== "PENDING") {
     throw new AppError(`Request is already ${req.status}`, 400);
   }
   if (req.roleType === "ADMIN") {
-    const { id, funtId } = await createAdminWithTemporaryPassword({
+    const { id, username, temporaryPassword } = await createAdminWithTemporaryPassword({
       name: req.name,
       email: req.email,
       mobile: req.mobile,
@@ -164,12 +167,13 @@ export async function approveRequest(requestId: string, approvedByUserId: string
     req.createdUserId = id;
     await req.save();
     return {
-      funtId,
-      message: `Admin account created. FUNT ID: ${funtId}. Temporary password: ${funtId}. User must log in and change password.`,
+      username,
+      temporaryPassword,
+      message: `Admin account created. Username: ${username}. Temporary password: ${temporaryPassword}. User must log in and change password.`,
     };
   }
   if (req.roleType === "SUPER_ADMIN") {
-    const { id, funtId } = await createSuperAdminWithTemporaryPassword({
+    const { id, username, temporaryPassword } = await createSuperAdminWithTemporaryPassword({
       name: req.name,
       email: req.email,
       mobile: req.mobile,
@@ -181,8 +185,9 @@ export async function approveRequest(requestId: string, approvedByUserId: string
     req.createdUserId = id;
     await req.save();
     return {
-      funtId,
-      message: `Super Admin account created. FUNT ID: ${funtId}. Temporary password: ${funtId}. User must log in and change password.`,
+      username,
+      temporaryPassword,
+      message: `Super Admin account created. Username: ${username}. Temporary password: ${temporaryPassword}. User must log in and change password.`,
     };
   }
   throw new AppError("Invalid role type", 400);

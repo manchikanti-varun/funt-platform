@@ -6,7 +6,7 @@ declare global {
     interface Request {
       user?: {
         userId: string;
-        funtId: string;
+        username: string;
         roles: ROLE[];
       };
     }

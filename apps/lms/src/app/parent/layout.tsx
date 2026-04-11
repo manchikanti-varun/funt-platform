@@ -7,7 +7,7 @@ import { parseJwtPayload, isTokenExpired } from "@/lib/auth";
 
 interface UserMe {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   roles: string[];
 }

@@ -100,6 +100,15 @@ export function Sidebar({ roles }: SidebarProps) {
         {isAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
+              Student shop
+            </SidebarNavLink>
+            <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
+              Payments
+            </SidebarNavLink>
+            <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
+              Coupons
+            </SidebarNavLink>
             <SidebarNavLink
               href="/attendance"
               isActive={pathname === "/attendance" || (pathname.startsWith("/batches") && pathname.includes("/attendance"))}

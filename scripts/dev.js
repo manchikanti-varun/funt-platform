@@ -1,7 +1,8 @@
 const { execSync, spawn } = require("child_process");
 const path = require("path");
 
-const BACKEND_PORT_FULL_DEV = 38473;
+/** Same as apps/backend default PORT / admin & LMS .env — avoids wrong API URL when Next reads .env locally. */
+const BACKEND_PORT_FULL_DEV = 38472;
 const root = path.resolve(__dirname, "..");
 const backendDir = path.join(root, "apps", "backend");
 process.chdir(root);

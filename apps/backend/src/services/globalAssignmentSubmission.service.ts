@@ -68,15 +68,15 @@ export interface ListGlobalSubmissionsFilters {
   status?: string;
 }
 
-async function getStudentFuntIdMap(studentIds: string[]): Promise<Map<string, string>> {
+async function getStudentUsernameMap(studentIds: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(studentIds.filter(Boolean))];
   if (unique.length === 0) return new Map();
-  const users = await UserModel.find({ _id: { $in: unique } }).select("_id funtId").lean().exec();
+  const users = await UserModel.find({ _id: { $in: unique } }).select("_id username").lean().exec();
   const map = new Map<string, string>();
   for (const u of users) {
     const id = String(u._id);
-    const funtId = (u as { funtId?: string }).funtId;
-    if (funtId) map.set(id, funtId);
+    const username = (u as { username?: string }).username;
+    if (username) map.set(id, username);
   }
   return map;
 }
@@ -92,11 +92,11 @@ export async function listGlobalSubmissions(filters?: ListGlobalSubmissionsFilte
     .lean()
     .exec();
 
-  const funtIdMap = await getStudentFuntIdMap(list.map((d) => d.studentId));
+  const usernameMap = await getStudentUsernameMap(list.map((d) => d.studentId));
 
   return list.map((d) => ({
     id: String(d._id),
-    studentId: funtIdMap.get(d.studentId) ?? d.studentId,
+    studentId: usernameMap.get(d.studentId) ?? d.studentId,
     assignmentId: d.assignmentId,
     trainerId: d.trainerId,
     submissionType: d.submissionType,

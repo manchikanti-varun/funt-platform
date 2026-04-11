@@ -11,7 +11,7 @@ interface EnrollmentRequest {
   batchFuntId?: string;
   courseTitle: string;
   studentId: string;
-  studentFuntId?: string;
+  studentUsername?: string;
   studentName?: string;
   studentEmail?: string;
   requestedAt: string;
@@ -119,7 +119,7 @@ export default function EnrollmentRequestsPage() {
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600">
                       <span className="font-mono font-medium text-slate-800">
-                        {r.studentFuntId ?? r.studentId}
+                        {r.studentUsername ?? r.studentId}
                       </span>
                       {r.studentName && (
                         <span className="ml-1 text-slate-500">— {r.studentName}</span>

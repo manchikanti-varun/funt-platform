@@ -19,12 +19,12 @@ async function seed(): Promise<void> {
   await mongoose.connect(MONGO_URI);
   const existing = await UserModel.findOne({ roles: ROLE.SUPER_ADMIN }).exec();
   if (existing) {
-    console.log("Super Admin already exists:", existing.funtId);
+    console.log("Super Admin already exists:", existing.username);
     await mongoose.disconnect();
     process.exit(0);
   }
   const result = await createSuperAdmin({ name, email, mobile, password });
-  console.log("Super Admin created:", result.funtId, result.id);
+  console.log("Super Admin created:", result.username, result.id);
   await mongoose.disconnect();
 }
 

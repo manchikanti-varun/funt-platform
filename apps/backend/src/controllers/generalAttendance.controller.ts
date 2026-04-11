@@ -13,18 +13,18 @@ function getUserId(req: Request): string {
 
 export const createGeneralAttendance = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const markedBy = getUserId(req);
-  const { eventDate, title, funtIds } = req.body ?? {};
+  const { eventDate, title, usernames } = req.body ?? {};
   if (!eventDate) throw new AppError("eventDate is required", 400);
-  const ids = Array.isArray(funtIds)
-    ? funtIds
-    : typeof funtIds === "string"
-      ? funtIds.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+  const ids = Array.isArray(usernames)
+    ? usernames
+    : typeof usernames === "string"
+      ? usernames.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
       : [];
-  if (ids.length === 0) throw new AppError("funtIds (or CSV paste) is required", 400);
+  if (ids.length === 0) throw new AppError("usernames (or CSV paste) is required", 400);
   const data = await service.createGeneralAttendance({
     eventDate,
     title,
-    funtIdsOrUserIds: ids,
+    usernamesOrUserIds: ids,
     markedBy,
   });
   successRes(res, data, "Event attendance created", 201);
@@ -46,9 +46,13 @@ export const addPresentToGeneralAttendance = asyncHandler(async (req: Request, r
   const performedBy = getUserId(req);
   const id = req.params.id as string;
   if (!id) throw new AppError("id is required", 400);
-  const { funtIds } = req.body ?? {};
-  const ids = Array.isArray(funtIds) ? funtIds : typeof funtIds === "string" ? funtIds.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean) : [];
-  if (ids.length === 0) throw new AppError("funtIds (or CSV paste) is required", 400);
+  const { usernames } = req.body ?? {};
+  const ids = Array.isArray(usernames)
+    ? usernames
+    : typeof usernames === "string"
+      ? usernames.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+      : [];
+  if (ids.length === 0) throw new AppError("usernames (or CSV paste) is required", 400);
   const data = await service.addPresentToGeneralAttendance(id, ids, performedBy);
   successRes(res, data, "Added remaining present", 200);
 });

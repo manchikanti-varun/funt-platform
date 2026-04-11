@@ -94,7 +94,7 @@ export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: 
 
   const studentIds = [...new Set(requests.map((r) => r.studentId))];
   const students = await UserModel.find({ _id: { $in: studentIds } })
-    .select("_id funtId name email")
+    .select("_id username name email")
     .lean()
     .exec();
   const studentMap = new Map(students.map((s) => [String(s._id), s]));
@@ -112,7 +112,7 @@ export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: 
       batchFuntId: (batch as { batchId?: string })?.batchId,
       courseTitle,
       studentId: r.studentId,
-      studentFuntId: (student as { funtId?: string })?.funtId,
+      studentUsername: (student as { username?: string })?.username,
       studentName: (student as { name?: string })?.name,
       studentEmail: (student as { email?: string })?.email,
       requestedAt: r.requestedAt,

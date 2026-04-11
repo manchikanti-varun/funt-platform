@@ -92,7 +92,7 @@ export default function AssignmentModeratorsPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Moderators</h1>
           <p className="mt-1 text-sm text-slate-600">{assignment.title}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Other admins or trainers who can edit this assignment. Comma-separated FUNT IDs.
+            Other admins or trainers who can edit this assignment. Comma-separated user IDs or usernames.
           </p>
         </div>
 

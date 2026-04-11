@@ -179,10 +179,17 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
 
   async function approve(requestId: string) {
     setActingId(requestId);
-    const res = await api<{ funtId?: string; message?: string }>(`/api/admin/requests/${requestId}/approve`, { method: "POST" });
+    const res = await api<{ username?: string; temporaryPassword?: string; message?: string }>(
+      `/api/admin/requests/${requestId}/approve`,
+      { method: "POST" }
+    );
     setActingId(null);
     if (res.success) {
-      onMessage("success", res.data?.message ?? `Account created. FUNT ID: ${res.data?.funtId ?? ""}. Temp password = FUNT ID.`);
+      onMessage(
+        "success",
+        res.data?.message ??
+          `Account created. Username: ${res.data?.username ?? ""}. Temporary password: ${res.data?.temporaryPassword ?? ""}.`
+      );
       load();
     } else {
       onMessage("error", res.message ?? "Failed to approve.");
@@ -208,7 +215,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Registration requests</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Requests from Google Admin signup appear here. Approve or reject to create the account (temp password = FUNT ID). Use <strong>Refresh</strong> to load the latest.
+            Requests from Google Admin signup appear here. Approve or reject to create the account (temporary password is shown on approval). Use <strong>Refresh</strong> to load the latest.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -339,23 +346,32 @@ function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
 }
 
 function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
+  const [age, setAge] = useState("10");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const res = await api<{ funtId?: string }>("/api/admin/users/student", {
+    const res = await api<{ username?: string }>("/api/admin/users/student", {
       method: "POST",
-      body: JSON.stringify({ name, email, mobile, password }),
+      body: JSON.stringify({
+        username,
+        name,
+        email,
+        mobile,
+        password,
+        age: Number(age),
+      }),
     });
     setLoading(false);
     if (res.success) {
-      const funtId = res.data?.funtId;
-      onSuccess(funtId ? `Student created. FUNT ID: ${funtId}` : "Student created.");
+      const u = res.data?.username;
+      onSuccess(u ? `Student created. Username: ${u}` : "Student created.");
     } else onError(res.message ?? "Failed to create student.");
   }
 
@@ -363,9 +379,20 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     <form onSubmit={submit} className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-slate-800">Create Student</h2>
-        <p className="mt-1 text-sm text-slate-500">Add a new student. They will receive a FUNT ID and can sign in to the LMS.</p>
+        <p className="mt-1 text-sm text-slate-500">Add a new student with a unique username. They can sign in to the LMS.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="student-username">Username</Label>
+          <input
+            id="student-username"
+            required
+            className={INPUT_CLASS}
+            placeholder="e.g. srikar.ch"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
         <div>
           <Label htmlFor="student-name">Name</Label>
           <input id="student-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -377,6 +404,19 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         <div>
           <Label htmlFor="student-mobile">Mobile</Label>
           <input id="student-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="student-age">Age</Label>
+          <input
+            id="student-age"
+            required
+            type="number"
+            min={7}
+            max={120}
+            className={INPUT_CLASS}
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+          />
         </div>
         <div>
           <Label htmlFor="student-password">Password</Label>
@@ -391,6 +431,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
 }
 
 function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
@@ -400,14 +441,14 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const res = await api<{ funtId?: string }>("/api/admin/users/trainer", {
+    const res = await api<{ username?: string }>("/api/admin/users/trainer", {
       method: "POST",
-      body: JSON.stringify({ name, email, mobile, password }),
+      body: JSON.stringify({ username, name, email, mobile, password }),
     });
     setLoading(false);
     if (res.success) {
-      const funtId = res.data?.funtId;
-      onSuccess(funtId ? `Trainer created. FUNT ID: ${funtId}` : "Trainer created.");
+      const u = res.data?.username;
+      onSuccess(u ? `Trainer created. Username: ${u}` : "Trainer created.");
     } else onError(res.message ?? "Failed to create trainer.");
   }
 
@@ -418,6 +459,17 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         <p className="mt-1 text-sm text-slate-500">Add a trainer. They can be assigned to batches and manage their assigned batches in the Trainer Panel.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="trainer-username">Username</Label>
+          <input
+            id="trainer-username"
+            required
+            className={INPUT_CLASS}
+            placeholder="e.g. trainer.jane"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </div>
         <div>
           <Label htmlFor="trainer-name">Name</Label>
           <input id="trainer-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -452,14 +504,14 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const res = await api<{ funtId?: string }>("/api/admin/users/admin", {
+    const res = await api<{ username?: string }>("/api/admin/users/admin", {
       method: "POST",
       body: JSON.stringify({ name, email, mobile, password }),
     });
     setLoading(false);
     if (res.success) {
-      const funtId = res.data?.funtId;
-      onSuccess(funtId ? `Admin created. FUNT ID: ${funtId}` : "Admin created.");
+      const u = res.data?.username;
+      onSuccess(u ? `Admin created. Username: ${u}` : "Admin created.");
     } else onError(res.message ?? "Failed to create admin.");
   }
 
@@ -497,24 +549,26 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
 function CreateParentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [linkedStudentFuntIds, setLinkedStudentFuntIds] = useState("");
+  const [linkedStudentUsernames, setLinkedStudentUsernames] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const res = await api<{ funtId?: string }>("/api/admin/users/parent", {
+    const res = await api<{ username?: string }>("/api/admin/users/parent", {
       method: "POST",
       body: JSON.stringify({
         name,
         mobile,
-        linkedStudentFuntIds: linkedStudentFuntIds ? linkedStudentFuntIds.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        linkedStudentUsernames: linkedStudentUsernames
+          ? linkedStudentUsernames.split(",").map((s) => s.trim()).filter(Boolean)
+          : [],
       }),
     });
     setLoading(false);
     if (res.success) {
-      const funtId = res.data?.funtId;
-      onSuccess(funtId ? `Parent created. FUNT ID: ${funtId}` : "Parent created.");
+      const u = res.data?.username;
+      onSuccess(u ? `Parent created. Username: ${u}` : "Parent created.");
     } else onError(res.message ?? "Failed to create parent.");
   }
 
@@ -522,7 +576,7 @@ function CreateParentForm({ onSuccess, onError }: { onSuccess: (m: string) => vo
     <form onSubmit={submit} className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-slate-800">Create Parent</h2>
-        <p className="mt-1 text-sm text-slate-500">Add a parent and optionally link them to students by FUNT ID. Parents can sign in to view linked students.</p>
+        <p className="mt-1 text-sm text-slate-500">Add a parent and link them to students by username. Parents can sign in to view linked students.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -534,13 +588,13 @@ function CreateParentForm({ onSuccess, onError }: { onSuccess: (m: string) => vo
           <input id="parent-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
         </div>
         <div className="sm:col-span-2">
-          <Label htmlFor="parent-students">Linked student FUNT IDs (optional)</Label>
+          <Label htmlFor="parent-students">Linked student usernames (required)</Label>
           <input
             id="parent-students"
             className={INPUT_CLASS}
-            placeholder="FS-26-00001, FS-26-00002"
-            value={linkedStudentFuntIds}
-            onChange={(e) => setLinkedStudentFuntIds(e.target.value)}
+            placeholder="student.one, student.two"
+            value={linkedStudentUsernames}
+            onChange={(e) => setLinkedStudentUsernames(e.target.value)}
           />
           <p className="mt-1 text-xs text-slate-500">Comma-separated. Parent can be linked to more students later.</p>
         </div>
@@ -553,34 +607,45 @@ function CreateParentForm({ onSuccess, onError }: { onSuccess: (m: string) => vo
 }
 
 function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
-  const [funtId, setFuntId] = useState("");
+  const [userIdentifier, setUserIdentifier] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!funtId.trim()) return onError("FUNT ID required.");
+    if (!userIdentifier.trim()) return onError("Username or user ID required.");
     setLoading(true);
-    const res = await api(`/api/admin/users/${encodeURIComponent(funtId.trim())}/reset-login`, { method: "POST" });
+    const res = await api<{ temporaryPassword?: string; message?: string }>(
+      `/api/admin/users/${encodeURIComponent(userIdentifier.trim())}/reset-login`,
+      { method: "POST" }
+    );
     setLoading(false);
-    if (res.success) onSuccess("Login reset. Password is now their FUNT ID; they can sign in with FUNT ID as both username and password.");
-    else onError(res.message ?? "Failed to reset.");
+    if (res.success) {
+      const tp = res.data?.temporaryPassword;
+      onSuccess(
+        tp
+          ? `Login reset. Temporary password: ${tp}. Share it securely; user should sign in and change password.`
+          : (res.data?.message ?? "Login reset.")
+      );
+    } else onError(res.message ?? "Failed to reset.");
   }
 
   return (
     <form onSubmit={submit} className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-slate-800">Reset Login</h2>
-        <p className="mt-1 text-sm text-slate-500">Clear account lockout and set the user&apos;s password to their FUNT ID. They sign in with FUNT ID + FUNT ID as password.</p>
+        <p className="mt-1 text-sm text-slate-500">
+          Clear account lockout and set a new temporary password. Enter MongoDB user ID (24 hex chars) or username.
+        </p>
       </div>
       <div className="max-w-md">
-        <Label htmlFor="reset-funtid">FUNT ID</Label>
+        <Label htmlFor="reset-user">Username or user ID</Label>
         <input
-          id="reset-funtid"
+          id="reset-user"
           required
           className={INPUT_CLASS}
-          placeholder="e.g. FS-26-00001, AD-26-0001, TR-26-00001"
-          value={funtId}
-          onChange={(e) => setFuntId(e.target.value)}
+          placeholder="e.g. name@funt or 507f1f77bcf86cd799439011"
+          value={userIdentifier}
+          onChange={(e) => setUserIdentifier(e.target.value)}
         />
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700 disabled:opacity-60">

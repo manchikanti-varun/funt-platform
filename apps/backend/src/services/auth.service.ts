@@ -1,32 +1,37 @@
 
 import bcrypt from "bcrypt";
+import crypto from "node:crypto";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 import { UserModel } from "../models/User.model.js";
-import {
-  generateStudentId,
-  generateTrainerId,
-  generateAdminId,
-  generateSuperAdminId,
-  parentIdFromStudentId,
-} from "../utils/funtIdGenerator.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
+import {
+  buildAdminUsernameBase,
+  normalizeStudentUsername,
+  validateAdminUsername,
+  validateStudentUsername,
+} from "../utils/username.js";
 
 const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 60 * 60 * 1000; 
+const LOCK_DURATION_MS = 60 * 60 * 1000;
 
 export interface CreateStudentInput {
+  username: string;
   name: string;
   email?: string;
   mobile: string;
   password: string;
+  age: number;
+  address?: string;
   grade?: string;
+  gradeOther?: string;
   schoolName?: string;
   city?: string;
 }
 
 export interface CreateTrainerInput {
+  username: string;
   name: string;
   email: string;
   mobile: string;
@@ -51,63 +56,111 @@ export interface CreateParentInput {
   name: string;
   mobile: string;
   email?: string;
-  linkedStudentFuntIds: string[];
+  linkedStudentUsernames: string[];
 }
 
 export interface LoginInput {
-    funtId?: string;
-    email?: string;
-    mobile?: string;
+  username?: string;
+  email?: string;
+  mobile?: string;
   password: string;
 }
 
 export interface ParentLoginInput {
-  studentFuntId: string;
+  studentUsername: string;
   mobile: string;
 }
 
 export interface LoginResult {
   token: string;
-  user: { id: string; funtId: string; name: string; roles: string[]; status: string };
+  user: { id: string; username: string; name: string; roles: string[]; status: string };
 }
 
-function toSafeUser(doc: { _id: unknown; funtId: string; name: string; roles: string[]; status: string }) {
+function toSafeUser(doc: {
+  _id: unknown;
+  username?: string | null;
+  name: string;
+  roles: string[];
+  status: string;
+}) {
   return {
     id: String(doc._id),
-    funtId: doc.funtId,
+    username: doc.username?.trim() ?? "",
     name: doc.name,
     roles: doc.roles,
     status: doc.status,
   };
 }
 
+async function uniqueAdminUsernameFromName(name: string): Promise<string> {
+  const base = buildAdminUsernameBase(name);
+  let candidate = base;
+  for (let i = 0; i < 80; i++) {
+    const exists = await UserModel.findOne({ username: candidate }).exec();
+    if (!exists) return candidate;
+    const local = base.replace(/@funt$/, "");
+    candidate = `${local}${i + 2}@funt`;
+  }
+  throw new AppError("Could not allocate admin username", 500);
+}
+
+async function uniqueParentUsername(name: string): Promise<string> {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "")
+    .slice(0, 12)
+    .toLowerCase() || "user";
+  let candidate = `parent.${slug}`;
+  for (let i = 0; i < 80; i++) {
+    const exists = await UserModel.findOne({ username: candidate }).exec();
+    if (!exists) return candidate;
+    candidate = `parent.${slug}${i + 2}`;
+  }
+  throw new AppError("Could not allocate parent username", 500);
+}
+
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
-export async function createStudent(input: CreateStudentInput): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateStudentId();
+function randomTemporaryPassword(): string {
+  return crypto.randomBytes(12).toString("base64url");
+}
+
+export async function createStudent(input: CreateStudentInput): Promise<{ id: string; username: string }> {
+  const uErr = validateStudentUsername(input.username);
+  if (uErr) throw new AppError(uErr, 400);
+  const uname = normalizeStudentUsername(input.username);
+  if (input.age < 7) throw new AppError("Minimum age is 7 years", 400);
   const passwordHash = await hashPassword(input.password);
+  const gradeVal = input.grade?.trim();
+  const gradeOther = input.gradeOther?.trim();
   const user = await UserModel.create({
-    funtId,
+    username: uname,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
     passwordHash,
     roles: [ROLE.STUDENT],
     status: ACCOUNT_STATUS.ACTIVE,
-    ...(input.grade != null && { grade: input.grade }),
+    age: input.age,
+    ...(input.address != null && input.address !== "" && { address: input.address.trim() }),
+    ...(gradeVal != null && gradeVal !== "" && { grade: gradeVal }),
+    ...(gradeOther != null && gradeOther !== "" && { gradeOther }),
     ...(input.schoolName != null && { schoolName: input.schoolName }),
     ...(input.city != null && { city: input.city }),
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username! };
 }
 
-export async function createTrainer(input: CreateTrainerInput): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateTrainerId();
+export async function createTrainer(input: CreateTrainerInput): Promise<{ id: string; username: string }> {
+  const uErr = validateStudentUsername(input.username);
+  if (uErr) throw new AppError(uErr, 400);
+  const uname = normalizeStudentUsername(input.username);
   const passwordHash = await hashPassword(input.password);
   const user = await UserModel.create({
-    funtId,
+    username: uname,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -115,14 +168,14 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
     roles: [ROLE.TRAINER],
     status: ACCOUNT_STATUS.ACTIVE,
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username! };
 }
 
-export async function createAdmin(input: CreateAdminInput): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateAdminId();
+export async function createAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
   const passwordHash = await hashPassword(input.password);
+  const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
-    funtId,
+    username,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -130,14 +183,14 @@ export async function createAdmin(input: CreateAdminInput): Promise<{ id: string
     roles: [ROLE.ADMIN],
     status: ACCOUNT_STATUS.ACTIVE,
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username! };
 }
 
-export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateSuperAdminId();
+export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; username: string }> {
   const passwordHash = await hashPassword(input.password);
+  const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
-    funtId,
+    username,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -145,14 +198,20 @@ export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ 
     roles: [ROLE.SUPER_ADMIN],
     status: ACCOUNT_STATUS.ACTIVE,
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username! };
 }
 
-export async function createAdminWithTemporaryPassword(input: { name: string; email: string; mobile: string; city?: string }): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateAdminId();
-  const passwordHash = await hashPassword(funtId);
+export async function createAdminWithTemporaryPassword(input: {
+  name: string;
+  email: string;
+  mobile: string;
+  city?: string;
+}): Promise<{ id: string; username: string; temporaryPassword: string }> {
+  const temporaryPassword = randomTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
-    funtId,
+    username,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -161,15 +220,20 @@ export async function createAdminWithTemporaryPassword(input: { name: string; em
     status: ACCOUNT_STATUS.ACTIVE,
     ...(input.city != null && input.city !== "" && { city: input.city }),
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username!, temporaryPassword };
 }
 
-/** Create Super Admin with temporary password = FUNT ID (for approval flow). */
-export async function createSuperAdminWithTemporaryPassword(input: { name: string; email: string; mobile: string; city?: string }): Promise<{ id: string; funtId: string }> {
-  const funtId = await generateSuperAdminId();
-  const passwordHash = await hashPassword(funtId);
+export async function createSuperAdminWithTemporaryPassword(input: {
+  name: string;
+  email: string;
+  mobile: string;
+  city?: string;
+}): Promise<{ id: string; username: string; temporaryPassword: string }> {
+  const temporaryPassword = randomTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
-    funtId,
+    username,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -178,28 +242,29 @@ export async function createSuperAdminWithTemporaryPassword(input: { name: strin
     status: ACCOUNT_STATUS.ACTIVE,
     ...(input.city != null && input.city !== "" && { city: input.city }),
   });
-  return { id: String(user._id), funtId: user.funtId };
+  return { id: String(user._id), username: user.username!, temporaryPassword };
 }
 
-export async function createParent(input: CreateParentInput): Promise<{ id: string; funtId: string }> {
-  if (!input.linkedStudentFuntIds?.length) {
-    throw new AppError("At least one linked student FUNT ID is required to create a parent", 400);
+export async function createParent(input: CreateParentInput): Promise<{ id: string; username: string }> {
+  if (!input.linkedStudentUsernames?.length) {
+    throw new AppError("At least one linked student username is required to create a parent", 400);
   }
-  const funtId = parentIdFromStudentId(input.linkedStudentFuntIds[0]);
+  const linked = input.linkedStudentUsernames.map((s) => normalizeStudentUsername(String(s)));
+  for (const uname of linked) {
+    const st = await UserModel.findOne({ username: uname, roles: ROLE.STUDENT }).exec();
+    if (!st) throw new AppError(`Student not found for username: ${uname}`, 400);
+  }
+  const username = await uniqueParentUsername(input.name);
   const user = await UserModel.create({
-    funtId,
+    username,
     name: input.name,
     mobile: input.mobile,
     email: input.email,
     roles: [ROLE.PARENT],
     status: ACCOUNT_STATUS.ACTIVE,
-    linkedStudentFuntIds: input.linkedStudentFuntIds,
+    linkedStudentUsernames: linked,
   });
-  return { id: String(user._id), funtId: user.funtId };
-}
-
-async function findUserByFuntId(funtId: string) {
-  return UserModel.findOne({ funtId: funtId.trim() }).select("+passwordHash +loginAttempts +lockedUntil +loginHistory");
+  return { id: String(user._id), username: user.username! };
 }
 
 async function findUserByEmailOrMobile(email?: string, mobile?: string) {
@@ -212,21 +277,29 @@ async function findUserByEmailOrMobile(email?: string, mobile?: string) {
   return null;
 }
 
+async function findUserForPasswordLogin(input: LoginInput) {
+  const raw = (input.username ?? "").trim();
+  if (raw) {
+    const user = await UserModel.findOne({ username: raw.toLowerCase() })
+      .select("+passwordHash +loginAttempts +lockedUntil +loginHistory")
+      .exec();
+    if (user) return user;
+  }
+  if (input.email || input.mobile) {
+    return findUserByEmailOrMobile(input.email, input.mobile);
+  }
+  return null;
+}
+
 export async function login(
   input: LoginInput,
   jwtSecret: string,
   expiresIn: string,
   meta?: { userAgent?: string; ip?: string }
 ): Promise<LoginResult> {
-  let user = null;
-  if (input.funtId?.trim()) {
-    user = await findUserByFuntId(input.funtId);
-  }
-  if (!user && (input.email || input.mobile)) {
-    user = await findUserByEmailOrMobile(input.email, input.mobile);
-  }
+  const user = await findUserForPasswordLogin(input);
   if (!user) {
-    throw new AppError("Invalid FUNT ID or password", 401);
+    throw new AppError("Invalid username or password", 401);
   }
 
   if (user.status !== ACCOUNT_STATUS.ACTIVE) {
@@ -238,7 +311,7 @@ export async function login(
   }
 
   if (!user.passwordHash) {
-    throw new AppError("Invalid FUNT ID or password", 401);
+    throw new AppError("Invalid username or password", 401);
   }
 
   const valid = await bcrypt.compare(input.password, user.passwordHash);
@@ -252,7 +325,7 @@ export async function login(
           : {}),
       }
     ).exec();
-    throw new AppError("Invalid FUNT ID or password", 401);
+    throw new AppError("Invalid username or password", 401);
   }
 
   await UserModel.updateOne(
@@ -269,7 +342,11 @@ export async function login(
   ).exec();
 
   const token = signToken(
-    { userId: String(user._id), funtId: user.funtId, roles: user.roles as ROLE[] },
+    {
+      userId: String(user._id),
+      username: user.username ?? "",
+      roles: user.roles as ROLE[],
+    },
     jwtSecret,
     expiresIn
   );
@@ -282,6 +359,7 @@ export async function parentLogin(
   expiresIn: string,
   meta?: { userAgent?: string; ip?: string }
 ): Promise<LoginResult> {
+  const studentU = normalizeStudentUsername(input.studentUsername);
   const user = await UserModel.findOne({
     mobile: input.mobile,
     roles: ROLE.PARENT,
@@ -301,7 +379,7 @@ export async function parentLogin(
     throw new AppError(`Account locked. Try again after ${user.lockedUntil.toISOString()}`, 423);
   }
 
-  const linked = user.linkedStudentFuntIds && user.linkedStudentFuntIds.includes(input.studentFuntId);
+  const linked = user.linkedStudentUsernames && user.linkedStudentUsernames.includes(studentU);
   if (!linked) {
     await UserModel.updateOne(
       { _id: user._id },
@@ -329,7 +407,7 @@ export async function parentLogin(
   ).exec();
 
   const token = signToken(
-    { userId: String(user._id), funtId: user.funtId, roles: user.roles as ROLE[] },
+    { userId: String(user._id), username: user.username ?? "", roles: user.roles as ROLE[] },
     jwtSecret,
     expiresIn
   );
@@ -340,15 +418,42 @@ const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
 export async function resolveUserIdFromIdentifier(identifier: string): Promise<string> {
   const v = (identifier ?? "").trim();
-  if (!v) throw new AppError("User identifier (FUNT ID or user ID) is required", 400);
+  if (!v) throw new AppError("User identifier (username or user ID) is required", 400);
   if (OBJECT_ID_REGEX.test(v)) {
     const user = await UserModel.findById(v).select("_id").lean().exec();
     if (!user) throw new AppError("User not found", 404);
     return String(user._id);
   }
-  const user = await UserModel.findOne({ funtId: v }).select("_id").lean().exec();
-  if (!user) throw new AppError("User not found (invalid FUNT ID or user ID)", 404);
+  const user = await UserModel.findOne({ username: v.toLowerCase() }).select("_id").lean().exec();
+  if (!user) throw new AppError("User not found (invalid username or user ID)", 404);
   return String(user._id);
+}
+
+export async function lookupStudentUsernameByEmail(email: string): Promise<{ username: string | null }> {
+  const normalized = email.trim().toLowerCase();
+  const user = await UserModel.findOne({ email: normalized }).select("username roles").lean().exec();
+  if (!user) throw new AppError("No account found for this email", 404);
+  if (!(user.roles as string[])?.includes(ROLE.STUDENT)) {
+    throw new AppError("No student account found for this email", 404);
+  }
+  return { username: (user as { username?: string }).username ?? null };
+}
+
+export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername: string): Promise<void> {
+  const user = await UserModel.findById(targetUserId).exec();
+  if (!user) throw new AppError("User not found", 404);
+  const v = rawUsername.trim().toLowerCase();
+  const isStaff = user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN);
+  if (isStaff) {
+    const e = validateAdminUsername(v);
+    if (e) throw new AppError(e, 400);
+  } else {
+    const e = validateStudentUsername(v);
+    if (e) throw new AppError(e, 400);
+  }
+  const taken = await UserModel.findOne({ username: v, _id: { $ne: user._id } }).lean().exec();
+  if (taken) throw new AppError("Username already taken", 400);
+  await UserModel.updateOne({ _id: user._id }, { $set: { username: v } }).exec();
 }
 
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
@@ -364,19 +469,18 @@ export async function changePassword(userId: string, currentPassword: string, ne
   await UserModel.updateOne({ _id: userId }, { $set: { passwordHash } }).exec();
 }
 
-export async function resetLoginAttempts(userIdentifier: string): Promise<void> {
+export async function resetLoginAttempts(userIdentifier: string): Promise<{ temporaryPassword: string }> {
   const v = (userIdentifier ?? "").trim();
-  if (!v) throw new AppError("User identifier (FUNT ID or user ID) is required", 400);
-  const query = OBJECT_ID_REGEX.test(v)
-    ? { _id: v }
-    : { funtId: v };
-  const user = await UserModel.findOne(query).select("_id funtId").lean().exec();
-  if (!user) throw new AppError("User not found (invalid FUNT ID or user ID)", 404);
+  if (!v) throw new AppError("User identifier (username or user ID) is required", 400);
+  const query = OBJECT_ID_REGEX.test(v) ? { _id: v } : { username: v.toLowerCase() };
+  const user = await UserModel.findOne(query).select("_id").lean().exec();
+  if (!user) throw new AppError("User not found (invalid username or user ID)", 404);
   const userId = String(user._id);
-  const funtId = (user as { funtId: string }).funtId;
-  const passwordHash = await bcrypt.hash(funtId, SALT_ROUNDS);
+  const temporaryPassword = randomTemporaryPassword();
+  const passwordHash = await bcrypt.hash(temporaryPassword, SALT_ROUNDS);
   await UserModel.updateOne(
     { _id: userId },
     { $set: { passwordHash, loginAttempts: 0, lockedUntil: null } }
   ).exec();
+  return { temporaryPassword };
 }

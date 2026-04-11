@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/parent/login", "/signup", "/auth/callback"];
+const PUBLIC = ["/login", "/parent/login", "/signup", "/auth/callback", "/forgot-username"];
 const AUTH_COOKIE = "funt_lms_auth";
 
 export function middleware(request: NextRequest) {

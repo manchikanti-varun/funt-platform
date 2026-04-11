@@ -51,6 +51,8 @@ const batchSchema = new Schema(
     },
         createdBy: { type: String, required: false },
         moderatorIds: { type: [String], required: false, default: [] },
+    /** FUNT coins students pay (when eligible) to generate their certificate; 0 = free. */
+    certificatePriceCoins: { type: Number, required: false, default: 0, min: 0 },
   },
   { timestamps: true }
 );

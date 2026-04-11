@@ -17,6 +17,7 @@ interface Batch {
   endDate?: string;
   zoomLink?: string;
   status: string;
+  certificatePriceCoins?: number;
   courseSnapshot?: { title?: string; courseId?: string };
   courseSnapshots?: Array<{ title?: string; courseId?: string }>;
 }
@@ -43,6 +44,7 @@ export default function EditBatchPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [zoomLink, setZoomLink] = useState("");
+  const [certificatePriceCoins, setCertificatePriceCoins] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [trainerOnly, setTrainerOnly] = useState(false);
@@ -64,6 +66,7 @@ export default function EditBatchPage() {
         setStartDate(r.data.startDate ? r.data.startDate.slice(0, 10) : "");
         setEndDate(r.data.endDate ? r.data.endDate.slice(0, 10) : "");
         setZoomLink(r.data.zoomLink ?? "");
+        setCertificatePriceCoins(r.data.certificatePriceCoins ?? 0);
       }
     });
   }, [id]);
@@ -87,6 +90,7 @@ export default function EditBatchPage() {
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         zoomLink: zoomLink || undefined,
+        certificatePriceCoins,
       }),
     });
     setLoading(false);
@@ -200,12 +204,12 @@ export default function EditBatchPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Trainer ID</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Trainer username or user ID</label>
                 <input
                   required
                   value={trainerId}
                   onChange={(e) => setTrainerId(e.target.value)}
-                  placeholder="Trainer FUNT ID (e.g. TR-26-00001)"
+                  placeholder="Trainer username or MongoDB user id"
                   className={INPUT_CLASS}
                 />
               </div>
@@ -250,6 +254,23 @@ export default function EditBatchPage() {
                   {selectedCourseIds.length} course{selectedCourseIds.length !== 1 ? "s" : ""} selected
                 </p>
               )}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Certificate (student)</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              FUNT coins students pay when they generate their own certificate after completing the course. Set to 0 for no fee. Coupons can discount this amount (batch Mongo ID + course snapshot ID on the Coupons page).
+            </p>
+            <div className="mt-3 max-w-xs">
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Certificate fee (coins)</label>
+              <input
+                type="number"
+                min={0}
+                value={certificatePriceCoins}
+                onChange={(e) => setCertificatePriceCoins(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                className={INPUT_CLASS}
+              />
             </div>
           </section>
 

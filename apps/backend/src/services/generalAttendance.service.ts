@@ -2,21 +2,21 @@
 
 import { GeneralAttendanceModel } from "../models/GeneralAttendance.model.js";
 import { UserModel } from "../models/User.model.js";
-import { resolveFuntIdsToStudentIds } from "./attendance.service.js";
+import { resolveUsernamesOrIdsToStudentIds } from "./attendance.service.js";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 
 export interface CreateGeneralAttendanceInput {
   eventDate: string | Date;
   title?: string;
-  funtIdsOrUserIds: string[];
+  usernamesOrUserIds: string[];
   markedBy: string;
 }
 
 export async function createGeneralAttendance(input: CreateGeneralAttendanceInput) {
   if (!input.eventDate) throw new AppError("eventDate is required", 400);
-  const { studentIds, notFound } = await resolveFuntIdsToStudentIds(input.funtIdsOrUserIds);
-  if (studentIds.length === 0) throw new AppError("No valid FUNT IDs or user IDs found", 400);
+  const { studentIds, notFound } = await resolveUsernamesOrIdsToStudentIds(input.usernamesOrUserIds);
+  if (studentIds.length === 0) throw new AppError("No valid usernames or user IDs found", 400);
   const d = new Date(input.eventDate);
   const eventDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const doc = await GeneralAttendanceModel.create({
@@ -53,13 +53,13 @@ export async function getGeneralAttendanceById(id: string) {
   const doc = await GeneralAttendanceModel.findById(id).lean().exec();
   if (!doc) throw new AppError("Event not found", 404);
   const userIds = doc.presentStudentIds;
-  const users = await UserModel.find({ _id: { $in: userIds } }).select("_id funtId name").lean().exec();
+  const users = await UserModel.find({ _id: { $in: userIds } }).select("_id username name").lean().exec();
   const userMap = new Map(users.map((u) => [String(u._id), u]));
   const presentStudents = doc.presentStudentIds.map((id) => {
     const u = userMap.get(id);
     return {
       studentId: id,
-      funtId: (u as { funtId?: string } | undefined)?.funtId ?? "",
+      username: (u as { username?: string } | undefined)?.username ?? "",
       name: (u as { name?: string } | undefined)?.name ?? "",
     };
   });
@@ -76,12 +76,12 @@ export async function getGeneralAttendanceById(id: string) {
 /** Add more students as present to an existing event. No duplicates for already-marked. */
 export async function addPresentToGeneralAttendance(
   eventId: string,
-  funtIdsOrUserIds: string[],
+  usernamesOrUserIds: string[],
   _performedBy: string
 ) {
   const doc = await GeneralAttendanceModel.findById(eventId).exec();
   if (!doc) throw new AppError("Event not found", 404);
-  const { studentIds, notFound } = await resolveFuntIdsToStudentIds(funtIdsOrUserIds);
+  const { studentIds, notFound } = await resolveUsernamesOrIdsToStudentIds(usernamesOrUserIds);
   const existingSet = new Set(doc.presentStudentIds.map((id) => String(id)));
   const alreadyMarkedCount = studentIds.filter((id) => existingSet.has(id)).length;
   const toAdd = studentIds.filter((id) => !existingSet.has(id));

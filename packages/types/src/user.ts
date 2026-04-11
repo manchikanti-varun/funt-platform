@@ -3,7 +3,7 @@ import type { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 
 export interface User {
   id: string;
-  funtId: string;
+  username: string;
   name: string;
   email?: string;
   mobile: string;

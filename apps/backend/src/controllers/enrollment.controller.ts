@@ -27,9 +27,9 @@ export const createEnrollment = asyncHandler(async (req: Request, res: Response)
 
 export const postBulkEnrollment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { batchId, studentFuntIds } = req.body ?? {};
+  const { batchId, studentUsernames } = req.body ?? {};
   if (!batchId) throw new AppError("batchId is required", 400);
-  const ids = Array.isArray(studentFuntIds) ? studentFuntIds : [];
+  const ids = Array.isArray(studentUsernames) ? studentUsernames : [];
   const data = await enrollmentService.bulkEnroll(batchId, ids, createdBy);
   successRes(res, data, "Bulk enrollment completed", 200);
 });
@@ -125,8 +125,12 @@ export const postMarkModuleComplete = asyncHandler(async (req: Request, res: Res
 });
 
 export const getTrainers = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  const list = await UserModel.find({ roles: ROLE.TRAINER }).select("funtId name").lean().exec();
-  const data = list.map((u) => ({ id: String(u._id), funtId: u.funtId, name: u.name }));
+  const list = await UserModel.find({ roles: ROLE.TRAINER }).select("username name").lean().exec();
+  const data = list.map((u) => ({
+    id: String(u._id),
+    username: (u as { username?: string }).username ?? "",
+    name: u.name,
+  }));
   successRes(res, data);
 });
 

@@ -7,7 +7,7 @@ const router = Router();
 router.get("/", (_req, res) => {
   const systemUser: User = {
     id: "system",
-    funtId: "FS-00-00000",
+    username: "system@funt",
     name: "API",
     email: "api@funt.in",
     mobile: "",

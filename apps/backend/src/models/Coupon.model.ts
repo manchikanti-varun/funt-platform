@@ -1,0 +1,31 @@
+import mongoose, { Schema } from "mongoose";
+
+const COUPON_KIND = ["COURSE", "SHOP"] as const;
+const DISCOUNT_TYPES = ["PERCENT", "FIXED_COINS"] as const;
+
+const couponSchema = new Schema(
+  {
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    kind: { type: String, required: true, enum: COUPON_KIND },
+    batchId: { type: String, required: false },
+    courseId: { type: String, required: false },
+    productId: { type: String, required: false },
+    discountType: { type: String, required: true, enum: DISCOUNT_TYPES },
+    discountValue: { type: Number, required: true, min: 0 },
+    maxRedemptions: { type: Number, required: false, default: null },
+    redemptionCount: { type: Number, required: true, default: 0 },
+    perStudentLimit: { type: Number, required: true, default: 1 },
+    validFrom: { type: Date, required: false },
+    validUntil: { type: Date, required: false },
+    active: { type: Boolean, required: true, default: true },
+    notes: { type: String, required: false, default: "" },
+    createdBy: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
+couponSchema.index({ kind: 1, active: 1 });
+couponSchema.index({ productId: 1 });
+couponSchema.index({ batchId: 1, courseId: 1 });
+
+export const CouponModel = mongoose.model("Coupon", couponSchema);

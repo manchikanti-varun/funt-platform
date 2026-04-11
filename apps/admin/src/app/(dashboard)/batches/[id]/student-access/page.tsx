@@ -7,10 +7,12 @@ import { api } from "@/lib/api";
 import { BackLink } from "@/components/ui/BackLink";
 
 interface BatchStudent {
+  enrollmentId: string;
   studentId: string;
-  funtId: string;
+  username: string;
   name: string;
   enrolledAt: string;
+  accessBlocked?: boolean;
 }
 
 const NAV_LINK_CLASS =
@@ -21,7 +23,7 @@ export default function BatchStudentAccessPage() {
   const id = params.id as string;
   const [batchName, setBatchName] = useState("");
   const [students, setStudents] = useState<BatchStudent[]>([]);
-  const [funtId, setFuntId] = useState("");
+  const [username, setUsername] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -40,16 +42,16 @@ export default function BatchStudentAccessPage() {
   }, [id]);
 
   async function addStudent() {
-    if (!funtId.trim()) return;
+    if (!username.trim()) return;
     setActionLoading(true);
     setError("");
     const res = await api(`/api/batches/${id}/students`, {
       method: "POST",
-      body: JSON.stringify({ funtId: funtId.trim() }),
+      body: JSON.stringify({ username: username.trim() }),
     });
     setActionLoading(false);
     if (res.success) {
-      setFuntId("");
+      setUsername("");
       const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
       if (r.success && Array.isArray(r.data)) setStudents(r.data);
     } else setError(res.message ?? "Failed to add.");
@@ -73,6 +75,21 @@ export default function BatchStudentAccessPage() {
       const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
       if (r.success && Array.isArray(r.data)) setStudents(r.data);
     } else setError(res.message ?? "Bulk add failed.");
+  }
+
+  async function setAccessBlocked(enrollmentId: string, blocked: boolean) {
+    setActionLoading(true);
+    setError("");
+    const res = await api(`/api/admin/enrollments/${encodeURIComponent(enrollmentId)}/access`, {
+      method: "PATCH",
+      body: JSON.stringify({ blocked }),
+    });
+    setActionLoading(false);
+    if (res.success) {
+      setStudents((prev) =>
+        prev.map((s) => (s.enrollmentId === enrollmentId ? { ...s, accessBlocked: blocked } : s))
+      );
+    } else setError(res.message ?? "Could not update access.");
   }
 
   async function removeStudent(studentId: string) {
@@ -125,7 +142,7 @@ export default function BatchStudentAccessPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Student access</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Students listed here can access this batch’s courses. Add by FUNT ID or bulk (one per line / comma-separated).
+            Students listed here can access this batch’s courses. Use <strong>Block access</strong> to turn off LMS access for an enrolled learner without removing them.
           </p>
         </div>
 
@@ -133,9 +150,9 @@ export default function BatchStudentAccessPage() {
           <div className="flex flex-wrap gap-2">
             <input
               type="text"
-              value={funtId}
-              onChange={(e) => setFuntId(e.target.value)}
-              placeholder="Student FUNT ID"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Student username"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
             <button type="button" onClick={addStudent} disabled={actionLoading} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
@@ -146,7 +163,7 @@ export default function BatchStudentAccessPage() {
             <textarea
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
-              placeholder="Bulk: one FUNT ID per line or comma-separated (or paste JSON array)"
+              placeholder="Bulk: one username per line or comma-separated (or paste JSON array)"
               rows={3}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
@@ -157,24 +174,36 @@ export default function BatchStudentAccessPage() {
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
             <ul className="divide-y divide-slate-100">
               {students.map((s) => (
-                <li key={s.studentId} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                  <span className="font-mono text-slate-700">{s.funtId || s.studentId}</span>
+                <li key={s.studentId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <span className="font-mono text-slate-700">{s.username || s.studentId}</span>
                   <span className="min-w-0 flex-1 truncate text-slate-600">{s.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeStudent(s.studentId)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700"
-                    title="Remove from batch"
-                  >
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={actionLoading || !s.enrollmentId}
+                      onClick={() => setAccessBlocked(s.enrollmentId, !s.accessBlocked)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                        s.accessBlocked ? "bg-slate-200 text-slate-800" : "bg-amber-100 text-amber-900"
+                      }`}
+                    >
+                      {s.accessBlocked ? "Unblock access" : "Block access"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeStudent(s.studentId)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+                      title="Remove from batch"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
             {students.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-slate-500">No students added yet. Add by FUNT ID or bulk above.</p>
+              <p className="px-4 py-8 text-center text-sm text-slate-500">No students added yet. Add by username or bulk above.</p>
             )}
           </div>
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}

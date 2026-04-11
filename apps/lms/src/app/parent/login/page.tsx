@@ -11,7 +11,7 @@ function ParentLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/parent";
-  const [studentFuntId, setStudentFuntId] = useState("");
+  const [studentUsername, setStudentUsername] = useState("");
   const [mobile, setMobile] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +22,7 @@ function ParentLoginForm() {
     setLoading(true);
     const res = await api<{ token: string }>("/api/auth/parent-login", {
       method: "POST",
-      body: JSON.stringify({ studentFuntId, mobile }),
+      body: JSON.stringify({ studentUsername, mobile }),
     });
     setLoading(false);
     if (!res.success || !res.data?.token) {
@@ -43,8 +43,8 @@ function ParentLoginForm() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Student FUNT ID</label>
-            <input value={studentFuntId} onChange={(e) => setStudentFuntId(e.target.value)} required className="input font-mono" placeholder="Student FUNT ID" />
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Student username</label>
+            <input value={studentUsername} onChange={(e) => setStudentUsername(e.target.value)} required className="input font-mono" placeholder="Student username" />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Mobile</label>

@@ -9,10 +9,24 @@ import { getAttendanceSummaryForStudent, type StudentAttendanceSummaryItem } fro
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
-function sanitizeUser(u: { _id: unknown; funtId: string; name: string; email?: string; mobile: string; roles: string[]; status: string; grade?: string; schoolName?: string; city?: string; createdAt?: Date; updatedAt?: Date; linkedStudentFuntIds?: string[] }) {
+function sanitizeUser(u: {
+  _id: unknown;
+  username: string;
+  name: string;
+  email?: string;
+  mobile: string;
+  roles: string[];
+  status: string;
+  grade?: string;
+  schoolName?: string;
+  city?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  linkedStudentUsernames?: string[];
+}) {
   return {
     id: String(u._id),
-    funtId: u.funtId,
+    username: u.username,
     name: u.name,
     email: u.email ?? "",
     mobile: u.mobile,
@@ -23,20 +37,62 @@ function sanitizeUser(u: { _id: unknown; funtId: string; name: string; email?: s
     city: u.city ?? "",
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
-    linkedStudentFuntIds: u.linkedStudentFuntIds ?? [],
+    linkedStudentUsernames: u.linkedStudentUsernames ?? [],
   };
 }
 
-/** Resolve query to user by MongoDB _id or funtId. Returns null if not found. */
+/** Resolve query to user by MongoDB _id or username. Returns null if not found. */
 export async function resolveUserByIdentifier(q: string) {
   const v = (q ?? "").trim();
   if (!v) return null;
   if (OBJECT_ID_REGEX.test(v)) {
-    const user = await UserModel.findById(v).select("_id funtId name email mobile roles status grade schoolName city createdAt updatedAt linkedStudentFuntIds").lean().exec();
-    return user ? { _id: user._id, funtId: user.funtId, name: user.name, email: user.email, mobile: user.mobile, roles: user.roles, status: user.status, grade: user.grade, schoolName: user.schoolName, city: user.city, createdAt: user.createdAt, updatedAt: user.updatedAt, linkedStudentFuntIds: user.linkedStudentFuntIds } : null;
+    const user = await UserModel.findById(v)
+      .select(
+        "_id username name email mobile roles status grade schoolName city createdAt updatedAt linkedStudentUsernames"
+      )
+      .lean()
+      .exec();
+    return user
+      ? {
+          _id: user._id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          mobile: user.mobile,
+          roles: user.roles,
+          status: user.status,
+          grade: user.grade,
+          schoolName: user.schoolName,
+          city: user.city,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          linkedStudentUsernames: user.linkedStudentUsernames,
+        }
+      : null;
   }
-  const user = await UserModel.findOne({ funtId: v }).select("_id funtId name email mobile roles status grade schoolName city createdAt updatedAt linkedStudentFuntIds").lean().exec();
-  return user ? { _id: user._id, funtId: user.funtId, name: user.name, email: user.email, mobile: user.mobile, roles: user.roles, status: user.status, grade: user.grade, schoolName: user.schoolName, city: user.city, createdAt: user.createdAt, updatedAt: user.updatedAt, linkedStudentFuntIds: user.linkedStudentFuntIds } : null;
+  const user = await UserModel.findOne({ username: v.toLowerCase() })
+    .select(
+      "_id username name email mobile roles status grade schoolName city createdAt updatedAt linkedStudentUsernames"
+    )
+    .lean()
+    .exec();
+  return user
+    ? {
+        _id: user._id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        roles: user.roles,
+        status: user.status,
+        grade: user.grade,
+        schoolName: user.schoolName,
+        city: user.city,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        linkedStudentUsernames: user.linkedStudentUsernames,
+      }
+    : null;
 }
 
 export interface ProfileEnrollment {
@@ -71,7 +127,7 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
 
   const isStudent = (user.roles as string[]).includes(ROLE.STUDENT);
   if (!isSuperAdmin && !isStudent) {
-    throw new AppError("Only student profiles can be viewed. Use a student ID or FUNT ID.", 403);
+    throw new AppError("Only student profiles can be viewed. Use a student ID or username.", 403);
   }
 
   const result: ProfileResult = {

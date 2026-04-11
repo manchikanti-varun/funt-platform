@@ -20,15 +20,26 @@ export function validateEnv(): void {
 const nodeEnv = process.env.NODE_ENV ?? "development";
 const isProduction = nodeEnv === "production";
 
+const LOCAL_CORS_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+];
+
 function getCorsOrigins(): string[] {
   const raw = process.env.CORS_ORIGINS?.trim();
-  if (raw) {
-    return raw.split(",").map((o) => o.trim()).filter(Boolean);
+  const configured = raw ? raw.split(",").map((o) => o.trim()).filter(Boolean) : [];
+
+  if (!isProduction) {
+    if (configured.length === 0) return LOCAL_CORS_ORIGINS;
+    return [...new Set([...configured, ...LOCAL_CORS_ORIGINS])];
   }
-  if (isProduction) {
-    return [];
+
+  if (process.env.CORS_ALLOW_LOCALHOST === "1") {
+    return [...new Set([...configured, ...LOCAL_CORS_ORIGINS])];
   }
-  return ["http://localhost:3000", "http://localhost:3001"];
+  return configured;
 }
 
 export function getEnv() {

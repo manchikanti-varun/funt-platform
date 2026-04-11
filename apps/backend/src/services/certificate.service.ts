@@ -5,6 +5,8 @@ import { BatchModel } from "../models/Batch.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { UserModel } from "../models/User.model.js";
+import { grantCoinsWithExpiry, spendCoins } from "./coinBalance.service.js";
+import { assertCourseCouponForCertificate, recordCouponRedemption } from "./coupon.service.js";
 import { ENROLLMENT_STATUS, CERTIFICATE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { generateCertificateId } from "../utils/funtIdGenerator.js";
@@ -82,12 +84,17 @@ export async function listCertificatesForStudent(studentId: string) {
     const batch = batchMap.get(c.batchId);
     const firstSnap = batch ? (getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { title?: string } | undefined) : undefined;
     const courseName = firstSnap?.title ?? "Course";
+    const coinReward = c.coinReward ?? 0;
+    const grantedAt = c.coinRewardGrantedAt ?? null;
     return {
       certificateId: c.certificateId,
       batchId: c.batchId,
       courseId: c.courseId,
       courseName,
       issuedAt: c.issuedAt,
+      coinReward,
+      coinRewardGrantedAt: grantedAt,
+      coinRewardPending: coinReward > 0 && !grantedAt,
     };
   });
 }
@@ -98,7 +105,12 @@ function getFirstSnapshotCourseId(batch: unknown): string {
   return first?.courseId ?? "";
 }
 
-export async function generateCertificate(studentId: string, batchId: string, issuedBy: string) {
+export async function generateCertificate(
+  studentId: string,
+  batchId: string,
+  issuedBy: string,
+  opts?: { coinReward?: number; couponCode?: string }
+) {
   const { eligible, reason } = await checkEligibility(studentId, batchId);
   if (!eligible) throw new AppError(reason ?? "Not eligible for certificate", 400);
 
@@ -111,6 +123,30 @@ export async function generateCertificate(studentId: string, batchId: string, is
     "";
   if (!courseId) throw new AppError("Batch has no course", 400);
 
+  const selfIssued = issuedBy === studentId;
+  let courseCouponId: string | null = null;
+  if (selfIssued) {
+    const baseFee = Math.max(0, Math.floor(Number((batch as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0)));
+    const { finalPrice, couponId } = await assertCourseCouponForCertificate(
+      opts?.couponCode,
+      batchMongoId,
+      courseId,
+      studentId,
+      baseFee
+    );
+    courseCouponId = couponId;
+    if (finalPrice > 0) {
+      await spendCoins(studentId, finalPrice);
+    }
+  }
+
+  let coinReward = 0;
+  if (opts?.coinReward != null) {
+    const n = Math.floor(Number(opts.coinReward));
+    if (!Number.isFinite(n) || n < 0 || n > 1_000_000) throw new AppError("coinReward must be 0–1,000,000", 400);
+    coinReward = n;
+  }
+
   const certificateId = await generateCertificateId();
   const doc = await CertificateModel.create({
     certificateId,
@@ -120,10 +156,16 @@ export async function generateCertificate(studentId: string, batchId: string, is
     issuedAt: new Date(),
     issuedBy,
     status: CERTIFICATE_STATUS.ISSUED,
+    coinReward,
   });
 
   await createAuditLog("CERTIFICATE_GENERATED", issuedBy, "Certificate", String(doc._id));
   await ensureFirstCourseCompletedBadge(studentId, batchMongoId).catch(() => {});
+  await UserModel.updateOne({ _id: studentId }, { $inc: { studentLevel: 1 } }).exec();
+
+  if (selfIssued && courseCouponId) {
+    await recordCouponRedemption(courseCouponId, studentId, `certificate:${batchMongoId}:${courseId}`);
+  }
 
   return {
     id: String(doc._id),
@@ -134,7 +176,35 @@ export async function generateCertificate(studentId: string, batchId: string, is
     issuedAt: doc.issuedAt,
     issuedBy: doc.issuedBy,
     status: doc.status,
+    coinReward: doc.coinReward ?? 0,
+    coinRewardGrantedAt: doc.coinRewardGrantedAt ?? null,
   };
+}
+
+export async function setCertificateCoinReward(certificateId: string, coinReward: number, actorId: string) {
+  const n = Math.floor(Number(coinReward));
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) throw new AppError("coinReward must be 0–1,000,000", 400);
+  const cert = await CertificateModel.findOne({ certificateId, status: CERTIFICATE_STATUS.ISSUED }).exec();
+  if (!cert) throw new AppError("Certificate not found", 404);
+  if (cert.coinRewardGrantedAt) throw new AppError("Cannot change reward after coins were granted", 400);
+  cert.coinReward = n;
+  await cert.save();
+  await createAuditLog("CERTIFICATE_COIN_REWARD_SET", actorId, "Certificate", certificateId);
+  return { certificateId, coinReward: cert.coinReward };
+}
+
+export async function grantCertificateCoinReward(certificateId: string, grantedBy: string) {
+  const cert = await CertificateModel.findOne({ certificateId, status: CERTIFICATE_STATUS.ISSUED }).exec();
+  if (!cert) throw new AppError("Certificate not found", 404);
+  if (cert.coinRewardGrantedAt) throw new AppError("Coin reward already granted", 400);
+  const amount = cert.coinReward ?? 0;
+  if (amount < 1) throw new AppError("Set a coin reward greater than 0 before granting", 400);
+  await grantCoinsWithExpiry(cert.studentId, amount, "CERTIFICATE_GRANT", certificateId);
+  cert.coinRewardGrantedAt = new Date();
+  cert.coinRewardGrantedBy = grantedBy;
+  await cert.save();
+  await createAuditLog("CERTIFICATE_COINS_GRANTED", grantedBy, "Certificate", certificateId);
+  return { certificateId, grantedCoins: amount, studentId: cert.studentId };
 }
 
 export async function verifyCertificatePublic(certificateId: string) {
@@ -221,7 +291,7 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
   const [enrollments, certs, progressDocs] = await Promise.all([
     listEnrollmentsByBatch(batchId),
     CertificateModel.find({ batchId: batchMongoId, status: CERTIFICATE_STATUS.ISSUED })
-      .select("studentId certificateId")
+      .select("studentId certificateId coinReward coinRewardGrantedAt")
       .lean()
       .exec(),
     ModuleProgressModel.find({ batchId: batchMongoId })
@@ -229,18 +299,31 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
       .lean()
       .exec(),
   ]);
-  const certByStudent = new Map(certs.map((c) => [c.studentId, c.certificateId]));
   const completedByStudent = new Map<string, number>();
   for (const p of progressDocs) {
     if (p.completedAt != null) {
       completedByStudent.set(p.studentId, (completedByStudent.get(p.studentId) ?? 0) + 1);
     }
   }
+  const certMetaByStudent = new Map(
+    certs.map((c) => [
+      c.studentId,
+      {
+        certificateId: c.certificateId as string,
+        coinReward: (c as { coinReward?: number }).coinReward ?? 0,
+        coinRewardGrantedAt: (c as { coinRewardGrantedAt?: Date | null }).coinRewardGrantedAt ?? null,
+      },
+    ])
+  );
+
   const result: Array<{
     studentId: string;
-    funtId: string;
+    username: string;
     name: string;
     certificateId: string | null;
+    coinReward: number;
+    coinRewardGrantedAt: Date | null;
+    coinRewardPending: boolean;
     eligible: boolean;
     reason?: string;
     modulesCompleted: number;
@@ -248,15 +331,21 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
     progressPercent: number;
   }> = [];
   for (const e of enrollments) {
-    const certId = certByStudent.get(e.studentId) ?? null;
+    const meta = certMetaByStudent.get(e.studentId);
+    const certId = meta?.certificateId ?? null;
+    const coinReward = meta?.coinReward ?? 0;
+    const coinRewardGrantedAt = meta?.coinRewardGrantedAt ?? null;
     const { eligible, reason } = await checkEligibility(e.studentId, batchId);
     const modulesCompleted = completedByStudent.get(e.studentId) ?? 0;
     const progressPercent = totalModules > 0 ? Math.round((modulesCompleted / totalModules) * 100) : 0;
     result.push({
       studentId: e.studentId,
-      funtId: e.funtId,
+      username: e.username,
       name: e.name,
       certificateId: certId,
+      coinReward,
+      coinRewardGrantedAt,
+      coinRewardPending: certId !== null && coinReward > 0 && !coinRewardGrantedAt,
       eligible: certId !== null ? true : eligible,
       reason: certId === null && !eligible ? reason : undefined,
       modulesCompleted,
@@ -270,13 +359,14 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
 export async function bulkGenerateCertificates(
   batchId: string,
   studentIds: string[],
-  issuedBy: string
+  issuedBy: string,
+  opts?: { coinReward?: number }
 ): Promise<{ generated: Array<{ studentId: string; certificateId: string }>; errors: Array<{ studentId: string; message: string }> }> {
   const generated: Array<{ studentId: string; certificateId: string }> = [];
   const errors: Array<{ studentId: string; message: string }> = [];
   for (const studentId of studentIds) {
     try {
-      const data = await generateCertificate(studentId, batchId, issuedBy);
+      const data = await generateCertificate(studentId, batchId, issuedBy, opts);
       generated.push({ studentId, certificateId: data.certificateId });
     } catch (err) {
       errors.push({ studentId, message: err instanceof Error ? err.message : "Failed to generate" });

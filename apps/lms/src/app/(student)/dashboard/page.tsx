@@ -5,127 +5,45 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { CourseCard } from "@/components/CourseCard";
 
-interface Enrollment {
-  id: string;
+interface MyCourse {
+  courseId: string;
+  courseTitle: string;
+  description?: string;
+  moduleCount: number;
   batchId: string;
-  courseId?: string;
-  status: string;
-  batch?: {
-    name?: string;
-    courseSnapshot?: { courseId?: string; title?: string; modules?: unknown[] };
-    courseSnapshots?: Array<{ courseId?: string; title?: string; modules?: unknown[] }>;
-  };
+  progressPercent: number;
+  accessBlocked?: boolean;
 }
 
-interface BatchAttendance {
+interface ExploreCourse {
+  courseId: string;
+  courseTitle: string;
+  description?: string;
+  moduleCount: number;
   batchId: string;
-  totalSessions: number;
-  presentCount: number;
-  percentage: number;
 }
 
-interface SkillProfile {
-  skills: { tag: string; score: number }[];
-}
-
-interface Achievement {
-  id?: string;
-  badgeType: string;
-  displayName?: string;
-  icon?: string;
-  awardedAt: string;
-}
-
-
-const BADGE_COLORS = [
-  { bg: "bg-amber-100", icon: "text-amber-700" },
-  { bg: "bg-violet-100", icon: "text-violet-700" },
-  { bg: "bg-teal-100", icon: "text-teal-700" },
-  { bg: "bg-emerald-100", icon: "text-emerald-700" },
-  { bg: "bg-sky-100", icon: "text-sky-700" },
-];
-
-function getAchievementIcon(iconKey: string, sizeClass = "h-9 w-9") {
-  const key = (iconKey || "star").toLowerCase();
-  if (key === "assignment") {
-    return (
-      <svg className={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    );
-  }
-  if (key === "streak") {
-    return (
-      <svg className={sizeClass} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 23c0 0 5-4 5-10 0-2.5-1.2-4.5-2.5-6-.5-.6-1-1.1-1.5-1.5V2h-2v3.5c-.5.4-1 1-1.5 1.5C6.2 8.5 5 10.5 5 13c0 6 5 10 5 10s5-4 5-10z" />
-      </svg>
-    );
-  }
-  if (key === "course") {
-    return (
-      <svg className={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-      </svg>
-    );
-  }
-  if (key === "attendance") {
-    return (
-      <svg className={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    );
-  }
-  return (
-    <svg className={sizeClass} fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-    </svg>
-  );
-}
-
-function AchievementBadge({
-  displayName,
-  icon,
-  badgeType,
-  colorIndex = 0,
-}: {
-  displayName: string;
-  icon?: string;
-  badgeType: string;
-  colorIndex?: number;
-}) {
-  const title = displayName || badgeType.replace(/_/g, " ");
-  const style = BADGE_COLORS[colorIndex % BADGE_COLORS.length];
-  return (
-    <div className="flex shrink-0 flex-col items-center gap-2">
-      <span className={`flex h-20 w-20 items-center justify-center rounded-full shadow-inner ring-1 ring-black/5 sm:h-24 sm:w-24 ${style.bg} ${style.icon}`}>
-        {getAchievementIcon(icon ?? "star", "h-10 w-10 sm:h-12 sm:w-12")}
-      </span>
-      <span className="max-w-[88px] truncate text-center text-sm font-medium text-slate-600">{title}</span>
-    </div>
-  );
+interface UserMe {
+  studentXp?: number;
+  studentLevel?: number;
 }
 
 export default function StudentDashboardPage() {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [attendance, setAttendance] = useState<BatchAttendance[]>([]);
-  const [skillProfile, setSkillProfile] = useState<SkillProfile | null>(null);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
+  const [explore, setExplore] = useState<ExploreCourse[]>([]);
+  const [me, setMe] = useState<UserMe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [achievementIndex, setAchievementIndex] = useState(0);
 
   useEffect(() => {
     Promise.all([
-      api<Enrollment[]>("/api/enrollments/me").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
-      api<BatchAttendance[]>("/api/attendance/me").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
-      api<SkillProfile>("/api/skills/me").then((r) => (r.success && r.data ? r.data : null)),
-      api<Achievement[]>("/api/achievements/me").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
+      api<MyCourse[]>("/api/student/courses").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
+      api<ExploreCourse[]>("/api/student/courses/explore").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
+      api<UserMe>("/api/users/me").then((r) => (r.success && r.data ? r.data : null)),
     ])
-      .then(([enrolls, att, skills, badges]) => {
-        setEnrollments(enrolls);
-        setAttendance(att);
-        setSkillProfile(skills);
-        setAchievements(badges);
+      .then(([mine, ex, user]) => {
+        setMyCourses(mine);
+        setExplore(ex);
+        setMe(user);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -133,166 +51,157 @@ export default function StudentDashboardPage() {
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
       </div>
     );
   }
 
-  const totalPresent = attendance.reduce((s, b) => s + b.presentCount, 0);
-  const avgSkillScore = skillProfile?.skills?.length
-    ? Math.round(skillProfile.skills.reduce((a, s) => a + s.score, 0) / skillProfile.skills.length)
-    : 0;
-  const flattenedCourses = enrollments.flatMap((e) => {
-    const batch = e.batch;
-    const snapshots = Array.isArray(batch?.courseSnapshots) && batch.courseSnapshots.length > 0
-      ? batch.courseSnapshots
-      : batch?.courseSnapshot
-        ? [batch.courseSnapshot]
-        : [];
-    return snapshots.map((snap) => ({
-      id: `${e.id}-${(snap as { courseId?: string }).courseId ?? "single"}`,
-      batchId: e.batchId,
-      courseId: (snap as { courseId?: string }).courseId ?? e.batchId,
-      title: (snap as { title?: string }).title ?? "Course",
-      batchName: batch?.name ?? "Batch",
-      moduleCount: Array.isArray((snap as { modules?: unknown[] }).modules) ? (snap as { modules: unknown[] }).modules.length : 0,
-      status: e.status,
-    }));
-  });
-  const displayCourses = flattenedCourses.slice(0, 2);
-  const hasMoreCourses = flattenedCourses.length > 2;
-
-  const achievementList = achievements.slice(0, 8);
-  const badgesPerView = 4;
-  const maxIndex = Math.max(0, achievementList.length - badgesPerView);
-  const canGoLeft = achievementIndex > 0;
-  const canGoRight = achievementIndex < maxIndex;
-  const visibleBadges = achievementList.slice(achievementIndex, achievementIndex + badgesPerView);
+  const active = myCourses.filter((c) => !c.accessBlocked);
+  const blocked = myCourses.filter((c) => c.accessBlocked);
+  const startLearning = active.filter((c) => c.progressPercent === 0);
+  const resumeLearning = active.filter((c) => c.progressPercent > 0);
 
   return (
-    <div className="mx-auto flex h-full w-full min-h-[calc(100vh-6rem)] max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-6">
-      <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-6 lg:grid-cols-3 lg:gap-8">
-        <div className="flex min-h-0 flex-col lg:col-span-2">
-          <div className="flex shrink-0 items-center justify-between rounded-2xl border border-slate-200/90 bg-white px-5 py-4 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Learning</p>
-              <h2 className="mt-0.5 text-xl font-bold tracking-tight text-slate-900">Courses</h2>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-12 px-4 py-6 sm:px-6">
+      <header className="relative overflow-hidden rounded-[2rem] border-2 border-black bg-white px-6 py-10 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.15)] sm:px-10 sm:py-12">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-funt-gold/35 blur-3xl" aria-hidden />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-52 w-52 rounded-full bg-funt-honey/80 blur-3xl" aria-hidden />
+        <div className="relative max-w-3xl">
+          <p className="text-xs font-bold uppercase tracking-[0.35em] text-black">FUNT Learn</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight text-black sm:text-4xl md:text-[2.75rem] md:leading-tight">
+            Build. Code. Create.
+            <span className="block text-funt-gold-deep">Your robotics &amp; learning studio.</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-black/70 sm:text-base">
+            Bright, practical learning — aligned with the{" "}
+            <a href="https://funt-frontend.vercel.app/" className="font-semibold text-black underline decoration-funt-gold decoration-2 underline-offset-2" target="_blank" rel="noopener noreferrer">
+              FUNT Robotics Academy
+            </a>{" "}
+            spirit. Sign in with your username, track every chapter, and level up as you finish courses.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-black/10 bg-white px-5 py-3 shadow-sm">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-black/50">XP</span>
+              <span className="text-2xl font-black tabular-nums text-black">{me?.studentXp ?? 0}</span>
+              <span className="h-8 w-px bg-black/10" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-funt-gold-deep">Level</span>
+              <span className="text-2xl font-black tabular-nums text-black">{me?.studentLevel ?? 1}</span>
             </div>
-            {hasMoreCourses && (
-              <Link href="/courses" className="rounded-xl px-3 py-2 text-sm font-semibold text-teal-600 shadow-sm ring-1 ring-teal-200/50 transition duration-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md hover:ring-teal-300/50">
-                View all
-              </Link>
-            )}
-          </div>
-          {flattenedCourses.length === 0 ? (
-            <div className="mt-5 flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 text-center shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-              <p className="text-sm text-slate-500">Not enrolled in any batch yet.</p>
-              <Link href="/courses" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-900/20 ring-1 ring-teal-700/20 transition duration-200 hover:bg-teal-700 hover:shadow-xl hover:shadow-teal-900/25">
-                Browse courses
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-5 grid min-h-0 flex-1 grid-cols-1 grid-rows-1 gap-5 sm:grid-cols-2">
-              {displayCourses.map((c, i) => {
-                const variants = ["violet", "teal"] as const;
-                return (
-                  <CourseCard
-                    key={c.id}
-                    href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                    title={c.title}
-                    batchName={c.batchName}
-                    moduleCount={c.moduleCount}
-                    status={c.status}
-                    variant={variants[i % variants.length]}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 transition duration-200 hover:shadow-xl hover:shadow-slate-300/25">
-          <p className="text-xs font-medium uppercase tracking-wider text-teal-600">Progress</p>
-          <h2 className="mt-0.5 shrink-0 text-lg font-bold tracking-tight text-slate-900">Skills</h2>
-          <div className="mt-5 flex min-h-0 flex-1 flex-col items-center justify-center">
-            <div className="h-20 w-32 shrink-0 sm:h-24 sm:w-40">
-              <svg viewBox="0 0 100 50" className="h-full w-full" aria-hidden>
-                {}
-                <path d="M 10 45 A 40 40 0 0 1 90 45" fill="none" stroke="#e2e8f0" strokeWidth="8" strokeLinecap="round" />
-                {}
-                <path
-                  d="M 10 45 A 40 40 0 0 1 90 45"
-                  fill="none"
-                  stroke="#0d9488"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(avgSkillScore / 100) * 125} 999`}
-                />
-              </svg>
-            </div>
-            <p className="mt-2 text-3xl font-bold tabular-nums text-teal-600">{avgSkillScore}%</p>
-            <Link href="/skills" className="mt-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-teal-600 transition hover:bg-teal-50 hover:text-teal-700">
-              View skills
+            <Link href="/courses" className="btn-primary px-6 py-3 text-sm font-bold">
+              Browse catalog
+            </Link>
+            <Link href="/progress" className="btn-secondary px-6 py-3 text-sm font-bold">
+              Full progress
             </Link>
           </div>
         </div>
+      </header>
 
-        <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 transition duration-200 hover:shadow-xl hover:shadow-slate-300/25 lg:col-span-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-amber-600">Badges</p>
-          <h2 className="mt-0.5 shrink-0 text-lg font-bold tracking-tight text-slate-900">Achievements</h2>
-          <div className="mt-5 flex min-h-0 flex-1 items-center justify-center gap-3">
-            {achievementList.length === 0 ? (
-              <p className="text-center text-sm text-slate-500">Earn badges by completing courses and assignments.</p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setAchievementIndex((i) => Math.max(0, i - 1))}
-                  disabled={!canGoLeft}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-md ring-1 ring-slate-100/80 transition duration-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-lg disabled:opacity-40 disabled:hover:bg-white disabled:hover:shadow-md"
-                  aria-label="Previous achievements"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-5">
-                  {visibleBadges.map((a, i) => (
-                    <AchievementBadge
-                      key={a.id ?? `${a.badgeType}-${a.awardedAt}`}
-                      badgeType={a.badgeType}
-                      displayName={a.displayName ?? a.badgeType.replace(/_/g, " ")}
-                      icon={a.icon}
-                      colorIndex={i}
-                    />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAchievementIndex((i) => Math.min(maxIndex, i + 1))}
-                  disabled={!canGoRight}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-600 shadow-md ring-1 ring-slate-100/80 transition duration-200 hover:bg-slate-50 hover:border-slate-300 hover:shadow-lg disabled:opacity-40 disabled:hover:bg-white disabled:hover:shadow-md"
-                  aria-label="Next achievements"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
+      <section>
+        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">Start learning</h2>
+        <p className="mt-2 text-sm text-black/55">Courses at 0% — open one to begin.</p>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {startLearning.length === 0 ? (
+            <p className="col-span-full rounded-2xl border-2 border-dashed border-black/15 bg-white py-14 text-center text-sm text-black/50">
+              Nothing new here yet. Explore all courses below or open the full catalog.
+            </p>
+          ) : (
+            startLearning.map((c) => (
+              <CourseCard
+                key={`${c.batchId}-${c.courseId}`}
+                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                title={c.courseTitle}
+                batchName=""
+                chapterCount={c.moduleCount}
+                progressPercent={c.progressPercent}
+              />
+            ))
+          )}
         </div>
+      </section>
 
-        <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 transition duration-200 hover:shadow-xl hover:shadow-slate-300/25 lg:col-span-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-emerald-600">Sessions</p>
-          <h2 className="mt-0.5 shrink-0 text-lg font-bold tracking-tight text-slate-900">Attendance</h2>
-          <div className="mt-5 flex min-h-0 flex-1 flex-col items-center justify-center text-center">
-            <span className="text-4xl font-bold tabular-nums text-slate-900 sm:text-5xl">{totalPresent}</span>
-            <span className="mt-2 text-sm text-slate-500">sessions attended</span>
-          </div>
+      <section>
+        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">Resume learning</h2>
+        <p className="mt-2 text-sm text-black/55">Above 0% — ring shows how far you&apos;ve come.</p>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {resumeLearning.length === 0 ? (
+            <p className="col-span-full rounded-2xl border-2 border-dashed border-black/15 bg-white py-14 text-center text-sm text-black/50">
+              Start a course above — your in-progress work will land here.
+            </p>
+          ) : (
+            resumeLearning.map((c) => (
+              <CourseCard
+                key={`${c.batchId}-${c.courseId}`}
+                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                title={c.courseTitle}
+                batchName=""
+                chapterCount={c.moduleCount}
+                progressPercent={c.progressPercent}
+              />
+            ))
+          )}
         </div>
-      </div>
+      </section>
+
+      {blocked.length > 0 && (
+        <section>
+          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">Access paused</h2>
+          <p className="mt-2 text-sm text-black/55">Your school admin disabled LMS access for these enrollments.</p>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {blocked.map((c) => (
+              <CourseCard
+                key={`${c.batchId}-${c.courseId}-blocked`}
+                href="#"
+                title={c.courseTitle}
+                batchName=""
+                chapterCount={c.moduleCount}
+                progressPercent={0}
+                locked
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">All courses we offer</h2>
+            <p className="mt-2 text-sm text-black/55">Open a course to enroll or continue — same catalog as the full courses page.</p>
+          </div>
+          <Link href="/courses" className="btn-primary text-sm font-bold">
+            Full catalog
+          </Link>
+        </div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {explore.map((c) => (
+            <Link
+              key={`${c.batchId}-${c.courseId}`}
+              href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+              className="group rounded-2xl border-2 border-black/10 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-funt-gold hover:shadow-lg"
+            >
+              <p className="font-bold text-black group-hover:text-funt-gold-deep">{c.courseTitle}</p>
+              <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-black/55">{c.description ?? "—"}</p>
+              <p className="mt-3 text-xs font-bold text-black/45">{c.moduleCount} chapters</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border-2 border-black/10 bg-funt-honey/40 px-6 py-5 text-sm text-black">
+        <p className="font-bold text-black">Rewards &amp; kits</p>
+        <p className="mt-2 text-black/70">
+          FUNT coins for shop discounts are planned for a later release. For now, use{" "}
+          <Link href="/shop" className="font-bold text-black underline decoration-funt-gold decoration-2">
+            Kits
+          </Link>{" "}
+          and{" "}
+          <Link href="/shop?shelf=COMPONENTS" className="font-bold text-black underline decoration-funt-gold decoration-2">
+            Components
+          </Link>{" "}
+          in the shop header — pay with coins or submit payment proof as shown on each product.
+        </p>
+      </section>
     </div>
   );
 }

@@ -229,8 +229,8 @@ export default function EditGlobalAssignmentPage() {
               </div>
             </div>
             <div className="border-t border-slate-200 pt-6">
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (FUNT IDs)</label>
-              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated FUNT IDs.</p>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (user IDs or usernames)</label>
+              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated MongoDB user IDs or usernames.</p>
               <input
                 type="text"
                 value={moderatorIdsText}

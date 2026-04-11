@@ -40,8 +40,8 @@ export default function EnrollmentsPage() {
       <p className="text-slate-500 text-sm">Enroll a student into a batch. Only Admin and Super Admin can create enrollments.</p>
       <form onSubmit={submit} className="card max-w-md space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">Student FUNT ID</label>
-          <input required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="input font-mono" placeholder="e.g. FS-26-00001" />
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Student username or user ID</label>
+          <input required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="input font-mono" placeholder="e.g. srikar.ch or MongoDB id" />
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Batch</label>

@@ -2,8 +2,10 @@
 import { BatchModel } from "../models/Batch.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
+import { UserModel } from "../models/User.model.js";
 import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
+import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
 import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 
@@ -74,7 +76,8 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
   }).exec();
 
-  const hasAccess = !!enrollment;
+  const blocked = !!(enrollment as { accessBlocked?: boolean } | null)?.accessBlocked;
+  const hasAccess = !!enrollment && !blocked;
 
   const rawModules = snapshot?.modules ?? [];
 
@@ -134,13 +137,24 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     }));
   }
 
-  const batchDoc = batch as { _id: unknown; batchId?: string; name: string; zoomLink?: string; trainerId: string; startDate: unknown; endDate?: unknown; status: string };
+  const batchDoc = batch as {
+    _id: unknown;
+    batchId?: string;
+    name: string;
+    zoomLink?: string;
+    trainerId: string;
+    startDate: unknown;
+    endDate?: unknown;
+    status: string;
+    certificatePriceCoins?: number;
+  };
   return {
     batchId: batchMongoId,
     batchFuntId: batchDoc.batchId,
     name: batchDoc.name,
     hasAccess,
     courseId: snapshotCourseId,
+    certificatePriceCoins: Math.max(0, Math.floor(Number(batchDoc.certificatePriceCoins ?? 0))),
     courseSnapshot: {
       courseId: snapshotCourseId,
       title: snapshot?.title ?? "Course",
@@ -155,6 +169,48 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   };
 }
 
+async function computeProgressPercent(
+  studentId: string,
+  batchMongoId: string,
+  snapshotCourseId: string,
+  rawModules: ModuleSnapshot[],
+  snapshotsLength: number
+): Promise<number> {
+  if (rawModules.length === 0) return 0;
+  const progressList = await ModuleProgressModel.find(
+    snapshotsLength > 1
+      ? { studentId, batchId: batchMongoId, courseId: snapshotCourseId }
+      : { studentId, batchId: batchMongoId, $or: [{ courseId: snapshotCourseId }, { courseId: null }, { courseId: { $exists: false } }] }
+  )
+    .lean()
+    .exec();
+  const progressByOrder = new Map<number, ProgressDoc>();
+  for (const p of progressList) {
+    progressByOrder.set((p as { moduleOrder: number }).moduleOrder, p as ProgressDoc);
+  }
+  let completed = 0;
+  rawModules.forEach((m, idx) => {
+    const order = (m.order as number) ?? idx;
+    const parts = moduleParts(m as ModuleSnapshot);
+    const progress = progressByOrder.get(order) ?? null;
+    if (isModuleFullyCompleted(parts, progress)) completed += 1;
+  });
+  return Math.round((completed / rawModules.length) * 100);
+}
+
+const XP_PER_CHAPTER = 40;
+
+async function awardChapterXp(studentId: string, amount: number) {
+  await UserModel.updateOne({ _id: studentId }, { $inc: { studentXp: amount } }).exec();
+}
+
+/** XP-only award (e.g. approved assignment). Course completion level is increased when a certificate is issued. */
+export async function awardStudentXp(studentId: string, amount: number) {
+  const n = Math.floor(Number(amount));
+  if (!Number.isFinite(n) || n < 1) return;
+  await UserModel.updateOne({ _id: studentId }, { $inc: { studentXp: n } }).exec();
+}
+
 /** List courses the student is enrolled in (one entry per course in each batch; batch can have multiple courses). */
 export async function getMyCoursesForStudent(studentId: string) {
   const enrollments = await EnrollmentModel.find({
@@ -166,24 +222,37 @@ export async function getMyCoursesForStudent(studentId: string) {
     .exec();
   const batchIds = enrollments.map((e) => e.batchId);
   const batches = await BatchModel.find({ _id: { $in: batchIds } }).lean().exec();
+  const batchById = new Map(batches.map((b) => [String(b._id), b]));
   const result: Array<{
     courseId: string;
     courseTitle: string;
     description?: string;
     moduleCount: number;
     batchId: string;
+    progressPercent: number;
+    accessBlocked: boolean;
   }> = [];
-  for (const batch of batches) {
+
+  for (const e of enrollments) {
+    const batch = batchById.get(e.batchId);
+    if (!batch) continue;
+    const blocked = !!(e as { accessBlocked?: boolean }).accessBlocked;
     const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
     for (const snap of snapshots) {
-      const s = snap as { courseId?: string; title?: string; description?: string; modules?: unknown[] };
+      const s = snap as { courseId?: string; title?: string; description?: string; modules?: ModuleSnapshot[] };
       const courseId = s?.courseId ?? String(batch._id);
+      const modules = Array.isArray(s?.modules) ? s.modules : [];
+      const pct = blocked
+        ? 0
+        : await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length);
       result.push({
         courseId,
         courseTitle: s?.title ?? "Course",
         description: s?.description,
-        moduleCount: Array.isArray(s?.modules) ? s.modules.length : 0,
+        moduleCount: modules.length,
         batchId: String(batch._id),
+        progressPercent: pct,
+        accessBlocked: blocked,
       });
     }
   }
@@ -216,6 +285,9 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
   const data = await getBatchCourseForStudent(studentId, resolvedBatchId, normalizedCourseId);
 
   let hasPendingRequest = false;
+  let hasPendingCoursePaymentFlag = false;
+  let hasRejectedCoursePayment = false;
+  let coursePaymentRejectReason: string | undefined;
   if (!data.hasAccess) {
     const pending = await EnrollmentRequestModel.findOne({
       studentId,
@@ -223,9 +295,20 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
       status: "PENDING",
     }).exec();
     hasPendingRequest = !!pending;
+    const payState = await getLatestCoursePaymentState(studentId, resolvedBatchId, normalizedCourseId);
+    hasPendingCoursePaymentFlag = payState?.status === "PENDING";
+    hasRejectedCoursePayment = payState?.status === "REJECTED";
+    coursePaymentRejectReason = payState?.rejectReason;
   }
 
-  return { ...data, courseId: normalizedCourseId, hasPendingRequest };
+  return {
+    ...data,
+    courseId: normalizedCourseId,
+    hasPendingRequest,
+    hasPendingCoursePayment: hasPendingCoursePaymentFlag,
+    hasRejectedCoursePayment,
+    coursePaymentRejectReason,
+  };
 }
 
 export async function listCoursesForExplore() {
@@ -284,6 +367,9 @@ export async function markModulePartComplete(
     status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
   }).exec();
   if (!enrollment) throw new AppError("You are not enrolled in this batch", 403);
+  if ((enrollment as { accessBlocked?: boolean }).accessBlocked) {
+    throw new AppError("Access to this course has been disabled", 403);
+  }
 
   const mod = rawModules[moduleOrder] as ModuleSnapshot;
   const parts = moduleParts(mod);
@@ -291,8 +377,10 @@ export async function markModulePartComplete(
   const hasPart = part === "content" ? parts.hasContent : part === "video" ? parts.hasVideo : parts.hasYoutube;
   if (!hasPart) throw new AppError(`This module has no ${part} to complete`, 400);
 
-  const now = new Date();
   const filter = { studentId, batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder };
+  const prevProgress = await ModuleProgressModel.findOne(filter).lean().exec();
+
+  const now = new Date();
   const update = { $set: { studentId, batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder, [field]: now, completedBy: studentId, isManualOverride: false } };
   let updated: unknown;
   try {
@@ -317,6 +405,9 @@ export async function markModulePartComplete(
       { studentId, batchId: batchMongoId, moduleOrder },
       { $set: { completedAt: now } }
     ).exec();
+    if (!(prevProgress as ProgressDoc | null)?.completedAt) {
+      await awardChapterXp(studentId, XP_PER_CHAPTER);
+    }
   }
 
   return { batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder, part, completed: true, moduleCompleted: allDone };
@@ -341,6 +432,18 @@ export async function markModuleComplete(studentId: string, batchId: string, mod
     status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
   }).exec();
   if (!enrollment) throw new AppError("You are not enrolled in this batch", 403);
+  if ((enrollment as { accessBlocked?: boolean }).accessBlocked) {
+    throw new AppError("Access to this course has been disabled", 403);
+  }
+
+  const before = await ModuleProgressModel.findOne({
+    studentId,
+    batchId: batchMongoId,
+    courseId: snapshotCourseId,
+    moduleOrder,
+  })
+    .lean()
+    .exec();
 
   const now = new Date();
   const filter = { studentId, batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder };
@@ -366,6 +469,11 @@ export async function markModuleComplete(studentId: string, batchId: string, mod
     } else {
       throw err;
     }
+  }
+
+  const wasComplete = !!(before as ProgressDoc | null)?.completedAt;
+  if (!wasComplete) {
+    await awardChapterXp(studentId, XP_PER_CHAPTER);
   }
 
   return { batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder, completed: true };
