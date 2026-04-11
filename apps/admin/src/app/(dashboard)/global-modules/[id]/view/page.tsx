@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { MODULE_STATUS } from "@funt-platform/constants";
 
 interface Module {
@@ -111,13 +112,13 @@ export default function ViewGlobalModulePage() {
           {module.description && (
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Description</h2>
-              <div className="prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_h1]:text-lg [&_h2]:text-base" dangerouslySetInnerHTML={{ __html: module.description }} />
+              <div className="prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_h1]:text-lg [&_h2]:text-base" dangerouslySetInnerHTML={{ __html: sanitizeHtml(module.description) }} />
             </section>
           )}
           {module.content && (
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Content</h2>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: module.content }} />
+              <div className="rounded-xl border border-slate-200 bg-white p-4 prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(module.content) }} />
             </section>
           )}
           {(module.youtubeUrl || module.videoUrl || module.resourceLinkUrl) && (

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { COURSE_STATUS } from "@funt-platform/constants";
 
 interface CourseModule {
@@ -98,7 +99,7 @@ export default function ViewCoursePage() {
           </section>
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Description</h2>
-            <div className="prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_h1]:text-lg [&_h2]:text-base" dangerouslySetInnerHTML={{ __html: course.description ?? "" }} />
+            <div className="prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_h1]:text-lg [&_h2]:text-base" dangerouslySetInnerHTML={{ __html: sanitizeHtml(course.description ?? "") }} />
           </section>
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Modules ({sortedModules.length})</h2>

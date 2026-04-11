@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { clearToken, api } from "@/lib/api";
+import { clearToken, api, clearLegacyJwtStorage, markClientLoggedIn } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 interface TopbarProps {
@@ -51,10 +51,12 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     });
     setLoading(false);
     if (res.success) {
+      clearLegacyJwtStorage();
+      markClientLoggedIn();
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage({ type: "success", text: "Password updated successfully." });
+      setMessage({ type: "success", text: "Password updated successfully. Your session was refreshed." });
     } else {
       setMessage({ type: "error", text: res.message ?? "Failed to update password." });
     }

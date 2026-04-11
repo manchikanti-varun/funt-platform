@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload, isTrainerOnly } from "@/lib/auth";
+import { isTrainerOnly } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { BATCH_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
 
@@ -32,6 +32,7 @@ const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
 
 export default function EditBatchPage() {
+  const { roles } = useAdminUser();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -49,8 +50,8 @@ export default function EditBatchPage() {
   const [error, setError] = useState("");
   const [trainerOnly, setTrainerOnly] = useState(false);
   useEffect(() => {
-    setTrainerOnly(isTrainerOnly(parseJwtPayload(getToken() ?? "")?.roles));
-  }, []);
+    setTrainerOnly(isTrainerOnly(roles));
+  }, [roles]);
 
   useEffect(() => {
     if (!id) return;

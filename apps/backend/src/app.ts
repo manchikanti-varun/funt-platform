@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { getEnv } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { helmetMiddleware } from "./middleware/security.middleware.js";
@@ -39,6 +40,7 @@ app.use(cors({
   origin: corsOrigins.length > 0 ? corsOrigins : false,
   credentials: true,
 }));
+app.use(cookieParser());
 app.use(express.json({ limit: "512kb" }));
 
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));

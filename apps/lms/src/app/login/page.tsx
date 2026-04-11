@@ -3,8 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, setToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { api, markClientLoggedIn } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 import logoSrc from "@/assets/funt-logo.png";
@@ -24,13 +23,11 @@ function LoginForm() {
   const [error, setError] = useState(errorFromQuery ?? "");
   const [loading, setLoading] = useState(false);
 
+  /** OAuth and legacy links may use /login?token= — handle tokens only on /auth/callback to avoid duplicating logic and reduce referrer leakage. */
   useEffect(() => {
-    if (tokenFromQuery) {
-      setToken(tokenFromQuery);
-      const payload = parseJwtPayload(tokenFromQuery);
-      if (payload?.roles?.includes(ROLE.PARENT)) router.replace("/parent");
-      else router.replace("/dashboard");
-      router.refresh();
+    const t = tokenFromQuery?.trim();
+    if (t) {
+      router.replace(`/auth/callback?token=${encodeURIComponent(t)}`);
     }
   }, [tokenFromQuery, router]);
 
@@ -42,18 +39,17 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await api<{ token: string }>("/api/auth/login", {
+    const res = await api<{ user: { roles: string[] } }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username: username.trim(), password }),
     });
     setLoading(false);
-    if (!res.success || !res.data?.token) {
+    if (!res.success || !res.data?.user) {
       setError(res.message ?? "Invalid username or password");
       return;
     }
-    setToken(res.data.token);
-    const payload = parseJwtPayload(res.data.token);
-    if (payload?.roles?.includes(ROLE.PARENT)) router.push("/parent");
+    markClientLoggedIn();
+    if (res.data.user.roles?.includes(ROLE.PARENT)) router.push("/parent");
     else router.push(from);
     router.refresh();
   }

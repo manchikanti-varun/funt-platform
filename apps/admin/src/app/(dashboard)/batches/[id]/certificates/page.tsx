@@ -134,10 +134,12 @@ export default function BatchCertificatesPage() {
   };
 
   const downloadSinglePdf = (certificateId: string) => {
-    const token = getToken();
-    if (!token) return;
+    const legacy = getToken()?.trim();
+    const headers: HeadersInit = {};
+    if (legacy) (headers as Record<string, string>)["Authorization"] = `Bearer ${legacy}`;
     fetch(apiUrl(`/api/certificates/${certificateId}/pdf`), {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+      headers,
     })
       .then((res) => {
         if (!res.ok) throw new Error("Download failed");
@@ -151,14 +153,13 @@ export default function BatchCertificatesPage() {
     const certIds = [...selectedDownload].map((k) => k.split(":")[1]).filter(Boolean);
     if (certIds.length === 0) return;
     setDownloadingZip(true);
-    const token = getToken();
-    if (!token) {
-      setDownloadingZip(false);
-      return;
-    }
+    const legacy = getToken()?.trim();
+    const headers: HeadersInit = {};
+    if (legacy) (headers as Record<string, string>)["Authorization"] = `Bearer ${legacy}`;
     try {
       const res = await fetch(apiUrl(`/api/certificates/batch/${id}/zip?certificateIds=${encodeURIComponent(certIds.join(","))}`), {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+        headers,
       });
       if (!res.ok) throw new Error("Download failed");
       const blob = await res.blob();

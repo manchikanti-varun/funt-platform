@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 
 type Tab = "requests" | "student" | "trainer" | "admin" | "parent" | "reset";
 
@@ -27,8 +26,8 @@ const INPUT_CLASS =
 
 export default function AdminManagementPage() {
   const searchParams = useSearchParams();
-  const payload = parseJwtPayload(getToken() ?? "");
-  const isSuperAdmin = payload?.roles?.includes(ROLE.SUPER_ADMIN) ?? false;
+  const { roles } = useAdminUser();
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
   const [tab, setTab] = useState<Tab>("student");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const hasSetInitialTab = useRef(false);

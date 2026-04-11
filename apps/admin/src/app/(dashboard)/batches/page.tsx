@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload, isTrainerOnly } from "@/lib/auth";
+import { isTrainerOnly } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { BATCH_STATUS } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
@@ -21,6 +21,7 @@ interface BatchItem {
 }
 
 export default function BatchesPage() {
+  const { roles } = useAdminUser();
   const [list, setList] = useState<BatchItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -29,8 +30,8 @@ export default function BatchesPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [trainerOnly, setTrainerOnly] = useState(false);
   useEffect(() => {
-    setTrainerOnly(isTrainerOnly(parseJwtPayload(getToken() ?? "")?.roles));
-  }, []);
+    setTrainerOnly(isTrainerOnly(roles));
+  }, [roles]);
 
   const sortedList = useMemo(() => {
     if (!sortKey) return list;

@@ -19,7 +19,9 @@ import {
 import { UserModel } from "../models/User.model.js";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 import { getEnv } from "../config/env.js";
-import { signToken } from "../utils/jwt.js";
+import { signToken, verifyToken } from "../utils/jwt.js";
+import { setAuthCookie, clearAuthCookie } from "../utils/authCookie.js";
+import { jwtExpiresInToMs } from "../utils/jwtExpires.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -35,8 +37,57 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
   if (!userId) throw new AppError("Unauthorized", 401);
   const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
   await changePasswordService(userId, currentPassword ?? "", newPassword ?? "");
-  res.status(200).json({ message: "Password updated" });
+  const { jwtSecret, jwtExpiresIn } = getEnv();
+  const user = await UserModel.findById(userId).select("username roles").lean().exec();
+  if (!user) throw new AppError("User not found", 404);
+  const token = signToken(
+    {
+      userId,
+      username: (user as { username?: string }).username?.trim() ?? "",
+      roles: (user as { roles: ROLE[] }).roles,
+    },
+    jwtSecret,
+    jwtExpiresIn
+  );
+  setAuthCookie(res, token, jwtExpiresInToMs(jwtExpiresIn));
+  res.status(200).json({ message: "Password updated", data: { sessionRotated: true } });
 });
+
+/** One-time: exchange a Bearer JWT (e.g. from OAuth redirect URL) for an httpOnly session cookie. */
+export const establishSession = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const raw = (req.body as { token?: string })?.token?.trim();
+  if (!raw) throw new AppError("token is required", 400);
+  const { jwtSecret, jwtExpiresIn } = getEnv();
+  let payload: ReturnType<typeof verifyToken>;
+  try {
+    payload = verifyToken(raw, jwtSecret);
+  } catch {
+    throw new AppError("Invalid or expired token", 401);
+  }
+  const user = await UserModel.findById(payload.userId).exec();
+  if (!user) throw new AppError("User not found", 401);
+  if (user.status !== ACCOUNT_STATUS.ACTIVE) {
+    throw new AppError("Account is suspended or archived", 403);
+  }
+  const maxAge = jwtExpiresInToMs(jwtExpiresIn);
+  setAuthCookie(res, raw, maxAge);
+  res.status(200).json({
+    data: {
+      user: {
+        id: String(user._id),
+        username: user.username?.trim() ?? "",
+        name: user.name,
+        roles: user.roles,
+        status: user.status,
+      },
+    },
+  });
+});
+
+export function logout(_req: Request, res: Response): void {
+  clearAuthCookie(res);
+  res.status(200).json({ success: true });
+}
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { username, password } = req.body as { username?: string; password: string };
@@ -53,7 +104,9 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     jwtExpiresIn,
     { userAgent, ip }
   );
-  res.status(200).json(result);
+  const maxAge = jwtExpiresInToMs(jwtExpiresIn);
+  setAuthCookie(res, result.token, maxAge);
+  res.status(200).json({ data: { user: result.user } });
 });
 
 export const parentLogin = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -70,7 +123,9 @@ export const parentLogin = asyncHandler(async (req: Request, res: Response): Pro
     jwtExpiresIn,
     { userAgent, ip }
   );
-  res.status(200).json(result);
+  const maxAge = jwtExpiresInToMs(jwtExpiresIn);
+  setAuthCookie(res, result.token, maxAge);
+  res.status(200).json({ data: { user: result.user } });
 });
 
 export const googleRedirectUri = (req: Request, res: Response): void => {
@@ -146,8 +201,7 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
     return;
   }
   const frontBase = (state.app === "lms" ? frontendLmsUrl : frontendAdminUrl).replace(/\/$/, "");
-  const callbackPath = state.app === "lms" ? "/auth/callback" : "/login";
-  const callbackUrl = `${frontBase}${callbackPath}?token=${encodeURIComponent(result.token)}`;
+  const callbackUrl = `${frontBase}/auth/callback?token=${encodeURIComponent(result.token)}`;
   res.redirect(302, callbackUrl);
 });
 
@@ -298,7 +352,9 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     roles: [ROLE.STUDENT],
     status: ACCOUNT_STATUS.ACTIVE,
   };
-  res.status(201).json({ token, user });
+  const maxAge = jwtExpiresInToMs(jwtExpiresIn);
+  setAuthCookie(res, token, maxAge);
+  res.status(201).json({ data: { user } });
 });
 
 export const googleAdminSignupPreview = (req: Request, res: Response): void => {

@@ -1,10 +1,10 @@
-
 import type { Request, Response, NextFunction } from "express";
 import { UserModel } from "../models/User.model.js";
 import { verifyToken } from "../utils/jwt.js";
 import { getEnv } from "../config/env.js";
 import { ACCOUNT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
+import { AUTH_COOKIE_NAME } from "../utils/authCookie.js";
 
 export async function authMiddleware(
   req: Request,
@@ -13,7 +13,9 @@ export async function authMiddleware(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const cookieToken = req.cookies?.[AUTH_COOKIE_NAME] as string | undefined;
+    const token = bearer || cookieToken || null;
 
     if (!token) {
       throw new AppError("Missing or invalid authorization token", 401);

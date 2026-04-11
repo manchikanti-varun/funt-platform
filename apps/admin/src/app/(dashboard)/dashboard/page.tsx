@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 
 interface Stats {
   courses: number;
@@ -100,6 +99,7 @@ function QuickLinkIcon({ icon }: { icon: string }) {
 }
 
 export default function DashboardPage() {
+  const { roles } = useAdminUser();
   const [stats, setStats] = useState<Stats>({
     courses: 0,
     batches: 0,
@@ -111,11 +111,9 @@ export default function DashboardPage() {
   const [role, setRole] = useState<string[]>([]);
 
   useEffect(() => {
-    const token = getToken();
-    const payload = token ? parseJwtPayload(token) : null;
-    if (payload) setRole(payload.roles ?? []);
+    setRole(roles);
 
-    const isAdminOrSuper = payload?.roles?.includes(ROLE.ADMIN) || payload?.roles?.includes(ROLE.SUPER_ADMIN);
+    const isAdminOrSuper = roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN);
 
     Promise.all([
       api<unknown[]>("/api/courses").then((r) => (Array.isArray(r.data) ? r.data : [])),
@@ -140,7 +138,7 @@ export default function DashboardPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [roles]);
 
   const isSuperAdmin = role.includes(ROLE.SUPER_ADMIN);
   const isAdmin = role.includes(ROLE.ADMIN) || isSuperAdmin;

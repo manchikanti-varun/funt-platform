@@ -3,25 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload, isTokenExpired } from "@/lib/auth";
+import { AdminUserProvider, type AdminUser } from "@/contexts/AdminUserContext";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-
-interface UserMe {
-  id: string;
-  username: string;
-  name: string;
-  email?: string;
-  mobile: string;
-  roles: string[];
-  status: string;
-}
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<UserMe | null>(null);
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -30,17 +19,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    const payload = parseJwtPayload(token);
-    if (!payload || isTokenExpired(payload)) {
-      router.push("/login");
-      return;
-    }
-    api<UserMe>("/api/users/me")
+    api<AdminUser>("/api/users/me")
       .then((res) => {
         if (res.success && res.data) setUser(res.data);
         else router.push("/login");
@@ -60,6 +39,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const sidebar = <Sidebar roles={user.roles} />;
 
   return (
+    <AdminUserProvider user={user}>
     <div className="flex min-h-screen bg-slate-50">
       <div className="hidden lg:block">{sidebar}</div>
       {sidebarOpen && (
@@ -73,5 +53,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto bg-gradient-to-b from-slate-50/50 to-slate-100/30 p-4 text-slate-800 sm:p-6">{children}</main>
       </div>
     </div>
+    </AdminUserProvider>
   );
 }

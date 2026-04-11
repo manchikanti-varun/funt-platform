@@ -5,6 +5,8 @@ import {
   login,
   parentLogin,
   changePassword,
+  establishSession,
+  logout,
   googleRedirect,
   googleCallback,
   googleRedirectUri,
@@ -17,6 +19,8 @@ import {
 
 const router = Router();
 
+router.post("/logout", logout);
+router.post("/session", establishSession);
 router.post("/login", login);
 router.post("/forgot-username", forgotStudentUsername);
 router.post("/change-password", authMiddleware, changePassword);

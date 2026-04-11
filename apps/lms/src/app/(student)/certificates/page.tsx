@@ -32,10 +32,13 @@ export default function CertificatesPage() {
   async function downloadPdf(certificateId: string) {
     setDownloadingId(certificateId);
     setError("");
-    const token = getToken();
+    const legacy = getToken()?.trim();
+    const headers: HeadersInit = {};
+    if (legacy) (headers as Record<string, string>)["Authorization"] = `Bearer ${legacy}`;
     try {
       const res = await fetch(`${API_BASE}/api/certificates/${encodeURIComponent(certificateId)}/pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        headers,
       });
       if (!res.ok) {
         setError(res.status === 403 ? "You can only download your own certificate." : "Download failed.");

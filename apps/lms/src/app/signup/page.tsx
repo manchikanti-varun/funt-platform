@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { setToken } from "@/lib/api";
+import { markClientLoggedIn } from "@/lib/api";
 
 import logoSrc from "@/assets/funt-logo.png";
 
@@ -121,6 +121,7 @@ function SignupForm() {
     try {
       const res = await fetch(`${API_BASE}/api/auth/google/signup-complete`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           signupToken: token,
@@ -137,9 +138,9 @@ function SignupForm() {
           password,
         }),
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data.token) {
-        setToken(data.token);
+      const data = (await res.json().catch(() => ({}))) as { data?: { user?: unknown }; message?: string };
+      if (res.ok && data.data?.user) {
+        markClientLoggedIn();
         router.replace("/dashboard");
         router.refresh();
       } else {

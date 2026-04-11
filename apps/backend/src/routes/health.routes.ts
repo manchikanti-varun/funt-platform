@@ -1,25 +1,12 @@
 import { Router } from "express";
-import type { User } from "@funt-platform/types";
-import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 
 const router = Router();
 
 router.get("/", (_req, res) => {
-  const systemUser: User = {
-    id: "system",
-    username: "system@funt",
-    name: "API",
-    email: "api@funt.in",
-    mobile: "",
-    roles: [ROLE.ADMIN],
-    status: ACCOUNT_STATUS.ACTIVE,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    service: systemUser,
+    service: "funt-platform-api",
   });
 });
 

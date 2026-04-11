@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 
 function toYouTubeEmbedUrl(url: string): string | null {
   if (!url?.trim()) return null;
@@ -205,7 +206,7 @@ export default function CourseViewerPage() {
           <div className="min-w-0">
             <h1 className="text-2xl font-black tracking-tight text-black">{courseTitle}</h1>
             {courseDescription && (
-              <div className="mt-5 max-w-3xl text-black/70 text-sm leading-relaxed prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal [&_.ql-cursor]:hidden" dangerouslySetInnerHTML={{ __html: courseDescription }} />
+              <div className="mt-5 max-w-3xl text-black/70 text-sm leading-relaxed prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal [&_.ql-cursor]:hidden" dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
             )}
           </div>
         </div>
@@ -351,9 +352,9 @@ export default function CourseViewerPage() {
                           <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Content</h3>
                             {selected.description && (
-                              <div className="text-black/70 text-sm mb-4 prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: selected.description }} />
+                              <div className="text-black/70 text-sm mb-4 prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
                             )}
-                            {selected.content && <div className="text-black/80 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selected.content }} />}
+                            {selected.content && <div className="text-black/80 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
                             {selected.hasContent && (
                               <div className="mt-4">
                                 {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}

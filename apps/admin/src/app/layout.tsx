@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { LegacySessionMigration } from '@/components/LegacySessionMigration';
 
 export const metadata: Metadata = {
   title: 'FUNT Admin',
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <LegacySessionMigration />
+        {children}
+      </body>
     </html>
   );
 }

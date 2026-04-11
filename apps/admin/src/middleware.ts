@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/admin-signup"];
+const PUBLIC = ["/login", "/admin-signup", "/auth/callback"];
 const AUTH_COOKIE = "funt_admin_auth";
 
 export function middleware(request: NextRequest) {

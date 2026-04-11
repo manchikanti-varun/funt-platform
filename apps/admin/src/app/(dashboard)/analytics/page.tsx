@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
 import {
   BarChart,
@@ -38,6 +37,7 @@ interface BatchItem {
 const COLORS = ["#0d9488", "#7c3aed", "#d97706", "#059669", "#dc2626", "#6366f1"];
 
 export default function AnalyticsPage() {
+  const { roles } = useAdminUser();
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [courses, setCourses] = useState<CourseItem[]>([]);
@@ -46,9 +46,7 @@ export default function AnalyticsPage() {
   const [assignmentsCount, setAssignmentsCount] = useState(0);
 
   useEffect(() => {
-    const token = getToken();
-    const payload = token ? parseJwtPayload(token) : null;
-    const isSuperAdmin = payload?.roles?.includes(ROLE.SUPER_ADMIN) ?? false;
+    const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
     setAllowed(isSuperAdmin);
 
     if (!isSuperAdmin) {
@@ -70,7 +68,7 @@ export default function AnalyticsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [roles]);
 
   if (!allowed) {
     return (

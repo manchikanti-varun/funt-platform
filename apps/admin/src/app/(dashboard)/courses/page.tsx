@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload, isTrainerOnly } from "@/lib/auth";
+import { isTrainerOnly } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { COURSE_STATUS } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
@@ -19,6 +19,7 @@ interface CourseItem {
 }
 
 export default function CoursesPage() {
+  const { roles } = useAdminUser();
   const [list, setList] = useState<CourseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -27,8 +28,8 @@ export default function CoursesPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
   useEffect(() => {
-    setReadOnly(isTrainerOnly(parseJwtPayload(getToken() ?? "")?.roles));
-  }, []);
+    setReadOnly(isTrainerOnly(roles));
+  }, [roles]);
 
   const sortedList = useMemo(() => {
     if (!sortKey) return list;

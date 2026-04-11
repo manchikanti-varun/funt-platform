@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
 
 interface AuditEntry {
@@ -26,6 +25,7 @@ interface AuditResponse {
 }
 
 export default function AuditLogPage() {
+  const { roles } = useAdminUser();
   const [data, setData] = useState<AuditResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,10 +38,8 @@ export default function AuditLogPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    const payload = token ? parseJwtPayload(token) : null;
-    setIsSuperAdmin(payload?.roles?.includes(ROLE.SUPER_ADMIN) ?? false);
-  }, []);
+    setIsSuperAdmin(roles.includes(ROLE.SUPER_ADMIN));
+  }, [roles]);
 
   useEffect(() => {
     if (!isSuperAdmin) {

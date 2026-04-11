@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, setToken } from "@/lib/api";
+import { api, markClientLoggedIn } from "@/lib/api";
 import logoSrc from "@/assets/funt-logo.png";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
@@ -20,10 +20,9 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (tokenFromQuery) {
-      setToken(tokenFromQuery);
-      router.replace("/dashboard");
-      router.refresh();
+    const t = tokenFromQuery?.trim();
+    if (t) {
+      router.replace(`/auth/callback?token=${encodeURIComponent(t)}`);
     }
   }, [tokenFromQuery, router]);
 
@@ -35,16 +34,16 @@ function LoginForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await api<{ token: string }>("/api/auth/login", {
+    const res = await api<{ user: { username: string } }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username: username.trim(), password }),
     });
     setLoading(false);
-    if (!res.success || !res.data?.token) {
+    if (!res.success || !res.data?.user) {
       setError(res.message ?? "Invalid username or password");
       return;
     }
-    setToken(res.data.token);
+    markClientLoggedIn();
     router.push(from);
     router.refresh();
   }

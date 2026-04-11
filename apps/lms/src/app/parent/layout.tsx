@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { api, getToken, clearToken } from "@/lib/api";
-import { parseJwtPayload, isTokenExpired } from "@/lib/auth";
+import { ROLE } from "@funt-platform/constants";
+import { api, clearToken } from "@/lib/api";
 
 interface UserMe {
   id: string;
@@ -31,20 +31,20 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       setLoading(false);
       return;
     }
-    const token = getToken();
-    if (!token) {
-      router.push("/parent/login");
-      return;
-    }
-    const payload = parseJwtPayload(token);
-    if (!payload || isTokenExpired(payload)) {
-      router.push("/parent/login");
-      return;
-    }
-    api<UserMe>("/api/users/me").then((r) => {
-      if (r.success && r.data) setUser(r.data);
-      else router.push("/parent/login");
-    }).catch(() => router.push("/parent/login")).finally(() => setLoading(false));
+    api<UserMe>("/api/users/me")
+      .then((r) => {
+        if (!r.success || !r.data) {
+          router.push("/parent/login");
+          return;
+        }
+        if (!r.data.roles?.includes(ROLE.PARENT)) {
+          router.push("/dashboard");
+          return;
+        }
+        setUser(r.data);
+      })
+      .catch(() => router.push("/parent/login"))
+      .finally(() => setLoading(false));
   }, [router, isLoginPage]);
 
   useEffect(() => {

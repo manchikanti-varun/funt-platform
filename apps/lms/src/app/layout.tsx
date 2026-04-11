@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Archivo_Black } from 'next/font/google';
 import './globals.css';
+import { LegacySessionMigration } from '@/components/LegacySessionMigration';
 
 const FONT_ARCHIVO_BLACK = Archivo_Black({ weight: "400", subsets: ["latin"], variable: "--font-brand-learn" });
 
@@ -16,7 +17,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={FONT_ARCHIVO_BLACK.variable}>{children}</body>
+      <body className={FONT_ARCHIVO_BLACK.variable}>
+        <LegacySessionMigration />
+        {children}
+      </body>
     </html>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { SUBMISSION_TYPE } from "@funt-platform/constants";
 
 interface AssignmentInfo {
@@ -388,7 +389,7 @@ export default function AssignmentsPage() {
                           {expandedAssignment.instructions && (
                             <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
                               <p className="text-sm font-medium text-slate-700">Instructions</p>
-                              <div className="mt-1 text-sm leading-relaxed text-slate-600 [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: expandedAssignment.instructions }} />
+                              <div className="mt-1 text-sm leading-relaxed text-slate-600 [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(expandedAssignment.instructions) }} />
                             </div>
                           )}
                           <div>

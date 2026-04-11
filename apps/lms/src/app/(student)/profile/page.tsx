@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, clearLegacyJwtStorage, markClientLoggedIn } from "@/lib/api";
 
 interface LoginEntry {
   timestamp: string;
@@ -56,10 +56,12 @@ function ChangePasswordSection() {
     });
     setLoading(false);
     if (res.success) {
+      clearLegacyJwtStorage();
+      markClientLoggedIn();
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage({ type: "success", text: "Password updated successfully." });
+      setMessage({ type: "success", text: "Password updated successfully. Your session was refreshed." });
     } else {
       setMessage({ type: "error", text: res.message ?? "Failed to update password." });
     }

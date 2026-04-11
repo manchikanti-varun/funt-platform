@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, setToken } from "@/lib/api";
+import { api, markClientLoggedIn } from "@/lib/api";
 
 import logoSrc from "@/assets/funt-logo.png";
 
@@ -20,16 +20,16 @@ function ParentLoginForm() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await api<{ token: string }>("/api/auth/parent-login", {
+    const res = await api<{ user: { username: string } }>("/api/auth/parent-login", {
       method: "POST",
       body: JSON.stringify({ studentUsername, mobile }),
     });
     setLoading(false);
-    if (!res.success || !res.data?.token) {
+    if (!res.success || !res.data?.user) {
       setError(res.message ?? "Invalid credentials");
       return;
     }
-    setToken(res.data.token);
+    markClientLoggedIn();
     router.push(from);
     router.refresh();
   }

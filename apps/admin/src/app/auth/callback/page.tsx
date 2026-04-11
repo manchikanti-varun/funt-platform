@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { establishSessionFromToken, markClientLoggedIn } from "@/lib/api";
-import { ROLE } from "@funt-platform/constants";
 
 function AuthCallbackContent() {
   const searchParams = useSearchParams();
@@ -25,16 +24,12 @@ function AuthCallbackContent() {
       const session = await establishSessionFromToken(token);
       if (cancelled) return;
       if (!session) {
-        setMessage("Could not complete sign-in. Try again.");
+        setMessage("Could not complete sign-in.");
         window.location.replace("/login?error=" + encodeURIComponent("Session could not be established."));
         return;
       }
       markClientLoggedIn();
-      if (session.roles.includes(ROLE.PARENT)) {
-        window.location.replace("/parent");
-      } else {
-        window.location.replace("/dashboard");
-      }
+      window.location.replace("/dashboard");
     })();
     return () => {
       cancelled = true;
@@ -42,9 +37,9 @@ function AuthCallbackContent() {
   }, [searchParams]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-funt-paper">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
-      <p className="mt-4 text-sm font-medium text-black/65">{message}</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <p className="mt-4 text-sm font-medium text-slate-600">{message}</p>
     </div>
   );
 }
@@ -53,8 +48,8 @@ export default function AuthCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-funt-paper">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
         </div>
       }
     >

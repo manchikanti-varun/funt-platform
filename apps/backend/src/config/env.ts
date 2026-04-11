@@ -1,6 +1,13 @@
 const required = ["MONGO_URI", "JWT_SECRET"] as const;
 const optional = { PORT: "38472" } as const;
 
+const PLACEHOLDER_SECRETS = new Set([
+  "your-secure-jwt-secret-min-32-chars",
+  "changeme",
+  "secret",
+  "jwt_secret",
+]);
+
 export function validateEnv(): void {
   const missing = required.filter((key) => !process.env[key]);
   if (missing.length > 0) {
@@ -8,11 +15,24 @@ export function validateEnv(): void {
     process.exit(1);
   }
   const nodeEnv = process.env.NODE_ENV ?? "development";
+  const jwtSecret = process.env.JWT_SECRET!.trim();
   if (nodeEnv === "production") {
     const raw = process.env.CORS_ORIGINS?.trim();
     if (!raw || !raw.split(",").some((o) => o.trim())) {
       console.error("[config] In production, CORS_ORIGINS must be set (comma-separated origins, e.g. https://app.example.com,https://admin.example.com).");
       process.exit(1);
+    }
+    if (jwtSecret.length < 32) {
+      console.error("[config] In production, JWT_SECRET must be at least 32 characters.");
+      process.exit(1);
+    }
+    const lower = jwtSecret.toLowerCase();
+    if (PLACEHOLDER_SECRETS.has(lower)) {
+      console.error("[config] In production, JWT_SECRET must not use a placeholder value from .env.example.");
+      process.exit(1);
+    }
+    if (process.env.CORS_ALLOW_LOCALHOST === "1") {
+      console.warn("[config] CORS_ALLOW_LOCALHOST=1: localhost origins are allowed on this production server. Disable after local testing.");
     }
   }
 }

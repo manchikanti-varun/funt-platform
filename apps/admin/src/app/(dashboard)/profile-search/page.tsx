@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
-import { getToken } from "@/lib/api";
-import { parseJwtPayload } from "@/lib/auth";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import Link from "next/link";
 
 interface ProfileUser {
@@ -66,6 +65,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function ProfileSearchPage() {
+  const { roles } = useAdminUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const qFromUrl = searchParams.get("q") ?? "";
@@ -74,9 +74,7 @@ export default function ProfileSearchPage() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
-  const token = getToken();
-  const payload = token ? parseJwtPayload(token) : null;
-  const isSuperAdmin = payload?.roles?.includes(ROLE.SUPER_ADMIN) ?? false;
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();

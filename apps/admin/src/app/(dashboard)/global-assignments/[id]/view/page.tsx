@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { ASSIGNMENT_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
 
@@ -117,7 +118,7 @@ export default function ViewGlobalAssignmentPage() {
           {assignment.instructions && (
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Instructions</h2>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 prose prose-sm max-w-none text-slate-700 [&_.ql-cursor]:hidden [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
+              <div className="rounded-xl border border-slate-200 bg-white p-4 prose prose-sm max-w-none text-slate-700 [&_.ql-cursor]:hidden [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(assignment.instructions) }} />
             </section>
           )}
           {assignment.skillTags && assignment.skillTags.length > 0 && (

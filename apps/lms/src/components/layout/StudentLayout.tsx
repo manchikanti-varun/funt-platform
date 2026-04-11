@@ -5,8 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { api, getToken, clearToken } from "@/lib/api";
-import { parseJwtPayload, isTokenExpired } from "@/lib/auth";
+import { api, clearToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 import {
   IconOverview,
@@ -249,24 +248,17 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    const payload = parseJwtPayload(token);
-    if (!payload || isTokenExpired(payload)) {
-      router.push("/login");
-      return;
-    }
-    if (payload.roles?.includes(ROLE.PARENT)) {
-      router.push("/parent");
-      return;
-    }
     api<UserMe>("/api/users/me")
       .then((r) => {
-        if (r.success && r.data) setUser(r.data);
-        else router.push("/login");
+        if (!r.success || !r.data) {
+          router.push("/login");
+          return;
+        }
+        if (r.data.roles?.includes(ROLE.PARENT)) {
+          router.push("/parent");
+          return;
+        }
+        setUser(r.data);
       })
       .catch(() => router.push("/login"))
       .finally(() => setLoading(false));
