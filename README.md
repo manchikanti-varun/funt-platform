@@ -271,8 +271,3 @@ The repository is actively evolving with major enhancements around:
 - secure checkout/order workflows
 - deployment hardening and production readiness checks
 
-If you are onboarding a new team member, start with:
-1. this `README.md`
-2. `docs/DEPLOYMENT.md`
-3. app-specific `.env.example` files
-
