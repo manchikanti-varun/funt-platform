@@ -1,70 +1,24 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { api, markClientLoggedIn } from "@/lib/api";
-
-import logoSrc from "@/assets/funt-logo.png";
-
-function ParentLoginForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "/parent";
-  const [studentUsername, setStudentUsername] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    const res = await api<{ user: { username: string } }>("/api/auth/parent-login", {
-      method: "POST",
-      body: JSON.stringify({ studentUsername, mobile }),
-    });
-    setLoading(false);
-    if (!res.success || !res.data?.user) {
-      setError(res.message ?? "Invalid credentials");
-      return;
-    }
-    markClientLoggedIn();
-    router.push(from);
-    router.refresh();
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
-        <div className="mb-8 flex flex-col items-center justify-center">
-          <img src={typeof logoSrc === "string" ? logoSrc : (logoSrc as { src: string }).src} alt="FUNT LEARN" className="h-16 w-auto object-contain" />
-          <span className="mt-1 font-brand-learn text-xl tracking-[0.2em] text-black sm:text-2xl">LEARN</span>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Student username</label>
-            <input value={studentUsername} onChange={(e) => setStudentUsername(e.target.value)} required className="input font-mono" placeholder="Student username" />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Mobile</label>
-            <input value={mobile} onChange={(e) => setMobile(e.target.value)} required className="input" placeholder="Mobile" />
-          </div>
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
-          <button type="submit" disabled={loading} className="btn-primary w-full">{loading ? "Signing in…" : "Sign in"}</button>
-        </form>
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Student? <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">Sign in as student</Link>
-        </p>
-      </div>
-    </div>
-  );
-}
+import { ParentLinkedStudentsPicker } from "../_components/ParentLinkedStudentsPicker";
 
 export default function ParentLoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" /></div>}>
-      <ParentLoginForm />
-    </Suspense>
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-[#fffdf7] via-[#fffaf0] to-[#fff7e6] p-4 overflow-y-auto">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        aria-hidden
+        style={{
+          background: "radial-gradient(520px 280px at 50% -8%, rgba(212, 175, 55, 0.22), transparent 70%)",
+        }}
+      />
+      <div className="relative w-full">
+        <ParentLinkedStudentsPicker
+          title="Parent login"
+          heading="Sign in to monitor your child"
+          subtitle="Enter your phone number to see your linked student profiles."
+        />
+      </div>
+    </div>
   );
 }

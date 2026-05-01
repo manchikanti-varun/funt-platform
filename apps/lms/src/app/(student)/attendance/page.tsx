@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface BatchAttendance {
   batchId: string;
@@ -60,20 +61,17 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
+    <AppPageShell className="max-w-4xl gap-8">
       {}
-      <header className="shrink-0">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Attendance</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Attendance</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Session attendance by batch (with percentage) and events you attended.
-        </p>
+      <header className="page-hero shrink-0 py-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7217]">Attendance</p>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">Attendance</h1>
       </header>
 
       {}
       <section className="shrink-0 space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-funt-gold-deep">Session Attendance</h2>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/20 ring-1 ring-slate-100 overflow-hidden">
+        <DataPanel className="overflow-hidden">
           <div className="border-b border-slate-200 bg-gradient-to-r from-funt-honey/60 to-white px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-wrap items-stretch gap-4 sm:gap-6">
               <div className="rounded-xl bg-white border border-slate-100 px-4 py-3 shadow-sm min-w-[120px]">
@@ -109,7 +107,6 @@ export default function AttendancePage() {
                   </svg>
                 </div>
                 <p className="mt-4 text-sm font-medium text-slate-600">No Session Attendance Yet</p>
-                <p className="mt-1 text-sm text-slate-500">Your session attendance will appear here.</p>
               </div>
             ) : (
               <ul className="space-y-4">
@@ -174,16 +171,15 @@ export default function AttendancePage() {
               </ul>
             )}
           </div>
-        </div>
+        </DataPanel>
       </section>
 
       {}
       <section className="flex flex-col gap-4">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-600">Events Attended</h2>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/20 ring-1 ring-slate-100 overflow-hidden">
+        <DataPanel className="overflow-hidden">
           <div className="border-b border-slate-200 bg-gradient-to-r from-violet-50 to-white px-5 py-4 sm:px-6">
             <p className="text-sm font-semibold text-slate-800">Events You Attended</p>
-            <p className="mt-0.5 text-xs text-slate-500">Bootcamps, workshops, and one-off events (no percentage).</p>
           </div>
           <div>
             {events.length === 0 ? (
@@ -194,7 +190,6 @@ export default function AttendancePage() {
                   </svg>
                 </div>
                 <p className="mt-4 text-sm font-medium text-slate-600">No Events Yet</p>
-                <p className="mt-1 text-sm text-slate-500">Events you attend will appear here.</p>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -222,8 +217,8 @@ export default function AttendancePage() {
               </ul>
             )}
           </div>
-        </div>
+        </DataPanel>
       </section>
-    </div>
+    </AppPageShell>
   );
 }

@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
 
   if (!allowed) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="w-full space-y-6">
         <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
         <p className="text-amber-600">Access restricted to Super Admin.</p>
       </div>
@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
   if (courseModuleCounts.length === 0) courseModuleCounts.push({ name: "—", modules: 0 });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="w-full space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
         <p className="mt-1 text-sm text-slate-600">Overview of content and batches. Data from existing APIs.</p>

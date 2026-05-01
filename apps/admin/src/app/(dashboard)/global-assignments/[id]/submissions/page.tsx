@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 
 interface AssignmentInfo {
   id: string;
@@ -46,6 +47,7 @@ interface GeneralSubmission {
 type SubmissionRow = ModuleSubmission | GeneralSubmission;
 
 import { BackLink } from "@/components/ui/BackLink";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 const NAV_LINK_CLASS =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50";
@@ -195,6 +197,7 @@ export default function AssignmentSubmissionsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
       <div className="shrink-0 space-y-3 pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <BackLink href={`/global-assignments/${id}/view`}>Back to assignment</BackLink>
@@ -309,9 +312,11 @@ export default function AssignmentSubmissionsPage() {
                       {s.type === "module" ? `${s.batchName} · Module ${(s.moduleOrder ?? 0) + 1}` : "General"}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">{s.studentId}</td>
-                    <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-600" title={s.submissionContent}>
-                      {s.submissionContent?.slice(0, 60)}
-                      {(s.submissionContent?.length ?? 0) > 60 ? "…" : ""}
+                    <td className="max-w-xs px-4 py-3 text-sm text-slate-600">
+                      <div
+                        className={`line-clamp-2 max-w-xs ${RICH_TEXT_VIEW_CLASS}`}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(s.submissionContent ?? "") }}
+                      />
                     </td>
                     <td className="px-4 py-3">{statusBadge(s.status)}</td>
                     <td className="px-4 py-3 text-sm text-slate-600">{new Date(s.submittedAt).toLocaleString()}</td>
@@ -349,8 +354,8 @@ export default function AssignmentSubmissionsPage() {
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-slate-900">Review submission</h2>
-            <div className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-              {reviewing.submissionContent}
+            <div className={`mt-2 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 ${RICH_TEXT_VIEW_CLASS}`}>
+              <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(reviewing.submissionContent ?? "") }} />
             </div>
             <div className="mt-4 space-y-3">
               <div>

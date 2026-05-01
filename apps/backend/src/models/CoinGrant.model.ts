@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const GRANT_SOURCES = ["CERTIFICATE_GRANT", "LEGACY_SYNC", "ADMIN_ADJUST"] as const;
+const GRANT_SOURCES = ["CERTIFICATE_GRANT", "BATCH_COMPLETION", "LEGACY_SYNC", "ADMIN_ADJUST"] as const;
 
 const coinGrantSchema = new Schema(
   {

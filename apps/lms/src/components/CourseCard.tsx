@@ -52,8 +52,8 @@ export function CourseCard({
     <Link
       href={locked ? "#" : href}
       onClick={(e) => locked && e.preventDefault()}
-      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-md shadow-black/5 ring-1 ring-black/5 transition duration-200 ${
-        locked ? "cursor-not-allowed opacity-70" : "hover:-translate-y-0.5 hover:shadow-lg"
+      className={`group flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-black/10 bg-white/95 shadow-md shadow-black/5 ring-1 ring-black/5 transition duration-200 ${
+        locked ? "cursor-not-allowed opacity-70" : "hover:-translate-y-1 hover:border-funt-gold/40 hover:shadow-xl"
       }`}
     >
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-5">
@@ -64,11 +64,11 @@ export function CourseCard({
           {locked && <p className="mt-2 text-xs font-semibold text-red-700">Access disabled</p>}
         </div>
       </div>
-      <div className="flex w-full items-center justify-between border-t border-black/5 bg-black/[0.02] px-4 py-3">
+      <div className="flex w-full items-center justify-between border-t border-black/5 bg-gradient-to-r from-black/[0.02] via-funt-honey/20 to-black/[0.02] px-4 py-3">
         <span className="text-xs font-medium text-black/70">
           {chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}
         </span>
-        <span className="text-xs font-semibold text-funt-ink">{locked ? "—" : `${progressPercent}%`}</span>
+        <span className="text-xs font-semibold text-funt-ink">{locked ? "—" : `${progressPercent}% complete`}</span>
       </div>
     </Link>
   );

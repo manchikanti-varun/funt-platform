@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { SUBMISSION_TYPE } from "@funt-platform/constants";
 
 const STORAGE_KEY = "new_global_assignment_type";
 
@@ -16,9 +16,11 @@ function getStoredType(): "general" | "module" {
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { SkillTagsField } from "@/components/admin/SkillTagsField";
+import { ModeratorCheckboxes } from "@/components/admin/StaffPickerFields";
 
 const SUBMISSION_TYPES = [SUBMISSION_TYPE.FILE, SUBMISSION_TYPE.TEXT, SUBMISSION_TYPE.LINK];
-const SKILL_TAGS_LIST = Object.values(SKILL_TAG);
 
 export default function NewGlobalAssignmentPage() {
   const router = useRouter();
@@ -27,7 +29,7 @@ export default function NewGlobalAssignmentPage() {
   const [submissionType, setSubmissionType] = useState(SUBMISSION_TYPE.TEXT);
   const [skillTags, setSkillTags] = useState<string[]>([]);
   const [type, setTypeState] = useState<"general" | "module">(getStoredType);
-  const [moderatorIdsText, setModeratorIdsText] = useState("");
+  const [moderatorIds, setModeratorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -41,10 +43,6 @@ export default function NewGlobalAssignmentPage() {
     typeRef.current = type;
   }, [type]);
 
-  function toggleSkill(tag: string) {
-    setSkillTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const instructionsPlain = instructions?.replace(/<[^>]+>/g, "").trim() ?? "";
@@ -52,9 +50,12 @@ export default function NewGlobalAssignmentPage() {
       setError("Instructions are required.");
       return;
     }
+    if (skillTags.length === 0) {
+      setError("Select at least one skill tag (or add a custom tag).");
+      return;
+    }
     setError("");
     setLoading(true);
-    const moderatorIds = moderatorIdsText.split(",").map((s) => s.trim()).filter(Boolean);
     const assignmentType = typeRef.current;
     const res = await api<{ id: string }>("/api/global-assignments", {
       method: "POST",
@@ -71,6 +72,7 @@ export default function NewGlobalAssignmentPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
       <div className="shrink-0 pb-4">
         <BackLink href="/global-assignments" onClick={() => typeof window !== "undefined" && window.sessionStorage.removeItem(STORAGE_KEY)}>
           Back to Assignments
@@ -84,7 +86,7 @@ export default function NewGlobalAssignmentPage() {
         </div>
 
         <form onSubmit={submit} className="p-6 sm:p-8">
-          <div className="mx-auto max-w-2xl space-y-6">
+          <div className="w-full space-y-6">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
               <div className="flex gap-6">
@@ -127,29 +129,15 @@ export default function NewGlobalAssignmentPage() {
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Skill Tags</label>
-              <div className="flex flex-wrap gap-2">
-                {SKILL_TAGS_LIST.map((tag) => (
-                  <label
-                    key={tag}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:border-teal-400 hover:bg-teal-50/50"
-                  >
-                    <input type="checkbox" checked={skillTags.includes(tag)} onChange={() => toggleSkill(tag)} className="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
-                    {tag}
-                  </label>
-                ))}
-              </div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Skill tags</label>
+              <SkillTagsField value={skillTags} onChange={setSkillTags} />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (user IDs or usernames)</label>
-              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated MongoDB user IDs or usernames.</p>
-              <input
-                type="text"
-                value={moderatorIdsText}
-                onChange={(e) => setModeratorIdsText(e.target.value)}
-                placeholder="e.g. id1, id2"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Moderators</label>
+              <p className="mb-2 text-xs text-slate-500">
+                Other admins or super admins who can edit this assignment (your account is excluded).
+              </p>
+              <ModeratorCheckboxes selectedIds={moderatorIds} onChange={setModeratorIds} />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex flex-wrap gap-3 pt-2">

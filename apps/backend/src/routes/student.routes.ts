@@ -9,6 +9,7 @@ import {
   getExploreCourses,
   getMyCourses,
   getCourseByCourseId,
+  getStudentMediaPlaybackRedirect,
   getGeneralAssignments,
   getAssignmentForStudent,
   getTrainers,
@@ -17,7 +18,16 @@ import {
   postEnrollmentRequest,
   getMySubmissions,
 } from "../controllers/enrollment.controller.js";
-import { postRedeemLicense, postSubmitPayment, getStudentPaymentPending } from "../controllers/studentAccess.controller.js";
+import {
+  postRedeemLicense,
+  postSubmitPayment,
+  getStudentPaymentPending,
+  getStudentPaymentTimelineView,
+  getMyCoinGrants,
+  getCourseCheckout,
+  postStudentRazorpayOrder,
+  postStudentRazorpayConfirm,
+} from "../controllers/studentAccess.controller.js";
 import { getMyCertificates, postGenerateMyCertificate } from "../controllers/certificate.controller.js";
 
 const router = Router();
@@ -28,12 +38,18 @@ router.get("/batches", getExploreBatches);
 router.get("/batches/:batchId/course", getBatchCourse);
 router.get("/courses", getMyCourses);
 router.get("/courses/explore", getExploreCourses);
+router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
+router.get("/media/play", getStudentMediaPlaybackRedirect);
 router.post("/batches/:batchId/progress", postMarkModuleComplete);
 router.post("/enrollment-requests", postEnrollmentRequest);
 router.post("/enroll/license", postRedeemLicense);
+router.post("/payments/razorpay/order", postStudentRazorpayOrder);
+router.post("/payments/razorpay/confirm", postStudentRazorpayConfirm);
 router.post("/payments", postSubmitPayment);
 router.get("/payments/pending", getStudentPaymentPending);
+router.get("/payments/timeline", getStudentPaymentTimelineView);
+router.get("/coin-grants", getMyCoinGrants);
 router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);
 router.get("/assignments/:assignmentId", getAssignmentForStudent);

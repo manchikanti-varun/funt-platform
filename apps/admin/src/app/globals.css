@@ -1,25 +1,162 @@
+@import "@funt-platform/rich-text-editor/styles.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-slate-50/80 text-slate-800 antialiased;
+    @apply bg-slate-100/90 text-slate-800 antialiased;
+    background-image: radial-gradient(ellipse 120% 80% at 50% -40%, rgb(199 210 254 / 0.45), transparent 55%);
   }
-  /* Premium typography scale */
+  ::selection {
+    background: rgb(99 102 241 / 0.22);
+    color: rgb(15 23 42);
+  }
+  *:focus-visible {
+    outline: 2px solid rgb(99 102 241 / 0.45);
+    outline-offset: 2px;
+  }
   h1 { @apply tracking-tight; }
   h2 { @apply tracking-tight; }
 }
 
 @layer components {
+  .rich-text-view {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .rich-text-view p {
+    margin: 0.8em 0;
+  }
+  .rich-text-view h1,
+  .rich-text-view h2,
+  .rich-text-view h3 {
+    margin: 1.2em 0 0.6em;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .rich-text-view h1 {
+    font-size: 2rem;
+  }
+  .rich-text-view h2 {
+    font-size: 1.5rem;
+  }
+  .rich-text-view h3 {
+    font-size: 1.2rem;
+  }
+  .rich-text-view ul,
+  .rich-text-view ol {
+    margin: 0.75rem 0 !important;
+    padding-left: 1.5rem !important;
+    list-style-position: outside !important;
+  }
+  .rich-text-view ul {
+    list-style-type: disc !important;
+  }
+  .rich-text-view ol {
+    list-style-type: decimal !important;
+  }
+  .rich-text-view li {
+    display: list-item !important;
+    margin: 0.25rem 0 !important;
+  }
+  .rich-text-view ul ul,
+  .rich-text-view ul ol,
+  .rich-text-view ol ul,
+  .rich-text-view ol ol {
+    margin: 0.35rem 0 !important;
+    padding-left: 1.25rem !important;
+  }
+  .rich-text-view li[data-list="bullet"] {
+    list-style-type: disc !important;
+  }
+  .rich-text-view li[data-list="ordered"] {
+    list-style-type: decimal !important;
+  }
+  .rich-text-view blockquote {
+    margin: 1em 0;
+    padding: 0.1em 0 0.1em 1em;
+    border-left: 3px solid #cbd5e1;
+    color: #334155;
+    background: #f8fafc;
+    border-radius: 0 8px 8px 0;
+  }
+  .rich-text-view pre {
+    margin: 1em 0;
+    padding: 12px;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  .rich-text-view pre code {
+    background: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+  .rich-text-view code {
+    border-radius: 6px;
+    background: #e2e8f0;
+    padding: 0.1em 0.35em;
+    color: #0f172a;
+  }
+  .rich-text-view hr {
+    margin: 1.2em 0;
+    border: none;
+    border-top: 1px solid #cbd5e1;
+  }
+  .rich-text-view img {
+    max-width: 100%;
+    margin: 0.7em 0;
+    border-radius: 8px;
+  }
+  .app-page-shell {
+    @apply w-full max-w-none space-y-6;
+  }
+  /* Ensure page-level loading states stay horizontally centered inside flex layouts. */
+  .app-page-shell [class*="min-h-"][class*="items-center"][class*="justify-center"]:has(.animate-spin) {
+    @apply w-full;
+  }
+  .page-section {
+    @apply rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm ring-1 ring-slate-100/80 sm:p-6;
+  }
+  .page-section-head {
+    @apply mb-4 flex flex-wrap items-start justify-between gap-3;
+  }
+  .panel-data {
+    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100/80;
+  }
+  .panel-form {
+    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ring-1 ring-slate-100/80;
+  }
+  .stack-8 {
+    @apply space-y-2;
+  }
+  .stack-12 {
+    @apply space-y-3;
+  }
+  .stack-16 {
+    @apply space-y-4;
+  }
+  .stack-24 {
+    @apply space-y-6;
+  }
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm ring-1 ring-slate-100/80 transition duration-200 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/25 focus:ring-offset-0;
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-slate-800 placeholder-slate-400 shadow-sm ring-1 ring-slate-100/80 transition duration-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:ring-offset-0;
   }
   .btn-primary {
-    @apply rounded-xl bg-teal-600 px-4 py-2.5 font-medium text-white shadow-lg shadow-teal-900/10 transition duration-200 hover:bg-teal-500 hover:shadow-xl hover:shadow-teal-900/15 active:scale-[0.98] disabled:opacity-50;
+    @apply rounded-xl bg-indigo-600 px-4 py-2.5 font-medium text-white shadow-lg shadow-indigo-900/15 transition duration-200 hover:bg-indigo-500 hover:shadow-xl hover:shadow-indigo-900/20 active:scale-[0.98] disabled:opacity-50;
   }
   .btn-secondary {
-    @apply rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50/80 hover:text-teal-700 hover:shadow-md;
+    @apply rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-indigo-200 hover:bg-indigo-50/80 hover:text-indigo-700 hover:shadow-md;
+  }
+  .btn-ghost {
+    @apply rounded-xl px-4 py-2.5 font-medium text-slate-700 transition duration-200 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-medium text-red-700 shadow-sm transition duration-200 hover:bg-red-100;
   }
   .badge {
     @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
@@ -46,9 +183,38 @@
     @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/80;
   }
   .card-premium {
-    @apply rounded-2xl border-2 border-teal-200/80 bg-white p-6 shadow-xl shadow-teal-900/5 ring-1 ring-teal-100/50;
+    @apply rounded-2xl border-2 border-indigo-200/80 bg-white p-6 shadow-xl shadow-indigo-900/5 ring-1 ring-indigo-100/50;
   }
   .card-colored {
     @apply rounded-2xl border-0 bg-white p-6 shadow-xl ring-1 ring-slate-100/50;
+  }
+  /** Section label — minimal copy beside titles */
+  .label-overline {
+    @apply text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500;
+  }
+  /** Page hero — dashboard & key landing strips */
+  .admin-hero {
+    @apply relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/50 to-slate-50/80 p-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/90 sm:p-8;
+  }
+  .admin-hero::after {
+    content: "";
+    @apply pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/30 blur-3xl;
+  }
+  .text-muted {
+    @apply text-sm text-slate-600 leading-relaxed;
+  }
+  /** Row icon: view / edit (list tables) */
+  .admin-table-action {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:border-slate-400 hover:bg-slate-50;
+  }
+  /** Copy / duplicate — same everywhere (course, assignment, module, batch) */
+  .btn-duplicate {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-900 shadow-sm transition hover:border-violet-300 hover:bg-violet-100 disabled:opacity-60;
+  }
+  .btn-duplicate--icon-only {
+    @apply h-9 w-9 p-0;
+  }
+  .btn-duplicate--xl {
+    @apply rounded-xl px-6 py-3 text-sm font-semibold shadow-md;
   }
 }

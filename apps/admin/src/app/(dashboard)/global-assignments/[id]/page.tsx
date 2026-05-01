@@ -4,10 +4,14 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ASSIGNMENT_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { ASSIGNMENT_STATUS, SUBMISSION_TYPE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { SkillTagsField } from "@/components/admin/SkillTagsField";
+import { ModeratorCheckboxes } from "@/components/admin/StaffPickerFields";
 
 interface Assignment {
   id: string;
@@ -20,8 +24,6 @@ interface Assignment {
   moderatorIds?: string[];
 }
 
-const SKILL_TAGS = Object.values(SKILL_TAG);
-
 export default function EditGlobalAssignmentPage() {
   const params = useParams();
   const router = useRouter();
@@ -32,7 +34,7 @@ export default function EditGlobalAssignmentPage() {
   const [submissionType, setSubmissionType] = useState<string>(SUBMISSION_TYPE.TEXT);
   const [skillTags, setSkillTags] = useState<string[]>([]);
   const [type, setType] = useState<"general" | "module">("module");
-  const [moderatorIdsText, setModeratorIdsText] = useState("");
+  const [moderatorIds, setModeratorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [error, setError] = useState("");
@@ -52,21 +54,20 @@ export default function EditGlobalAssignmentPage() {
         setSubmissionType(r.data.submissionType ?? SUBMISSION_TYPE.TEXT);
         setSkillTags(Array.isArray(r.data.skillTags) ? r.data.skillTags : []);
         setType((r.data.type === "general" ? "general" : "module") as "general" | "module");
-        setModeratorIdsText(Array.isArray(r.data.moderatorIds) ? r.data.moderatorIds.join(", ") : "");
+        setModeratorIds(Array.isArray(r.data.moderatorIds) ? r.data.moderatorIds : []);
       }
     });
   }, [id]);
 
-  function toggleSkill(tag: string) {
-    setSkillTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
-  }
-
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (skillTags.length === 0) {
+      setError("Select at least one skill tag (or add a custom tag).");
+      return;
+    }
     setLoading(true);
     const assignmentType = typeRef.current;
-    const moderatorIds = moderatorIdsText.split(",").map((s) => s.trim()).filter(Boolean);
     const res = await api(`/api/global-assignments/${id}`, {
       method: "PUT",
       body: JSON.stringify({ title, instructions, submissionType, skillTags, type: assignmentType, moderatorIds }),
@@ -109,6 +110,7 @@ export default function EditGlobalAssignmentPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
         <BackLink href="/global-assignments">Back to Assignments</BackLink>
         <div className="flex items-center gap-2">
@@ -141,18 +143,11 @@ export default function EditGlobalAssignmentPage() {
                   Submissions
                 </Link>
               )}
-              <button
-                type="button"
-                onClick={duplicate}
-                disabled={duplicating}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-              >
+              <button type="button" onClick={duplicate} disabled={duplicating} className="btn-duplicate">
                 {duplicating ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-700" />
                 ) : (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
+                  <DuplicateIcon />
                 )}
                 Duplicate
               </button>
@@ -172,10 +167,13 @@ export default function EditGlobalAssignmentPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Assignment</h1>
           <p className="mt-1 text-sm text-slate-600">Update title, instructions, type, and skill tags.</p>
+          <div className="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
+            Global source
+          </div>
         </div>
 
         <form onSubmit={submit} className="p-6 sm:p-8">
-          <div className="mx-auto max-w-2xl space-y-6">
+          <div className="w-full space-y-6">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
               <div className="flex gap-6">
@@ -215,29 +213,15 @@ export default function EditGlobalAssignmentPage() {
               </select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Skill Tags</label>
-              <div className="flex flex-wrap gap-2">
-                {SKILL_TAGS.map((tag) => (
-                  <label
-                    key={tag}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:border-teal-400 hover:bg-teal-50/50"
-                  >
-                    <input type="checkbox" checked={skillTags.includes(tag)} onChange={() => toggleSkill(tag)} className="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
-                    {tag}
-                  </label>
-                ))}
-              </div>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Skill tags</label>
+              <SkillTagsField value={skillTags} onChange={setSkillTags} />
             </div>
             <div className="border-t border-slate-200 pt-6">
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Moderators (user IDs or usernames)</label>
-              <p className="mb-2 text-xs text-slate-500">Other admins or trainers who can edit this assignment. Comma-separated MongoDB user IDs or usernames.</p>
-              <input
-                type="text"
-                value={moderatorIdsText}
-                onChange={(e) => setModeratorIdsText(e.target.value)}
-                placeholder="e.g. id1, id2"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-              />
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Moderators</label>
+              <p className="mb-2 text-xs text-slate-500">
+                Other admins or super admins who can edit this assignment (your account is excluded).
+              </p>
+              <ModeratorCheckboxes selectedIds={moderatorIds} onChange={setModeratorIds} />
             </div>
             {type === "general" && (
               <p className="border-t border-slate-200 pt-4 text-sm text-slate-500">

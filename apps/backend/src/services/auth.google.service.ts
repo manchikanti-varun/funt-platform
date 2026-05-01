@@ -127,6 +127,7 @@ export async function loginWithGoogleEmail(
       userId: String(user._id),
       username: user.username ?? "",
       roles: user.roles as ROLE[],
+      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn

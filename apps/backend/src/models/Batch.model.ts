@@ -18,6 +18,8 @@ const courseModuleSnapshotSchema = new Schema(
     linkedAssignmentSubmissionTypeOverride: { type: String, required: false },
     linkedAssignmentSkillTagsOverride: { type: [String], required: false },
     order: { type: Number, required: true },
+    /** XP granted when the student fully completes this module in a batch (snapshot value at batch creation). */
+    xpReward: { type: Number, required: false, default: 40, min: 0, max: 100_000 },
   },
   { _id: false }
 );
@@ -27,8 +29,17 @@ const courseSnapshotSchema = new Schema(
     courseId: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    durationText: { type: String, required: false, default: "" },
     modules: { type: [courseModuleSnapshotSchema], required: true, default: [] },
     version: { type: Number, required: true },
+    /** INR enrollment list price for this course in this batch (paise). Shown at checkout; Razorpay order uses this amount. */
+    enrollmentPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
+    /** How students may pay for this course in this batch: UPI_MANUAL, RAZORPAY, or both. Empty when no paid checkout. */
+    allowedPaymentMethods: { type: [String], required: false, default: undefined },
+    /** FUNT coins auto-credited when a student earns a certificate for this course in this batch (same cohort as fee). */
+    completionRewardCoins: { type: Number, required: false, default: 0, min: 0 },
+    /** Badge keys auto-awarded when certificate is issued for this course in this batch. */
+    completionBadgeTypes: { type: [String], required: false, default: [] },
   },
   { _id: false }
 );
@@ -53,6 +64,8 @@ const batchSchema = new Schema(
         moderatorIds: { type: [String], required: false, default: [] },
     /** FUNT coins students pay (when eligible) to generate their certificate; 0 = free. */
     certificatePriceCoins: { type: Number, required: false, default: 0, min: 0 },
+    /** Manual UPI QR for this batch: https image URL or data:image/...;base64,... (shown at student checkout when UPI manual is enabled). */
+    manualUpiQrUrl: { type: String, required: false },
   },
   { timestamps: true }
 );

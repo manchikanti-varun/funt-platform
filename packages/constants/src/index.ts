@@ -60,6 +60,73 @@ export enum SKILL_TAG {
   ALGORITHMS = "Algorithms",
   CREATIVITY = "Creativity",
   INNOVATION = "Innovation",
+  WEB_DEVELOPMENT = "Web Development",
+  MOBILE_DEVELOPMENT = "Mobile Development",
+  DATA_SCIENCE = "Data Science",
+  DEVOPS_CLOUD = "DevOps & Cloud",
+  UI_UX = "UI / UX",
+  COMMUNICATION = "Communication",
+  HTML = "HTML",
+  CSS = "CSS",
+  JAVASCRIPT = "JavaScript",
+  TYPESCRIPT = "TypeScript",
+  REACT = "React",
+  NODEJS = "Node.js",
+  PYTHON = "Python",
+  SQL = "SQL",
+  GIT = "Git",
+}
+
+/** Curated groups for admin UI (preset tags). Custom labels may still be added up to 48 chars. */
+export const SKILL_TAG_GROUPS: ReadonlyArray<{ label: string; tags: readonly SKILL_TAG[] }> = [
+  {
+    label: "Domains & tracks",
+    tags: [
+      SKILL_TAG.WEB_DEVELOPMENT,
+      SKILL_TAG.MOBILE_DEVELOPMENT,
+      SKILL_TAG.DATA_SCIENCE,
+      SKILL_TAG.DEVOPS_CLOUD,
+      SKILL_TAG.UI_UX,
+    ],
+  },
+  {
+    label: "Hardware & foundations",
+    tags: [
+      SKILL_TAG.ELECTRONICS,
+      SKILL_TAG.MECHANICAL,
+      SKILL_TAG.PROGRAMMING,
+      SKILL_TAG.ALGORITHMS,
+    ],
+  },
+  {
+    label: "Web & software stack",
+    tags: [
+      SKILL_TAG.HTML,
+      SKILL_TAG.CSS,
+      SKILL_TAG.JAVASCRIPT,
+      SKILL_TAG.TYPESCRIPT,
+      SKILL_TAG.REACT,
+      SKILL_TAG.NODEJS,
+      SKILL_TAG.PYTHON,
+      SKILL_TAG.SQL,
+      SKILL_TAG.GIT,
+    ],
+  },
+  {
+    label: "Mindset & craft",
+    tags: [SKILL_TAG.CREATIVITY, SKILL_TAG.INNOVATION, SKILL_TAG.COMMUNICATION],
+  },
+];
+
+const PRESET_SKILL_TAG_SET = new Set(Object.values(SKILL_TAG));
+
+/** Preset enum tags plus optional short custom labels (e.g. “Rust”, “Angular”). */
+export function isValidSkillTag(tag: string): boolean {
+  const t = tag.trim();
+  if (!t) return false;
+  if (PRESET_SKILL_TAG_SET.has(t as SKILL_TAG)) return true;
+  if (t.length < 2 || t.length > 48) return false;
+  return /^[A-Za-z0-9 +.#\-\/()][A-Za-z0-9 +.#\-\/()]{0,47}$/.test(t);
 }
 
 export enum ATTENDANCE_STATUS {
@@ -78,3 +145,6 @@ export enum BADGE_TYPE {
   FIRST_COURSE_COMPLETED = "FIRST_COURSE_COMPLETED",
   PERFECT_ATTENDANCE_MONTH = "PERFECT_ATTENDANCE_MONTH",
 }
+
+/** Student rolling UPI QR refresh interval (seconds); must match backend rolling QR generation. */
+export const ROLLING_UPI_QR_REFRESH_AFTER_SECONDS = 30;

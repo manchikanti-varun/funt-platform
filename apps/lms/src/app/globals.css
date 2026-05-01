@@ -1,26 +1,251 @@
+@import "@funt-platform/rich-text-editor/styles.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-primary: #d4af37;
+  --brand-primary-hover: #c9a227;
+  --brand-secondary: #b8960c;
+  --brand-bg: #f7f3e8;
+  --brand-bg-alt: #fffdf7;
+  --brand-surface: #ffffff;
+  --brand-surface-elevated: #fffdf8;
+  --brand-surface-soft: #fbf6e8;
+  --brand-text: #0a0a0a;
+  --brand-text-secondary: #0a0a0a;
+  --brand-text-muted: #0a0a0a;
+  --brand-border: rgba(10, 10, 10, 0.1);
+  --brand-border-soft: rgba(10, 10, 10, 0.06);
+  --brand-focus: rgba(212, 175, 55, 0.6);
+  --brand-accent-warm: rgba(212, 175, 55, 0.08);
+  --brand-accent-cool: rgba(255, 255, 255, 0.04);
+}
+
 @layer base {
   body {
-    @apply bg-white text-funt-ink antialiased min-h-screen;
-    background-image: radial-gradient(1200px 500px at 10% -10%, rgba(245, 196, 0, 0.18), transparent 55%),
-      radial-gradient(900px 400px at 100% 0%, rgba(254, 243, 199, 0.5), transparent 50%);
+    @apply antialiased min-h-screen;
+    background: radial-gradient(1200px 560px at 8% -10%, rgba(212, 175, 55, 0.26), transparent 52%),
+      radial-gradient(900px 480px at 100% 0%, rgba(244, 223, 149, 0.22), transparent 56%),
+      linear-gradient(180deg, var(--brand-bg) 0%, var(--brand-bg-alt) 45%, var(--brand-bg) 100%);
+    color: var(--brand-text);
+  }
+  ::selection {
+    background: rgba(212, 175, 55, 0.28);
+    color: #0a0a0a;
+  }
+  *:focus-visible {
+    outline: 2px solid rgba(212, 175, 55, 0.6);
+    outline-offset: 2px;
   }
   h1 { @apply tracking-tight; }
   h2 { @apply tracking-tight; }
 }
 
 @layer components {
+  .rich-text-view {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .rich-text-view p {
+    margin: 0.8em 0;
+  }
+  .rich-text-view h1,
+  .rich-text-view h2,
+  .rich-text-view h3 {
+    margin: 1.2em 0 0.6em;
+    line-height: 1.25;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .rich-text-view h1 {
+    font-size: 2rem;
+  }
+  .rich-text-view h2 {
+    font-size: 1.5rem;
+  }
+  .rich-text-view h3 {
+    font-size: 1.2rem;
+  }
+  .rich-text-view ul,
+  .rich-text-view ol {
+    margin: 0.75rem 0 !important;
+    padding-left: 1.5rem !important;
+    list-style-position: outside !important;
+  }
+  .rich-text-view ul {
+    list-style-type: disc !important;
+  }
+  .rich-text-view ol {
+    list-style-type: decimal !important;
+  }
+  .rich-text-view li {
+    display: list-item !important;
+    margin: 0.25rem 0 !important;
+  }
+  .rich-text-view ul ul,
+  .rich-text-view ul ol,
+  .rich-text-view ol ul,
+  .rich-text-view ol ol {
+    margin: 0.35rem 0 !important;
+    padding-left: 1.25rem !important;
+  }
+  .rich-text-view li[data-list="bullet"] {
+    list-style-type: disc !important;
+  }
+  .rich-text-view li[data-list="ordered"] {
+    list-style-type: decimal !important;
+  }
+  .rich-text-view blockquote {
+    margin: 1em 0;
+    padding: 0.1em 0 0.1em 1em;
+    border-left: 3px solid #cbd5e1;
+    color: #334155;
+    background: #f8fafc;
+    border-radius: 0 8px 8px 0;
+  }
+  .rich-text-view pre {
+    margin: 1em 0;
+    padding: 12px;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+  }
+  .rich-text-view pre code {
+    background: transparent !important;
+    padding: 0 !important;
+    color: inherit !important;
+  }
+  .rich-text-view code {
+    border-radius: 6px;
+    background: #e2e8f0;
+    padding: 0.1em 0.35em;
+    color: #0f172a;
+  }
+  .rich-text-view hr {
+    margin: 1.2em 0;
+    border: none;
+    border-top: 1px solid #cbd5e1;
+  }
+  .rich-text-view img {
+    max-width: 100%;
+    margin: 0.7em 0;
+    border-radius: 8px;
+  }
+  .app-page-shell {
+    @apply mx-auto w-full max-w-6xl space-y-6;
+  }
+  /* Ensure page-level loading states stay horizontally centered inside flex layouts. */
+  .app-page-shell [class*="min-h-"][class*="items-center"][class*="justify-center"]:has(.animate-spin) {
+    @apply w-full;
+  }
+  .page-hero {
+    @apply relative overflow-hidden rounded-3xl px-6 py-7 shadow-xl backdrop-blur sm:px-8 sm:py-8;
+    border: 1px solid rgba(198, 162, 52, 0.35);
+    background: linear-gradient(90deg, #f7f4ec 0%, #f0e4c1 52%, #ddc57a 100%);
+    box-shadow: 0 22px 44px -26px rgba(180, 146, 20, 0.36);
+  }
+  .page-hero h1 {
+    @apply relative inline-block font-extrabold tracking-tight;
+    font-size: clamp(2rem, 2.8vw, 2.9rem);
+    letter-spacing: -0.02em;
+    color: #000000;
+    text-shadow: none;
+  }
+  .page-hero p {
+    color: #0a0a0a;
+  }
+  .page-section {
+    @apply rounded-2xl p-5 shadow-md sm:p-6;
+    border: 1px solid rgba(214, 188, 115, 0.35);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf6 55%, #fff6de 100%);
+    box-shadow: 0 16px 34px -24px rgba(122, 97, 31, 0.2);
+  }
+  .page-section-head {
+    @apply mb-4 flex flex-wrap items-start justify-between gap-3;
+  }
+  .panel-data {
+    @apply overflow-hidden rounded-2xl shadow-md;
+    border: 1px solid rgba(214, 188, 115, 0.35);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf6 55%, #fff6de 100%);
+  }
+  .panel-form {
+    @apply rounded-2xl p-6 shadow-md;
+    border: 1px solid rgba(214, 188, 115, 0.35);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf6 55%, #fff6de 100%);
+  }
+  .glass-nav {
+    border: 1px solid var(--brand-border);
+    background: color-mix(in oklab, var(--brand-surface-elevated) 94%, #f5f5f5);
+    box-shadow: 0 16px 35px -25px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+  }
+  .accent-violet {
+    background: linear-gradient(135deg, #5b31d6 0%, #6f44ea 45%, #8a67ff 100%);
+  }
+  .right-rail-card {
+    @apply rounded-2xl p-4 shadow-lg;
+    border: 1px solid rgba(214, 188, 115, 0.4);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf6 58%, #fff6df 100%);
+  }
+  .stack-8 {
+    @apply space-y-2;
+  }
+  .stack-12 {
+    @apply space-y-3;
+  }
+  .stack-16 {
+    @apply space-y-4;
+  }
+  .stack-24 {
+    @apply space-y-6;
+  }
   .input {
-    @apply w-full rounded-xl border border-black/15 bg-white px-4 py-2.5 text-funt-ink placeholder-black/40 shadow-sm ring-1 ring-black/5 transition duration-200 focus:border-funt-gold focus:outline-none focus:ring-2 focus:ring-funt-gold/30 focus:ring-offset-0;
+    @apply w-full rounded-xl px-4 py-2.5 shadow-sm transition duration-200 focus:outline-none focus:ring-2 focus:ring-offset-0;
+    border: 1px solid var(--brand-border);
+    background: var(--brand-surface-soft);
+    color: var(--brand-text);
+  }
+  .input::placeholder {
+    color: var(--brand-text-muted);
+  }
+  .input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px var(--brand-focus);
   }
   .btn-primary {
-    @apply rounded-xl bg-funt-gold px-4 py-2.5 font-semibold text-black shadow-md transition duration-200 hover:bg-funt-gold-hover active:scale-[0.98] disabled:opacity-50;
+    @apply rounded-xl px-4 py-2.5 font-semibold shadow-md transition duration-200 active:scale-[0.98] disabled:opacity-50;
+    background: linear-gradient(135deg, #e0bf58 0%, #cfa62d 100%);
+    color: #262626;
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #e5c768 0%, #c79f28 100%);
   }
   .btn-secondary {
-    @apply rounded-xl border border-black/15 bg-white px-4 py-2.5 font-medium text-funt-ink shadow-sm ring-1 ring-black/5 transition duration-200 hover:border-black/25 hover:bg-black/[0.03];
+    @apply rounded-xl px-4 py-2.5 font-medium shadow-sm transition duration-200;
+    border: 1px solid var(--brand-border);
+    background: var(--brand-surface-soft);
+    color: var(--brand-text);
+  }
+  .btn-secondary:hover {
+    border-color: rgba(212, 175, 55, 0.45);
+    background: color-mix(in oklab, var(--brand-surface-soft) 72%, var(--brand-accent-warm));
+  }
+  .btn-ghost {
+    @apply rounded-xl px-4 py-2.5 font-medium transition duration-200;
+    color: var(--brand-text-secondary);
+  }
+  .btn-ghost:hover {
+    background: var(--brand-accent-cool);
+    color: var(--brand-text);
+  }
+  .btn-danger {
+    @apply rounded-xl px-4 py-2.5 font-medium shadow-sm transition duration-200;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    background: rgba(127, 29, 29, 0.25);
+    color: #fecaca;
   }
   .badge {
     @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
@@ -32,7 +257,9 @@
     @apply badge bg-funt-gold/25 text-black ring-1 ring-funt-gold/40;
   }
   .card {
-    @apply rounded-2xl border border-black/10 bg-white p-6 shadow-md shadow-black/5 ring-1 ring-black/5 transition duration-200 hover:shadow-lg;
+    @apply rounded-2xl p-6 shadow-md transition duration-200 hover:shadow-lg;
+    border: 1px solid rgba(214, 188, 115, 0.35);
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf6 55%, #fff6de 100%);
   }
   .card-elevated {
     @apply rounded-2xl border border-black/10 bg-white p-6 shadow-lg shadow-black/10 ring-1 ring-black/5;
@@ -42,5 +269,39 @@
   }
   .card-student {
     @apply rounded-2xl border border-black/10 bg-white p-6 shadow-md shadow-black/5 transition duration-200 hover:border-funt-gold/40 hover:shadow-lg;
+  }
+  .label-overline {
+    @apply text-[10px] font-bold uppercase tracking-[0.2em] text-black;
+  }
+  .text-muted {
+    @apply text-sm text-black leading-relaxed;
+  }
+  /** Admin revoked access — same treatment everywhere */
+  .surface-blocked {
+    @apply rounded-2xl border border-rose-200/90 bg-gradient-to-b from-rose-50/95 to-white p-8 shadow-[0_8px_30px_-12px_rgba(190,18,60,0.15)] ring-1 ring-rose-100/80;
+  }
+
+  /* Student-wide compatibility layer:
+     normalizes legacy slate/violet utility classes to the premium light gold theme. */
+  .student-premium [class*="text-slate-"] {
+    color: #0a0a0a !important;
+  }
+  .student-premium [class*="text-violet-"] {
+    color: #8d6f14 !important;
+  }
+  .student-premium [class*="bg-slate-"] {
+    background-color: #f7f1e2 !important;
+  }
+  .student-premium [class*="bg-violet-"] {
+    background-color: #f8edc7 !important;
+  }
+  .student-premium [class*="border-slate-"] {
+    border-color: rgba(180, 150, 60, 0.28) !important;
+  }
+  .student-premium [class*="divide-slate-"] > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(180, 150, 60, 0.2) !important;
+  }
+  .student-premium [class*="ring-slate-"] {
+    --tw-ring-color: rgba(180, 150, 60, 0.2) !important;
   }
 }

@@ -12,7 +12,45 @@ interface CourseOption {
   status: string;
 }
 
+interface BadgeOption {
+  badgeType: string;
+  displayName: string;
+  isActive?: boolean;
+  awardMode?: "MANUAL" | "AUTO" | "BOTH";
+}
+
 import { BackLink } from "@/components/ui/BackLink";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { TrainerSelect } from "@/components/admin/StaffPickerFields";
+import {
+  mapPaymentUpiApiToSummary,
+  PlatformUpiCheckoutSummary,
+  type PaymentUpiConfigApiResponse,
+  type PlatformUpiSummaryState,
+} from "@/components/admin/PlatformUpiCheckoutSummary";
+
+const MAX_QR_FILE_BYTES = 350_000;
+
+function readImageFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Choose a PNG, JPEG, GIF, or WebP image."));
+      return;
+    }
+    if (file.size > MAX_QR_FILE_BYTES) {
+      reject(new Error("Image must be under about 350 KB."));
+      return;
+    }
+    const r = new FileReader();
+    r.onload = () => {
+      const s = typeof r.result === "string" ? r.result : "";
+      if (!s.startsWith("data:image/")) reject(new Error("Could not read image."));
+      else resolve(s);
+    };
+    r.onerror = () => reject(new Error("Could not read file."));
+    r.readAsDataURL(file);
+  });
+}
 
 export default function NewBatchPage() {
   const router = useRouter();
@@ -24,13 +62,62 @@ export default function NewBatchPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [zoomLink, setZoomLink] = useState("");
+  const [enrollmentInrByCourseId, setEnrollmentInrByCourseId] = useState<Record<string, string>>({});
+  const [paymentByCourseId, setPaymentByCourseId] = useState<Record<string, { upiManual: boolean; razorpay: boolean }>>({});
+  const [manualUpiQrDataUrl, setManualUpiQrDataUrl] = useState("");
+  const [manualUpiQrName, setManualUpiQrName] = useState("");
+  const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
+  const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
+  const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
+  const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [platformUpiSummary, setPlatformUpiSummary] = useState<PlatformUpiSummaryState>("idle");
+
+  const needsPlatformUpiInfo = useMemo(() => {
+    return selectedCourseIds.some((sid) => {
+      const raw = enrollmentInrByCourseId[sid]?.trim();
+      const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
+      if (!Number.isFinite(rupees) || rupees < 1) return false;
+      const pm = paymentByCourseId[sid] ?? { upiManual: true, razorpay: true };
+      return pm.upiManual;
+    });
+  }, [selectedCourseIds, enrollmentInrByCourseId, paymentByCourseId]);
+
+  useEffect(() => {
+    if (!needsPlatformUpiInfo) {
+      setPlatformUpiSummary("idle");
+      return;
+    }
+    let cancelled = false;
+    setPlatformUpiSummary("loading");
+    api<PaymentUpiConfigApiResponse>("/api/admin/payment-upi/config")
+      .then((r) => {
+        if (!cancelled) setPlatformUpiSummary(mapPaymentUpiApiToSummary(r));
+      })
+      .catch(() => {
+        if (!cancelled) setPlatformUpiSummary("network_error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [needsPlatformUpiInfo]);
 
   useEffect(() => {
     api<CourseOption[]>("/api/courses").then((r) => {
       if (r.success && Array.isArray(r.data)) setCourses(r.data.filter((c) => c.status !== "ARCHIVED"));
     });
+    api<BadgeOption[]>("/api/admin/badges")
+      .then((r) => {
+        if (r.success && Array.isArray(r.data)) {
+          setBadgeOptions(
+            r.data.filter(
+              (b) => b.isActive !== false && (b.awardMode === "AUTO" || b.awardMode === "BOTH")
+            )
+          );
+        }
+      })
+      .catch(() => setBadgeOptions([]));
   }, []);
 
   const filteredCourses = useMemo(() => {
@@ -44,9 +131,36 @@ export default function NewBatchPage() {
   }, [courses, courseSearch]);
 
   function toggleCourse(id: string) {
-    setSelectedCourseIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setSelectedCourseIds((prev) => {
+      if (prev.includes(id)) {
+        setEnrollmentInrByCourseId((m) => {
+          const next = { ...m };
+          delete next[id];
+          return next;
+        });
+        setPaymentByCourseId((m) => {
+          const next = { ...m };
+          delete next[id];
+          return next;
+        });
+        setCompletionCoinsByCourseId((m) => {
+          const next = { ...m };
+          delete next[id];
+          return next;
+        });
+        setCompletionBadgesByCourseId((m) => {
+          const next = { ...m };
+          delete next[id];
+          return next;
+        });
+        return prev.filter((x) => x !== id);
+      }
+      setEnrollmentInrByCourseId((m) => ({ ...m, [id]: m[id] ?? "" }));
+      setPaymentByCourseId((m) => ({ ...m, [id]: m[id] ?? { upiManual: true, razorpay: true } }));
+      setCompletionCoinsByCourseId((m) => ({ ...m, [id]: m[id] ?? "0" }));
+      setCompletionBadgesByCourseId((m) => ({ ...m, [id]: m[id] ?? [] }));
+      return [...prev, id];
+    });
   }
 
   async function submit(e: React.FormEvent) {
@@ -58,6 +172,31 @@ export default function NewBatchPage() {
     }
     setLoading(true);
     try {
+      const courseEnrollmentPrices: Record<string, number> = {};
+      const coursePaymentMethods: Record<string, { upiManual: boolean; razorpay: boolean }> = {};
+      const courseCompletionRewardCoins: Record<string, number> = {};
+      const courseCompletionBadgeTypes: Record<string, string[]> = {};
+      for (const sid of selectedCourseIds) {
+        const raw = enrollmentInrByCourseId[sid]?.trim();
+        const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
+        if (raw !== undefined && raw !== "" && Number.isFinite(rupees)) {
+          courseEnrollmentPrices[sid] = rupees;
+        }
+        if (Number.isFinite(rupees) && rupees >= 1) {
+          const pm = paymentByCourseId[sid] ?? { upiManual: true, razorpay: true };
+          if (!pm.upiManual && !pm.razorpay) {
+            setError("For each paid course (₹1+), enable at least one checkout option: QR + UTR or online checkout.");
+            setLoading(false);
+            return;
+          }
+          coursePaymentMethods[sid] = { upiManual: pm.upiManual, razorpay: pm.razorpay };
+        }
+        const coinRaw = completionCoinsByCourseId[sid]?.trim();
+        const coins = coinRaw === undefined || coinRaw === "" ? 0 : Math.floor(Number(coinRaw));
+        courseCompletionRewardCoins[sid] = Number.isFinite(coins) && coins >= 0 ? Math.min(1_000_000, coins) : 0;
+        const badges = (completionBadgesByCourseId[sid] ?? []).map((b) => b.trim()).filter(Boolean);
+        if (badges.length > 0) courseCompletionBadgeTypes[sid] = badges;
+      }
       const res = await api("/api/batches", {
         method: "POST",
         body: JSON.stringify({
@@ -67,6 +206,11 @@ export default function NewBatchPage() {
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           zoomLink: zoomLink || undefined,
+          ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
+          ...(Object.keys(coursePaymentMethods).length > 0 ? { coursePaymentMethods } : {}),
+          ...(manualUpiQrDataUrl.trim() ? { manualUpiQrUrl: manualUpiQrDataUrl.trim() } : {}),
+          ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
+          ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
         }),
       });
       if (!res.success) {
@@ -82,26 +226,25 @@ export default function NewBatchPage() {
     }
   }
 
-  const selectedCourses = selectedCourseIds
-    .map((id) => courses.find((c) => c.id === id))
-    .filter(Boolean) as CourseOption[];
-
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="shrink-0 pb-6">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/batches" />
+      <div className="shrink-0 pb-4">
         <BackLink href="/batches">Back to Batches</BackLink>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">New Batch</h2>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Create batch</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Create one batch with one or more courses. Students enrolled in this batch will see all selected courses.
+            Build one batch with one or more courses, set per-course fee/payment options, and (optional) batch UPI QR.
           </p>
         </div>
 
-        <form onSubmit={submit} className="p-6 space-y-6">
-          <div className="grid gap-6 sm:grid-cols-1 max-w-2xl">
+        <form onSubmit={submit} className="p-6 space-y-8">
+          <section>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Basic info</h3>
+            <div className="mt-3 grid gap-6 sm:grid-cols-1 w-full">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Batch Name</label>
               <input
@@ -113,14 +256,8 @@ export default function NewBatchPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trainer username or user ID</label>
-              <input
-                required
-                value={trainerId}
-                onChange={(e) => setTrainerId(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                placeholder="e.g. trainer.jane or 24-char MongoDB id"
-              />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trainer / batch lead</label>
+              <TrainerSelect value={trainerId} onChange={setTrainerId} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -152,72 +289,293 @@ export default function NewBatchPage() {
                 placeholder="https://..."
               />
             </div>
-          </div>
+            </div>
+          </section>
 
-          <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Courses</h3>
-            <p className="mt-1 text-sm text-slate-600">
-              Select one or more courses to include in this batch. Students enrolled in the batch will get access to all selected courses.
-            </p>
-            <div className="mt-3">
+          <section>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Schedule & meeting</h3>
+            <div className="mt-3 grid gap-6 sm:grid-cols-1 w-full">
+              <div>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Fallback QR image (optional)</label>
+              <p className="mb-2 text-xs text-slate-600">
+                For <strong className="font-semibold text-slate-700">QR + UTR</strong> checkout, students get a direct static QR generated from the active platform UPI and exact course amount.
+                Keep upload disabled unless you need a fallback image for emergency/manual override. Platform payee UPI is set in the panel below and in{" "}
+                <Link href="/payment-qr" className="font-semibold text-teal-700 hover:underline">
+                  UPI &amp; QR center
+                </Link>
+                .
+              </p>
+              {!showFallbackQrUploader && !manualUpiQrDataUrl ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={() => setShowFallbackQrUploader(true)}
+                >
+                  Add fallback QR image
+                </button>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    void readImageFileAsDataUrl(f)
+                      .then((url) => {
+                        setManualUpiQrDataUrl(url);
+                        setManualUpiQrName(f.name);
+                      })
+                      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Invalid image"));
+                    e.target.value = "";
+                  }}
+                />
+              )}
+              {manualUpiQrDataUrl ? (
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <img src={manualUpiQrDataUrl} alt="UPI QR preview" className="h-32 w-32 rounded-lg border border-slate-200 object-contain" />
+                  <div className="text-xs text-slate-600">
+                    <p className="font-medium text-slate-800">{manualUpiQrName || "Selected image"}</p>
+                    <button
+                      type="button"
+                      className="mt-1 font-semibold text-rose-700 hover:underline"
+                      onClick={() => {
+                        setManualUpiQrDataUrl("");
+                        setManualUpiQrName("");
+                      }}
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {needsPlatformUpiInfo ? (
+                <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-slate-700 shadow-sm">
+                  <p className="font-semibold text-slate-900">UPI ID &amp; payee name (what learners pay into)</p>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                    When <strong>QR + UTR</strong> is on for a paid course, the LMS builds a static QR for students
+                    using the values below and the current amount due.
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                    If static QR cannot be generated (missing config / error), students automatically see the fallback batch QR only when you upload one above.
+                  </p>
+                  <PlatformUpiCheckoutSummary
+                    state={needsPlatformUpiInfo && platformUpiSummary === "idle" ? "loading" : platformUpiSummary}
+                    variant="panel"
+                  />
+                </div>
+              ) : null}
+            </div>
+            </div>
+          </section>
+
+          <section className="border-t border-slate-200 pt-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Courses &amp; pricing</h3>
+                <p className="mt-1 max-w-3xl text-sm text-slate-600">
+                  Tick courses for this cohort; expand below each title for fee (INR) and checkout behaviour. Fee blank or below ₹1 means no paid enrollment flow.
+                </p>
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Included: <span className="text-teal-700">{selectedCourseIds.length}</span>
+              </p>
+            </div>
+            <div className="mt-4">
               <input
                 type="text"
                 value={courseSearch}
                 onChange={(e) => setCourseSearch(e.target.value)}
-                placeholder="Search courses by title or description…"
-                className="mb-3 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                placeholder="Search courses…"
+                className="mb-4 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               />
-              <div className="min-h-0 max-h-72 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
+              <div className="space-y-3 overflow-x-hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                 {filteredCourses.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-slate-500">
+                  <p className="py-6 text-center text-sm text-slate-500">
                     {courseSearch.trim()
                       ? "No courses match your search."
-                      : "No non-archived courses available. Create courses first."}
+                      : "No courses available yet."}
                   </p>
                 ) : (
-                  <ul className="space-y-1">
-                    {filteredCourses.map((c) => (
-                      <li key={c.id}>
-                        <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white">
+                  filteredCourses.map((c) => {
+                    const checked = selectedCourseIds.includes(c.id);
+                    const raw = enrollmentInrByCourseId[c.id]?.trim();
+                    const ru = raw === "" || raw === undefined ? NaN : Number(raw);
+                    const payControls = Number.isFinite(ru) && ru >= 1;
+                    const pm = paymentByCourseId[c.id] ?? { upiManual: true, razorpay: true };
+                    return (
+                      <div key={c.id} className="rounded-xl border border-white bg-white shadow-sm shadow-slate-900/5">
+                        <label className="flex cursor-pointer gap-3 px-4 py-4">
                           <input
                             type="checkbox"
-                            checked={selectedCourseIds.includes(c.id)}
+                            checked={checked}
                             onChange={() => toggleCourse(c.id)}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                           />
-                          <span className="text-sm font-medium text-slate-800">{c.title}</span>
+                          <div className="flex-1 space-y-3">
+                            <div className="flex flex-wrap justify-between gap-3">
+                              <span className="font-semibold text-slate-900">{c.title}</span>
+                              <button
+                                type="button"
+                                className={`text-xs font-semibold underline-offset-2 hover:underline ${checked ? "text-rose-700" : "pointer-events-none text-transparent"}`}
+                                onClick={(evt) => {
+                                  evt.preventDefault();
+                                  evt.stopPropagation();
+                                  if (checked) toggleCourse(c.id);
+                                }}
+                              >
+                                Remove course
+                              </button>
+                            </div>
+                            {checked ? (
+                              <div className="border-t border-slate-100 pt-3 space-y-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                                  <label className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    Course fee (₹ INR)
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step="0.01"
+                                      placeholder="Optional"
+                                      value={enrollmentInrByCourseId[c.id] ?? ""}
+                                      onChange={(e) =>
+                                        setEnrollmentInrByCourseId((m) => ({
+                                          ...m,
+                                          [c.id]: e.target.value,
+                                        }))
+                                      }
+                                      className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                    />
+                                    <span className="normal-case tracking-normal font-normal text-slate-400">
+                                      Leave blank when access is complimentary.
+                                    </span>
+                                  </label>
+                                  <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    Completion coins (FUNT)
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step={1}
+                                      placeholder="0"
+                                      value={completionCoinsByCourseId[c.id] ?? "0"}
+                                      onChange={(e) =>
+                                        setCompletionCoinsByCourseId((m) => ({
+                                          ...m,
+                                          [c.id]: e.target.value,
+                                        }))
+                                      }
+                                      className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                    />
+                                    <span className="normal-case font-normal text-slate-400">
+                                      Per course, like the fee—credited when they earn a certificate for this course in the batch.
+                                    </span>
+                                  </label>
+                                  <div className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                    <span>Completion badges</span>
+                                    <span className="normal-case font-normal text-slate-400">Select one or more badges:</span>
+                                    <div className="mt-1 flex flex-wrap gap-2">
+                                      {badgeOptions.map((b) => {
+                                        const selected = (completionBadgesByCourseId[c.id] ?? []).includes(b.badgeType);
+                                        return (
+                                          <label
+                                            key={b.badgeType}
+                                            className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
+                                              selected
+                                                ? "border-teal-300 bg-teal-50 text-teal-800"
+                                                : "border-slate-300 bg-white text-slate-600"
+                                            }`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={selected}
+                                              onChange={(e) =>
+                                                setCompletionBadgesByCourseId((m) => {
+                                                  const prev = m[c.id] ?? [];
+                                                  const next = e.target.checked
+                                                    ? [...new Set([...prev, b.badgeType])]
+                                                    : prev.filter((x) => x !== b.badgeType);
+                                                  return { ...m, [c.id]: next };
+                                                })
+                                              }
+                                              className="rounded border-slate-300 text-teal-600"
+                                            />
+                                            {b.displayName}
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    <span className="normal-case font-normal text-slate-400">
+                                      Auto-awarded on this course completion (certificate).
+                                    </span>
+                                  </div>
+                                </div>
+                                {payControls ? (
+                                  <div className="rounded-lg bg-slate-50 px-4 py-3">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                                      Checkout modes for learners (pick one or both)
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-5 text-xs font-semibold text-slate-700">
+                                      <label className="flex cursor-pointer items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={pm.upiManual}
+                                          onChange={(e) =>
+                                            setPaymentByCourseId((m) => ({
+                                              ...m,
+                                              [c.id]: {
+                                                ...(m[c.id] ?? pm),
+                                                upiManual: e.target.checked,
+                                              },
+                                            }))
+                                          }
+                                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                        />
+                                        QR scan + manual payment proof (UTR)
+                                      </label>
+                                      <label className="flex cursor-pointer items-center gap-2">
+                                        <input
+                                          type="checkbox"
+                                          checked={pm.razorpay}
+                                          onChange={(e) =>
+                                            setPaymentByCourseId((m) => ({
+                                              ...m,
+                                              [c.id]: {
+                                                ...(m[c.id] ?? pm),
+                                                razorpay: e.target.checked,
+                                              },
+                                            }))
+                                          }
+                                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                        />
+                                        Hosted online checkout
+                                      </label>
+                                    </div>
+                                    {pm.upiManual ? (
+                                      <PlatformUpiCheckoutSummary
+                                        state={needsPlatformUpiInfo && platformUpiSummary === "idle" ? "loading" : platformUpiSummary}
+                                        variant="inline"
+                                      />
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] leading-relaxed text-slate-400">
+                                    Payment controls unlock once fee is ₹1 or higher.
+                                  </p>
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
                         </label>
-                      </li>
-                    ))}
-                  </ul>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
-            {selectedCourseIds.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-medium text-slate-700">
-                  Selected ({selectedCourses.length}) course{selectedCourses.length !== 1 ? "s" : ""} in this batch
-                </p>
-                <ul className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-                  {selectedCourses.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
-                    >
-                      <span className="text-sm font-medium text-slate-800">{c.title}</span>
-                      <button
-                        type="button"
-                        onClick={() => toggleCourse(c.id)}
-                        className="text-xs font-medium text-slate-500 hover:text-red-600"
-                      >
-                        Remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+            <p className="mt-4 text-xs leading-relaxed text-slate-500">
+              Checkout surfaces only what you enable above — learners never toggle gateways themselves. Hosted checkout requires Razorpay keys on the server.
+            </p>
+          </section>
 
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">

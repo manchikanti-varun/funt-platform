@@ -12,9 +12,93 @@ function getUserId(req: Request): string {
   return req.user.userId;
 }
 
+function parseCourseEnrollmentPrices(raw: unknown): Record<string, number> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    const n = Number(v);
+    if (Number.isFinite(n) && k) out[k] = n;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function parseManualUpiQrForCreate(raw: unknown): string | undefined {
+  if (raw == null || typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t) return undefined;
+  return service.assertManualUpiQrUrl(t);
+}
+
+function parseCourseCompletionRewardCoins(raw: unknown): Record<string, number> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!k) continue;
+    const n = Math.floor(Number(v));
+    if (!Number.isFinite(n) || n < 0) {
+      throw new AppError("courseCompletionRewardCoins values must be non-negative integers", 400);
+    }
+    if (n > 1_000_000) throw new AppError("courseCompletionRewardCoins values must be at most 1,000,000", 400);
+    out[k] = n;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function parseCourseCompletionBadgeTypes(raw: unknown): Record<string, string | string[]> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, string | string[]> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!k) continue;
+    if (typeof v === "string" || Array.isArray(v)) out[k] = v as string | string[];
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
+function parseManualUpiQrForUpdate(body: Record<string, unknown>): string | null | undefined {
+  if (!("manualUpiQrUrl" in body)) return undefined;
+  const raw = body.manualUpiQrUrl;
+  if (raw === null) return null;
+  if (typeof raw !== "string") throw new AppError("manualUpiQrUrl must be a string or null", 400);
+  const t = raw.trim();
+  if (!t) return null;
+  return service.assertManualUpiQrUrl(t);
+}
+
+function parseCoursePaymentMethods(
+  raw: unknown
+): Record<string, { upiManual?: boolean; razorpay?: boolean }> | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const out: Record<string, { upiManual?: boolean; razorpay?: boolean }> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!k || !v || typeof v !== "object" || Array.isArray(v)) continue;
+    const o = v as Record<string, unknown>;
+    const upiManual = o.upiManual;
+    const razorpay = o.razorpay;
+    out[k] = {
+      ...(typeof upiManual === "boolean" ? { upiManual } : {}),
+      ...(typeof razorpay === "boolean" ? { razorpay } : {}),
+    };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 export const createBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { name, courseId, courseIds, trainerId, startDate, endDate, zoomLink, moderatorIds } = req.body ?? {};
+  const {
+    name,
+    courseId,
+    courseIds,
+    trainerId,
+    startDate,
+    endDate,
+    zoomLink,
+    moderatorIds,
+    courseEnrollmentPrices,
+    coursePaymentMethods,
+    courseCompletionRewardCoins,
+    courseCompletionBadgeTypes,
+    manualUpiQrUrl: manualUpiQrUrlRaw,
+  } = req.body ?? {};
   if (!startDate) throw new AppError("startDate is required", 400);
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : []);
   if (ids.length === 0) throw new AppError("courseIds or courseId is required", 400);
@@ -27,6 +111,11 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     zoomLink,
     createdBy,
     moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
+    courseEnrollmentPrices: parseCourseEnrollmentPrices(courseEnrollmentPrices),
+    coursePaymentMethods: parseCoursePaymentMethods(coursePaymentMethods),
+    manualUpiQrUrl: parseManualUpiQrForCreate(manualUpiQrUrlRaw),
+    courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
+    courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
   });
   successRes(res, data, "Batch created", 201);
 });
@@ -76,19 +165,37 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
       throw new AppError("Forbidden: you can only edit batches assigned to you", 403);
     }
   }
-  const { name, courseId, courseIds, trainerId, startDate, endDate, zoomLink, moderatorIds, certificatePriceCoins } = req.body ?? {};
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const {
+    name,
+    courseId,
+    courseIds,
+    trainerId,
+    startDate,
+    endDate,
+    zoomLink,
+    moderatorIds,
+    courseEnrollmentPrices,
+    coursePaymentMethods,
+    courseCompletionRewardCoins,
+    courseCompletionBadgeTypes,
+  } = body;
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : undefined);
   const data = await service.updateBatch(
     id,
     {
-      name,
+      name: typeof name === "string" ? name : undefined,
       courseIds: ids,
-      trainerId,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-      zoomLink,
-      moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
-      certificatePriceCoins: certificatePriceCoins !== undefined ? Number(certificatePriceCoins) : undefined,
+      trainerId: typeof trainerId === "string" ? trainerId : undefined,
+      startDate: startDate ? new Date(String(startDate)) : undefined,
+      endDate: endDate ? new Date(String(endDate)) : undefined,
+      zoomLink: typeof zoomLink === "string" ? zoomLink : undefined,
+      moderatorIds: Array.isArray(moderatorIds) ? (moderatorIds as string[]) : undefined,
+      courseEnrollmentPrices: parseCourseEnrollmentPrices(courseEnrollmentPrices),
+      coursePaymentMethods: parseCoursePaymentMethods(coursePaymentMethods),
+      manualUpiQrUrl: parseManualUpiQrForUpdate(body),
+      courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
+      courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
     },
     performedBy
   );

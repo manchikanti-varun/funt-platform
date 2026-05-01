@@ -6,8 +6,10 @@ import { useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
+import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
-type Tab = "requests" | "student" | "trainer" | "admin" | "parent" | "reset";
+type Tab = "requests" | "student" | "trainer" | "admin" | "reset";
 
 interface RegistrationRequestRow {
   id: string;
@@ -23,6 +25,11 @@ interface RegistrationRequestRow {
 
 const INPUT_CLASS =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
+const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
+
+function isValidEmailFormat(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
 
 export default function AdminManagementPage() {
   const searchParams = useSearchParams();
@@ -49,15 +56,15 @@ export default function AdminManagementPage() {
     { id: "student", label: "Create Student" },
     { id: "trainer", label: "Create Trainer" },
     { id: "admin", label: "Create Admin", show: isSuperAdmin },
-    { id: "parent", label: "Create Parent" },
     { id: "reset", label: "Reset Login" },
   ];
   const tabs = allTabs.filter((t) => t.show !== false);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Admin Management</h1>
+    <AppPageShell className="w-full">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <PageSection>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800">Team Management</h1>
         <p className="mt-1 text-sm text-slate-600">
           {isSuperAdmin ? "Review registration requests, create users, and manage logins." : "Create users and reset logins."}
         </p>
@@ -70,7 +77,7 @@ export default function AdminManagementPage() {
           </svg>
           Profile Search
         </Link>
-      </div>
+      </PageSection>
 
       {message && (
         <div
@@ -102,7 +109,7 @@ export default function AdminManagementPage() {
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 sm:p-8">
+      <FormPanel className="sm:p-8">
         {tab === "requests" && (
           isSuperAdmin ? (
             <RegistrationRequestsTab onMessage={(type, text) => setMessageAndClear(type, text)} />
@@ -133,20 +140,14 @@ export default function AdminManagementPage() {
             onError={(m) => setMessageAndClear("error", m)}
           />
         )}
-        {tab === "parent" && (
-          <CreateParentForm
-            onSuccess={(m) => setMessageAndClear("success", m)}
-            onError={(m) => setMessageAndClear("error", m)}
-          />
-        )}
         {tab === "reset" && (
           <ResetLoginForm
             onSuccess={(m) => setMessageAndClear("success", m)}
             onError={(m) => setMessageAndClear("error", m)}
           />
         )}
-      </div>
-    </div>
+      </FormPanel>
+    </AppPageShell>
   );
 }
 
@@ -247,7 +248,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 py-8 text-slate-500">
+        <div className="flex w-full items-center justify-center gap-2 py-8 text-slate-500">
           <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" />
           Loading requests…
         </div>
@@ -348,13 +349,56 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
   const [age, setAge] = useState("10");
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    message: string;
+  }>({ checking: false, available: null, message: "" });
+
+  useEffect(() => {
+    const candidate = username.trim();
+    if (!candidate) {
+      setUsernameStatus({ checking: false, available: null, message: "" });
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setUsernameStatus((s) => ({ ...s, checking: true }));
+      const res = await api<{ available?: boolean; message?: string }>(
+        `/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
+      );
+      if (!res.success) {
+        setUsernameStatus({ checking: false, available: null, message: "" });
+        return;
+      }
+      const available = Boolean(res.data?.available);
+      setUsernameStatus({
+        checking: false,
+        available,
+        message: res.data?.message ?? (available ? "Username is available" : "Username is already taken"),
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [username]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isValidEmailFormat(email)) {
+      onError("Enter a valid email address.");
+      return;
+    }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
+      onError("Enter a valid mobile number.");
+      return;
+    }
+    if (usernameStatus.available === false) {
+      onError(usernameStatus.message || "Username is already taken.");
+      return;
+    }
     setLoading(true);
     const res = await api<{ username?: string }>("/api/admin/users/student", {
       method: "POST",
@@ -362,7 +406,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         username,
         name,
         email,
-        mobile,
+        mobile: `${countryCode}${mobileNumber.trim()}`,
         password,
         age: Number(age),
       }),
@@ -391,6 +435,19 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
+          {username.trim() ? (
+            <p
+              className={`mt-1 text-xs ${
+                usernameStatus.available === true
+                  ? "text-emerald-700"
+                  : usernameStatus.available === false
+                    ? "text-rose-700"
+                    : "text-slate-500"
+              }`}
+            >
+              {usernameStatus.checking ? "Checking availability..." : usernameStatus.message}
+            </p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="student-name">Name</Label>
@@ -399,10 +456,39 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         <div>
           <Label htmlFor="student-email">Email</Label>
           <input id="student-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {email.trim() && !isValidEmailFormat(email) ? (
+            <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="student-mobile">Mobile</Label>
-          <input id="student-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          <div className="grid grid-cols-[120px,1fr] gap-2">
+            <div className="relative">
+              <select
+                id="student-country-code"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className={`${INPUT_CLASS} appearance-none pr-9`}
+              >
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              id="student-mobile"
+              required
+              className={INPUT_CLASS}
+              placeholder="9876543210"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="student-age">Age</Label>
@@ -419,7 +505,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         </div>
         <div>
           <Label htmlFor="student-password">Password</Label>
-          <input id="student-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="student-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
@@ -433,16 +519,59 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    message: string;
+  }>({ checking: false, available: null, message: "" });
+
+  useEffect(() => {
+    const candidate = username.trim();
+    if (!candidate) {
+      setUsernameStatus({ checking: false, available: null, message: "" });
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setUsernameStatus((s) => ({ ...s, checking: true }));
+      const res = await api<{ available?: boolean; message?: string }>(
+        `/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
+      );
+      if (!res.success) {
+        setUsernameStatus({ checking: false, available: null, message: "" });
+        return;
+      }
+      const available = Boolean(res.data?.available);
+      setUsernameStatus({
+        checking: false,
+        available,
+        message: res.data?.message ?? (available ? "Username is available" : "Username is already taken"),
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [username]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isValidEmailFormat(email)) {
+      onError("Enter a valid email address.");
+      return;
+    }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
+      onError("Enter a valid mobile number.");
+      return;
+    }
+    if (usernameStatus.available === false) {
+      onError(usernameStatus.message || "Username is already taken.");
+      return;
+    }
     setLoading(true);
     const res = await api<{ username?: string }>("/api/admin/users/trainer", {
       method: "POST",
-      body: JSON.stringify({ username, name, email, mobile, password }),
+      body: JSON.stringify({ username, name, email, mobile: `${countryCode}${mobileNumber.trim()}`, password }),
     });
     setLoading(false);
     if (res.success) {
@@ -468,6 +597,19 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
+          {username.trim() ? (
+            <p
+              className={`mt-1 text-xs ${
+                usernameStatus.available === true
+                  ? "text-emerald-700"
+                  : usernameStatus.available === false
+                    ? "text-rose-700"
+                    : "text-slate-500"
+              }`}
+            >
+              {usernameStatus.checking ? "Checking availability..." : usernameStatus.message}
+            </p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="trainer-name">Name</Label>
@@ -476,14 +618,43 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         <div>
           <Label htmlFor="trainer-email">Email</Label>
           <input id="trainer-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {email.trim() && !isValidEmailFormat(email) ? (
+            <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="trainer-mobile">Mobile</Label>
-          <input id="trainer-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          <div className="grid grid-cols-[120px,1fr] gap-2">
+            <div className="relative">
+              <select
+                id="trainer-country-code"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className={`${INPUT_CLASS} appearance-none pr-9`}
+              >
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              id="trainer-mobile"
+              required
+              className={INPUT_CLASS}
+              placeholder="9876543210"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="trainer-password">Password</Label>
-          <input id="trainer-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="trainer-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
@@ -496,16 +667,25 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
 function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isValidEmailFormat(email)) {
+      onError("Enter a valid email address.");
+      return;
+    }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
+      onError("Enter a valid mobile number.");
+      return;
+    }
     setLoading(true);
     const res = await api<{ username?: string }>("/api/admin/users/admin", {
       method: "POST",
-      body: JSON.stringify({ name, email, mobile, password }),
+      body: JSON.stringify({ name, email, mobile: `${countryCode}${mobileNumber.trim()}`, password }),
     });
     setLoading(false);
     if (res.success) {
@@ -528,78 +708,47 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
         <div>
           <Label htmlFor="admin-email">Email</Label>
           <input id="admin-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {email.trim() && !isValidEmailFormat(email) ? (
+            <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor="admin-mobile">Mobile</Label>
-          <input id="admin-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          <div className="grid grid-cols-[120px,1fr] gap-2">
+            <div className="relative">
+              <select
+                id="admin-country-code"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className={`${INPUT_CLASS} appearance-none pr-9`}
+              >
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              id="admin-mobile"
+              required
+              className={INPUT_CLASS}
+              placeholder="9876543210"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+            />
+          </div>
         </div>
         <div>
           <Label htmlFor="admin-password">Password</Label>
-          <input id="admin-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input id="admin-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
         {loading ? "Creating…" : "Create Admin"}
-      </button>
-    </form>
-  );
-}
-
-function CreateParentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
-  const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [linkedStudentUsernames, setLinkedStudentUsernames] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const res = await api<{ username?: string }>("/api/admin/users/parent", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        mobile,
-        linkedStudentUsernames: linkedStudentUsernames
-          ? linkedStudentUsernames.split(",").map((s) => s.trim()).filter(Boolean)
-          : [],
-      }),
-    });
-    setLoading(false);
-    if (res.success) {
-      const u = res.data?.username;
-      onSuccess(u ? `Parent created. Username: ${u}` : "Parent created.");
-    } else onError(res.message ?? "Failed to create parent.");
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-slate-800">Create Parent</h2>
-        <p className="mt-1 text-sm text-slate-500">Add a parent and link them to students by username. Parents can sign in to view linked students.</p>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label htmlFor="parent-name">Name</Label>
-          <input id="parent-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="parent-mobile">Mobile</Label>
-          <input id="parent-mobile" required className={INPUT_CLASS} placeholder="+91 9876543210" value={mobile} onChange={(e) => setMobile(e.target.value)} />
-        </div>
-        <div className="sm:col-span-2">
-          <Label htmlFor="parent-students">Linked student usernames (required)</Label>
-          <input
-            id="parent-students"
-            className={INPUT_CLASS}
-            placeholder="student.one, student.two"
-            value={linkedStudentUsernames}
-            onChange={(e) => setLinkedStudentUsernames(e.target.value)}
-          />
-          <p className="mt-1 text-xs text-slate-500">Comma-separated. Parent can be linked to more students later.</p>
-        </div>
-      </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
-        {loading ? "Creating…" : "Create Parent"}
       </button>
     </form>
   );

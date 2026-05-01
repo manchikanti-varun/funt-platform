@@ -4,8 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 import { BackLink } from "@/components/ui/BackLink";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 
 export default function DuplicateCoursePage() {
   const params = useParams();
@@ -25,6 +27,7 @@ export default function DuplicateCoursePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />
       <div className="shrink-0 pb-6">
         <BackLink href="/courses">Back to Courses</BackLink>
       </div>
@@ -43,30 +46,20 @@ export default function DuplicateCoursePage() {
             </div>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={handleDuplicate}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-50"
-            >
+            <button type="button" onClick={handleDuplicate} disabled={loading} className="btn-duplicate btn-duplicate--xl">
               {loading ? (
                 <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-700" />
                   Duplicating…
                 </>
               ) : (
                 <>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Duplicate Course
+                  <DuplicateIcon />
+                  Duplicate course
                 </>
               )}
             </button>
-            <Link
-              href="/courses"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
+            <Link href="/courses" className="btn-secondary">
               Cancel
             </Link>
           </div>

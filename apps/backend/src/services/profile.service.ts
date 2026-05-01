@@ -6,6 +6,9 @@ import { AppError } from "../utils/AppError.js";
 import { getMyEnrollments } from "./enrollment.service.js";
 import { listCertificatesForStudent } from "./certificate.service.js";
 import { getAttendanceSummaryForStudent, type StudentAttendanceSummaryItem } from "./attendance.service.js";
+import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
+import { listCoinGrantHistoryForUser } from "./coinBalance.service.js";
+import { listAchievements } from "./achievement.service.js";
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
@@ -111,6 +114,16 @@ export interface ProfileCertificate {
   issuedAt: string;
 }
 
+export interface ProfileCoinGrant {
+  id: string;
+  amountOriginal: number;
+  amountRemaining: number;
+  grantedAt: string;
+  expiresAt: string;
+  source: string;
+  sourceRef?: string;
+}
+
 export interface ProfileResult {
   user: ReturnType<typeof sanitizeUser>;
   enrollments?: ProfileEnrollment[];
@@ -118,6 +131,34 @@ export interface ProfileResult {
   coursesCount?: number;
   certificatesCount?: number;
   attendanceSummary?: StudentAttendanceSummaryItem[];
+  coinGrants?: ProfileCoinGrant[];
+  achievements?: Array<{
+    id: string;
+    badgeType: string;
+    displayName: string;
+    icon: string;
+    awardedAt: string;
+  }>;
+  moduleProgressSummary?: {
+    modulesCompleted: number;
+    modulesPending: number;
+    modulesTotal: number;
+    completionPercent: number;
+    courses: Array<{
+      courseKey: string;
+      batchName?: string;
+      courseName: string;
+      modules: Array<{
+        order: number;
+        title: string;
+        completed: boolean;
+      }>;
+      modulesCompleted: number;
+      modulesPending: number;
+      modulesTotal: number;
+      completionPercent: number;
+    }>;
+  };
 }
 
 
@@ -136,11 +177,122 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
 
   if (isStudent) {
     const studentId = String(user._id);
-    const [enrollments, certs, attendanceSummary] = await Promise.all([
+    const [enrollments, certs, attendanceSummary, coinGrants, achievements] = await Promise.all([
       getMyEnrollments(studentId),
       listCertificatesForStudent(studentId),
       getAttendanceSummaryForStudent(studentId),
+      listCoinGrantHistoryForUser(studentId, 200),
+      listAchievements(studentId),
     ]);
+
+    // Module progress for parents/students:
+    // We build module-level completion using `ModuleProgressModel` (completedAt != null)
+    // matched against the module snapshots found in each enrolled batch.
+    const batchIds = enrollments.map((e) => String(e.batchId)).filter(Boolean);
+
+    // Map: `${batchId}|${courseIdKey}` -> Map(moduleOrder -> completed)
+    const completedByCourseOrder = new Map<string, Map<number, boolean>>();
+    const progressDocs =
+      batchIds.length > 0
+        ? await ModuleProgressModel.find({
+            studentId,
+            batchId: { $in: batchIds },
+          })
+            .select("batchId courseId moduleOrder completedAt")
+            .lean()
+            .exec()
+        : [];
+
+    for (const d of progressDocs) {
+      const batchId = String((d as { batchId: string }).batchId);
+      const courseIdKey = (d as { courseId?: string }).courseId ?? batchId;
+      const courseKey = `${batchId}|${String(courseIdKey)}`;
+      const order = (d as { moduleOrder: number }).moduleOrder;
+      const completed = (d as { completedAt?: Date | null }).completedAt != null;
+
+      const inner = completedByCourseOrder.get(courseKey) ?? new Map<number, boolean>();
+      inner.set(order, completed);
+      completedByCourseOrder.set(courseKey, inner);
+    }
+
+    const courses: Array<{
+      courseKey: string;
+      courseName: string;
+      batchName?: string;
+      modules: Array<{ order: number; title: string; completed: boolean }>;
+      modulesCompleted: number;
+      modulesPending: number;
+      modulesTotal: number;
+      completionPercent: number;
+    }> = [];
+
+    let modulesTotal = 0;
+    let modulesCompleted = 0;
+
+    for (const e of enrollments) {
+      const batchId = String(e.batchId);
+      const batchAny = e.batch as unknown as {
+        name?: string;
+        // Some enrollment/batch shapes may contain `courseSnapshot` instead of `courseSnapshots`.
+        courseSnapshots?: Array<{
+          courseId?: string;
+          title?: string;
+          modules?: Array<{ order?: number; title?: string }>;
+        }>;
+        courseSnapshot?: {
+          courseId?: string;
+          title?: string;
+          modules?: Array<{ order?: number; title?: string }>;
+        } | null;
+      } | null | undefined;
+
+      const batchName = batchAny?.name ?? "—";
+      const courseSnapshots = batchAny?.courseSnapshots?.length
+        ? batchAny.courseSnapshots
+        : batchAny?.courseSnapshot
+          ? [batchAny.courseSnapshot]
+          : [];
+
+      for (const s of courseSnapshots) {
+        const courseIdKey = s.courseId ?? batchId;
+        const courseKey = `${batchId}|${String(courseIdKey)}`;
+        const courseName = s.title ?? "Course";
+        const rawModules = Array.isArray(s.modules) ? s.modules : [];
+
+        const modules = rawModules.map((m, idx) => {
+          const order = typeof m.order === "number" ? m.order : idx;
+          const title = (m.title ?? `Module ${order + 1}`) as string;
+          const inner = completedByCourseOrder.get(courseKey);
+          const completed = inner?.get(order) ?? false;
+          return { order, title, completed };
+        });
+
+        const completedCount = modules.reduce((sum, m) => sum + (m.completed ? 1 : 0), 0);
+        const totalCount = modules.length;
+        const pendingCount = Math.max(0, totalCount - completedCount);
+        const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+        courses.push({
+          courseKey,
+          courseName,
+          batchName,
+          modules,
+          modulesCompleted: completedCount,
+          modulesPending: pendingCount,
+          modulesTotal: totalCount,
+          completionPercent: percent,
+        });
+
+        modulesTotal += totalCount;
+        modulesCompleted += completedCount;
+      }
+    }
+
+    // Keep most-progressed courses on top.
+    courses.sort((a, b) => b.completionPercent - a.completionPercent);
+
+    const modulesPending = Math.max(0, modulesTotal - modulesCompleted);
+    const completionPercent = modulesTotal > 0 ? Math.round((modulesCompleted / modulesTotal) * 100) : 0;
     const courseIds = new Set<string>();
     result.enrollments = enrollments.map((e) => {
       const batch = e.batch;
@@ -172,6 +324,21 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
     result.coursesCount = courseIds.size;
     result.certificatesCount = certs.length;
     result.attendanceSummary = attendanceSummary;
+    result.coinGrants = coinGrants;
+    result.achievements = achievements.map((a) => ({
+      id: a.id,
+      badgeType: a.badgeType,
+      displayName: a.displayName,
+      icon: a.icon,
+      awardedAt: new Date(a.awardedAt).toISOString(),
+    }));
+    result.moduleProgressSummary = {
+      modulesCompleted,
+      modulesPending,
+      modulesTotal,
+      completionPercent,
+      courses,
+    };
   }
 
   return result;

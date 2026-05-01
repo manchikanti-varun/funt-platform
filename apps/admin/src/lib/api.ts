@@ -1,5 +1,14 @@
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
+function resolveApiUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (raw) return raw.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_API_URL is required in production for admin app.");
+  }
+  return "http://localhost:38472";
+}
+
+const API_URL = resolveApiUrl();
 
 const LEGACY_TOKEN_KEY = "funt_admin_token";
 
@@ -34,7 +43,7 @@ export async function establishSessionFromToken(token: string): Promise<{ roles:
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: token.trim() }),
+    body: JSON.stringify({ token: token.trim(), portal: "admin" }),
   });
   const json = (await res.json().catch(() => ({}))) as { data?: { user?: { roles: string[] } } };
   if (!res.ok) return null;
@@ -81,17 +90,35 @@ export async function api<T>(
   } catch (err) {
     return { success: false, message: "Network error. Check that the API URL is correct and CORS allows this origin." };
   }
-  const json = await res.json().catch(() => ({}));
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (!res.ok) {
     if (res.status === 401) {
       clearToken();
       if (typeof window !== "undefined") window.location.href = "/login";
     }
-    const msg = (json as { message?: string }).message ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
+    const msg =
+      (typeof json.message === "string" ? json.message : undefined) ??
+      (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
     return { success: false, message: msg };
   }
-  return { success: true, data: (json as { data?: T }).data ?? (json as T), message: (json as { message?: string }).message };
+
+  // Prefer nested `data`; avoid `??` with nullish `data: null` accidentally falling through to the whole envelope.
+  let data: T | undefined;
+  if ("data" in json && json.data !== undefined && json.data !== null) {
+    data = json.data as T;
+  } else {
+    const { success: _s, message: _m, ...rest } = json;
+    if (Object.keys(rest).length > 0) {
+      data = rest as T;
+    }
+  }
+
+  return {
+    success: true,
+    data,
+    message: typeof json.message === "string" ? json.message : undefined,
+  };
 }
 
 export function apiUrl(path: string): string {

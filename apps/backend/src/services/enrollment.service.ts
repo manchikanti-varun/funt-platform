@@ -117,6 +117,34 @@ export async function setEnrollmentAccessBlocked(enrollmentId: string, blocked: 
   return doc;
 }
 
+export async function setEnrollmentCourseAccessBlocked(
+  enrollmentId: string,
+  courseId: string,
+  blocked: boolean
+) {
+  const enrollment = await EnrollmentModel.findById(enrollmentId).exec();
+  if (!enrollment) throw new AppError("Enrollment not found", 404);
+  const cId = String(courseId ?? "").trim();
+  if (!cId) throw new AppError("courseId is required", 400);
+
+  const batch = await BatchModel.findById(enrollment.batchId).lean().exec();
+  if (!batch) throw new AppError("Batch not found for enrollment", 404);
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const inBatch = snapshots.some((s) => String((s as { courseId?: string }).courseId ?? "").trim() === cId);
+  if (!inBatch) throw new AppError("courseId is not part of this batch", 400);
+
+  const mapRaw = (enrollment as { courseAccessBlocked?: Map<string, boolean> | Record<string, boolean> })
+    .courseAccessBlocked;
+  const next = new Map<string, boolean>(
+    mapRaw instanceof Map ? Array.from(mapRaw.entries()) : Object.entries(mapRaw ?? {})
+  );
+  if (blocked) next.set(cId, true);
+  else next.delete(cId);
+  (enrollment as { courseAccessBlocked: Map<string, boolean> }).courseAccessBlocked = next;
+  await enrollment.save();
+  return enrollment;
+}
+
 export async function requireActiveEnrollment(studentId: string, batchId: string) {
   const batch = await findBatchByParam(batchId);
   if (!batch) throw new AppError("Batch not found", 404);
@@ -225,6 +253,13 @@ export async function listEnrollmentsByBatch(batchId: string) {
     batchId: String(e.batchId),
     enrolledAt: e.enrolledAt instanceof Date ? e.enrolledAt : new Date(e.enrolledAt as string | number),
     accessBlocked: !!(e as { accessBlocked?: boolean }).accessBlocked,
+    courseAccessBlocked: Object.fromEntries(
+      ((e as { courseAccessBlocked?: Map<string, boolean> | Record<string, boolean> }).courseAccessBlocked instanceof Map
+        ? (e as { courseAccessBlocked?: Map<string, boolean> }).courseAccessBlocked!.entries()
+        : Object.entries(
+            (e as { courseAccessBlocked?: Record<string, boolean> }).courseAccessBlocked ?? {}
+          )) as Iterable<[string, boolean]>
+    ),
   }));
   const userIds = [...new Set(enrollments.map((e) => e.studentId))];
   const users = await UserModel.find({ _id: { $in: userIds } }).select("_id username name").lean().exec();

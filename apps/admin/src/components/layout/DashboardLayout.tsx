@@ -31,7 +31,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
       </div>
     );
   }
@@ -40,17 +40,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminUserProvider user={user}>
-    <div className="flex min-h-screen bg-slate-50">
-      <div className="hidden lg:block">{sidebar}</div>
+    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50">
+      <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
       {sidebarOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden" onClick={() => setSidebarOpen(false)} aria-hidden />
           <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:hidden">{sidebar}</div>
         </>
       )}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar user={{ name: user.name, username: user.username, roles: user.roles }} onMenuClick={() => setSidebarOpen((o) => !o)} />
-        <main className="flex-1 overflow-auto bg-gradient-to-b from-slate-50/50 to-slate-100/30 p-4 text-slate-800 sm:p-6">{children}</main>
+        <main className="flex min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 overscroll-contain sm:p-6">{children}</main>
       </div>
     </div>
     </AdminUserProvider>

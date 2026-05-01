@@ -1,6 +1,9 @@
 import { CouponModel } from "../models/Coupon.model.js";
 import { CouponRedemptionModel } from "../models/CouponRedemption.model.js";
+import { UserModel } from "../models/User.model.js";
+import { ShopOrderModel } from "../models/ShopOrder.model.js";
 import { AppError } from "../utils/AppError.js";
+import type { ClientSession } from "mongoose";
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
@@ -27,66 +30,162 @@ function applyDiscount(baseCoins: number, discountType: string, discountValue: n
   return base;
 }
 
-export async function assertShopCouponForPurchase(
-  code: string | undefined,
-  productId: string,
-  studentId: string,
-  listPriceCoins: number
-): Promise<{ finalPrice: number; couponId: string | null }> {
-  if (!code?.trim()) return { finalPrice: listPriceCoins, couponId: null };
-  const c = normalizeCode(code);
-  const doc = await CouponModel.findOne({ code: c }).exec();
-  if (!doc || !doc.active) throw new AppError("Invalid coupon code", 400);
-  if (doc.kind !== "SHOP") throw new AppError("This coupon is not valid for shop items", 400);
-  if (String(doc.productId) !== String(productId)) throw new AppError("Coupon does not apply to this product", 400);
-  if (!nowInRange(doc.validFrom ?? undefined, doc.validUntil ?? undefined)) throw new AppError("Coupon is not valid at this time", 400);
-  if (doc.maxRedemptions != null && doc.redemptionCount >= doc.maxRedemptions) throw new AppError("Coupon has reached its usage limit", 400);
-
-  const used = await CouponRedemptionModel.countDocuments({ couponId: String(doc._id), studentId }).exec();
-  if (used >= (doc.perStudentLimit ?? 1)) throw new AppError("You have already used this coupon the maximum number of times", 400);
-
-  const finalPrice = applyDiscount(listPriceCoins, doc.discountType, doc.discountValue);
-  return { finalPrice, couponId: String(doc._id) };
+/** Course list price in paise (INR × 100). */
+function applyDiscountPaise(basePaise: number, discountType: string, discountValue: number): number {
+  const base = Math.max(0, Math.floor(basePaise));
+  if (discountType === "PERCENT") {
+    const p = Math.min(100, Math.max(0, Math.floor(discountValue)));
+    return Math.max(0, base - Math.floor((base * p) / 100));
+  }
+  return base;
 }
 
-export async function assertCourseCouponForCertificate(
+export async function assertEnrollmentCoupon(
   code: string | undefined,
-  batchMongoId: string,
+  _batchMongoId: string,
   courseId: string,
   studentId: string,
+  listPaise: number
+): Promise<{ finalPricePaise: number; couponId: string | null }> {
+  if (!code?.trim()) return { finalPricePaise: listPaise, couponId: null };
+  const c = normalizeCode(code);
+  const doc = await CouponModel.findOne({ code: c }).exec();
+  if (!doc || !doc.active) throw new AppError("Not valid coupon code", 400);
+  if (doc.kind !== "COURSE") throw new AppError("This coupon is not valid for course enrollment", 400);
+  if (String(doc.courseId ?? "") !== String(courseId)) throw new AppError("Coupon does not apply to this course", 400);
+  if (!nowInRange(doc.validFrom ?? undefined, doc.validUntil ?? undefined)) throw new AppError("Coupon is not valid at this time", 400);
+  if (doc.maxRedemptions != null && doc.redemptionCount >= doc.maxRedemptions) {
+    throw new AppError("Coupon has reached its usage limit", 400);
+  }
+
+  const used = await CouponRedemptionModel.countDocuments({ couponId: String(doc._id), studentId }).exec();
+  if (used >= 1) throw new AppError("You can use this coupon only once", 400);
+
+  const list = Math.max(0, Math.floor(listPaise));
+  const finalPricePaise = applyDiscountPaise(list, doc.discountType, doc.discountValue);
+  if (list >= 100 && finalPricePaise > 0 && finalPricePaise < 100) {
+    throw new AppError("Discounted amount must be at least ₹1 for paid checkout, or use a 100% discount for free access.", 400);
+  }
+  return { finalPricePaise, couponId: String(doc._id) };
+}
+
+export async function assertShopCouponForPurchase(
+  code: string | undefined,
+  _productId: string,
+  studentId: string,
   listPriceCoins: number
 ): Promise<{ finalPrice: number; couponId: string | null }> {
   if (!code?.trim()) return { finalPrice: listPriceCoins, couponId: null };
   const c = normalizeCode(code);
   const doc = await CouponModel.findOne({ code: c }).exec();
   if (!doc || !doc.active) throw new AppError("Invalid coupon code", 400);
-  if (doc.kind !== "COURSE") throw new AppError("This coupon is not valid for certificates", 400);
-  if (String(doc.batchId) !== String(batchMongoId)) throw new AppError("Coupon does not apply to this batch", 400);
-  if (String(doc.courseId ?? "") !== String(courseId)) throw new AppError("Coupon does not apply to this course", 400);
+  if (doc.kind !== "SHOP") throw new AppError("This coupon is not valid for shop cart", 400);
   if (!nowInRange(doc.validFrom ?? undefined, doc.validUntil ?? undefined)) throw new AppError("Coupon is not valid at this time", 400);
   if (doc.maxRedemptions != null && doc.redemptionCount >= doc.maxRedemptions) throw new AppError("Coupon has reached its usage limit", 400);
+  if ((doc as { shopScope?: string }).shopScope === "FIRST_ORDER") {
+    const prior = await ShopOrderModel.findOne({ studentId }).select("_id").lean().exec();
+    if (prior) throw new AppError("This coupon is only for first shop order", 400);
+  }
 
   const used = await CouponRedemptionModel.countDocuments({ couponId: String(doc._id), studentId }).exec();
-  if (used >= (doc.perStudentLimit ?? 1)) throw new AppError("You have already used this coupon the maximum number of times", 400);
+  if (used >= 1) throw new AppError("You can use this coupon only once", 400);
 
   const finalPrice = applyDiscount(listPriceCoins, doc.discountType, doc.discountValue);
   return { finalPrice, couponId: String(doc._id) };
 }
 
-export async function recordCouponRedemption(couponId: string, studentId: string, context?: string): Promise<void> {
-  await CouponRedemptionModel.create({ couponId, studentId, context });
-  await CouponModel.updateOne({ _id: couponId }, { $inc: { redemptionCount: 1 } }).exec();
+export async function recordCouponRedemption(
+  couponId: string,
+  studentId: string,
+  context?: string,
+  session?: ClientSession
+): Promise<void> {
+  const redemptionContext = context?.trim() || "default";
+  try {
+    await CouponRedemptionModel.create(
+      [{ couponId, studentId, context: redemptionContext }],
+      session ? { session } : undefined
+    );
+  } catch (err: unknown) {
+    if ((err as { code?: number })?.code === 11000) {
+      return;
+    }
+    throw err;
+  }
+  const coupon = await CouponModel.findOneAndUpdate(
+    {
+      _id: couponId,
+      active: true,
+      $or: [{ maxRedemptions: null }, { maxRedemptions: { $exists: false } }, { $expr: { $lt: ["$redemptionCount", "$maxRedemptions"] } }],
+    },
+    { $inc: { redemptionCount: 1 } },
+    { new: true, session }
+  ).exec();
+  if (!coupon) {
+    await CouponRedemptionModel.deleteOne({ couponId, studentId, context: redemptionContext }, session ? { session } : undefined).exec();
+    throw new AppError("Coupon has reached its usage limit", 400);
+  }
+}
+
+export async function listCouponAudit(input: { page: number; limit: number }): Promise<{
+  rows: Array<{
+    id: string;
+    couponId: string;
+    couponCode: string;
+    couponKind: string;
+    studentId: string;
+    studentName: string;
+    studentUsername: string;
+    context: string;
+    createdAt: string;
+  }>;
+  total: number;
+  page: number;
+  limit: number;
+}> {
+  const limit = Math.min(100, Math.max(1, input.limit));
+  const page = Math.max(1, input.page);
+  const skip = (page - 1) * limit;
+  const [total, redemptions] = await Promise.all([
+    CouponRedemptionModel.countDocuments({}).exec(),
+    CouponRedemptionModel.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).lean().exec(),
+  ]);
+  const couponIds = [...new Set(redemptions.map((r) => String((r as { couponId: string }).couponId)))];
+  const studentIds = [...new Set(redemptions.map((r) => String((r as { studentId: string }).studentId)))];
+  const [coupons, users] = await Promise.all([
+    couponIds.length ? CouponModel.find({ _id: { $in: couponIds } }).select("code kind").lean().exec() : [],
+    studentIds.length ? UserModel.find({ _id: { $in: studentIds } }).select("name username").lean().exec() : [],
+  ]);
+  const cmap = new Map(coupons.map((c) => [String((c as { _id: unknown })._id), c as { code?: string; kind?: string }]));
+  const umap = new Map(users.map((u) => [String((u as { _id: unknown })._id), u as { name?: string; username?: string }]));
+  const rows = redemptions.map((r) => {
+    const couponId = String((r as { couponId: string }).couponId);
+    const studentId = String((r as { studentId: string }).studentId);
+    const cp = cmap.get(couponId);
+    const u = umap.get(studentId);
+    return {
+      id: String((r as { _id: unknown })._id),
+      couponId,
+      couponCode: cp?.code ?? couponId,
+      couponKind: cp?.kind ?? "—",
+      studentId,
+      studentName: u?.name?.trim() || "—",
+      studentUsername: u?.username?.trim() || "—",
+      context: String((r as { context?: string }).context ?? ""),
+      createdAt: (r as { createdAt?: Date }).createdAt ? new Date((r as { createdAt: Date }).createdAt).toISOString() : "",
+    };
+  });
+  return { rows, total, page, limit };
 }
 
 export async function listCouponsAdmin() {
-  const rows = await CouponModel.find({}).sort({ createdAt: -1 }).lean().exec();
+  const rows = await CouponModel.find({ kind: { $in: ["SHOP", "COURSE"] } }).sort({ createdAt: -1 }).lean().exec();
   return rows.map((r) => ({
     id: String(r._id),
     code: r.code,
     kind: r.kind,
-    batchId: r.batchId ?? "",
     courseId: r.courseId ?? "",
-    productId: r.productId ?? "",
+    shopScope: (r as { shopScope?: string }).shopScope ?? "ALL_ORDERS",
     discountType: r.discountType,
     discountValue: r.discountValue,
     maxRedemptions: r.maxRedemptions,
@@ -103,14 +202,12 @@ export async function listCouponsAdmin() {
 
 export async function createCouponAdmin(input: {
   code: string;
-  kind: "COURSE" | "SHOP";
-  batchId?: string;
+  kind: "SHOP" | "COURSE";
   courseId?: string;
-  productId?: string;
-  discountType: "PERCENT" | "FIXED_COINS";
+  shopScope?: "ALL_ORDERS" | "FIRST_ORDER";
+  discountType: "PERCENT";
   discountValue: number;
   maxRedemptions?: number | null;
-  perStudentLimit?: number;
   validFrom?: Date | null;
   validUntil?: Date | null;
   active?: boolean;
@@ -120,13 +217,15 @@ export async function createCouponAdmin(input: {
   const code = normalizeCode(input.code);
   if (code.length < 3) throw new AppError("Coupon code must be at least 3 characters", 400);
   if (input.kind === "SHOP") {
-    if (!input.productId?.trim()) throw new AppError("productId is required for shop coupons", 400);
-  } else {
-    if (!input.batchId?.trim() || !input.courseId?.trim()) throw new AppError("batchId and courseId are required for course coupons", 400);
+    // no per-product binding; coupon is cart-level.
+  } else if (input.kind === "COURSE") {
+    if (!input.courseId?.trim()) {
+      throw new AppError("courseId is required for course coupons", 400);
+    }
   }
   const discountValue = Math.floor(Number(input.discountValue));
   if (!Number.isFinite(discountValue) || discountValue < 0) throw new AppError("Invalid discount value", 400);
-  if (input.discountType === "PERCENT" && (discountValue < 1 || discountValue > 100)) {
+  if (discountValue < 1 || discountValue > 100) {
     throw new AppError("Percent discount must be 1–100", 400);
   }
 
@@ -134,13 +233,12 @@ export async function createCouponAdmin(input: {
     const doc = await CouponModel.create({
       code,
       kind: input.kind,
-      batchId: input.kind === "COURSE" ? input.batchId!.trim() : undefined,
       courseId: input.kind === "COURSE" ? input.courseId!.trim() : undefined,
-      productId: input.kind === "SHOP" ? input.productId!.trim() : undefined,
-      discountType: input.discountType,
+      shopScope: input.kind === "SHOP" ? (input.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS") : undefined,
+      discountType: "PERCENT",
       discountValue,
       maxRedemptions: input.maxRedemptions === undefined ? null : input.maxRedemptions,
-      perStudentLimit: Math.max(1, Math.floor(Number(input.perStudentLimit ?? 1))),
+      perStudentLimit: 1,
       validFrom: input.validFrom ?? undefined,
       validUntil: input.validUntil ?? undefined,
       active: input.active !== false,

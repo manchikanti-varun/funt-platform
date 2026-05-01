@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { BackLink } from "@/components/ui/BackLink";
+import { AccessToggleIconButton, DeleteIconButton } from "@/components/ui/actionIconButtons";
 
 interface BatchStudent {
   enrollmentId: string;
@@ -13,6 +14,12 @@ interface BatchStudent {
   name: string;
   enrolledAt: string;
   accessBlocked?: boolean;
+  courseAccessBlocked?: Record<string, boolean>;
+}
+
+interface BatchCourseSnapshot {
+  courseId?: string;
+  title?: string;
 }
 
 const NAV_LINK_CLASS =
@@ -22,6 +29,7 @@ export default function BatchStudentAccessPage() {
   const params = useParams();
   const id = params.id as string;
   const [batchName, setBatchName] = useState("");
+  const [courseSnapshots, setCourseSnapshots] = useState<BatchCourseSnapshot[]>([]);
   const [students, setStudents] = useState<BatchStudent[]>([]);
   const [username, setUsername] = useState("");
   const [bulkText, setBulkText] = useState("");
@@ -32,10 +40,19 @@ export default function BatchStudentAccessPage() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      api<{ name: string }>(`/api/batches/${id}`),
+      api<{ name: string; courseSnapshots?: BatchCourseSnapshot[]; courseSnapshot?: BatchCourseSnapshot }>(`/api/batches/${id}`),
       api<BatchStudent[]>(`/api/batches/${id}/students`),
     ]).then(([batchRes, studentsRes]) => {
-      if (batchRes.success && batchRes.data) setBatchName(batchRes.data.name);
+      if (batchRes.success && batchRes.data) {
+        setBatchName(batchRes.data.name);
+        const snaps =
+          Array.isArray(batchRes.data.courseSnapshots) && batchRes.data.courseSnapshots.length > 0
+            ? batchRes.data.courseSnapshots
+            : batchRes.data.courseSnapshot
+              ? [batchRes.data.courseSnapshot]
+              : [];
+        setCourseSnapshots(snaps);
+      }
       if (studentsRes.success && Array.isArray(studentsRes.data)) setStudents(studentsRes.data);
       setLoading(false);
     });
@@ -92,6 +109,28 @@ export default function BatchStudentAccessPage() {
     } else setError(res.message ?? "Could not update access.");
   }
 
+  async function setCourseAccessBlocked(enrollmentId: string, courseId: string, blocked: boolean) {
+    if (!enrollmentId || !courseId) return;
+    setActionLoading(true);
+    setError("");
+    const res = await api(`/api/admin/enrollments/${encodeURIComponent(enrollmentId)}/course-access`, {
+      method: "PATCH",
+      body: JSON.stringify({ courseId, blocked }),
+    });
+    setActionLoading(false);
+    if (res.success) {
+      setStudents((prev) =>
+        prev.map((s) => {
+          if (s.enrollmentId !== enrollmentId) return s;
+          const next = { ...(s.courseAccessBlocked ?? {}) };
+          if (blocked) next[courseId] = true;
+          else delete next[courseId];
+          return { ...s, courseAccessBlocked: next };
+        })
+      );
+    } else setError(res.message ?? "Could not update course access.");
+  }
+
   async function removeStudent(studentId: string) {
     setActionLoading(true);
     setError("");
@@ -139,11 +178,10 @@ export default function BatchStudentAccessPage() {
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Student access</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">Batch access</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Students listed here can access this batch’s courses. Use <strong>Block access</strong> to turn off LMS access for an enrolled learner without removing them.
-          </p>
+          <p className="mt-2 text-sm text-slate-500">Enrolled learners for this batch. Lock = pause LMS access for all courses in this batch; trash = remove enrollment.</p>
+          <p className="mt-1 text-xs text-slate-500">You can optionally block specific courses in this batch snapshot per student.</p>
         </div>
 
         <div className="p-6">
@@ -175,29 +213,49 @@ export default function BatchStudentAccessPage() {
             <ul className="divide-y divide-slate-100">
               {students.map((s) => (
                 <li key={s.studentId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
-                  <span className="font-mono text-slate-700">{s.username || s.studentId}</span>
-                  <span className="min-w-0 flex-1 truncate text-slate-600">{s.name}</span>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-slate-700">{s.username || s.studentId}</span>
+                      <span className="min-w-0 truncate text-slate-600">{s.name}</span>
+                    </div>
+                    {courseSnapshots.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {courseSnapshots.map((c, idx) => {
+                          const cId = String(c.courseId ?? "").trim();
+                          if (!cId) return null;
+                          const blocked = !!s.courseAccessBlocked?.[cId];
+                          return (
+                            <button
+                              key={`${s.studentId}-${cId}-${idx}`}
+                              type="button"
+                              disabled={actionLoading || !s.enrollmentId}
+                              onClick={() => setCourseAccessBlocked(s.enrollmentId, cId, !blocked)}
+                              className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                                blocked
+                                  ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              }`}
+                              title={blocked ? "Course access blocked for this batch" : "Course access allowed for this batch"}
+                            >
+                              {c.title ?? "Course"}: {blocked ? "Blocked" : "Allowed"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 self-start">
+                    <AccessToggleIconButton
+                      accessBlocked={!!s.accessBlocked}
                       disabled={actionLoading || !s.enrollmentId}
                       onClick={() => setAccessBlocked(s.enrollmentId, !s.accessBlocked)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                        s.accessBlocked ? "bg-slate-200 text-slate-800" : "bg-amber-100 text-amber-900"
-                      }`}
-                    >
-                      {s.accessBlocked ? "Unblock access" : "Block access"}
-                    </button>
-                    <button
-                      type="button"
+                    />
+                    <DeleteIconButton
+                      disabled={actionLoading}
                       onClick={() => removeStudent(s.studentId)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
                       title="Remove from batch"
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                      aria-label="Remove student from batch"
+                    />
                   </div>
                 </li>
               ))}

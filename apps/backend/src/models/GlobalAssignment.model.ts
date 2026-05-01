@@ -1,10 +1,6 @@
 
 import mongoose, { Schema } from "mongoose";
-import {
-  ASSIGNMENT_STATUS,
-  SUBMISSION_TYPE,
-  SKILL_TAG,
-} from "@funt-platform/constants";
+import { ASSIGNMENT_STATUS, SUBMISSION_TYPE } from "@funt-platform/constants";
 
 const globalAssignmentSchema = new Schema(
   {
@@ -19,7 +15,6 @@ const globalAssignmentSchema = new Schema(
     skillTags: {
       type: [String],
       required: true,
-      enum: Object.values(SKILL_TAG),
     },
     status: {
       type: String,

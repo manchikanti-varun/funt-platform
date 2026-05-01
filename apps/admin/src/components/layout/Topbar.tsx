@@ -37,11 +37,11 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setMessage(null);
     if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "New password and confirmation do not match." });
+      setMessage({ type: "error", text: "Passwords do not match." });
       return;
     }
     if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "New password must be at least 6 characters." });
+      setMessage({ type: "error", text: "Use at least 6 characters." });
       return;
     }
     setLoading(true);
@@ -56,7 +56,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setMessage({ type: "success", text: "Password updated successfully. Your session was refreshed." });
+      setMessage({ type: "success", text: "Password updated. Session refreshed." });
     } else {
       setMessage({ type: "error", text: res.message ?? "Failed to update password." });
     }
@@ -83,7 +83,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               type="password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               required
               autoComplete="current-password"
             />
@@ -95,7 +95,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               required
               minLength={6}
               autoComplete="new-password"
@@ -108,7 +108,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               required
               minLength={6}
               autoComplete="new-password"
@@ -130,7 +130,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 rounded-xl bg-teal-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60"
+              className="flex-1 rounded-xl bg-indigo-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
             >
               {loading ? "Updating…" : "Update password"}
             </button>
@@ -167,7 +167,7 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-[4.25rem] items-center justify-between border-b border-slate-200/90 bg-white/98 px-4 backdrop-blur-md shadow-lg shadow-slate-300/10 ring-1 ring-slate-100/80 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-[4.25rem] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl shadow-md shadow-slate-400/10 ring-1 ring-slate-100/70 sm:px-6">
         <div className="flex items-center gap-3">
           {onMenuClick && (
             <button
@@ -183,11 +183,9 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
           )}
           <div className="h-8 w-px bg-slate-200 lg:block hidden" aria-hidden />
           <div className="flex flex-col">
-            <span className="text-[15px] font-semibold tracking-tight text-slate-900">
-              FUNT Robotics
-            </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
-              {getPanelLabel(user.roles)}
+            <span className="text-[15px] font-semibold tracking-tight text-slate-900">FUNT Robotics</span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-indigo-700/80">
+              {getPanelLabel(user.roles)} · Console
             </span>
           </div>
         </div>
@@ -200,7 +198,7 @@ export function Topbar({ user, onMenuClick }: TopbarProps) {
             aria-expanded={open}
             aria-haspopup="true"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white shadow-lg shadow-teal-900/20 ring-2 ring-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-semibold text-white shadow-lg shadow-indigo-900/20 ring-2 ring-white">
               {initials}
             </div>
             <div className="hidden text-left sm:block">

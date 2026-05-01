@@ -1,5 +1,27 @@
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
+function resolveApiUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (raw) return raw.replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_API_URL is required in production for LMS app.");
+  }
+  return "http://localhost:38472";
+}
+
+export const API_URL = resolveApiUrl();
+
+/**
+ * Course payloads use root-relative media URLs (`/api/student/media/play?...`) for `api()`.
+ * `<iframe src>` and `<video src>` resolve against the Next.js origin unless prefixed with the API base.
+ */
+export function resolveMediaPlaybackUrl(pathOrAbsolute: string | undefined): string {
+  if (!pathOrAbsolute) return "";
+  const t = pathOrAbsolute.trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  const base = API_URL.replace(/\/$/, "");
+  return `${base}${t.startsWith("/") ? t : `/${t}`}`;
+}
 
 /** Legacy localStorage key — migrated to httpOnly cookie via /api/auth/session when present. */
 const LEGACY_TOKEN_KEY = "funt_lms_token";
@@ -38,7 +60,7 @@ export async function establishSessionFromToken(token: string): Promise<{ roles:
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token: token.trim() }),
+    body: JSON.stringify({ token: token.trim(), portal: "lms" }),
   });
   const json = (await res.json().catch(() => ({}))) as { data?: { user?: { roles: string[] } } };
   if (!res.ok) return null;
@@ -89,7 +111,10 @@ export async function api<T>(
   if (!res.ok) {
     if (res.status === 401) {
       clearToken();
-      if (typeof window !== "undefined") window.location.href = "/login";
+      if (typeof window !== "undefined") {
+        const path = window.location.pathname;
+        window.location.href = path.startsWith("/parent") ? "/parent/profiles" : "/login";
+      }
     }
     const msg = (json as { message?: string }).message ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
     return { success: false, message: msg };

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { COURSE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 
@@ -21,19 +22,25 @@ interface CourseModule {
     linkedAssignmentInstructionsOverride?: string;
     linkedAssignmentSubmissionTypeOverride?: string;
     linkedAssignmentSkillTagsOverride?: string[];
+  xpReward?: number;
   order: number;
 }
 
 interface Course {
   id: string;
+  /** Human-readable course id when set (matches batch snapshots) */
+  courseId?: string;
   title: string;
   description: string;
+  durationText?: string;
   modules: CourseModule[];
   version: number;
   status: string;
 }
 
 import { BackLink } from "@/components/ui/BackLink";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 export default function EditCoursePage() {
   const params = useParams();
@@ -42,6 +49,7 @@ export default function EditCoursePage() {
   const [course, setCourse] = useState<Course | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [durationText, setDurationText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -49,13 +57,16 @@ export default function EditCoursePage() {
   const [savingModule, setSavingModule] = useState(false);
   const [globalAssignmentPreview, setGlobalAssignmentPreview] = useState<{ title: string; instructions: string; submissionType?: string; skillTags?: string[] } | null>(null);
 
+  const roleGuard = <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />;
+
   useEffect(() => {
     if (!id) return;
     api<Course>(`/api/courses/${id}`).then((r) => {
       if (r.success && r.data) {
         setCourse(r.data);
         setTitle(r.data.title);
-        setDescription(r.data.description ?? "");
+        setDescription(decodeEncodedRichText(r.data.description ?? ""));
+        setDurationText((r.data.durationText ?? "").trim());
       }
     });
   }, [id]);
@@ -92,7 +103,7 @@ export default function EditCoursePage() {
     setLoading(true);
     const res = await api(`/api/courses/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify({ title, description: decodeEncodedRichText(description), durationText: durationText.trim() }),
     });
     setLoading(false);
     if (res.success) router.push("/courses");
@@ -104,6 +115,7 @@ export default function EditCoursePage() {
       title: m.title,
       description: m.description ?? "",
       content: m.content ?? "",
+      xpReward: m.xpReward ?? 40,
       youtubeUrl: m.youtubeUrl ?? "",
       videoUrl: m.videoUrl ?? "",
       resourceLinkUrl: m.resourceLinkUrl ?? "",
@@ -132,15 +144,16 @@ export default function EditCoursePage() {
         body: JSON.stringify({
           title: moduleEdit.title,
           description: moduleEdit.description,
-          content: moduleEdit.content,
+          content: decodeEncodedRichText(moduleEdit.content),
           youtubeUrl: moduleEdit.youtubeUrl || undefined,
           videoUrl: moduleEdit.videoUrl || undefined,
           resourceLinkUrl: moduleEdit.resourceLinkUrl || undefined,
           linkedAssignmentId: moduleEdit.linkedAssignmentId || undefined,
           linkedAssignmentTitleOverride: moduleEdit.linkedAssignmentTitleOverride || undefined,
-          linkedAssignmentInstructionsOverride: moduleEdit.linkedAssignmentInstructionsOverride || undefined,
+          linkedAssignmentInstructionsOverride: decodeEncodedRichText(moduleEdit.linkedAssignmentInstructionsOverride) || undefined,
           linkedAssignmentSubmissionTypeOverride: moduleEdit.linkedAssignmentSubmissionTypeOverride || undefined,
           linkedAssignmentSkillTagsOverride: Array.isArray(moduleEdit.linkedAssignmentSkillTagsOverride) ? moduleEdit.linkedAssignmentSkillTagsOverride : undefined,
+          xpReward: moduleEdit.xpReward != null ? Math.floor(Number(moduleEdit.xpReward)) : undefined,
         }),
       });
       if (res.success && res.data) {
@@ -183,6 +196,7 @@ export default function EditCoursePage() {
   if (!course) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
+        {roleGuard}
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
         <p className="mt-4 text-sm text-slate-500">Loading course…</p>
       </div>
@@ -193,6 +207,7 @@ export default function EditCoursePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      {roleGuard}
       <div className="shrink-0 pb-6">
         <BackLink href="/courses">Back to Courses</BackLink>
       </div>
@@ -203,6 +218,9 @@ export default function EditCoursePage() {
             <div>
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Edit Course</h2>
               <p className="mt-1 text-sm text-slate-600">Update title, description, reorder modules, or edit a module copy (content, video, etc.) for this course only.</p>
+              <div className="mt-2 inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+                Snapshot context
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{course.version}</span>
@@ -224,13 +242,8 @@ export default function EditCoursePage() {
                   Archive
                 </button>
               )}
-              <Link
-                href={`/courses/${id}/duplicate`}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
+              <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
+                <DuplicateIcon />
                 Duplicate
               </Link>
             </div>
@@ -251,6 +264,16 @@ export default function EditCoursePage() {
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
             <RichTextEditor value={description} onChange={setDescription} minHeight={200} />
           </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Duration</label>
+            <input
+              value={durationText}
+              onChange={(e) => setDurationText(e.target.value)}
+              className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              placeholder="e.g. 45 days, 3 months, 12 weeks"
+            />
+            <p className="mt-1 text-xs text-slate-500">Used in certificates for this course.</p>
+          </div>
           <div className="border-t border-slate-200 pt-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Modules in this course</h3>
             <p className="mt-1 text-sm text-slate-600">These are copies of global modules for this course. You can edit the module copy (title, content, video, etc.) here, or reorder with Up/Down.</p>
@@ -260,6 +283,9 @@ export default function EditCoursePage() {
                   <div className="flex items-center gap-3 px-4 py-3">
                     <span className="w-6 shrink-0 text-sm font-medium text-slate-500">{i + 1}.</span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-slate-800 truncate">{m.title}</span>
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                      {Math.max(0, Math.floor(Number(m.xpReward ?? 40)))} XP
+                    </span>
                     <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
@@ -305,6 +331,19 @@ export default function EditCoursePage() {
                           onChange={(e) => setModuleEdit((p) => ({ ...p, title: e.target.value }))}
                           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-600">XP on module completion</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100000}
+                          step={1}
+                          value={moduleEdit.xpReward ?? 40}
+                          onChange={(e) => setModuleEdit((p) => ({ ...p, xpReward: Math.floor(Number(e.target.value)) || 0 }))}
+                          className="w-full max-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">Awarded when the learner finishes this module in a batch. New batches copy values from this course snapshot.</p>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">Description</label>

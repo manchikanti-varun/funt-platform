@@ -71,6 +71,14 @@ export interface ParentLoginInput {
   mobile: string;
 }
 
+export interface ParentLinkedStudent {
+  username: string;
+  name: string;
+  grade?: string;
+  schoolName?: string;
+  city?: string;
+}
+
 export interface LoginResult {
   token: string;
   user: { id: string; username: string; name: string; roles: string[]; status: string };
@@ -346,6 +354,7 @@ export async function login(
       userId: String(user._id),
       username: user.username ?? "",
       roles: user.roles as ROLE[],
+      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn
@@ -407,11 +416,132 @@ export async function parentLogin(
   ).exec();
 
   const token = signToken(
-    { userId: String(user._id), username: user.username ?? "", roles: user.roles as ROLE[] },
+    {
+      userId: String(user._id),
+      username: user.username ?? "",
+      roles: user.roles as ROLE[],
+      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
+    },
     jwtSecret,
     expiresIn
   );
   return { token, user: toSafeUser(user) };
+}
+
+export async function getParentLinkedStudentsByMobile(
+  mobile: string
+): Promise<{ parentName: string; students: ParentLinkedStudent[] }> {
+  const normalizedMobile = (mobile ?? "").trim();
+  if (!normalizedMobile) throw new AppError("Parent mobile is required", 400);
+
+  // Preferred in this flow: parent mobile is stored on student profiles.
+  const mobileStudents = await UserModel.find({
+    mobile: normalizedMobile,
+    roles: ROLE.STUDENT,
+    status: ACCOUNT_STATUS.ACTIVE,
+  })
+    .select("username name grade schoolName city")
+    .sort({ name: 1 })
+    .lean()
+    .exec();
+  if (mobileStudents.length > 0) {
+    return {
+      parentName: "Parent",
+      students: mobileStudents.map((s) => ({
+        username: s.username,
+        name: s.name,
+        grade: s.grade ?? "",
+        schoolName: s.schoolName ?? "",
+        city: s.city ?? "",
+      })),
+    };
+  }
+
+  // Backward compatible fallback: dedicated parent account with linked students.
+  const parent = await UserModel.findOne({
+    mobile: normalizedMobile,
+    roles: ROLE.PARENT,
+  })
+    .select("name status linkedStudentUsernames")
+    .lean()
+    .exec();
+
+  if (!parent) throw new AppError("Parent account not found for this mobile number", 404);
+  if (parent.status !== ACCOUNT_STATUS.ACTIVE) {
+    throw new AppError("Parent account is suspended or archived", 403);
+  }
+
+  const linkedUsernames = (parent.linkedStudentUsernames ?? [])
+    .map((u) => normalizeStudentUsername(String(u)))
+    .filter(Boolean);
+  if (linkedUsernames.length === 0) {
+    return { parentName: parent.name, students: [] };
+  }
+
+  const students = await UserModel.find({
+    username: { $in: linkedUsernames },
+    roles: ROLE.STUDENT,
+    status: ACCOUNT_STATUS.ACTIVE,
+  })
+    .select("username name grade schoolName city")
+    .lean()
+    .exec();
+
+  const byUsername = new Map<string, ParentLinkedStudent>(
+    students.map((s) => [
+      s.username,
+      {
+        username: s.username,
+        name: s.name,
+        grade: s.grade ?? "",
+        schoolName: s.schoolName ?? "",
+        city: s.city ?? "",
+      },
+    ])
+  );
+  const ordered = linkedUsernames
+    .map((u) => byUsername.get(u))
+    .filter((v): v is ParentLinkedStudent => v != null);
+
+  return { parentName: parent.name, students: ordered };
+}
+
+export async function assertParentStudentLinked(mobile: string, studentUsername: string): Promise<void> {
+  const normalizedMobile = (mobile ?? "").trim();
+  const normalizedStudent = normalizeStudentUsername(studentUsername);
+  if (!normalizedMobile) throw new AppError("Parent mobile is required", 400);
+  if (!normalizedStudent) throw new AppError("Student username is required", 400);
+
+  // Preferred validation: selected student has the same mobile in student profile.
+  const studentByMobile = await UserModel.findOne({
+    username: normalizedStudent,
+    roles: ROLE.STUDENT,
+    mobile: normalizedMobile,
+    status: ACCOUNT_STATUS.ACTIVE,
+  })
+    .select("_id")
+    .lean()
+    .exec();
+  if (studentByMobile) return;
+
+  // Backward compatible fallback: parent account linkage.
+  const parent = await UserModel.findOne({
+    mobile: normalizedMobile,
+    roles: ROLE.PARENT,
+  })
+    .select("status linkedStudentUsernames")
+    .lean()
+    .exec();
+
+  if (!parent) throw new AppError("Parent account not found for this mobile number", 404);
+  if (parent.status !== ACCOUNT_STATUS.ACTIVE) {
+    throw new AppError("Parent account is suspended or archived", 403);
+  }
+
+  const linked = (parent.linkedStudentUsernames ?? []).map((u) => normalizeStudentUsername(String(u)));
+  if (!linked.includes(normalizedStudent)) {
+    throw new AppError("Selected student is not linked to this parent", 403);
+  }
 }
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -456,6 +586,41 @@ export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername:
   await UserModel.updateOne({ _id: user._id }, { $set: { username: v } }).exec();
 }
 
+export async function updateUserIdentityByAdmin(
+  targetUserId: string,
+  input: { username?: string; email?: string; mobile?: string }
+): Promise<void> {
+  const user = await UserModel.findById(targetUserId).exec();
+  if (!user) throw new AppError("User not found", 404);
+
+  const updates: Record<string, string> = {};
+  if (input.username != null) {
+    const username = input.username.trim().toLowerCase();
+    const isStaff = user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN);
+    if (isStaff) {
+      const e = validateAdminUsername(username);
+      if (e) throw new AppError(e, 400);
+    } else {
+      const e = validateStudentUsername(username);
+      if (e) throw new AppError(e, 400);
+    }
+    const taken = await UserModel.findOne({ username, _id: { $ne: user._id } }).lean().exec();
+    if (taken) throw new AppError("Username already taken", 400);
+    updates.username = username;
+  }
+
+  if (input.email != null) {
+    const email = input.email.trim().toLowerCase();
+    updates.email = email;
+  }
+  if (input.mobile != null) {
+    const mobile = input.mobile.trim();
+    updates.mobile = mobile;
+  }
+  if (Object.keys(updates).length === 0) throw new AppError("No identity fields provided", 400);
+  await UserModel.updateOne({ _id: user._id }, { $set: updates }).exec();
+}
+
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
   if (!currentPassword?.trim()) throw new AppError("Current password is required", 400);
   if (!newPassword?.trim()) throw new AppError("New password is required", 400);
@@ -466,7 +631,13 @@ export async function changePassword(userId: string, currentPassword: string, ne
   const match = await bcrypt.compare(currentPassword.trim(), hash);
   if (!match) throw new AppError("Current password is incorrect", 401);
   const passwordHash = await bcrypt.hash(newPassword.trim(), SALT_ROUNDS);
-  await UserModel.updateOne({ _id: userId }, { $set: { passwordHash } }).exec();
+  await UserModel.updateOne(
+    { _id: userId },
+    {
+      $set: { passwordHash, passwordChangedAt: new Date() },
+      $inc: { tokenVersion: 1 },
+    }
+  ).exec();
 }
 
 export async function resetLoginAttempts(userIdentifier: string): Promise<{ temporaryPassword: string }> {
@@ -480,7 +651,10 @@ export async function resetLoginAttempts(userIdentifier: string): Promise<{ temp
   const passwordHash = await bcrypt.hash(temporaryPassword, SALT_ROUNDS);
   await UserModel.updateOne(
     { _id: userId },
-    { $set: { passwordHash, loginAttempts: 0, lockedUntil: null } }
+    {
+      $set: { passwordHash, loginAttempts: 0, lockedUntil: null, passwordChangedAt: new Date() },
+      $inc: { tokenVersion: 1 },
+    }
   ).exec();
   return { temporaryPassword };
 }

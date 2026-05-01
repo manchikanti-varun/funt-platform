@@ -1,5 +1,5 @@
 
-import mongoose from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
 import { AuditLogModel } from "../models/AuditLog.model.js";
 import { UserModel } from "../models/User.model.js";
 import { CertificateModel } from "../models/Certificate.model.js";
@@ -50,23 +50,35 @@ export type AuditAction =
   | "SHOP_PURCHASE"
   | "BADGE_AWARDED"
   | "SKILL_RECALCULATED"
-  | "VERIFY_ACCESSED";
+  | "VERIFY_ACCESSED"
+  | "PAYMENT_UPI_UPDATED"
+  | "PAYMENT_UPI_CHANGE_REQUESTED"
+  | "PAYMENT_UPI_CHANGE_APPROVED"
+  | "PAYMENT_UPI_CHANGE_REJECTED"
+  | "PAYMENT_VERIFIED"
+  | "PAYMENT_REJECTED";
 
 export async function createAuditLog(
   action: AuditAction,
   performedBy: string,
   targetEntity: string,
   targetId: string,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
+  session?: ClientSession
 ): Promise<void> {
-  await AuditLogModel.create({
-    action,
-    performedBy,
-    targetEntity,
-    targetId,
-    timestamp: new Date(),
-    ...(meta ? { meta } : {}),
-  });
+  await AuditLogModel.create(
+    [
+      {
+        action,
+        performedBy,
+        targetEntity,
+        targetId,
+        timestamp: new Date(),
+        ...(meta ? { meta } : {}),
+      },
+    ],
+    session ? { session } : undefined
+  );
 }
 
 export interface ListAuditLogsFilters {
@@ -139,20 +151,26 @@ export async function listAuditLogs(
   const batchIds = logs.filter((d) => d.targetEntity === "Batch").map((d) => d.targetId);
   const batchMap = new Map<string, string>();
   if (batchIds.length > 0) {
-    const batches = await BatchModel.find({ _id: { $in: batchIds } }).select("_id batchId").lean().exec();
+    const batches = await BatchModel.find({ _id: { $in: batchIds } }).select("_id name batchId").lean().exec();
     for (const b of batches) {
-      const bid = (b as { batchId?: string }).batchId;
-      if (bid) batchMap.set(String((b as { _id: unknown })._id), bid);
+      const id = String((b as { _id: unknown })._id);
+      const name = ((b as { name?: string }).name ?? "").trim();
+      const code = ((b as { batchId?: string }).batchId ?? "").trim();
+      const label = name && code ? `${name} (${code})` : name || code || id;
+      batchMap.set(id, label);
     }
   }
 
   const courseIds = logs.filter((d) => d.targetEntity === "Course").map((d) => d.targetId);
   const courseMap = new Map<string, string>();
   if (courseIds.length > 0) {
-    const courses = await CourseModel.find({ _id: { $in: courseIds } }).select("_id courseId").lean().exec();
+    const courses = await CourseModel.find({ _id: { $in: courseIds } }).select("_id courseId title").lean().exec();
     for (const c of courses) {
-      const cid = (c as { courseId?: string }).courseId;
-      if (cid) courseMap.set(String((c as { _id: unknown })._id), cid);
+      const id = String((c as { _id: unknown })._id);
+      const title = ((c as { title?: string }).title ?? "").trim();
+      const cid = ((c as { courseId?: string }).courseId ?? "").trim();
+      const label = title && cid ? `${title} (${cid})` : title || cid || id;
+      courseMap.set(id, label);
     }
   }
 

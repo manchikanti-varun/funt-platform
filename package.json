@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "turbo run build",
+    "predeploy:check": "npm run lint && npm run build",
     "start": "node apps/backend/dist/server.js",
     "start:backend": "node apps/backend/dist/server.js",
     "start:admin": "npm run start --workspace=@funt-platform/admin",

@@ -1,13 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+
+function ParentRootRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/parent/profiles");
+  }, [router]);
+
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+    </div>
+  );
+}
+
 export default function ParentDashboardPage() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Parent Dashboard</h1>
-      <p className="text-slate-600">Read-only view. Link student progress, attendance, Skill Radar, certificates, and achievements here when backend supports parent-linked student data.</p>
-      <div className="card text-sm text-slate-600">
-        Parent sees linked students (via linked student usernames). Use those usernames with existing APIs when wiring student data. This is a placeholder.
-      </div>
-    </div>
+    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" /></div>}>
+      <ParentRootRedirect />
+    </Suspense>
   );
 }

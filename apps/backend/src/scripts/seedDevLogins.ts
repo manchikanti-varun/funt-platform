@@ -1,12 +1,9 @@
 import "dotenv/config";
 import mongoose from "mongoose";
-import { seedDevAccounts } from "./seedDevAccounts.js";
+import { printDevLoginReport, seedDevAccounts } from "./devLocalAccounts.js";
+import { readDevLoginPassword } from "./readDevLoginPassword.js";
 
 const MONGO_URI = process.env.MONGO_URI;
-const password =
-  process.env.DEV_LOGIN_PASSWORD?.trim() ||
-  process.env.SEED_DEV_PASSWORD?.trim() ||
-  "";
 
 async function seed(): Promise<void> {
   if (!MONGO_URI) {
@@ -19,20 +16,13 @@ async function seed(): Promise<void> {
     );
     process.exit(1);
   }
-  if (!password) {
-    console.error(
-      "Set DEV_LOGIN_PASSWORD (or SEED_DEV_PASSWORD) in apps/backend/.env — local dev only; never use weak passwords in production."
-    );
-    process.exit(1);
-  }
+  const password = readDevLoginPassword();
 
   await mongoose.connect(MONGO_URI);
   const lines = await seedDevAccounts(password);
   await mongoose.disconnect();
 
-  console.log("\n--- Dev logins (Admin: http://localhost:3000  LMS: http://localhost:3001) ---\n");
-  for (const line of lines) console.log(line);
-  console.log("");
+  printDevLoginReport(lines);
 }
 
 seed().catch((err) => {

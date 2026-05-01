@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { establishSessionFromToken, markClientLoggedIn } from "@/lib/api";
+import { establishSessionFromToken, markClientLoggedIn, clearToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 function AuthCallbackContent() {
@@ -29,12 +29,21 @@ function AuthCallbackContent() {
         window.location.replace("/login?error=" + encodeURIComponent("Session could not be established."));
         return;
       }
-      markClientLoggedIn();
       if (session.roles.includes(ROLE.PARENT)) {
+        markClientLoggedIn();
         window.location.replace("/parent");
-      } else {
-        window.location.replace("/dashboard");
+        return;
       }
+      if (!session.roles.includes(ROLE.STUDENT)) {
+        clearToken();
+        window.location.replace(
+          "/login?error=" +
+            encodeURIComponent("FUNT Learn is for student accounts. Staff should use the Admin portal instead.")
+        );
+        return;
+      }
+      markClientLoggedIn();
+      window.location.replace("/dashboard");
     })();
     return () => {
       cancelled = true;

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { AppPageShell, PageSection } from "@/components/ui";
 
 interface UserMe {
   name?: string;
@@ -34,18 +35,20 @@ export default function ProgressPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <p className="text-xs font-black uppercase tracking-[0.25em] text-black">Progress</p>
-      <h1 className="mt-2 text-3xl font-black tracking-tight text-black">Your learning journey</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/65">
-        XP builds from every chapter and approved assignment. You gain a <strong className="text-black">level</strong> each time you earn a course certificate. Dive into per-course progress below, or open skills and assignments for detail.
-      </p>
+    <AppPageShell className="max-w-5xl">
+      <div className="page-hero py-5">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-black">Progress</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-black">Your learning journey</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/65">
+          <strong className="text-black">XP</strong> from finished chapters and approved assignments. <strong className="text-black">Level</strong> +1 per course certificate. Details below and under Skills / Assignments.
+        </p>
+      </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
         <div className="card-premium">
           <p className="text-xs font-black uppercase text-black/50">Total XP</p>
           <p className="mt-2 text-4xl font-black tabular-nums text-black">{me?.studentXp ?? 0}</p>
-          <p className="mt-2 text-xs text-black/55">+40 XP when you finish a chapter · +50 XP when an assignment is approved</p>
+          <p className="mt-2 text-xs text-black/55">+40 XP per chapter · +50 XP per approved assignment</p>
         </div>
         <div className="card-premium border-funt-gold">
           <p className="text-xs font-black uppercase text-funt-gold-deep">Level</p>
@@ -73,7 +76,7 @@ export default function ProgressPage() {
         </Link>
       </div>
 
-      <section className="mt-12">
+      <PageSection className="mt-4">
         <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">Per-course analysis</h2>
         <p className="mt-2 text-sm text-black/55">Enrollment progress — open a course for chapters and assignments.</p>
         <ul className="mt-4 space-y-3">
@@ -90,7 +93,7 @@ export default function ProgressPage() {
                     <p className="font-bold text-black">{c.courseTitle}</p>
                     <p className="text-xs text-black/50">
                       {c.moduleCount} chapters
-                      {c.accessBlocked ? " · access paused" : ""}
+                      {c.accessBlocked ? " · blocked by admin" : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -104,7 +107,7 @@ export default function ProgressPage() {
             ))
           )}
         </ul>
-      </section>
-    </div>
+      </PageSection>
+    </AppPageShell>
   );
 }

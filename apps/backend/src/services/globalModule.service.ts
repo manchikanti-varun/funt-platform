@@ -75,7 +75,12 @@ export async function createModule(input: CreateModuleInput) {
     createdBy: input.createdBy,
   });
 
-  await createAuditLog("MODULE_CREATED", input.createdBy, ENTITY, String(doc._id));
+  await createAuditLog("MODULE_CREATED", input.createdBy, ENTITY, String(doc._id), {
+    moduleId,
+    title: doc.title,
+    version: doc.version,
+    status: doc.status,
+  });
 
   return {
     id: String(doc._id),
@@ -203,7 +208,12 @@ export async function updateModule(
   existing.version = newVersion;
   await existing.save();
 
-  await createAuditLog("MODULE_UPDATED", performedBy, ENTITY, String(existing._id));
+  await createAuditLog("MODULE_UPDATED", performedBy, ENTITY, String(existing._id), {
+    moduleId: (existing as { moduleId?: string }).moduleId,
+    title: existing.title,
+    version: existing.version,
+    versionBumped: shouldBumpVersion,
+  });
 
   return {
     id: String(existing._id),
@@ -232,7 +242,12 @@ export async function archiveModule(id: string, performedBy: string) {
     { new: true }
   ).exec();
   if (!doc) throw new AppError("Module not found", 404);
-  await createAuditLog("MODULE_ARCHIVED", performedBy, ENTITY, String(doc._id));
+  await createAuditLog("MODULE_ARCHIVED", performedBy, ENTITY, String(doc._id), {
+    moduleId: (doc as { moduleId?: string }).moduleId,
+    title: doc.title,
+    version: doc.version,
+    status: doc.status,
+  });
   return {
     id: String(doc._id),
     moduleId: (doc as { moduleId?: string }).moduleId,
@@ -280,7 +295,12 @@ export async function restoreVersionCopy(id: string, version: number, performedB
   existing.version = nextVer;
   await existing.save();
 
-  await createAuditLog("MODULE_UPDATED", performedBy, ENTITY, String(existing._id));
+  await createAuditLog("MODULE_UPDATED", performedBy, ENTITY, String(existing._id), {
+    moduleId: (existing as { moduleId?: string }).moduleId,
+    title: existing.title,
+    version: existing.version,
+    restoredFromVersion: version,
+  });
   return getModuleById(id);
 }
 
@@ -303,7 +323,12 @@ export async function duplicateModule(id: string, performedBy: string) {
     status: MODULE_STATUS.ACTIVE,
     createdBy: performedBy,
   });
-  await createAuditLog("MODULE_DUPLICATED", performedBy, ENTITY, String(doc._id));
+  await createAuditLog("MODULE_DUPLICATED", performedBy, ENTITY, String(doc._id), {
+    moduleId,
+    sourceModuleId: (src as { moduleId?: string }).moduleId,
+    sourceModuleDbId: String(source._id),
+    title: doc.title,
+  });
   return {
     id: String(doc._id),
     moduleId: (doc as { moduleId?: string }).moduleId,

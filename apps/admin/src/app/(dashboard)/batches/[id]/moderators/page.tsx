@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { BackLink } from "@/components/ui/BackLink";
+import { DeleteIconButton } from "@/components/ui/actionIconButtons";
 
 const NAV_LINK_CLASS =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50";
@@ -117,9 +118,7 @@ export default function BatchModeratorsPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Moderators</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
-          <p className="mt-2 text-sm text-slate-500">
-            Add moderator usernames or user IDs below; remove with the red delete icon.
-          </p>
+          <p className="mt-2 text-sm text-slate-500">Add usernames or user IDs below.</p>
         </div>
 
         <div className="p-6">
@@ -147,7 +146,6 @@ export default function BatchModeratorsPage() {
 
           <section className="mt-6">
             <h2 className="text-sm font-semibold text-slate-700">Current moderators</h2>
-            <p className="mt-1 text-xs text-slate-500">Click the red delete icon to remove a moderator from this batch.</p>
             {moderatorsList.length === 0 ? (
               <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-4 text-center text-sm text-slate-500">No moderators yet. Add usernames or user IDs above and click Add.</p>
             ) : (
@@ -155,17 +153,12 @@ export default function BatchModeratorsPage() {
                 {moderatorsList.map((mid) => (
                   <li key={mid} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                     <span className="font-mono text-slate-800">{mid}</span>
-                    <button
-                      type="button"
+                    <DeleteIconButton
                       onClick={() => removeModerator(mid)}
                       disabled={actionLoading}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
                       title="Remove moderator"
-                    >
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                      aria-label="Remove moderator"
+                    />
                   </li>
                 ))}
               </ul>

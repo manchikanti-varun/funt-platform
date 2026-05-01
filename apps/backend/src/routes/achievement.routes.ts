@@ -9,5 +9,6 @@ const router = Router();
 
 router.get("/badge-types", authMiddleware, getBadgeTypes);
 router.get("/me", authMiddleware, requireRoles(ROLE.STUDENT), getMyAchievements);
+router.get("/my", authMiddleware, getMyAchievements);
 
 export const achievementRoutes = router;

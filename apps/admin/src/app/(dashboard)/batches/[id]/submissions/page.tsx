@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 
 interface BatchModuleOption {
   courseId: string;
@@ -331,9 +332,11 @@ export default function BatchSubmissionsPage() {
                         </td>
                       ) : null}
                       <td className="px-4 py-3 text-sm font-medium text-slate-800">{s.studentId}</td>
-                      <td className="max-w-xs truncate px-4 py-3 text-sm text-slate-600" title={s.submissionContent ?? ""}>
-                        {(s.submissionContent ?? "").slice(0, 60)}
-                        {(s.submissionContent?.length ?? 0) > 60 ? "…" : ""}
+                      <td className="max-w-xs px-4 py-3 text-sm text-slate-600">
+                        <div
+                          className={`line-clamp-2 max-w-xs ${RICH_TEXT_VIEW_CLASS}`}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(s.submissionContent ?? "") }}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <span

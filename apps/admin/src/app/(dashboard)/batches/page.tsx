@@ -7,13 +7,17 @@ import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { BATCH_STATUS } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
-import { BackLink } from "@/components/ui/BackLink";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface BatchItem {
   id: string;
   name: string;
   batchId?: string;
   trainerId: string;
+  trainerName?: string;
+  trainerUsername?: string;
   startDate: string;
   status: string;
   courseSnapshot?: { title?: string };
@@ -38,6 +42,10 @@ export default function BatchesPage() {
     return [...list].sort((a, b) => {
       let av: unknown = (a as unknown as Record<string, unknown>)[sortKey];
       let bv: unknown = (b as unknown as Record<string, unknown>)[sortKey];
+      if (sortKey === "trainerName") {
+        av = a.trainerName ?? a.trainerUsername ?? a.trainerId ?? "";
+        bv = b.trainerName ?? b.trainerUsername ?? b.trainerId ?? "";
+      }
       if (sortKey === "courseTitle") {
         av = Array.isArray(a.courseSnapshots) && a.courseSnapshots.length > 1
           ? `${a.courseSnapshots.length} courses`
@@ -80,28 +88,32 @@ export default function BatchesPage() {
   }, [debouncedSearch]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="shrink-0 space-y-4 pb-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <BackLink href="/dashboard">Back to Dashboard</BackLink>
-          {!trainerOnly && (
-            <Link
-              href="/batches/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              New Batch
-            </Link>
-          )}
-        </div>
+    <AppPageShell className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="shrink-0 pb-6">
+        <PageHeader
+          title="Batches"
+          subtitle="Create and manage batches, course assignment, and student access."
+          backHref="/dashboard"
+          backLabel="Back to Dashboard"
+          actions={
+            !trainerOnly ? (
+              <Link
+                href="/batches/new"
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                New Batch
+              </Link>
+            ) : null
+          }
+        />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
+      <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">Batches</h2>
-          <p className="mt-1 text-sm text-slate-600">Create batches and assign courses. Enroll students to give them access.</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">Search</p>
           <div className="mt-4">
             <input
               type="text"
@@ -139,6 +151,7 @@ export default function BatchesPage() {
               <thead className="bg-slate-50">
                 <tr>
                   <SortableTh label="Name" columnKey="name" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Trainer" columnKey="trainerName" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Course" columnKey="courseTitle" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Start" columnKey="startDate" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Status" columnKey="status" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -149,6 +162,18 @@ export default function BatchesPage() {
                 {sortedList.map((b) => (
                   <tr key={b.id} className="transition hover:bg-slate-50/80">
                     <td className="px-5 py-4 text-sm font-medium text-slate-800">{b.name}</td>
+                    <td className="px-5 py-4 text-sm text-slate-700">
+                      {b.trainerName ? (
+                        <span>
+                          {b.trainerName}
+                          {b.trainerUsername ? <span className="text-slate-500"> · @{b.trainerUsername}</span> : null}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs text-slate-500" title={b.trainerId}>
+                          {b.trainerId.length > 10 ? `${b.trainerId.slice(0, 8)}…` : b.trainerId}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {Array.isArray(b.courseSnapshots) && b.courseSnapshots.length > 1
                         ? `${b.courseSnapshots.length} courses`
@@ -171,7 +196,7 @@ export default function BatchesPage() {
                         <Link
                           href={`/batches/${b.id}/view`}
                           title="View"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                          className="admin-table-action"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -181,7 +206,7 @@ export default function BatchesPage() {
                         <Link
                           href={`/batches/${b.id}`}
                           title="Edit"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                          className="admin-table-action"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -191,11 +216,9 @@ export default function BatchesPage() {
                           <Link
                             href={`/batches/${b.id}/duplicate`}
                             title="Duplicate"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            className="btn-duplicate btn-duplicate--icon-only"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
+                            <DuplicateIcon />
                           </Link>
                         )}
                       </div>
@@ -206,7 +229,7 @@ export default function BatchesPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </DataPanel>
+    </AppPageShell>
   );
 }

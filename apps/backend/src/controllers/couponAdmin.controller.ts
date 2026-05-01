@@ -3,6 +3,7 @@ import * as service from "../services/coupon.service.js";
 import { successRes } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
+import { ROLE } from "@funt-platform/constants";
 
 function uid(req: Request): string {
   const id = req.user?.userId;
@@ -15,11 +16,25 @@ export const listCoupons = asyncHandler(async (_req: Request, res: Response): Pr
   successRes(res, data);
 });
 
+export const getCouponAudit = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  uid(req);
+  if (!req.user?.roles?.includes(ROLE.SUPER_ADMIN)) {
+    throw new AppError("Only Super Admin can access coupon audit", 403);
+  }
+  const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 25));
+  const data = await service.listCouponAudit({ page, limit });
+  successRes(res, data);
+});
+
 export const postCoupon = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = uid(req);
   const b = req.body as Record<string, unknown>;
-  const kind = String(b.kind ?? "").toUpperCase() === "SHOP" ? "SHOP" : "COURSE";
-  const discountType = String(b.discountType ?? "").toUpperCase() === "FIXED_COINS" ? "FIXED_COINS" : "PERCENT";
+  const kindRaw = String(b.kind ?? "").toUpperCase();
+  if (kindRaw !== "SHOP" && kindRaw !== "COURSE") {
+    throw new AppError("kind must be SHOP or COURSE", 400);
+  }
+  const kind = kindRaw as "SHOP" | "COURSE";
   const validFrom = b.validFrom ? new Date(String(b.validFrom)) : undefined;
   const validUntil = b.validUntil ? new Date(String(b.validUntil)) : undefined;
   if (validFrom && Number.isNaN(validFrom.getTime())) throw new AppError("Invalid validFrom", 400);
@@ -27,13 +42,11 @@ export const postCoupon = asyncHandler(async (req: Request, res: Response): Prom
   const data = await service.createCouponAdmin({
     code: String(b.code ?? ""),
     kind,
-    batchId: b.batchId != null ? String(b.batchId) : undefined,
     courseId: b.courseId != null ? String(b.courseId) : undefined,
-    productId: b.productId != null ? String(b.productId) : undefined,
-    discountType,
+    shopScope: b.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS",
+    discountType: "PERCENT",
     discountValue: Number(b.discountValue),
     maxRedemptions: b.maxRedemptions === null || b.maxRedemptions === "" ? null : Number(b.maxRedemptions),
-    perStudentLimit: b.perStudentLimit != null ? Number(b.perStudentLimit) : undefined,
     validFrom: validFrom && !Number.isNaN(validFrom.getTime()) ? validFrom : undefined,
     validUntil: validUntil && !Number.isNaN(validUntil.getTime()) ? validUntil : undefined,
     active: b.active !== false,

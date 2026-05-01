@@ -18,6 +18,8 @@ interface AssignmentInfo {
 }
 
 import { BackLink } from "@/components/ui/BackLink";
+import { DeleteIconButton } from "@/components/ui/actionIconButtons";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 const NAV_LINK_CLASS =
   "inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50";
@@ -119,6 +121,7 @@ export default function AssignmentStudentAccessPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
       <div className="shrink-0 pb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <BackLink href={`/global-assignments/${id}/view`}>Back to assignment</BackLink>
@@ -148,7 +151,7 @@ export default function AssignmentStudentAccessPage() {
         </div>
 
         <div className="p-6">
-          <div className="mx-auto max-w-2xl space-y-6">
+          <div className="w-full space-y-6">
             <div className="flex flex-wrap gap-2">
               <input
                 type="text"
@@ -187,17 +190,13 @@ export default function AssignmentStudentAccessPage() {
               {allowedStudents.map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm"
                 >
-                  <span className="font-mono text-slate-700">{s.username || s.id}</span>
-                  <span className="text-slate-600">{s.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeAccess(s.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
+                  <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className="font-mono text-slate-700">{s.username || s.id}</span>
+                    <span className="text-slate-600">{s.name}</span>
+                  </div>
+                  <DeleteIconButton title="Remove access" aria-label="Remove student access" onClick={() => removeAccess(s.id)} />
                 </li>
               ))}
             </ul>

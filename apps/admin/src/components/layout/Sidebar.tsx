@@ -33,8 +33,8 @@ function SidebarNavLink({
       href={href}
       className={
         isActive
-          ? `${NAV_LINK_BASE} bg-teal-600 text-white shadow-lg shadow-teal-900/15 ring-1 ring-teal-700/20`
-          : `${NAV_LINK_BASE} text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:ring-1 hover:ring-slate-200/80`
+          ? `${NAV_LINK_BASE} bg-indigo-600 text-white shadow-lg shadow-indigo-900/20 ring-1 ring-indigo-700/20`
+          : `${NAV_LINK_BASE} text-slate-600 hover:bg-indigo-50/70 hover:text-slate-900 hover:ring-1 hover:ring-indigo-200/80`
       }
     >
       {children}
@@ -42,7 +42,7 @@ function SidebarNavLink({
   );
 }
 
-const SECTION_LABEL_CLASS = "pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400";
+const SECTION_LABEL_CLASS = "label-overline pt-4 pb-1";
 
 interface SidebarProps {
   roles: string[];
@@ -57,12 +57,11 @@ export function Sidebar({ roles }: SidebarProps) {
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/90 bg-white shadow-xl shadow-slate-300/10 ring-1 ring-slate-100/80">
-      <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-5 py-7 ring-1 ring-slate-100/50 ring-inset">
-        {}
+      <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100/90 bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-5 py-7 ring-1 ring-slate-100/50 ring-inset">
         <img
           src="/funt-logo.png"
-          alt="FUNT"
-          className="h-12 w-auto object-contain sm:h-14"
+          alt="FUNT Robotics"
+          className="h-12 w-auto max-w-full object-contain sm:h-14"
         />
         <span className="mt-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-500 sm:text-xs">
           {getPanelLabel(roles)}
@@ -70,13 +69,19 @@ export function Sidebar({ roles }: SidebarProps) {
       </div>
       <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-5">
         <SidebarNavLink href="/dashboard" isActive={pathname === "/dashboard"}>
-          Dashboard
+          Home
         </SidebarNavLink>
         {isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>People</p>
-            <SidebarNavLink href="/admin-management" isActive={pathname.startsWith("/admin-management")}>
-              Admins &amp; Requests
+            <p className={SECTION_LABEL_CLASS}>Team</p>
+            <SidebarNavLink href="/team-management" isActive={pathname.startsWith("/team-management") || pathname.startsWith("/admin-management")}>
+              Team management
+            </SidebarNavLink>
+            <SidebarNavLink href="/people-insights" isActive={pathname.startsWith("/people-insights")}>
+              People insights
+            </SidebarNavLink>
+            <SidebarNavLink href="/badges" isActive={pathname.startsWith("/badges")}>
+              Badges
             </SidebarNavLink>
           </>
         )}
@@ -99,12 +104,18 @@ export function Sidebar({ roles }: SidebarProps) {
         )}
         {isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Operations</p>
-            <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
-              Student shop
-            </SidebarNavLink>
+            <p className={SECTION_LABEL_CLASS}>Payments & Commerce</p>
             <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
-              Payments
+              Payment approvals
+            </SidebarNavLink>
+            <SidebarNavLink href="/finance" isActive={pathname.startsWith("/finance")}>
+              Finance dashboard
+            </SidebarNavLink>
+            <SidebarNavLink href="/payment-qr" isActive={pathname.startsWith("/payment-qr")}>
+              UPI QR center
+            </SidebarNavLink>
+            <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
+              Shop
             </SidebarNavLink>
             <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
               Coupons
@@ -119,12 +130,12 @@ export function Sidebar({ roles }: SidebarProps) {
         )}
         {isSuperAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Governance</p>
-            <SidebarNavLink href="/audit" isActive={pathname.startsWith("/audit")}>
-              Audit
-            </SidebarNavLink>
+            <p className={SECTION_LABEL_CLASS}>System</p>
             <SidebarNavLink href="/analytics" isActive={pathname.startsWith("/analytics")}>
               Analytics
+            </SidebarNavLink>
+            <SidebarNavLink href="/audit-hub" isActive={pathname.startsWith("/audit-hub")}>
+              Audit hub
             </SidebarNavLink>
           </>
         )}

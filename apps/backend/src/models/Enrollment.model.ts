@@ -14,6 +14,8 @@ const enrollmentSchema = new Schema(
     },
     enrolledAt: { type: Date, required: true, default: Date.now },
     accessBlocked: { type: Boolean, required: false, default: false },
+    /** Batch-scoped course access overrides: key=courseId in this batch snapshot, value=true means blocked */
+    courseAccessBlocked: { type: Map, of: Boolean, required: false, default: {} },
     progressTracking: { type: Schema.Types.Mixed, required: false },
   },
   { timestamps: false }

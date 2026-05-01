@@ -1,11 +1,9 @@
-
 import { Router } from "express";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { requireRoles } from "../middleware/role.middleware.js";
-import { ROLE } from "@funt-platform/constants";
+import { parentDelegateAuthMiddleware } from "../middleware/parentDelegate.middleware.js";
+import { getParentStudentProfile } from "../controllers/parent.controller.js";
 
 const router = Router();
 
-router.use(authMiddleware, requireRoles(ROLE.PARENT));
+router.get("/student-profile", parentDelegateAuthMiddleware, getParentStudentProfile);
 
 export const parentRoutes = router;

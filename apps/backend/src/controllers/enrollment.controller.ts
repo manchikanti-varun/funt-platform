@@ -12,6 +12,9 @@ import { ROLE } from "@funt-platform/constants";
 import { successRes } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
+import { signMediaToken, verifyMediaToken } from "../utils/mediaToken.js";
+import { findBatchByParam, getBatchCourseSnapshots } from "../services/batch.service.js";
+import { parseYoutubeVideoId } from "../utils/youtubeId.js";
 
 function getUserId(req: Request): string {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
@@ -45,7 +48,46 @@ export const getBatchCourse = asyncHandler(async (req: Request, res: Response): 
   const batchId = req.params.batchId;
   if (!batchId) throw new AppError("batchId is required", 400);
   const data = await getBatchCourseForStudent(studentId, batchId);
-  successRes(res, data);
+  const modules =
+    (data.courseSnapshot?.modules as Array<{ order?: number; videoUrl?: string; youtubeUrl?: string; [k: string]: unknown }> | undefined) ?? [];
+  const signedModules = modules.map((m, idx) => {
+    const order = Number(m.order ?? idx);
+    const out: Record<string, unknown> = { ...m };
+    if (typeof m.videoUrl === "string" && m.videoUrl.trim()) {
+      const token = signMediaToken({
+        studentId,
+        batchId: data.batchId,
+        courseId: data.courseId ?? "",
+        moduleOrder: order,
+        kind: "VIDEO",
+      });
+      out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+    }
+    if (typeof m.youtubeUrl === "string" && m.youtubeUrl.trim()) {
+      const ytId = parseYoutubeVideoId(m.youtubeUrl);
+      if (ytId) {
+        const token = signMediaToken({
+          studentId,
+          batchId: data.batchId,
+          courseId: data.courseId ?? "",
+          moduleOrder: order,
+          kind: "YOUTUBE",
+        });
+        out.youtubeEmbedUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+        out.youtubeVideoId = ytId;
+      }
+    }
+    delete out.videoUrl;
+    delete out.youtubeUrl;
+    return out;
+  });
+  successRes(res, {
+    ...data,
+    courseSnapshot: {
+      ...data.courseSnapshot,
+      modules: signedModules,
+    },
+  });
 });
 
 export const getMyCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -60,7 +102,84 @@ export const getCourseByCourseId = asyncHandler(async (req: Request, res: Respon
   const batchId = req.query.batchId as string | undefined;
   if (!courseId) throw new AppError("courseId is required", 400);
   const data = await getCourseForStudentByCourseId(studentId, courseId, batchId);
-  successRes(res, data);
+  const modules =
+    (data.courseSnapshot?.modules as Array<{ order?: number; videoUrl?: string; youtubeUrl?: string; [k: string]: unknown }> | undefined) ?? [];
+  const signedModules = modules.map((m, idx) => {
+    const order = Number(m.order ?? idx);
+    const out: Record<string, unknown> = { ...m };
+    if (typeof m.videoUrl === "string" && m.videoUrl.trim()) {
+      const token = signMediaToken({
+        studentId,
+        batchId: data.batchId,
+        courseId: data.courseId ?? courseId,
+        moduleOrder: order,
+        kind: "VIDEO",
+      });
+      out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+    }
+    if (typeof m.youtubeUrl === "string" && m.youtubeUrl.trim()) {
+      const ytId = parseYoutubeVideoId(m.youtubeUrl);
+      if (ytId) {
+        const token = signMediaToken({
+          studentId,
+          batchId: data.batchId,
+          courseId: data.courseId ?? courseId,
+          moduleOrder: order,
+          kind: "YOUTUBE",
+        });
+        out.youtubeEmbedUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+        out.youtubeVideoId = ytId;
+      }
+    }
+    delete out.videoUrl;
+    delete out.youtubeUrl;
+    return out;
+  });
+  const safeData = {
+    ...data,
+    courseSnapshot: {
+      ...data.courseSnapshot,
+      modules: signedModules,
+    },
+  };
+  successRes(res, safeData);
+});
+
+export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const studentId = getUserId(req);
+  const token = typeof req.query.token === "string" ? req.query.token.trim() : "";
+  if (!token) throw new AppError("token is required", 400);
+  const decoded = verifyMediaToken(token);
+  if (decoded.uid !== studentId) throw new AppError("Invalid media token", 403);
+  const enrollmentData = await getCourseForStudentByCourseId(studentId, decoded.cid, decoded.bid);
+  if (!enrollmentData.hasAccess || enrollmentData.accessBlocked) {
+    throw new AppError("No access to this media", 403);
+  }
+  const batch = await findBatchByParam(decoded.bid);
+  if (!batch) throw new AppError("Batch not found", 404);
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const snap = snaps.find((s) => (s as { courseId?: string }).courseId === decoded.cid) ?? (snaps.length === 1 ? snaps[0] : null);
+  if (!snap) throw new AppError("Course not found", 404);
+  const modules = Array.isArray((snap as { modules?: unknown[] }).modules) ? (snap as { modules: unknown[] }).modules : [];
+  const mod = modules.find((m, idx) => Number((m as { order?: number }).order ?? idx) === decoded.ord) as
+    | { videoUrl?: string; youtubeUrl?: string }
+    | undefined;
+  if (!mod) throw new AppError("Module not found", 404);
+  if (decoded.kind === "VIDEO") {
+    const src = (mod.videoUrl ?? "").trim();
+    if (!src) throw new AppError("Video URL missing", 404);
+    res.redirect(302, src);
+    return;
+  }
+  const id = parseYoutubeVideoId(mod.youtubeUrl ?? "");
+  if (!id) throw new AppError("YouTube URL invalid", 400);
+  const params = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    iv_load_policy: "3",
+  });
+  res.redirect(302, `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`);
 });
 
 export const getExploreCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {

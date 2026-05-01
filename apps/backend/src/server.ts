@@ -5,7 +5,11 @@ import { connectDb } from "./config/db.js";
 import { validateEnv, getEnv } from "./config/env.js";
 
 validateEnv();
-const { port, mongoUri, isProduction } = getEnv();
+const { port, mongoUri, isProduction, nodeEnv } = getEnv();
+
+if (!isProduction) {
+  console.log(`[server] Development mode (NODE_ENV=${nodeEnv})`);
+}
 
 const host = "0.0.0.0";
 

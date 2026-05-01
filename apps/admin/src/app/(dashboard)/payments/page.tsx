@@ -2,6 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { AppPageShell, DataPanel, PageSection } from "@/components/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 interface PendingRow {
   id: string;
@@ -10,12 +14,20 @@ interface PendingRow {
   studentName: string;
   studentUsername: string;
   batchId: string;
+  batchName?: string;
   courseId: string;
+  courseTitle?: string;
   productId: string;
   productName: string;
   transactionId: string;
   paidAt: string;
   createdAt?: string;
+  paymentMethod?: string;
+  amountPaise?: number;
+  payerName?: string;
+  razorpayVerified?: boolean;
+  riskFlags?: string[];
+  riskEscalatedAt?: string;
 }
 
 export default function AdminPaymentsPage() {
@@ -23,16 +35,20 @@ export default function AdminPaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<"ALL" | "COURSE" | "SHOP">("ALL");
+  const [riskOnly, setRiskOnly] = useState(false);
+  const [query, setQuery] = useState("");
+  const [queueMode, setQueueMode] = useState<"all" | "risk">("all");
 
   const load = useCallback(() => {
     setLoading(true);
-    api<PendingRow[]>("/api/admin/payments/pending")
+    api<PendingRow[]>(`/api/admin/payments/pending${queueMode === "risk" ? "?queue=risk" : ""}`)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setRows(r.data);
         else setRows([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [queueMode]);
 
   useEffect(() => {
     load();
@@ -73,37 +89,112 @@ export default function AdminPaymentsPage() {
   if (loading) {
     return (
       <div className="flex min-h-[240px] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-amber-600" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
       </div>
     );
   }
 
+  const q = query.trim().toLowerCase();
+  const filteredRows = rows.filter((r) => {
+    if (kindFilter !== "ALL" && r.kind !== kindFilter) return false;
+    if (riskOnly && (!Array.isArray(r.riskFlags) || r.riskFlags.length === 0)) return false;
+    if (!q) return true;
+    const hay = [
+      r.studentName,
+      r.studentUsername,
+      r.courseTitle,
+      r.batchName,
+      r.productName,
+      r.transactionId,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Payment verifications</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          <strong>Verify &amp; assign license key</strong> for course payments: student is enrolled, access is on, and a single-use license row is recorded for audit. Shop payments fulfill the order only.
-        </p>
-      </div>
-      {msg && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{msg}</div>}
-      {rows.length === 0 ? (
-        <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No pending payments.</p>
+    <AppPageShell className="w-full">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <PageHeader
+        title="Payment verifications"
+        subtitle="Course payments that used manual UPI appear here until you verify them. Razorpay course checkouts are confirmed automatically for the student (no action needed). Shop orders still require your confirmation."
+      />
+      {msg ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-100/80">
+          {msg}
+        </div>
+      ) : null}
+      <PageSection>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setQueueMode("all")}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${queueMode === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            All queue
+          </button>
+          <button
+            type="button"
+            onClick={() => setQueueMode("risk")}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${queueMode === "risk" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
+          >
+            Risk escalation queue
+          </button>
+          <button
+            type="button"
+            onClick={() => setKindFilter("ALL")}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "ALL" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setKindFilter("COURSE")}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "COURSE" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            Course
+          </button>
+          <button
+            type="button"
+            onClick={() => setKindFilter("SHOP")}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "SHOP" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            Shop
+          </button>
+          <button
+            type="button"
+            onClick={() => setRiskOnly((v) => !v)}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${riskOnly ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
+          >
+            Suspicious only
+          </button>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search student, batch, course, transaction"
+            className="ml-auto w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+      </PageSection>
+      {filteredRows.length === 0 ? (
+        <EmptyState title="No pending payments" description="New submissions will appear here when students pay or submit UPI details." />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <DataPanel>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                <th className="px-4 py-3 font-semibold text-slate-700">Type</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Student</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Detail</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Transaction</th>
-                <th className="px-4 py-3 font-semibold text-slate-700">Paid at</th>
-                <th className="px-4 py-3 font-semibold text-slate-700 w-52">Actions</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Type</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Student</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Detail</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Method</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Amount / payer</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Transaction</th>
+                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Paid at</th>
+                <th className="w-52 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((r) => (
+              {filteredRows.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80">
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{r.kind}</span>
@@ -115,15 +206,40 @@ export default function AdminPaymentsPage() {
                   <td className="px-4 py-3 text-slate-700">
                     {r.kind === "SHOP" ? (
                       <>
-                        <p className="font-medium">{r.productName || "Product"}</p>
-                        <p className="text-xs text-slate-500">{r.productId}</p>
+                        <p className="font-medium text-slate-900">{r.productName || "Product"}</p>
+                        <p className="font-mono text-xs text-slate-500">{r.productId}</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-xs">Batch: {r.batchId || "—"}</p>
-                        <p className="text-xs">Course: {r.courseId || "—"}</p>
+                        <p className="font-medium text-slate-900">{r.courseTitle?.trim() || "Course"}</p>
+                        <p className="text-sm text-slate-600">{r.batchName?.trim() || "Batch"}</p>
                       </>
                     )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                      {r.paymentMethod === "RAZORPAY" ? "Razorpay" : "UPI / manual"}
+                    </span>
+                    {r.razorpayVerified ? (
+                      <span className="mt-1 block text-[10px] font-medium text-emerald-700">Signature OK</span>
+                    ) : null}
+                    {Array.isArray(r.riskFlags) && r.riskFlags.length ? (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {r.riskFlags.map((f) => (
+                          <span key={f} className="rounded-full border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">
+                            {f.replace("VELOCITY_", "velocity: ")}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-700">
+                    {r.amountPaise != null && r.amountPaise > 0 ? (
+                      <span className="font-mono font-medium">₹{(r.amountPaise / 100).toFixed(2)}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                    {r.payerName ? <span className="mt-1 block text-slate-500">{r.payerName}</span> : null}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-slate-600">{r.transactionId}</td>
                   <td className="px-4 py-3 text-slate-600">{r.paidAt ? new Date(r.paidAt).toLocaleString() : "—"}</td>
@@ -135,7 +251,7 @@ export default function AdminPaymentsPage() {
                         onClick={() => verify(r.id)}
                         className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
                       >
-                        {actingId === r.id ? "…" : r.kind === "COURSE" ? "Verify & license" : "Verify"}
+                        {actingId === r.id ? "…" : r.kind === "COURSE" ? "Verify & issue license" : "Verify"}
                       </button>
                       <button
                         type="button"
@@ -151,8 +267,8 @@ export default function AdminPaymentsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </DataPanel>
       )}
-    </div>
+    </AppPageShell>
   );
 }

@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { MODULE_STATUS } from "@funt-platform/constants";
+import { MODULE_STATUS, ROLE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { RequireRoles } from "@/components/auth/RequireRoles";
+import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
 
 interface VersionSnapshot {
   version: number;
@@ -80,8 +82,9 @@ export default function EditGlobalModulePage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const autoDescription =
-      content.replace(/<[^>]+>/g, "").trim().slice(0, 160) || title.trim();
+    // Keep rich formatting in the short "Description" preview.
+    const preview = truncateRichTextHtml(content, 160);
+    const autoDescription = preview.trim() ? preview : title.trim();
     const res = await api(`/api/global-modules/${id}`, {
       method: "PUT",
       body: JSON.stringify({
@@ -133,6 +136,7 @@ export default function EditGlobalModulePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
         <BackLink href="/global-modules">Back to Modules</BackLink>
         <div className="flex items-center gap-2">
@@ -148,10 +152,13 @@ export default function EditGlobalModulePage() {
         <div className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white px-6 py-6">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Module</h1>
           <p className="mt-1 text-sm text-slate-500">Update content, video links, and linked assignment.</p>
+          <div className="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
+            Global source
+          </div>
         </div>
 
         <form onSubmit={submit} className="p-6 sm:p-8">
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="w-full space-y-4">
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Title

@@ -1,61 +1,105 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { AppPageShell, DataPanel, FormPanel } from "@/components/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 interface CouponRow {
   id: string;
   code: string;
   kind: "COURSE" | "SHOP";
-  batchId: string;
   courseId: string;
-  productId: string;
-  discountType: "PERCENT" | "FIXED_COINS";
+  shopScope?: "ALL_ORDERS" | "FIRST_ORDER";
+  discountType: "PERCENT";
   discountValue: number;
   maxRedemptions: number | null;
   redemptionCount: number;
   perStudentLimit: number;
-  validFrom?: string;
   validUntil?: string;
   active: boolean;
   notes: string;
 }
 
-interface ProductOpt {
+interface BatchCourseSnapshot {
+  courseId?: string;
+  title?: string;
+}
+
+interface BatchOpt {
   id: string;
+  batchId: string;
   name: string;
+  courseSnapshots?: BatchCourseSnapshot[];
+  courseSnapshot?: BatchCourseSnapshot | null;
+}
+
+function kindLabel(k: CouponRow["kind"]) {
+  return k === "SHOP" ? "Shop cart" : "Course checkout";
+}
+
+function scopeLabel(r: CouponRow): string {
+  if (r.kind === "COURSE") return `Course: ${r.courseId}`;
+  return r.shopScope === "FIRST_ORDER" ? "Shop: first order only" : "Shop: all orders";
 }
 
 export default function AdminCouponsPage() {
   const [rows, setRows] = useState<CouponRow[]>([]);
-  const [products, setProducts] = useState<ProductOpt[]>([]);
+  const [batches, setBatches] = useState<BatchOpt[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
 
   const [code, setCode] = useState("");
-  const [kind, setKind] = useState<"COURSE" | "SHOP">("SHOP");
-  const [batchId, setBatchId] = useState("");
+  const [kind, setKind] = useState<"SHOP" | "COURSE">("SHOP");
+  const [shopScope, setShopScope] = useState<"ALL_ORDERS" | "FIRST_ORDER">("ALL_ORDERS");
+  const [selectedBatchId, setSelectedBatchId] = useState("");
   const [courseId, setCourseId] = useState("");
-  const [productId, setProductId] = useState("");
-  const [discountType, setDiscountType] = useState<"PERCENT" | "FIXED_COINS">("PERCENT");
-  const [discountValue, setDiscountValue] = useState(10);
-  const [maxRedemptions, setMaxRedemptions] = useState("");
-  const [perStudentLimit, setPerStudentLimit] = useState(1);
+  const [discountPercent, setDiscountPercent] = useState(10);
   const [validUntil, setValidUntil] = useState("");
   const [notes, setNotes] = useState("");
+
+  const selectedBatch = useMemo(
+    () => batches.find((b) => b.id === selectedBatchId || b.batchId === selectedBatchId) ?? null,
+    [batches, selectedBatchId]
+  );
+
+  const selectedBatchCourseOptions = useMemo(() => {
+    if (!selectedBatch) return [];
+    const snapshots = Array.isArray(selectedBatch.courseSnapshots)
+      ? selectedBatch.courseSnapshots
+      : selectedBatch.courseSnapshot
+        ? [selectedBatch.courseSnapshot]
+        : [];
+    const dedup = new Map<string, string>();
+    for (const snap of snapshots) {
+      const cid = String(snap?.courseId ?? "").trim();
+      if (!cid) continue;
+      const title = String(snap?.title ?? cid).trim() || cid;
+      if (!dedup.has(cid)) dedup.set(cid, title);
+    }
+    return Array.from(dedup.entries()).map(([cid, title]) => ({ courseId: cid, title }));
+  }, [selectedBatch]);
 
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
       api<CouponRow[]>("/api/admin/coupons"),
-      api<ProductOpt[]>("/api/admin/shop/products"),
+      api<BatchOpt[]>("/api/batches"),
     ])
-      .then(([cRes, pRes]) => {
-        if (cRes.success && Array.isArray(cRes.data)) setRows(cRes.data);
-        else setRows([]);
-        if (pRes.success && Array.isArray(pRes.data)) setProducts(pRes.data.filter((p) => p.id));
-        else setProducts([]);
+      .then(([cRes, batchRes]) => {
+        if (cRes.success && Array.isArray(cRes.data)) {
+          setRows(cRes.data.filter((r) => r.kind === "SHOP" || r.kind === "COURSE"));
+        } else {
+          setRows([]);
+        }
+
+        if (batchRes.success && Array.isArray(batchRes.data)) {
+          setBatches(batchRes.data);
+        } else {
+          setBatches([]);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -64,21 +108,37 @@ export default function AdminCouponsPage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    if (kind !== "COURSE") return;
+    if (!selectedBatch) return;
+    const valid = selectedBatchCourseOptions.some((c) => c.courseId === courseId);
+    if (!valid) setCourseId("");
+  }, [kind, selectedBatch, selectedBatchCourseOptions, courseId]);
+
   async function createCoupon(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
+    const percent = Math.floor(Number(discountPercent));
+    if (!Number.isFinite(percent) || percent < 1 || percent > 100) {
+      setMsg("Discount percent must be between 1 and 100.");
+      return;
+    }
+    if (kind === "COURSE" && !selectedBatchId) {
+      setMsg("Pick a batch first.");
+      return;
+    }
+    if (kind === "COURSE" && !courseId.trim()) {
+      setMsg("Pick a course from the selected batch.");
+      return;
+    }
     const res = await api("/api/admin/coupons", {
       method: "POST",
       body: JSON.stringify({
         code,
         kind,
-        batchId: kind === "COURSE" ? batchId.trim() : undefined,
+        shopScope: kind === "SHOP" ? shopScope : undefined,
         courseId: kind === "COURSE" ? courseId.trim() : undefined,
-        productId: kind === "SHOP" ? productId : undefined,
-        discountType,
-        discountValue: Number(discountValue),
-        maxRedemptions: maxRedemptions.trim() === "" ? null : Number(maxRedemptions),
-        perStudentLimit: Number(perStudentLimit) || 1,
+        discountValue: percent,
         validUntil: validUntil.trim() ? new Date(validUntil).toISOString() : undefined,
         notes: notes.trim() || undefined,
       }),
@@ -87,8 +147,12 @@ export default function AdminCouponsPage() {
       setMsg("Coupon created.");
       setCode("");
       setNotes("");
+      setSelectedBatchId("");
+      setCourseId("");
       load();
-    } else setMsg(res.message ?? "Failed");
+    } else {
+      setMsg(res.message ?? "Failed");
+    }
   }
 
   async function toggleActive(row: CouponRow) {
@@ -112,104 +176,149 @@ export default function AdminCouponsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Coupons</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Create codes for shop items (coin checkout) or for a specific batch + course (certificate coin fee). Students enter the code when they pay with coins or generate a certificate.
-        </p>
-      </div>
+    <AppPageShell className="w-full gap-8">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <PageHeader
+        title="Coupons"
+        subtitle="Simple model: SHOP cart coupons and COURSE coupons. Admin sets code + percent, validity, and active state."
+      />
 
       {msg && <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">{msg}</div>}
 
-      <form onSubmit={createCoupon} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">New coupon</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Code</span>
-            <input
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="WELCOME10"
-              required
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Applies to</span>
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value as "COURSE" | "SHOP")}>
-              <option value="SHOP">Shop product (coin purchase)</option>
-              <option value="COURSE">Course certificate fee (batch + course)</option>
-            </select>
-          </label>
-        </div>
-        {kind === "SHOP" ? (
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Product</span>
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={productId} onChange={(e) => setProductId(e.target.value)} required>
-              <option value="">Select product</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
+      <FormPanel className="space-y-4 p-6">
+        <form onSubmit={createCoupon} className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-900">Create coupon</h2>
+          <p className="text-sm text-slate-600">One user can use a coupon only once. Discount is always percentage based.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Batch ID (Mongo _id)</span>
-              <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs" value={batchId} onChange={(e) => setBatchId(e.target.value)} placeholder="64abc..." required />
+              <span className="font-medium text-slate-700">Code</span>
+              <input
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="WELCOME10"
+                required
+              />
             </label>
             <label className="block text-sm">
-              <span className="font-medium text-slate-700">Course ID (snapshot courseId)</span>
-              <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-xs" value={courseId} onChange={(e) => setCourseId(e.target.value)} required />
+              <span className="font-medium text-slate-700">Coupon type</span>
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={kind}
+                onChange={(e) => {
+                  const next = e.target.value as "SHOP" | "COURSE";
+                  setKind(next);
+                  if (next !== "COURSE") {
+                    setSelectedBatchId("");
+                    setCourseId("");
+                  }
+                }}
+              >
+                <option value="SHOP">Shop cart</option>
+                <option value="COURSE">Course checkout</option>
+              </select>
             </label>
           </div>
-        )}
-        <div className="grid gap-4 sm:grid-cols-3">
+          {kind === "SHOP" ? (
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Eligibility</span>
+              <select
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={shopScope}
+                onChange={(e) => setShopScope(e.target.value as "ALL_ORDERS" | "FIRST_ORDER")}
+              >
+                <option value="ALL_ORDERS">All orders (if active)</option>
+                <option value="FIRST_ORDER">First order only</option>
+              </select>
+            </label>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Batch</span>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={selectedBatchId}
+                  onChange={(e) => {
+                    setSelectedBatchId(e.target.value);
+                    setCourseId("");
+                  }}
+                  required
+                >
+                  <option value="">Select batch</option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.batchId || b.id})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="font-medium text-slate-700">Course (from batch)</span>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                  required
+                  disabled={!selectedBatchId}
+                >
+                  <option value="">{selectedBatchId ? "Select course" : "Select batch first"}</option>
+                  {selectedBatchCourseOptions.map((c) => (
+                    <option key={c.courseId} value={c.courseId}>
+                      {c.title} ({c.courseId})
+                    </option>
+                  ))}
+                </select>
+                {selectedBatchId && selectedBatchCourseOptions.length === 0 && (
+                  <p className="mt-1 text-xs text-amber-700">
+                    This batch has no course snapshots. Pick another batch or update batch courses.
+                  </p>
+                )}
+              </label>
+            </div>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Discount percent</span>
+              <input
+                type="number"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={discountPercent}
+                onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                min={1}
+                max={100}
+                required
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="font-medium text-slate-700">Valid until (optional)</span>
+              <input
+                type="datetime-local"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={validUntil}
+                onChange={(e) => setValidUntil(e.target.value)}
+              />
+            </label>
+          </div>
           <label className="block text-sm">
-            <span className="font-medium text-slate-700">Discount type</span>
-            <select className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={discountType} onChange={(e) => setDiscountType(e.target.value as "PERCENT" | "FIXED_COINS")}>
-              <option value="PERCENT">Percent off coin price</option>
-              <option value="FIXED_COINS">Fixed coins off</option>
-            </select>
+            <span className="font-medium text-slate-700">Internal notes</span>
+            <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">{discountType === "PERCENT" ? "Percent (1–100)" : "Coins to subtract"}</span>
-            <input type="number" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={discountValue} onChange={(e) => setDiscountValue(Number(e.target.value))} min={1} required />
-          </label>
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Max uses (empty = unlimited)</span>
-            <input type="number" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} min={1} placeholder="∞" />
-          </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Uses per student</span>
-            <input type="number" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={perStudentLimit} onChange={(e) => setPerStudentLimit(Number(e.target.value))} min={1} required />
-          </label>
-          <label className="block text-sm">
-            <span className="font-medium text-slate-700">Valid until (optional)</span>
-            <input type="datetime-local" className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
-          </label>
-        </div>
-        <label className="block text-sm">
-          <span className="font-medium text-slate-700">Internal notes</span>
-          <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </label>
-        <button type="submit" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
-          Create coupon
-        </button>
-      </form>
+          <button type="submit" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+            Create coupon
+          </button>
+        </form>
+      </FormPanel>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <DataPanel>
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <h3 className="text-sm font-semibold text-slate-800">Existing coupons</h3>
+        </div>
         <table className="min-w-full text-sm">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-left">
               <th className="px-4 py-3 font-semibold text-slate-700">Code</th>
-              <th className="px-4 py-3 font-semibold text-slate-700">Kind</th>
-              <th className="px-4 py-3 font-semibold text-slate-700">Target</th>
+              <th className="px-4 py-3 font-semibold text-slate-700">Type</th>
+              <th className="px-4 py-3 font-semibold text-slate-700">Scope</th>
               <th className="px-4 py-3 font-semibold text-slate-700">Discount</th>
               <th className="px-4 py-3 font-semibold text-slate-700">Uses</th>
               <th className="px-4 py-3 font-semibold text-slate-700 w-28">Active</th>
@@ -219,17 +328,10 @@ export default function AdminCouponsPage() {
             {rows.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50/80">
                 <td className="px-4 py-3 font-mono font-semibold text-slate-900">{r.code}</td>
-                <td className="px-4 py-3 text-slate-600">{r.kind}</td>
-                <td className="px-4 py-3 text-xs text-slate-600">
-                  {r.kind === "SHOP" ? r.productId : `${r.batchId.slice(0, 8)}… / ${r.courseId}`}
-                </td>
-                <td className="px-4 py-3 text-slate-700">
-                  {r.discountType === "PERCENT" ? `${r.discountValue}%` : `${r.discountValue} coins`}
-                </td>
-                <td className="px-4 py-3 text-slate-600">
-                  {r.redemptionCount}
-                  {r.maxRedemptions != null ? ` / ${r.maxRedemptions}` : ""}
-                </td>
+                <td className="px-4 py-3 text-slate-600">{kindLabel(r.kind)}</td>
+                <td className="px-4 py-3 text-xs text-slate-600">{scopeLabel(r)}</td>
+                <td className="px-4 py-3 text-slate-700">{r.discountValue}%</td>
+                <td className="px-4 py-3 text-slate-600">{r.redemptionCount}</td>
                 <td className="px-4 py-3">
                   <button
                     type="button"
@@ -245,7 +347,7 @@ export default function AdminCouponsPage() {
           </tbody>
         </table>
         {rows.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No coupons yet.</p>}
-      </div>
-    </div>
+      </DataPanel>
+    </AppPageShell>
   );
 }

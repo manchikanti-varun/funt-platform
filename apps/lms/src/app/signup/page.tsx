@@ -4,11 +4,12 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { markClientLoggedIn } from "@/lib/api";
+import { FormPanel } from "@/components/ui/FormPanel";
 
-import logoSrc from "@/assets/funt-logo.png";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12", "other"];
+const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return "Password must be at least 8 characters";
@@ -19,17 +20,40 @@ function validatePassword(password: string): string | null {
   return null;
 }
 
+function passwordStrength(password: string) {
+  const lengthOk = password.length >= 8;
+  const upperOk = /[A-Z]/.test(password);
+  const lowerOk = /[a-z]/.test(password);
+  const numberOk = /[0-9]/.test(password);
+  const specialOk = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+
+  const score = [lengthOk, upperOk, lowerOk, numberOk, specialOk].filter(Boolean).length; // 0..5
+  const pct = Math.round((score / 5) * 100);
+
+  if (score <= 1) return { score, pct, label: "Very weak", hint: "Use 8+ characters and mix types." };
+  if (score === 2) return { score, pct, label: "Weak", hint: "Add more character variety for safety." };
+  if (score === 3) return { score, pct, label: "Good", hint: "Almost there — finish the remaining rule(s)." };
+  if (score === 4) return { score, pct, label: "Strong", hint: "Great — this looks secure." };
+  return { score, pct, label: "Very strong", hint: "Excellent password strength." };
+}
+
+function isValidEmailFormat(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const isGoogleFlow = !!token;
 
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(true);
   const [previewError, setPreviewError] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
   const [username, setUsername] = useState("");
   const [age, setAge] = useState("");
   const [address, setAddress] = useState("");
@@ -42,10 +66,22 @@ function SignupForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<{
+    checking: boolean;
+    available: boolean | null;
+    message: string;
+  }>({ checking: false, available: null, message: "" });
+
+  const strength = passwordStrength(password);
+  const lengthOk = password.length >= 8;
+  const upperOk = /[A-Z]/.test(password);
+  const lowerOk = /[a-z]/.test(password);
+  const numberOk = /[0-9]/.test(password);
+  const specialOk = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
 
   useEffect(() => {
     if (!token) {
-      router.replace("/login");
+      setLoading(false);
       return;
     }
     let cancelled = false;
@@ -70,6 +106,34 @@ function SignupForm() {
     return () => { cancelled = true; };
   }, [token, router]);
 
+  useEffect(() => {
+    const candidate = username.trim();
+    if (!candidate) {
+      setUsernameStatus({ checking: false, available: null, message: "" });
+      return;
+    }
+    const timer = window.setTimeout(async () => {
+      setUsernameStatus((s) => ({ ...s, checking: true }));
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
+        );
+        const json = (await res.json().catch(() => ({}))) as {
+          data?: { available?: boolean; message?: string };
+        };
+        const available = Boolean(json.data?.available);
+        setUsernameStatus({
+          checking: false,
+          available,
+          message: json.data?.message ?? (available ? "Username is available" : "Username not available"),
+        });
+      } catch {
+        setUsernameStatus({ checking: false, available: null, message: "" });
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [username]);
+
   function handleStep1Next(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
@@ -77,12 +141,24 @@ function SignupForm() {
       setSubmitError("Full name is required");
       return;
     }
-    if (!mobile.trim()) {
+    if (!mobileNumber.trim()) {
       setSubmitError("Parent phone number is required");
+      return;
+    }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
+      setSubmitError("Enter a valid mobile number");
       return;
     }
     if (!username.trim()) {
       setSubmitError("Username is required");
+      return;
+    }
+    if (usernameStatus.available === false) {
+      setSubmitError(usernameStatus.message || "Please choose a different username");
+      return;
+    }
+    if (!isGoogleFlow && !isValidEmailFormat(email)) {
+      setSubmitError("Enter a valid email address");
       return;
     }
     const ageNum = parseInt(age, 10);
@@ -119,16 +195,17 @@ function SignupForm() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/google/signup-complete`, {
+      const endpoint = isGoogleFlow ? `${API_BASE}/api/auth/google/signup-complete` : `${API_BASE}/api/auth/signup`;
+      const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          signupToken: token,
+          ...(isGoogleFlow ? { signupToken: token } : {}),
           username: username.trim(),
           name: name.trim(),
           email: email.trim(),
-          mobile: mobile.trim(),
+          mobile: `${countryCode}${mobileNumber.trim()}`,
           age: parseInt(age, 10),
           address: address.trim(),
           class: grade || undefined,
@@ -153,175 +230,240 @@ function SignupForm() {
     }
   }
 
-  if (!token) return null;
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="flex min-h-screen items-center justify-center bg-funt-paper">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
       </div>
     );
   }
-  if (previewError) {
+  if (isGoogleFlow && previewError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft text-center">
-          <p className="text-slate-600 mb-4">{previewError}</p>
-          <Link href="/login" className="text-teal-600 font-semibold hover:underline">Back to Sign In</Link>
-        </div>
+      <div className="flex min-h-screen items-center justify-center bg-funt-paper p-4">
+        <FormPanel className="w-full max-w-md rounded-3xl p-8 text-center">
+          <p className="mb-4 text-black/65">{previewError}</p>
+          <Link href="/login" className="font-semibold text-funt-ink underline decoration-funt-gold underline-offset-2">Back to Sign In</Link>
+        </FormPanel>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
+    <div className="relative min-h-screen flex items-center justify-center bg-funt-paper p-4">
+      <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden style={{ background: "radial-gradient(560px 280px at 50% -8%, rgba(212,175,55,0.2), transparent 70%)" }} />
+      <FormPanel className="relative w-full max-w-3xl rounded-3xl p-6 sm:p-8">
         <div className="mb-6 flex flex-col items-center justify-center">
-          <img src={typeof logoSrc === "string" ? logoSrc : (logoSrc as { src: string }).src} alt="FUNT LEARN" className="h-14 w-auto object-contain" />
+          <img src="/funt-logo.png" alt="FUNT LEARN" className="h-14 w-auto max-w-full object-contain" />
           <span className="mt-1 font-brand-learn text-xl tracking-[0.2em] text-black">LEARN</span>
         </div>
-        <h1 className="text-center text-lg font-semibold text-slate-800">
+        <h1 className="text-center text-2xl font-bold tracking-tight text-black">
           {step === 1 ? "Complete your profile" : "Set your password"}
         </h1>
-        <p className="mt-1 text-center text-sm text-slate-500">
-          {step === 1 ? "Fill in your details to create your account." : "Use at least one uppercase, one lowercase, one number, one special character (min 8 characters)."}
+        <p className="mt-1 text-center text-sm text-black/60">
+          {step === 1 ? "Fill in your details to create your account." : "Set a strong password to secure your account."}
         </p>
+        <div className="mx-auto mt-4 max-w-xl">
+          <div className="h-2 w-full rounded-full bg-black/10">
+            <div className={`h-2 rounded-full bg-funt-gold-deep transition-all ${step === 1 ? "w-1/2" : "w-full"}`} />
+          </div>
+          <p className="mt-1 text-center text-xs text-black/55">Step {step} of 2</p>
+        </div>
 
         {step === 1 ? (
-          <form onSubmit={handleStep1Next} className="mt-6 space-y-4">
+          <form onSubmit={handleStep1Next} className="mx-auto mt-6 max-w-2xl space-y-5">
+            <div className="rounded-2xl border border-black/10 bg-white/70 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-black/55">Account</p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-funt-ink">Username (login)</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Username *</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="input w-full"
-                placeholder="e.g. srikar.ch"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Choose a username"
                 autoComplete="username"
               />
+              {username.trim() ? (
+                <p
+                  className={`mt-1 text-xs ${
+                    usernameStatus.available === true
+                      ? "text-emerald-700"
+                      : usernameStatus.available === false
+                        ? "text-rose-700"
+                        : "text-black/50"
+                  }`}
+                >
+                  {usernameStatus.checking ? "Checking availability..." : usernameStatus.message}
+                </p>
+              ) : null}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Full Name (Required)</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Full Name *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="input w-full"
-                placeholder="Full Name"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Enter your full name"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Email (from Google)</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">
+                {isGoogleFlow ? "Email (from Google) *" : "Email *"}
+              </label>
               <input
                 type="email"
                 value={email}
-                readOnly
-                className="input w-full bg-slate-50 text-slate-600"
-                aria-readonly
+                onChange={(e) => setEmail(e.target.value)}
+                readOnly={isGoogleFlow}
+                required
+                className={`input w-full text-black placeholder:text-black/45 ${isGoogleFlow ? "bg-black/[0.03] text-black/65" : ""}`}
+                placeholder="Enter your email address"
+                aria-readonly={isGoogleFlow}
               />
+              {!isGoogleFlow && email.trim() && !isValidEmailFormat(email) && (
+                <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+              )}
+            </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 bg-white/70 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-black/55">Student Details</p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-black">Parent Phone Number *</label>
+              <div className="grid grid-cols-[120px,1fr] gap-2">
+                <div className="relative">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="input w-full appearance-none pr-9 text-black"
+                    aria-label="Country code"
+                  >
+                    {COUNTRY_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
+                  </select>
+                  <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/50" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                    <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="tel"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+                  className="input w-full text-black placeholder:text-black/45"
+                  placeholder="Enter mobile number"
+                />
+              </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Parent Phone Number</label>
-              <input
-                type="tel"
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                className="input w-full"
-                placeholder="Parent phone number"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Age (years)</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Age *</label>
               <input
                 type="number"
                 min={7}
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 required
-                className="input w-full"
-                placeholder="Minimum 7"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Enter your age"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Address</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Address *</label>
               <textarea
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 required
-                rows={2}
-                className="input w-full resize-y"
-                placeholder="Full address"
+                rows={3}
+                className="input w-full resize-y text-black placeholder:text-black/45"
+                placeholder="Enter your address"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Class</label>
-              <select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="input w-full appearance-none bg-white"
-              >
-                <option value="">Select class</option>
-                {CLASS_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c === "other" ? "Other (above 12 / college)" : c}
-                  </option>
-                ))}
-              </select>
+              <label className="mb-1.5 block text-sm font-medium text-black">Class</label>
+              <div className="relative">
+                <select
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="input w-full appearance-none pr-9 text-black"
+                >
+                  <option value="">Select class</option>
+                  {CLASS_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {c === "other" ? "Other (above 12 / college)" : c}
+                    </option>
+                  ))}
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/50" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
             {grade === "other" && (
-              <div>
-                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Describe your grade / program</label>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-black">Describe your grade / program</label>
                 <input
                   type="text"
                   value={gradeOther}
                   onChange={(e) => setGradeOther(e.target.value)}
-                  className="input w-full"
-                  placeholder="e.g. B.Tech 2nd year"
+                  className="input w-full text-black placeholder:text-black/45"
+                  placeholder="Enter your grade or program"
                 />
               </div>
             )}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">School / college name (required)</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">School / college name *</label>
               <input
                 type="text"
                 value={schoolName}
                 onChange={(e) => setSchoolName(e.target.value)}
                 required
-                className="input w-full"
-                placeholder="School name"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Enter school or college name"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">City</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">City</label>
               <input
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="input w-full"
-                placeholder="City"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Enter your city"
               />
             </div>
-            {submitError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>}
+              </div>
+            </div>
+            {submitError && <p className="rounded-lg border border-amber-900/15 bg-funt-honey px-3 py-2 text-sm text-black">{submitError}</p>}
             <button type="submit" className="btn-primary w-full">Next: Set password</button>
           </form>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit} className="mx-auto mt-6 max-w-lg space-y-4 rounded-2xl border border-black/10 bg-white/70 p-5 sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-black/55">Security</p>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Password *</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onCopy={(e) => e.preventDefault()}
+                  onCut={(e) => e.preventDefault()}
                   required
-                  className="input w-full pr-10"
-                  placeholder="Min 8 chars, 1 upper, 1 lower, 1 number, 1 special"
+                  className="input w-full pr-10 text-black placeholder:text-black/45"
+                  placeholder="Create a strong password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-black/35 hover:text-black/55"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
@@ -336,20 +478,59 @@ function SignupForm() {
                   )}
                 </button>
               </div>
+
+              <div className="mt-3 rounded-xl border border-black/10 bg-white/70 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-black/55">Strength: {strength.label}</p>
+                  <p className="text-xs font-mono font-semibold text-black/60">{strength.pct}%</p>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-funt-gold-deep to-funt-gold"
+                    style={{ width: `${Math.min(100, Math.max(0, strength.pct))}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-black/55">{strength.hint}</p>
+
+                <ul className="mt-2 space-y-1 text-xs">
+                  <li className="flex items-center gap-2 text-black/65">
+                    <span className={`inline-block h-2 w-2 rounded-full ${lengthOk ? "bg-emerald-500" : "bg-black/20"}`} aria-hidden />
+                    8+ characters
+                  </li>
+                  <li className="flex items-center gap-2 text-black/65">
+                    <span className={`inline-block h-2 w-2 rounded-full ${upperOk ? "bg-emerald-500" : "bg-black/20"}`} aria-hidden />
+                    Uppercase (A-Z)
+                  </li>
+                  <li className="flex items-center gap-2 text-black/65">
+                    <span className={`inline-block h-2 w-2 rounded-full ${lowerOk ? "bg-emerald-500" : "bg-black/20"}`} aria-hidden />
+                    Lowercase (a-z)
+                  </li>
+                  <li className="flex items-center gap-2 text-black/65">
+                    <span className={`inline-block h-2 w-2 rounded-full ${numberOk ? "bg-emerald-500" : "bg-black/20"}`} aria-hidden />
+                    Number (0-9)
+                  </li>
+                  <li className="flex items-center gap-2 text-black/65">
+                    <span className={`inline-block h-2 w-2 rounded-full ${specialOk ? "bg-emerald-500" : "bg-black/20"}`} aria-hidden />
+                    Special character
+                  </li>
+                </ul>
+              </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Confirm Password</label>
+              <label className="mb-1.5 block text-sm font-medium text-black">Confirm Password *</label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onCopy={(e) => e.preventDefault()}
+                onCut={(e) => e.preventDefault()}
                 required
-                className="input w-full"
-                placeholder="Confirm password"
+                className="input w-full text-black placeholder:text-black/45"
+                placeholder="Re-enter your password"
               />
             </div>
-            {submitError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>}
-            <div className="flex gap-3">
+            {submitError && <p className="rounded-lg border border-amber-900/15 bg-funt-honey px-3 py-2 text-sm text-black">{submitError}</p>}
+            <div className="flex gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => setStep(1)}
@@ -364,10 +545,10 @@ function SignupForm() {
           </form>
         )}
 
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Already have an account? <Link href="/login" className="font-medium text-teal-600 hover:text-teal-700">Sign in</Link>
+        <p className="mt-6 text-center text-sm text-black/55">
+          Already have an account? <Link href="/login" className="font-medium text-funt-ink hover:text-black">Sign in</Link>
         </p>
-      </div>
+      </FormPanel>
     </div>
   );
 }
@@ -375,8 +556,8 @@ function SignupForm() {
 export default function SignupPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="flex min-h-screen items-center justify-center bg-funt-paper">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
       </div>
     }>
       <SignupForm />

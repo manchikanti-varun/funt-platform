@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AuditEntry {
   id: string;
@@ -25,6 +29,7 @@ interface AuditResponse {
 }
 
 export default function AuditLogPage() {
+  const searchParams = useSearchParams();
   const { roles } = useAdminUser();
   const [data, setData] = useState<AuditResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +41,12 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    const actionFromUrl = (searchParams.get("action") ?? "").trim();
+    setAction(actionFromUrl);
+    setPage(1);
+  }, [searchParams]);
 
   useEffect(() => {
     setIsSuperAdmin(roles.includes(ROLE.SUPER_ADMIN));
@@ -66,67 +77,116 @@ export default function AuditLogPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="mx-auto max-w-7xl space-y-6">
-        <h1 className="text-2xl font-bold text-slate-800">Audit Logs</h1>
-        <p className="text-amber-600">Access restricted to Super Admin (backend: GET /api/audit).</p>
+      <div className="w-full space-y-6">
+        <PageHeader title="Audit logs" subtitle="Super Admin only." />
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
+          Access is restricted to Super Admin accounts.
+        </p>
       </div>
     );
   }
 
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <h1 className="text-2xl font-bold text-slate-800">Audit Logs</h1>
-      <p className="text-sm text-slate-600">From <code className="rounded bg-slate-100 px-1 text-xs">GET /api/audit</code>. Filter by action, performedBy, date range.</p>
-      <div className="card flex flex-wrap gap-4">
-        <input
-          placeholder="Action"
-          value={action}
-          onChange={(e) => setAction(e.target.value)}
-          className="input w-48"
-        />
-        <input
-          placeholder="Performed by (username or user id)"
-          value={performedBy}
-          onChange={(e) => setPerformedBy(e.target.value)}
-          className="input w-48"
-        />
-        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input w-40" />
-        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input w-40" />
-        <button type="button" onClick={() => setPage(1)} className="btn-primary">Filter</button>
+    <div className="w-full space-y-6">
+      <PageHeader
+        title="Audit logs"
+        subtitle="Immutable history of important actions. Batches and courses show readable names where possible."
+      />
+      <div className="flex flex-wrap gap-2">
+        <Link href="/audit-hub" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Audit hub</Link>
+        <Link href="/audit" className="rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">System</Link>
+        <Link href="/license-key-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">License keys</Link>
+        <Link href="/coupon-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Coupons</Link>
+        <Link href="/audit?action=PAYMENT_UPI_UPDATED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Payment UPI config</Link>
+        <Link href="/payment-qr?section=HISTORY" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">QR history</Link>
       </div>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ring-1 ring-slate-100/80 sm:p-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block min-w-[8rem] flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Action
+            <input
+              placeholder="e.g. BATCH_UPDATED"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              className="input mt-1.5"
+            />
+          </label>
+          <label className="block min-w-[10rem] flex-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Performed by
+            <input
+              placeholder="Username or user id"
+              value={performedBy}
+              onChange={(e) => setPerformedBy(e.target.value)}
+              className="input mt-1.5"
+            />
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            From
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input mt-1.5 w-40" />
+          </label>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+            To
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input mt-1.5 w-40" />
+          </label>
+          <button type="button" onClick={() => setPage(1)} className="btn-primary shrink-0">
+            Apply filters
+          </button>
+        </div>
+      </div>
+
+      {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
+
       {loading ? (
-        <p className="text-slate-500">Loading…</p>
+        <div className="flex min-h-[200px] items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        </div>
+      ) : data && data.logs.length === 0 ? (
+        <EmptyState title="No matching entries" description="Try widening the date range or clearing filters." />
       ) : data ? (
         <>
-          <p className="text-slate-600 text-sm">Total: {data.total} · Page {data.page}</p>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full divide-y divide-slate-100">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Action</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Performed by</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Entity</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Target ID (FUNT)</th>
+          <p className="text-sm text-slate-600">
+            <span className="font-medium text-slate-800">{data.total}</span> entries · page{" "}
+            <span className="font-medium text-slate-800">{data.page}</span> of {totalPages}
+          </p>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100/80">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Time</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Action</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Performed by</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Entity</th>
+                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Target</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {data.logs.map((log) => (
-                  <tr key={log.id} className="transition hover:bg-slate-50/80">
-                    <td className="px-4 py-3 text-sm text-slate-600">{new Date(log.timestamp).toLocaleString()}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-800">{log.action}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-slate-700">{log.performedByDisplay}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{log.targetEntity}</td>
-                    <td className="px-4 py-3 text-sm font-mono text-slate-600">{log.targetIdDisplay}</td>
+                  <tr key={log.id} className="hover:bg-slate-50/80">
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{log.action}</td>
+                    <td className="px-4 py-3 font-medium text-slate-800">{log.performedByDisplay}</td>
+                    <td className="px-4 py-3 text-slate-600">{log.targetEntity}</td>
+                    <td className="max-w-md px-4 py-3 text-slate-800">{log.targetIdDisplay}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-primary">Previous</button>
-            <button type="button" onClick={() => setPage((p) => p + 1)} disabled={data.logs.length < limit} className="btn-primary">Next</button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary text-sm">
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= totalPages}
+              className="btn-secondary text-sm"
+            >
+              Next
+            </button>
           </div>
         </>
       ) : null}

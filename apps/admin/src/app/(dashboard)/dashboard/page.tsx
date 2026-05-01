@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ROLE } from "@funt-platform/constants";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 
 interface Stats {
@@ -18,6 +18,11 @@ interface BatchSummary {
   name: string;
   startDate?: string;
   status?: string;
+}
+interface FinanceSummary {
+  revenue: { verifiedRevenueRupees: number; verifiedCount: number };
+  funnel: { totalAttempts: number; pendingCount: number; rejectedCount: number; verifiedCount: number; conversionRatePercent: number };
+  failedReasons: Array<{ reason: string; count: number }>;
 }
 
 const STAT_STYLES = [
@@ -40,7 +45,7 @@ const QUICK_LINKS = [
   { href: "/courses", label: "Courses", icon: "academic" },
   { href: "/batches", label: "Batches", icon: "users" },
   { href: "/attendance", label: "Attendance", icon: "calendar" },
-  { href: "/admin-management", label: "Admins", icon: "userGroup" },
+  { href: "/team-management", label: "Team management", icon: "userGroup" },
 ];
 
 function QuickLinkIcon({ icon }: { icon: string }) {
@@ -109,6 +114,7 @@ export default function DashboardPage() {
   const [recentBatches, setRecentBatches] = useState<BatchSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string[]>([]);
+  const [finance, setFinance] = useState<FinanceSummary | null>(null);
 
   useEffect(() => {
     setRole(roles);
@@ -120,8 +126,9 @@ export default function DashboardPage() {
       api<BatchSummary[]>("/api/batches").then((r) => (Array.isArray(r.data) ? r.data : [])),
       isAdminOrSuper ? api<unknown[]>("/api/global-modules").then((r) => (Array.isArray(r.data) ? r.data : [])) : Promise.resolve([]),
       isAdminOrSuper ? api<unknown[]>("/api/global-assignments").then((r) => (Array.isArray(r.data) ? r.data : [])) : Promise.resolve([]),
+      isAdminOrSuper ? api<FinanceSummary>("/api/admin/payments/finance").then((r) => (r.success && r.data ? r.data : null)) : Promise.resolve(null),
     ])
-      .then(([courses, batches, modules, assignments]) => {
+      .then(([courses, batches, modules, assignments, financePayload]) => {
         setStats({
           courses: Array.isArray(courses) ? courses.length : 0,
           batches: Array.isArray(batches) ? batches.length : 0,
@@ -135,6 +142,7 @@ export default function DashboardPage() {
           return db.localeCompare(da);
         });
         setRecentBatches(sorted.slice(0, 5));
+        setFinance(financePayload);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -149,7 +157,7 @@ export default function DashboardPage() {
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-          <p className="text-sm text-slate-500">Loading dashboard…</p>
+          <p className="text-sm text-slate-500">Loading…</p>
         </div>
       </div>
     );
@@ -159,8 +167,8 @@ export default function DashboardPage() {
     ? [
         { title: "Courses", value: stats.courses, style: STAT_STYLES[0] },
         { title: "Batches", value: stats.batches, style: STAT_STYLES[1] },
-        { title: "Global Modules", value: stats.globalModules, style: STAT_STYLES[2] },
-        { title: "Global Assignments", value: stats.globalAssignments, style: STAT_STYLES[3] },
+        { title: "Modules", value: stats.globalModules, style: STAT_STYLES[2] },
+        { title: "Assignments", value: stats.globalAssignments, style: STAT_STYLES[3] },
       ]
     : isTrainer
       ? [
@@ -172,10 +180,13 @@ export default function DashboardPage() {
   const linksToShow = showQuickLinks ? QUICK_LINKS : QUICK_LINKS.filter((l) => l.href === "/batches" || l.href === "/attendance");
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
-      <header className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/60 via-white to-slate-50/40 p-6 shadow-lg shadow-slate-300/10 ring-1 ring-slate-100/80">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl">{getGreeting()}</h1>
-        <p className="mt-1 text-sm text-slate-600">Overview and shortcuts below.</p>
+    <div className="w-full space-y-8">
+      <header className="admin-hero">
+        <div className="relative">
+          <p className="label-overline text-teal-700/90">Overview</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{getGreeting()}</h1>
+          <p className="mt-2 max-w-xl text-sm text-slate-600">Counts and shortcuts—jump to content or batches in one tap.</p>
+        </div>
       </header>
 
       {statCards.length > 0 && (
@@ -194,7 +205,8 @@ export default function DashboardPage() {
 
       {showQuickLinks && (
         <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
-          <h2 className="mb-5 text-lg font-semibold text-slate-800">Shortcuts</h2>
+          <h2 className="mb-1 text-lg font-semibold text-slate-900">Shortcuts</h2>
+          <p className="mb-5 text-xs text-slate-500">Frequent destinations</p>
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {linksToShow.map((link) => (
               <Link
@@ -210,12 +222,43 @@ export default function DashboardPage() {
         </section>
       )}
 
+      {(isAdmin || isSuperAdmin) && finance ? (
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Finance visibility (30 days)</h2>
+              <p className="text-xs text-slate-500">Revenue, conversion funnel, and failed payment reasons.</p>
+            </div>
+            <a
+              href={apiUrl("/api/admin/payments/finance?format=csv")}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Export CSV
+            </a>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Revenue</span><p className="text-lg font-bold text-slate-900">₹{finance.revenue.verifiedRevenueRupees.toFixed(2)}</p></div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Attempts</span><p className="text-lg font-bold text-slate-900">{finance.funnel.totalAttempts}</p></div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Verified</span><p className="text-lg font-bold text-emerald-700">{finance.funnel.verifiedCount}</p></div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Conversion</span><p className="text-lg font-bold text-teal-700">{finance.funnel.conversionRatePercent}%</p></div>
+          </div>
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Top failed reasons</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {finance.failedReasons.length ? finance.failedReasons.slice(0, 5).map((r) => (
+                <span key={r.reason} className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-800">{r.reason} ({r.count})</span>
+              )) : <span className="text-xs text-slate-500">No rejected reasons in this period.</span>}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {recentBatches.length > 0 && (isAdmin || isSuperAdmin || isTrainer) && (
         <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-800">Recent Batches</h2>
-            <Link href="/batches" className="text-sm font-medium text-teal-600 transition hover:text-teal-700 hover:underline">
-              View all
+            <h2 className="text-lg font-semibold text-slate-900">Recent batches</h2>
+            <Link href="/batches" className="text-sm font-medium text-teal-600 transition hover:text-teal-800 hover:underline">
+              All batches
             </Link>
           </div>
           <ul className="space-y-2">
@@ -238,17 +281,17 @@ export default function DashboardPage() {
 
       {isSuperAdmin && (
         <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
-          <h2 className="mb-1 text-lg font-semibold text-slate-800">Governance</h2>
-          <p className="mb-5 text-sm text-slate-500">Audit &amp; controls</p>
+          <h2 className="mb-1 text-lg font-semibold text-slate-900">System</h2>
+          <p className="mb-5 text-sm text-slate-500">Admin controls and grouped audit access</p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/audit" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
-              Audit
-            </Link>
-            <Link href="/admin-management" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
-              Admins
+            <Link href="/team-management" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
+              Team management
             </Link>
             <Link href="/analytics" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
               Analytics
+            </Link>
+            <Link href="/audit-hub" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
+              Audit hub
             </Link>
           </div>
         </section>

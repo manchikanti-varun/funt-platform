@@ -47,6 +47,24 @@ interface ProfileAttendanceItem {
   percentage: number;
 }
 
+interface ProfileCoinGrant {
+  id: string;
+  amountOriginal: number;
+  amountRemaining: number;
+  grantedAt: string;
+  expiresAt: string;
+  source: string;
+  sourceRef?: string;
+}
+
+interface ProfileAchievement {
+  id: string;
+  badgeType: string;
+  displayName: string;
+  icon: string;
+  awardedAt: string;
+}
+
 interface ProfileData {
   user: ProfileUser;
   enrollments?: ProfileEnrollment[];
@@ -54,6 +72,23 @@ interface ProfileData {
   coursesCount?: number;
   certificatesCount?: number;
   attendanceSummary?: ProfileAttendanceItem[];
+  coinGrants?: ProfileCoinGrant[];
+  achievements?: ProfileAchievement[];
+}
+
+function coinGrantSourceLabel(source: string): string {
+  switch (source) {
+    case "BATCH_COMPLETION":
+      return "Programme completion";
+    case "CERTIFICATE_GRANT":
+      return "Certificate reward";
+    case "ADMIN_ADJUST":
+      return "Admin adjustment";
+    case "LEGACY_SYNC":
+      return "Legacy balance sync";
+    default:
+      return source;
+  }
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -102,7 +137,7 @@ export default function ProfileSearchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Profile search</h1>
         <p className="mt-1 text-sm text-slate-600">
@@ -325,6 +360,58 @@ export default function ProfileSearchPage() {
               )}
 
               {}
+              {profile.coinGrants && profile.coinGrants.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">FUNT coin grants</h3>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50">
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Granted</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Amount</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Remaining</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Source</th>
+                          <th className="px-4 py-3 text-left font-semibold text-slate-700">Expires</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {profile.coinGrants.map((g) => (
+                          <tr key={g.id} className="hover:bg-slate-50/50">
+                            <td className="px-4 py-3 text-slate-600">{formatDate(g.grantedAt)}</td>
+                            <td className="px-4 py-3 font-medium text-slate-800">{g.amountOriginal}</td>
+                            <td className="px-4 py-3 text-slate-600">{g.amountRemaining}</td>
+                            <td className="px-4 py-3 text-slate-700">
+                              {coinGrantSourceLabel(g.source)}
+                              {g.sourceRef ? (
+                                <span className="mt-0.5 block font-mono text-[11px] text-slate-500">{g.sourceRef}</span>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 text-slate-600">{formatDate(g.expiresAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+
+              {profile.achievements && profile.achievements.length > 0 && (
+                <section>
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Achievements / medals</h3>
+                  <ul className="space-y-2 rounded-xl border border-slate-200 divide-y divide-slate-200">
+                    {profile.achievements.map((a) => (
+                      <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50/50">
+                        <div>
+                          <p className="font-medium text-slate-800">{a.displayName}</p>
+                          <p className="font-mono text-xs text-slate-500">{a.badgeType}</p>
+                        </div>
+                        <span className="text-sm text-slate-600">{formatDate(a.awardedAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {profile.certificates && profile.certificates.length > 0 && (
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Certificates</h3>
@@ -342,8 +429,12 @@ export default function ProfileSearchPage() {
                 </section>
               )}
 
-              {(!profile.enrollments || profile.enrollments.length === 0) && (!profile.certificates || profile.certificates.length === 0) && (!profile.attendanceSummary || profile.attendanceSummary.length === 0) && (
-                <p className="text-sm text-slate-500">No batch enrollments, attendance, or certificates yet.</p>
+              {(!profile.enrollments || profile.enrollments.length === 0) &&
+                (!profile.certificates || profile.certificates.length === 0) &&
+                (!profile.attendanceSummary || profile.attendanceSummary.length === 0) &&
+                (!profile.coinGrants || profile.coinGrants.length === 0) &&
+                (!profile.achievements || profile.achievements.length === 0) && (
+                <p className="text-sm text-slate-500">No batch enrollments, attendance, certificates, coin grants, or achievements yet.</p>
               )}
             </div>
           )}

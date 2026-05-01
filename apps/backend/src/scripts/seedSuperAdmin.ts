@@ -1,4 +1,9 @@
-
+/**
+ * Creates a single Super Admin from SUPER_ADMIN_* env vars if none exists.
+ * For local development with fixed Super Admin + Admin + Student, use:
+ *   DEV_LOGIN_SEED_CONFIRM=1 npm run seed:dev-logins
+ * (see devLocalAccounts.ts).
+ */
 import "dotenv/config";
 import mongoose from "mongoose";
 import { createSuperAdmin } from "../services/auth.service.js";

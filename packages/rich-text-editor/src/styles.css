@@ -1,0 +1,243 @@
+.rte-shell {
+  --rte-bg: #ffffff;
+  --rte-panel: #ffffff;
+  --rte-border: #e5e7eb;
+  --rte-muted: #6b7280;
+  --rte-text: #111827;
+  --rte-active: #eef2ff;
+  --rte-accent: #4f46e5;
+  color: var(--rte-text);
+  background: var(--rte-bg);
+  border: 1px solid var(--rte-border);
+  border-radius: 12px;
+  overflow: visible;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--rte-border);
+  background: var(--rte-panel);
+  z-index: 6;
+}
+
+.rte-font-select {
+  height: 34px;
+  min-width: 118px;
+  border: 1px solid var(--rte-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rte-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 28px 0 10px;
+  cursor: pointer;
+}
+
+.rte-font-select:focus {
+  outline: 2px solid #c7d2fe;
+  outline-offset: 1px;
+}
+
+.rte-toolbar.floating {
+  position: sticky;
+  top: 10px;
+  margin: 10px;
+  border: 1px solid var(--rte-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.rte-btn {
+  height: 34px;
+  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rte-border);
+  background: transparent;
+  color: var(--rte-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+  transition: all 0.16s ease;
+}
+
+.rte-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-0.5px);
+}
+
+.rte-btn.active {
+  background: var(--rte-active);
+  border-color: #c7d2fe;
+  color: var(--rte-accent);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.18);
+}
+
+.rte-btn svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.rte-btn-text {
+  line-height: 1;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.rte-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rte-separator {
+  width: 1px;
+  height: 18px;
+  background: var(--rte-border);
+  margin: 0 4px;
+}
+
+.rte-content {
+  position: relative;
+  padding: 8px 12px 18px;
+}
+
+.rte-prosemirror {
+  min-height: 280px;
+  outline: none;
+  line-height: 1.7;
+  font-size: 16px;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.rte-prosemirror > *:first-child {
+  margin-top: 0;
+}
+
+.rte-prosemirror p {
+  margin: 0.8em 0;
+}
+
+.rte-prosemirror h1,
+.rte-prosemirror h2,
+.rte-prosemirror h3 {
+  margin: 1.2em 0 0.6em;
+  line-height: 1.25;
+}
+
+.rte-prosemirror h1 {
+  font-size: 2rem;
+}
+
+.rte-prosemirror h2 {
+  font-size: 1.5rem;
+}
+
+.rte-prosemirror h3 {
+  font-size: 1.2rem;
+}
+
+.rte-prosemirror ul,
+.rte-prosemirror ol {
+  margin: 0.8em 0;
+  padding-left: 1.6em;
+  list-style-position: outside;
+}
+
+.rte-prosemirror ul {
+  list-style-type: disc;
+}
+
+.rte-prosemirror ol {
+  list-style-type: decimal;
+}
+
+.rte-prosemirror li {
+  display: list-item;
+}
+
+.rte-prosemirror li::marker {
+  color: currentColor;
+}
+
+.rte-prosemirror blockquote {
+  border-left: 3px solid #cbd5e1;
+  margin: 1em 0;
+  padding: 0.1em 0 0.1em 1em;
+  color: #334155;
+}
+
+.rte-prosemirror pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+}
+
+.rte-prosemirror img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 0.7em 0;
+}
+
+.rte-prosemirror hr {
+  border: none;
+  border-top: 1px solid #cbd5e1;
+  margin: 1.2em 0;
+}
+
+.rte-slash-menu {
+  position: absolute;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 14px 35px rgba(2, 6, 23, 0.16);
+  padding: 6px;
+  z-index: 20;
+}
+
+.rte-slash-menu.hidden {
+  display: none;
+}
+
+.rte-slash-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.rte-slash-item .title {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.rte-slash-item .desc {
+  font-size: 12px;
+  color: var(--rte-muted);
+}
+
+.rte-slash-item.active,
+.rte-slash-item:hover {
+  background: #f3f4f6;
+}

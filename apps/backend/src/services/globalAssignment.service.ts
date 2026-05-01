@@ -1,7 +1,7 @@
 
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
 import { UserModel } from "../models/User.model.js";
-import { ASSIGNMENT_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { ASSIGNMENT_STATUS, SUBMISSION_TYPE, isValidSkillTag } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateAssignmentId } from "../utils/funtIdGenerator.js";
@@ -9,7 +9,6 @@ import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 
 const ENTITY = "GlobalAssignment";
 const VALID_SUBMISSION_TYPES = Object.values(SUBMISSION_TYPE);
-const VALID_SKILL_TAGS = Object.values(SKILL_TAG);
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
 function assertCanEditAssignment(performedBy: string, doc: { createdBy?: string; moderatorIds?: string[] }) {
@@ -63,17 +62,13 @@ function validateSubmissionType(value: string): void {
   }
 }
 
-function validateSkillTags(arr: string[]): void {
-  if (!Array.isArray(arr) || arr.length === 0) {
-    throw new AppError("skillTags must be a non-empty array", 400);
-  }
-  const invalid = arr.filter((t) => !VALID_SKILL_TAGS.includes(t as typeof SKILL_TAG[keyof typeof SKILL_TAG]));
-  if (invalid.length > 0) {
-    throw new AppError(
-      `skillTags must only include: ${VALID_SKILL_TAGS.join(", ")}`,
-      400
-    );
-  }
+/** Dedupe, trim, validate presets + short custom labels. */
+function normalizeSkillTags(raw: unknown): string[] {
+  const unique = [...new Set((Array.isArray(raw) ? raw : []).map((t) => String(t).trim()).filter(Boolean))];
+  if (unique.length === 0) throw new AppError("skillTags must be a non-empty array", 400);
+  const invalid = unique.filter((t) => !isValidSkillTag(t));
+  if (invalid.length > 0) throw new AppError(`Invalid skill tags: ${invalid.slice(0, 8).join(", ")}`, 400);
+  return unique;
 }
 
 export async function createAssignment(input: CreateAssignmentInput) {
@@ -81,7 +76,7 @@ export async function createAssignment(input: CreateAssignmentInput) {
   if (!input.instructions?.trim()) throw new AppError("instructions is required", 400);
   if (!input.submissionType) throw new AppError("submissionType is required", 400);
   validateSubmissionType(input.submissionType);
-  validateSkillTags(input.skillTags ?? []);
+  const skillTagsNorm = normalizeSkillTags(input.skillTags ?? []);
   const type =
     input.type != null && String(input.type).toLowerCase() === "general" ? "general" : "module";
   const allowedStudentIds = Array.isArray(input.allowedStudentIds) ? input.allowedStudentIds : [];
@@ -96,7 +91,7 @@ export async function createAssignment(input: CreateAssignmentInput) {
     title: input.title.trim(),
     instructions: input.instructions.trim(),
     submissionType: input.submissionType,
-    skillTags: input.skillTags,
+    skillTags: skillTagsNorm,
     status: ASSIGNMENT_STATUS.ACTIVE,
     type,
     allowedStudentIds,
@@ -201,12 +196,11 @@ export async function updateAssignment(
   }
 
   if (input.submissionType !== undefined) validateSubmissionType(input.submissionType);
-  if (input.skillTags !== undefined) validateSkillTags(input.skillTags);
 
   if (input.title !== undefined) existing.title = input.title.trim();
   if (input.instructions !== undefined) existing.instructions = input.instructions.trim();
   if (input.submissionType !== undefined) existing.submissionType = input.submissionType as typeof SUBMISSION_TYPE[keyof typeof SUBMISSION_TYPE];
-  if (input.skillTags !== undefined) existing.skillTags = input.skillTags as typeof SKILL_TAG[keyof typeof SKILL_TAG][];
+  if (input.skillTags !== undefined) existing.skillTags = normalizeSkillTags(input.skillTags);
   if (input.type !== undefined)
     (existing as { type?: string }).type =
       String(input.type).toLowerCase() === "general" ? "general" : "module";

@@ -66,6 +66,8 @@ export const patchMe = asyncHandler(async (req: Request, res: Response): Promise
   if (!req.user) throw new AppError("Unauthorized", 401);
   const body = req.body as {
     name?: string;
+    username?: string;
+    email?: string;
     mobile?: string;
     address?: string;
     city?: string;
@@ -74,9 +76,11 @@ export const patchMe = asyncHandler(async (req: Request, res: Response): Promise
     grade?: string;
     gradeOther?: string;
   };
+  if (body.username !== undefined || body.email !== undefined || body.mobile !== undefined) {
+    throw new AppError("Username, email, and mobile can only be changed by Admin or Super Admin", 403);
+  }
   const allowed: Record<string, unknown> = {};
   if (body.name != null) allowed.name = String(body.name).trim();
-  if (body.mobile != null) allowed.mobile = String(body.mobile).trim();
   if (body.address != null) allowed.address = String(body.address).trim();
   if (body.city != null) allowed.city = String(body.city).trim();
   if (body.schoolName != null) allowed.schoolName = String(body.schoolName).trim();

@@ -8,6 +8,8 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { COURSE_STATUS } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface CourseItem {
   id: string;
@@ -74,7 +76,7 @@ export default function CoursesPage() {
   }, [debouncedSearch]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <AppPageShell className="flex h-full min-h-0 flex-1 flex-col">
       <div className="shrink-0 space-y-4 pb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <BackLink href="/dashboard">Back to Dashboard</BackLink>
@@ -92,7 +94,7 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
+      <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Courses</h2>
           <p className="mt-1 text-sm text-slate-600">
@@ -169,7 +171,7 @@ export default function CoursesPage() {
                         <Link
                           href={`/courses/${c.id}/view`}
                           title="View"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+                          className="admin-table-action"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -180,11 +182,9 @@ export default function CoursesPage() {
                           <Link
                             href={`/courses/${c.id}/duplicate`}
                             title="Duplicate"
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+                            className="btn-duplicate btn-duplicate--icon-only"
                           >
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
+                            <DuplicateIcon />
                           </Link>
                         )}
                       </div>
@@ -195,7 +195,7 @@ export default function CoursesPage() {
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </DataPanel>
+    </AppPageShell>
   );
 }

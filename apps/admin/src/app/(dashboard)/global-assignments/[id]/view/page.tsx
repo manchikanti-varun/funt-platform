@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { ASSIGNMENT_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
 
@@ -54,6 +54,9 @@ export default function ViewGlobalAssignmentPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{assignment.title}</h1>
           <p className="mt-1 text-sm text-slate-500">View only. Use the actions below to edit, manage access, or review submissions.</p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
+              Global source
+            </span>
             <span
               className={
                 assignment.status === ASSIGNMENT_STATUS.ARCHIVED
@@ -118,7 +121,7 @@ export default function ViewGlobalAssignmentPage() {
           {assignment.instructions && (
             <section>
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Instructions</h2>
-              <div className="rounded-xl border border-slate-200 bg-white p-4 prose prose-sm max-w-none text-slate-700 [&_.ql-cursor]:hidden [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(assignment.instructions) }} />
+              <div className={`rounded-xl border border-slate-200 bg-white p-4 text-slate-700 [&_.ql-cursor]:hidden ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(assignment.instructions) }} />
             </section>
           )}
           {assignment.skillTags && assignment.skillTags.length > 0 && (

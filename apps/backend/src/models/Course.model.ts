@@ -18,6 +18,8 @@ const courseModuleSnapshotSchema = new Schema(
         linkedAssignmentSubmissionTypeOverride: { type: String, required: false },
         linkedAssignmentSkillTagsOverride: { type: [String], required: false },
     order: { type: Number, required: true },
+    /** XP granted when the student fully completes this module (default matches legacy fixed award). */
+    xpReward: { type: Number, required: false, default: 40, min: 0, max: 100_000 },
   },
   { _id: false }
 );
@@ -27,6 +29,7 @@ const courseSchema = new Schema(
         courseId: { type: String, required: false, unique: true, sparse: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    durationText: { type: String, required: false, default: "" },
     modules: {
       type: [courseModuleSnapshotSchema],
       required: true,

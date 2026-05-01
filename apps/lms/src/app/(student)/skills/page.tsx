@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface SkillPoint {
   tag: string;
@@ -14,6 +15,59 @@ interface SkillPoint {
 interface SkillProfile {
   studentId: string;
   skills: SkillPoint[];
+}
+
+interface CourseRadarAxis {
+  key: string;
+  label: string;
+  short: string;
+  keywords: string[];
+}
+
+interface NormalizedSkillPoint {
+  key: string;
+  tag: string;
+  score: number;
+  count: number;
+}
+
+const COURSE_RADAR_AXES: CourseRadarAxis[] = [
+  { key: "scratch", label: "Scratch Programming", short: "Scratch", keywords: ["scratch", "block", "logic"] },
+  { key: "android", label: "Android Development", short: "Android", keywords: ["android", "mobile", "app"] },
+  { key: "electronics", label: "Basic Electronics", short: "Electronics", keywords: ["electronics", "circuit", "sensor", "hardware"] },
+  { key: "robobrains", label: "RoboBrains", short: "RoboBrains", keywords: ["robobrains", "brain", "ai", "eeg", "ml"] },
+  { key: "smartwheels", label: "Smart Wheels Robotics", short: "Smart Wheels", keywords: ["smart wheels", "robotics", "robot", "mechanics"] },
+  { key: "printing3d", label: "3D Printing", short: "3D Printing", keywords: ["3d", "printing", "cad", "design"] },
+  { key: "iot", label: "IoT", short: "IoT", keywords: ["iot", "raspberry", "python", "automation"] },
+  { key: "web", label: "Web Development", short: "Web Dev", keywords: ["web", "frontend", "backend", "website"] },
+];
+
+function normalizeSkillsToCourseAxes(skills: SkillPoint[]): NormalizedSkillPoint[] {
+  const buckets = new Map<string, { weightedScore: number; totalWeight: number; count: number }>();
+  for (const axis of COURSE_RADAR_AXES) buckets.set(axis.key, { weightedScore: 0, totalWeight: 0, count: 0 });
+
+  for (const item of skills) {
+    const tag = (item.tag ?? "").toLowerCase();
+    const axis = COURSE_RADAR_AXES.find((a) => a.keywords.some((k) => tag.includes(k)));
+    if (!axis) continue;
+    const weight = Math.max(1, item.count || 0);
+    const bucket = buckets.get(axis.key);
+    if (!bucket) continue;
+    bucket.weightedScore += item.score * weight;
+    bucket.totalWeight += weight;
+    bucket.count += Math.max(0, item.count || 0);
+  }
+
+  return COURSE_RADAR_AXES.map((axis) => {
+    const bucket = buckets.get(axis.key);
+    if (!bucket || bucket.totalWeight === 0) return { key: axis.key, tag: axis.label, score: 0, count: 0 };
+    return {
+      key: axis.key,
+      tag: axis.label,
+      score: Math.max(0, Math.min(100, Math.round(bucket.weightedScore / bucket.totalWeight))),
+      count: bucket.count,
+    };
+  });
 }
 
 const SKILL_COLORS = [
@@ -45,11 +99,11 @@ export default function SkillsPage() {
 
   if (!profile) {
 return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 min-h-min">
+    <AppPageShell className="max-w-5xl flex flex-1 flex-col gap-6 min-h-min">
       <div className="shrink-0 space-y-1">
         <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Progress</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Skill Radar</h1>
-        </div>
+      </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-16 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-200/80 text-slate-400">
             <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -57,9 +111,6 @@ return (
             </svg>
           </span>
           <h2 className="mt-5 text-lg font-semibold text-slate-800">No skill data yet</h2>
-          <p className="mt-2 max-w-sm text-sm text-slate-500">
-            Complete assignments and get them approved by your trainer. Your skill scores will appear here.
-          </p>
           <Link
             href="/assignments"
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 transition hover:bg-funt-gold-hover"
@@ -70,23 +121,23 @@ return (
             </svg>
           </Link>
         </div>
-      </div>
+      </AppPageShell>
     );
   }
 
-  const data = profile.skills ?? [];
-  const radarData = data.map((s) => ({ subject: s.tag, score: s.score, fullMark: 100 }));
+  const data = normalizeSkillsToCourseAxes(profile.skills ?? []);
+  const radarData = COURSE_RADAR_AXES.map((axis) => {
+    const point = data.find((d) => d.key === axis.key);
+    return { subject: axis.short, score: point?.score ?? 0, fullMark: 100 };
+  });
   const avgScore = data.length ? Math.round(data.reduce((a, s) => a + s.score, 0) / data.length) : 0;
+  const activeSkillAreas = data.filter((d) => d.count > 0).length;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 min-h-min">
-      {}
-      <div className="shrink-0 space-y-1">
+    <AppPageShell className="max-w-5xl flex flex-1 flex-col gap-6 min-h-min">
+      <div className="page-hero shrink-0 space-y-1 py-5">
         <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Progress</p>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Skill Radar</h1>
-        <p className="max-w-xl text-sm text-slate-600">
-          Your scores by skill area from approved assignments. Submit work and get feedback to build your profile.
-        </p>
       </div>
 
       {data.length === 0 ? (
@@ -97,9 +148,6 @@ return (
             </svg>
           </span>
           <h2 className="mt-5 text-lg font-semibold text-slate-800">No skills yet</h2>
-          <p className="mt-2 max-w-sm text-sm text-slate-500">
-            Submit assignments and get them approved to see your Skill Radar here.
-          </p>
           <Link
             href="/assignments"
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 transition hover:bg-funt-gold-hover"
@@ -119,13 +167,13 @@ return (
               <p className="text-sm font-medium text-slate-600">Average score</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-lg shadow-slate-200/25 ring-1 ring-slate-100">
-              <p className="text-2xl font-bold tabular-nums text-slate-800">{data.length}</p>
-              <p className="text-sm font-medium text-slate-600">Skill area{data.length !== 1 ? "s" : ""}</p>
+              <p className="text-2xl font-bold tabular-nums text-slate-800">{activeSkillAreas}</p>
+              <p className="text-sm font-medium text-slate-600">Active course skill area{activeSkillAreas !== 1 ? "s" : ""}</p>
             </div>
           </div>
 
           {/* Radar chart */}
-          <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/30 ring-1 ring-slate-100">
+          <DataPanel className="shrink-0 p-6">
             <div className="mb-4 flex items-center gap-2">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-funt-honey text-funt-gold-deep">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -155,11 +203,11 @@ return (
                 </RadarChart>
               </ResponsiveContainer>
             </div>
-          </div>
+          </DataPanel>
 
           {}
           <div className="flex-1">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/30 ring-1 ring-slate-100">
+            <DataPanel className="p-6">
               <div className="mb-4 flex items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-600">
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -191,10 +239,10 @@ return (
                   );
                 })}
               </div>
-            </div>
+            </DataPanel>
           </div>
         </>
       )}
-    </div>
+    </AppPageShell>
   );
 }

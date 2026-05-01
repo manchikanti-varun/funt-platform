@@ -157,8 +157,8 @@ Redeploy backend after updating these.
 
 ## 5. Cleaning and unused files
 
-- Temporary reset/seed helpers and dev-only scripts have been removed or moved out of the main flow.
+- Local dev seed accounts are defined in `apps/backend/src/scripts/devLocalAccounts.ts` and created via `npm run seed:dev-logins` (see `apps/backend/.env.example`). They are not part of production runtime.
 - Certificate layout files under `apps/backend/templates/` are kept because they are used for the certificate feature.
 
-If you add new seed scripts or helpers in the future, keep them in clearly named folders (e.g. `apps/backend/scripts/`) and avoid wiring them into production runtime.
+If you add new seed scripts or helpers, keep them under `apps/backend/src/scripts/` and avoid wiring them into production runtime.
 

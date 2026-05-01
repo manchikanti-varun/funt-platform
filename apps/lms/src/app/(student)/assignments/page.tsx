@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { SUBMISSION_TYPE } from "@funt-platform/constants";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface AssignmentInfo {
   id: string;
@@ -44,10 +45,8 @@ function toSubmissionType(raw: string): SUBMISSION_TYPE {
   return raw === SUBMISSION_TYPE.LINK ? SUBMISSION_TYPE.LINK : raw === SUBMISSION_TYPE.FILE ? SUBMISSION_TYPE.FILE : SUBMISSION_TYPE.TEXT;
 }
 
-function stripHtml(html: string): string {
-  if (!html || typeof html !== "string") return "";
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
-}
+const RICH_TEXT_PREVIEW_CLASS =
+  "[&_p]:my-0 [&_ul]:my-0 [&_ol]:my-0 [&_li]:my-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-3 [&_.ql-indent-2]:pl-6 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-[6rem]";
 
 export default function AssignmentsPage() {
   const searchParams = useSearchParams();
@@ -231,9 +230,12 @@ export default function AssignmentsPage() {
     }
 
     const courseBackHref = courseIdParam ? `/courses/${encodeURIComponent(courseIdParam)}${batchId ? `?batchId=${encodeURIComponent(batchId)}` : ""}` : "/courses";
+    const courseLearnHref = courseIdParam
+      ? `/courses/${encodeURIComponent(courseIdParam)}/learn${batchId ? `?batchId=${encodeURIComponent(batchId)}` : ""}`
+      : "/courses";
 
     return (
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-8">
+      <AppPageShell className="max-w-5xl pb-8">
         <div className="flex shrink-0 flex-wrap items-center gap-3">
           <Link href="/assignments" className={backButtonClass}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -244,11 +246,10 @@ export default function AssignmentsPage() {
           </Link>
         </div>
 
-        <div className="flex flex-col rounded-2xl border-2 border-black/10 bg-white shadow-xl shadow-black/5">
+        <DataPanel className="flex flex-col border-2 border-black/10 shadow-xl shadow-black/5">
           <div className="border-b border-black/10 bg-gradient-to-b from-funt-honey/40 to-white px-6 py-6">
             <p className="text-sm font-bold uppercase tracking-wider text-black/55">Chapter assignment</p>
             <h1 className="mt-1 text-2xl font-black tracking-tight text-black">{moduleAssignment.title}</h1>
-            <p className="mt-2 text-sm text-black/70">Submit your work for this chapter. Your trainer will review and approve or send feedback.</p>
           </div>
 
           <div className="px-6 py-6">
@@ -260,12 +261,11 @@ export default function AssignmentsPage() {
                 </svg>
                 <div>
                   <p className="font-bold text-black">Already submitted</p>
-                  <p className="text-sm text-black/75">You can only submit once for this chapter. Your trainer will review and you can see feedback under Assignments.</p>
                 </div>
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Link
-                  href={courseBackHref}
+                  href={courseLearnHref}
                   className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-sm transition hover:bg-funt-gold-hover"
                 >
                   Continue with course
@@ -279,7 +279,7 @@ export default function AssignmentsPage() {
             {moduleAssignment.instructions && (
               <div className="rounded-xl border-2 border-black/10 bg-funt-honey/30 px-4 py-3">
                 <p className="text-sm font-bold text-black">Instructions</p>
-                <div className="mt-1 text-sm leading-relaxed text-black/75 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: moduleAssignment.instructions }} />
+                <div className={`mt-1 text-sm text-black/75 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(moduleAssignment.instructions) }} />
               </div>
             )}
             <div>
@@ -314,8 +314,8 @@ export default function AssignmentsPage() {
           </form>
           )}
           </div>
-        </div>
-      </div>
+        </DataPanel>
+      </AppPageShell>
     );
   }
 
@@ -324,12 +324,9 @@ export default function AssignmentsPage() {
   const expandedAlreadySubmitted = expandedId ? mySubmissions?.generalSubmissions.some((s) => s.assignmentId === expandedId) : false;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 pb-8">
-      <div className="shrink-0">
+    <AppPageShell className="max-w-5xl pb-8">
+      <div className="page-hero shrink-0 py-5">
         <h1 className="text-2xl font-black tracking-tight text-black">Assignments</h1>
-        <p className="mt-2 text-sm text-black/70">
-          General assignments assigned to you. You can submit once per assignment. Chapter assignments are submitted from within each course.
-        </p>
       </div>
 
       <div className="space-y-8">
@@ -338,7 +335,6 @@ export default function AssignmentsPage() {
           {assignments.length === 0 ? (
             <div className="mt-3 rounded-2xl border-2 border-black/10 bg-funt-honey/25 px-6 py-10 text-center">
               <p className="text-black/75">No assignments assigned to you yet.</p>
-              <p className="mt-1 text-sm text-black/55">Assignments your trainer adds for you will appear here.</p>
             </div>
           ) : (
             <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -348,7 +344,7 @@ export default function AssignmentsPage() {
                 return (
                   <div
                     key={a.id}
-                    className={`rounded-2xl border bg-white shadow-sm ring-1 transition ${
+                    className={`rounded-2xl border bg-white/95 shadow-md shadow-black/5 ring-1 transition ${
                       isExpanded ? "border-funt-gold ring-2 ring-black/10" : "border-black/10 ring-1 ring-black/5 hover:border-black/20"
                     }`}
                   >
@@ -364,7 +360,10 @@ export default function AssignmentsPage() {
                         )}
                       </div>
                       {a.instructions && (
-                        <p className="mt-2 line-clamp-2 text-sm text-slate-600">{stripHtml(a.instructions)}</p>
+                        <div
+                          className={`mt-2 line-clamp-2 text-sm text-slate-600 ${RICH_TEXT_PREVIEW_CLASS}`}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.instructions) }}
+                        />
                       )}
                       {!alreadySubmitted && (
                         <button
@@ -381,7 +380,7 @@ export default function AssignmentsPage() {
                     </div>
 
                     {isExpanded && expandedAssignment && !expandedAlreadySubmitted && (
-                      <div className="border-t border-slate-200 bg-slate-50/50 p-4">
+                      <div className="border-t border-slate-200 bg-slate-50/60 p-4">
                         <form
                           onSubmit={submitGlobal}
                           className="space-y-4"
@@ -389,7 +388,7 @@ export default function AssignmentsPage() {
                           {expandedAssignment.instructions && (
                             <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
                               <p className="text-sm font-medium text-slate-700">Instructions</p>
-                              <div className="mt-1 text-sm leading-relaxed text-slate-600 [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(expandedAssignment.instructions) }} />
+                              <div className={`mt-1 text-sm text-slate-600 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(expandedAssignment.instructions) }} />
                             </div>
                           )}
                           <div>
@@ -437,7 +436,7 @@ export default function AssignmentsPage() {
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Submissions</h2>
           {mySubmissions && (mySubmissions.moduleSubmissions.length > 0 || mySubmissions.generalSubmissions.length > 0) ? (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
+            <DataPanel className="mt-3">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -489,15 +488,14 @@ export default function AssignmentsPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </DataPanel>
           ) : (
-            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/60 px-6 py-8 text-center shadow-sm ring-1 ring-slate-100/70">
               <p className="text-slate-600">No submissions yet.</p>
-              <p className="mt-1 text-sm text-slate-500">When you submit an assignment, it will appear here with status and feedback.</p>
             </div>
           )}
         </section>
       </div>
-    </div>
+    </AppPageShell>
   );
 }

@@ -59,3 +59,29 @@ export const deleteShopProduct = asyncHandler(async (req: Request, res: Response
   await service.deleteProductAdmin(id, actor);
   successRes(res, { ok: true }, "Product deleted");
 });
+
+export const listShopOrdersAdmin = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const data = await service.listShopOrdersAdmin();
+  successRes(res, data);
+});
+
+export const patchShopOrderStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const actor = getUserId(req);
+  const orderId = req.params.orderId;
+  if (!orderId) throw new AppError("orderId is required", 400);
+  const body = req.body as { status?: string; note?: string; reason?: string };
+  if (!body.status) throw new AppError("status is required", 400);
+  const data = await service.updateShopOrderStatus({
+    orderId,
+    status: body.status as Parameters<typeof service.updateShopOrderStatus>[0]["status"],
+    note: body.note,
+    reason: body.reason,
+    actorId: actor,
+  });
+  successRes(res, data, "Order status updated");
+});
+
+export const getShopStockInsightsAdmin = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const data = await service.getShopStockInsightsAdmin();
+  successRes(res, data);
+});

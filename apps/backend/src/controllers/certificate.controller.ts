@@ -71,11 +71,9 @@ export const getMyCertificates = asyncHandler(async (req: Request, res: Response
 
 export const postGenerateMyCertificate = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
-  const { batchId, couponCode } = req.body ?? {};
+  const { batchId } = req.body ?? {};
   if (!batchId) throw new AppError("batchId is required", 400);
-  const data = await service.generateCertificate(studentId, batchId, studentId, {
-    couponCode: typeof couponCode === "string" ? couponCode : undefined,
-  });
+  const data = await service.generateCertificate(studentId, batchId, studentId);
   successRes(res, data, "Certificate generated", 201);
 });
 

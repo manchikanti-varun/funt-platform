@@ -6,6 +6,10 @@ import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_DISPLAY, supportWhatsAppHref } from "@/
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 
+function isValidEmailFormat(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export default function ForgotUsernamePage() {
   const [email, setEmail] = useState("");
   const [msg, setMsg] = useState("");
@@ -16,6 +20,10 @@ export default function ForgotUsernamePage() {
     e.preventDefault();
     setErr("");
     setMsg("");
+    if (!isValidEmailFormat(email)) {
+      setErr("Enter a valid email address");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/api/auth/forgot-username`, {
@@ -66,15 +74,18 @@ export default function ForgotUsernamePage() {
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-funt-ink">Email</label>
+            <label className="mb-1.5 block text-sm font-medium text-black">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="input"
-              placeholder="you@example.com"
+              className="input text-black placeholder:text-black/45"
+              placeholder="Enter your email address"
             />
+            {email.trim() && !isValidEmailFormat(email) && (
+              <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+            )}
           </div>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
           {msg && <p className="rounded-lg bg-funt-gold/15 px-3 py-2 text-sm text-funt-ink">{msg}</p>}

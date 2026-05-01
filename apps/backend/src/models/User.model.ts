@@ -52,6 +52,8 @@ const userSchema = new Schema(
       default: undefined,
     },
     funtId: { type: String, required: false, unique: true, sparse: true },
+    tokenVersion: { type: Number, required: true, default: 0 },
+    passwordChangedAt: { type: Date, required: false },
   },
   { timestamps: true }
 );

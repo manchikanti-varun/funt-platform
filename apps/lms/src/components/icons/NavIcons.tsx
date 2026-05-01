@@ -83,6 +83,14 @@ export function IconSkills({ className = "w-5 h-5" }: { className?: string }) {
     </svg>
   );
 }
+export function IconProgress({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 17l6-6 4 4 8-8" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 7h6v6" />
+    </svg>
+  );
+}
 export function IconCertificates({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -101,6 +109,28 @@ export function IconShop({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+    </svg>
+  );
+}
+
+export function IconKey({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 7a2 2 0 01 2 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+      />
+    </svg>
+  );
+}
+
+export function IconFaq({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9a3.75 3.75 0 117.5 0c0 1.625-.9 2.43-1.95 3.132-.95.634-1.8 1.08-1.8 2.118v.75" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 6.75A2.25 2.25 0 016.75 4.5h10.5a2.25 2.25 0 012.25 2.25v7.6a2.25 2.25 0 01-2.25 2.25H10.5l-4.4 2.9a.5.5 0 01-.77-.42V16.6A2.25 2.25 0 014.5 14.35v-7.6z" />
     </svg>
   );
 }

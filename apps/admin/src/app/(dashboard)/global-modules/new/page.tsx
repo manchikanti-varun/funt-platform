@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
+import { ROLE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { RequireRoles } from "@/components/auth/RequireRoles";
 
 interface AssignmentOption {
   id: string;
@@ -39,8 +42,9 @@ export default function NewGlobalModulePage() {
       return;
     }
     setLoading(true);
-    const autoDescription =
-      content.replace(/<[^>]+>/g, "").trim().slice(0, 160) || title.trim();
+    // Keep rich formatting in the short "Description" preview.
+    const preview = truncateRichTextHtml(content, 160);
+    const autoDescription = preview.trim() ? preview : title.trim();
     const res = await api<{ id: string }>("/api/global-modules", {
       method: "POST",
         body: JSON.stringify({
@@ -63,6 +67,7 @@ export default function NewGlobalModulePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="shrink-0 pb-4">
         <BackLink href="/global-modules">Back to Modules</BackLink>
       </div>
@@ -74,7 +79,7 @@ export default function NewGlobalModulePage() {
         </div>
 
         <form onSubmit={submit} className="p-6 sm:p-8">
-          <div className="mx-auto max-w-3xl space-y-4">
+          <div className="w-full space-y-4">
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Title

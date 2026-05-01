@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, clearToken } from "@/lib/api";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface MyCourse {
   courseId: string;
@@ -10,6 +11,7 @@ interface MyCourse {
   description?: string;
   moduleCount: number;
   batchId: string;
+  accessBlocked?: boolean;
 }
 
 interface ExploreCourse {
@@ -18,6 +20,8 @@ interface ExploreCourse {
   description?: string;
   moduleCount: number;
   batchId: string;
+  enrollmentPriceInPaise?: number;
+  paymentOptionsLabel?: string;
 }
 
 function filterBySearch<T>(
@@ -99,8 +103,8 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col gap-5 px-4 py-5 sm:px-6 sm:py-6">
-      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-slate-200/90 bg-white px-5 py-4 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
+    <AppPageShell className="flex h-full min-h-0 flex-1 flex-col gap-5">
+      <div className="page-hero flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Learning</p>
           <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">Courses</h1>
@@ -122,7 +126,7 @@ export default function CoursesPage() {
       </div>
 
       {}
-      <div className="shrink-0 flex gap-1 rounded-2xl border border-slate-200/90 bg-slate-50/90 p-1.5 shadow-lg shadow-slate-200/15 ring-1 ring-slate-100/80">
+      <div className="shrink-0 flex gap-1 rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-md shadow-black/5 ring-1 ring-black/5">
         <button
           type="button"
           onClick={() => setActiveTab("my")}
@@ -148,7 +152,7 @@ export default function CoursesPage() {
       </div>
 
       {}
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-lg shadow-slate-200/25 ring-1 ring-slate-100/80 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+      <DataPanel className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
         {activeTab === "my" ? (
           <>
             <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
@@ -180,14 +184,24 @@ export default function CoursesPage() {
                         <td className="px-6 py-3.5 font-medium text-slate-800">{c.courseTitle}</td>
                         <td className="px-6 py-3.5 text-slate-600">{c.moduleCount}</td>
                         <td className="px-6 py-3.5">
-                          <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                          {c.accessBlocked ? (
+                            <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">
+                              Blocked by admin
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                          )}
                         </td>
                         <td className="px-6 py-3.5 text-right">
                           <Link
                             href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                            className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover hover:shadow-xl"
+                            className={
+                              c.accessBlocked
+                                ? "inline-flex items-center gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-950 shadow-sm transition duration-200 hover:bg-red-100"
+                                : "inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover hover:shadow-xl"
+                            }
                           >
-                            Open
+                            {c.accessBlocked ? "View status" : "Open"}
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
@@ -208,10 +222,29 @@ export default function CoursesPage() {
               <p className="mt-1 text-xs text-slate-500">All courses from the platform, including those you are not enrolled in.</p>
             </div>
             {exploreError ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-10">
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-10 text-center">
                 <p className="text-sm font-medium text-amber-800">Could not load explore courses</p>
                 <p className="text-xs text-amber-700">{exploreError}</p>
-                <p className="text-xs text-slate-500">Check that the backend is running and you are logged in.</p>
+                {/insufficient role|forbidden/i.test(exploreError) ? (
+                  <div className="max-w-md space-y-2 text-xs text-amber-950">
+                    <p>
+                      FUNT Learn only works with a <strong>student</strong> account. If you used an Admin / Trainer login (@funt), open the{" "}
+                      <strong>Admin</strong> site instead, or log out here and sign in as a student.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        clearToken();
+                        window.location.href = "/login";
+                      }}
+                      className="rounded-lg bg-amber-200 px-3 py-1.5 text-sm font-semibold text-amber-950 hover:bg-amber-300"
+                    >
+                      Log out and try again
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Check that the backend is running and you are logged in.</p>
+                )}
               </div>
             ) : exploreCourses.length === 0 ? (
               <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 shadow-inner ring-1 ring-slate-100/80">
@@ -223,13 +256,14 @@ export default function CoursesPage() {
               </div>
             ) : (
               <div className="min-h-0 flex-1 overflow-auto">
-                <table className="w-full min-w-[600px] border-collapse text-left text-sm">
+                <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
                     <tr>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Course</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Chapters</th>
+                      <th className="px-6 py-3.5 font-semibold text-slate-700">Fee (INR)</th>
                       <th className="px-6 py-3.5 font-semibold text-slate-700">Status</th>
-                      <th className="px-6 py-3.5 font-semibold text-slate-700 text-right">Action</th>
+                      <th className="px-6 py-3.5 text-right font-semibold text-slate-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -237,19 +271,37 @@ export default function CoursesPage() {
                       <tr key={c.courseId} className="transition hover:bg-slate-50/80">
                         <td className="px-6 py-3.5 font-medium text-slate-800">{c.courseTitle}</td>
                         <td className="px-6 py-3.5 text-slate-600">{c.moduleCount}</td>
+                        <td className="px-6 py-3.5 text-slate-600">
+                          {c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                            <span>
+                              ₹
+                              {(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="px-6 py-3.5">
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
                         </td>
                         <td className="px-6 py-3.5 text-right">
-                          <Link
-                            href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-md ring-1 ring-slate-100/80 transition duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-lg"
-                          >
-                            Open
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </Link>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Link
+                              href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50"
+                            >
+                              Details
+                            </Link>
+                            <Link
+                              href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                            >
+                              Pay
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -259,7 +311,7 @@ export default function CoursesPage() {
             )}
           </>
         )}
-      </section>
-    </div>
+      </DataPanel>
+    </AppPageShell>
   );
 }

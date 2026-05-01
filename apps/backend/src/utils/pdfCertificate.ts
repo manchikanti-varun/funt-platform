@@ -14,6 +14,7 @@ export interface CertificatePdfData {
   studentName: string;
   courseName: string;
   issuedAt: Date;
+  durationText?: string;
 }
 
 export type CertificatePlaceholder = "studentName" | "courseName" | "certificateId" | "issuedDate";
@@ -98,7 +99,142 @@ function substitute(str: string, data: Record<string, string>): string {
   return out;
 }
 
+function getTemplateImagePath(): string | null {
+  const backendRoot = join(__dirname, "..", "..");
+  const templatePath = join(backendRoot, "templates", "certificate-template.png");
+  return existsSync(templatePath) ? templatePath : null;
+}
+
+function generateImageTemplateCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
+  const imagePath = getTemplateImagePath();
+  if (!imagePath) {
+    throw new Error("Certificate template image not found");
+  }
+
+  return new Promise((resolve, reject) => {
+    const probe = new PDFDocument({ autoFirstPage: false });
+    const image = probe.openImage(imagePath);
+    const pageWidth = image.width;
+    const pageHeight = image.height;
+    probe.destroy();
+
+    const doc = new PDFDocument({
+      autoFirstPage: true,
+      size: [pageWidth, pageHeight],
+      margin: 0
+    });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    const issuedDateRaw = data.issuedAt instanceof Date ? data.issuedAt : new Date(data.issuedAt);
+    const issuedDate = Number.isNaN(issuedDateRaw.getTime())
+      ? "—"
+      : `${String(issuedDateRaw.getDate()).padStart(2, "0")}/${String(issuedDateRaw.getMonth() + 1).padStart(2, "0")}/${issuedDateRaw.getFullYear()}`;
+    const durationText = (data.durationText ?? "—").trim() || "—";
+    const shrinkToFit = (
+      text: string,
+      maxWidth: number,
+      baseSize: number,
+      minSize: number,
+      fontName: string
+    ): number => {
+      doc.font(fontName);
+      let size = baseSize;
+      while (size > minSize) {
+        doc.fontSize(size);
+        if (doc.widthOfString(text) <= maxWidth) break;
+        size -= 1;
+      }
+      return size;
+    };
+
+    doc.image(imagePath, 0, 0, { width: pageWidth, height: pageHeight });
+
+    const bottomPad = Math.max(8, Math.round(pageHeight * 0.018));
+
+    // Metadata block (left side): render one line per field with labels so the template
+    // can omit printed values and keep the dynamic content aligned.
+    // Target the black outlined box at bottom-left in the final template image.
+    const metaX = pageWidth * 0.170;
+    const certWidth = pageWidth * 0.24;
+    const courseWidth = pageWidth * 0.24;
+    const rowGap = Math.max(3, Math.round(pageHeight * 0.008));
+    const hCertRow = Math.max(19, Math.round(pageHeight * 0.03));
+    const hCourseRow = Math.max(19, Math.round(pageHeight * 0.03));
+    const hDateRow = Math.max(19, Math.round(pageHeight * 0.03));
+    const hDurRow = Math.max(19, Math.round(pageHeight * 0.03));
+    const metaBand = hCertRow + rowGap + hCourseRow + rowGap + hDateRow + rowGap + hDurRow + bottomPad;
+    const metaStartY = Math.min(pageHeight * 0.81, pageHeight - metaBand);
+
+    const nameBoxWidth = pageWidth * 0.74;
+    const nameX = (pageWidth - nameBoxWidth) / 2;
+    const nameY = Math.round(pageHeight * 0.5);
+    const nameMaxHeight = Math.max(36, metaStartY - nameY - rowGap * 2);
+
+    const fitFontHeight = (
+      text: string,
+      width: number,
+      maxHeight: number,
+      maxSize: number,
+      minSize: number,
+      fontName: string
+    ): number => {
+      doc.font(fontName);
+      let size = maxSize;
+      while (size >= minSize) {
+        doc.fontSize(size);
+        const h = doc.heightOfString(text, { width });
+        if (h <= maxHeight) return size;
+        size -= 1;
+      }
+      return minSize;
+    };
+
+    const nameSize = fitFontHeight(data.studentName, nameBoxWidth, nameMaxHeight, 44, 20, "Helvetica-Bold");
+    doc.font("Helvetica-Bold")
+      .fillColor("#111111")
+      .fontSize(nameSize)
+      .text(data.studentName, nameX, nameY, {
+        width: nameBoxWidth,
+        align: "center",
+        height: nameMaxHeight,
+        ellipsis: true,
+        lineGap: 2,
+      });
+
+    let yRow = metaStartY;
+    doc.font("Helvetica-Bold").fillColor("#111111").fontSize(14);
+    const certLine = `Certificate No. : ${data.certificateId}`;
+    const certSize = shrinkToFit(certLine, certWidth, 14, 8, "Helvetica-Bold");
+    doc.fontSize(certSize).text(certLine, metaX, yRow, { lineBreak: false });
+    yRow += hCertRow + rowGap;
+
+    const courseLine = `Course : ${data.courseName}`;
+    const courseSize = shrinkToFit(courseLine, courseWidth, 14, 8, "Helvetica-Bold");
+    doc.fontSize(courseSize).text(courseLine, metaX, yRow, { lineBreak: false });
+    yRow += hCourseRow + rowGap;
+
+    const dateLine = `Date : ${issuedDate}`;
+    const dateSize = shrinkToFit(dateLine, certWidth, 14, 8, "Helvetica-Bold");
+    doc.fontSize(dateSize).text(dateLine, metaX, yRow, { lineBreak: false });
+    yRow += hDateRow + rowGap;
+
+    const durationLine = `Duration : ${durationText}`;
+    const durationSize = shrinkToFit(durationLine, certWidth, 14, 8, "Helvetica-Bold");
+    doc.fontSize(durationSize).text(durationLine, metaX, yRow, { lineBreak: false });
+
+    doc.end();
+  });
+}
+
 export function generateCertificatePdf(data: CertificatePdfData): Promise<Buffer> {
+  const templateImagePath = getTemplateImagePath();
+  if (templateImagePath) {
+    return generateImageTemplateCertificatePdf(data);
+  }
+
   const template = loadCertificateTemplate();
   const issuedDate = data.issuedAt instanceof Date
     ? data.issuedAt.toLocaleDateString()

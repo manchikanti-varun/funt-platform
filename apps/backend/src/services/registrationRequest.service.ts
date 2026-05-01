@@ -20,7 +20,7 @@ export interface SubmitSuperAdminRequestInput {
   email: string;
   mobile: string;
   city?: string;
-  requestedBy: string;
+  requestedBy?: string;
 }
 
 export interface RegistrationRequestDto {
@@ -120,7 +120,7 @@ export async function submitSuperAdminRequest(input: SubmitSuperAdminRequestInpu
     mobile: input.mobile.trim(),
     city: input.city?.trim() || undefined,
     status: "PENDING",
-    requestedBy: input.requestedBy,
+    requestedBy: input.requestedBy || undefined,
   });
   return toDto(doc.toObject());
 }

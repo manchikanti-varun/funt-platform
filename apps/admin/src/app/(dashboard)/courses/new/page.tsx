@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 interface ModuleOption {
   id: string;
@@ -21,6 +22,7 @@ export default function NewCoursePage() {
   const [moduleSearch, setModuleSearch] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [durationText, setDurationText] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -70,7 +72,7 @@ export default function NewCoursePage() {
     setLoading(true);
     const res = await api<{ id: string }>("/api/courses", {
       method: "POST",
-      body: JSON.stringify({ title, description, globalModuleIds: selectedIds }),
+      body: JSON.stringify({ title, description, durationText: durationText.trim(), globalModuleIds: selectedIds }),
     });
     setLoading(false);
     if (res.success && res.data?.id) {
@@ -84,6 +86,7 @@ export default function NewCoursePage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />
       <div className="shrink-0 pb-6">
         <BackLink href="/courses">Back to Courses</BackLink>
       </div>
@@ -110,6 +113,16 @@ export default function NewCoursePage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
               <RichTextEditor value={description} onChange={setDescription} minHeight={200} />
               <p className="mt-1 text-xs text-slate-500">Use the toolbar for headers, bold, italic, lists, links, and more.</p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Duration</label>
+              <input
+                value={durationText}
+                onChange={(e) => setDurationText(e.target.value)}
+                className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                placeholder="e.g. 45 days, 3 months, 12 weeks"
+              />
+              <p className="mt-1 text-xs text-slate-500">This value will be used on the student certificate.</p>
             </div>
           </div>
 
@@ -167,17 +180,23 @@ export default function NewCoursePage() {
                           type="button"
                           onClick={() => moveUp(i)}
                           disabled={i === 0}
-                          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Move up"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          Up
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                          </svg>
                         </button>
                         <button
                           type="button"
                           onClick={() => moveDown(i)}
                           disabled={i === selectedModules.length - 1}
-                          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Move down"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          Down
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                          </svg>
                         </button>
                       </div>
                     </li>

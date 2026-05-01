@@ -10,6 +10,8 @@ declare global {
         username: string;
         roles: ROLE[];
       };
+      /** Set by `parentDelegateAuthMiddleware` — Mongo user id of the student being viewed. */
+      parentDelegateStudentId?: string;
     }
   }
 }

@@ -1,21 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
-
-function toYouTubeEmbedUrl(url: string): string | null {
-  if (!url?.trim()) return null;
-  const s = url.trim();
-  const watchMatch = s.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  const embedMatch = s.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
-  const shortIdMatch = s.match(/^([a-zA-Z0-9_-]{11})$/);
-  const id = watchMatch?.[1] ?? embedMatch?.[1] ?? shortIdMatch?.[1];
-  if (!id) return null;
-  return `https://www.youtube.com/embed/${id}`;
-}
+import { api, resolveMediaPlaybackUrl } from "@/lib/api";
+import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
+import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface ModuleItem {
   order: number;
@@ -24,6 +15,10 @@ interface ModuleItem {
   content?: string;
   youtubeUrl?: string;
   videoUrl?: string;
+  youtubeEmbedUrl?: string;
+  /** Parsed id for LMS embed (avoids iframe → API redirect → YouTube with YT.Player, which triggers Error 153). */
+  youtubeVideoId?: string;
+  videoPlaybackUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
   unlocked: boolean;
@@ -43,6 +38,9 @@ interface BatchCourse {
   courseId?: string;
   name: string;
   hasAccess?: boolean;
+  /** Enrolled but admin disabled LMS access for this batch enrollment */
+  accessBlocked?: boolean;
+  isEnrolled?: boolean;
   hasPendingRequest?: boolean;
   hasPendingCoursePayment?: boolean;
   hasRejectedCoursePayment?: boolean;
@@ -53,17 +51,38 @@ interface BatchCourse {
     description?: string;
   };
   zoomLink?: string;
-  certificatePriceCoins?: number;
 }
 
-export default function CourseViewerPage() {
+/**
+ * In-page nocookie embed. `enablejsapi` + `origin` let the parent listen for `onStateChange` / ENDED via postMessage (no YT.Player — avoids Error 153).
+ * Do not use /watch URLs or API /media/play as iframe src for the primary player.
+ */
+function youtubeNocookieEmbedSrc(videoId: string, pageOrigin: string): string {
+  const q = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    iv_load_policy: "3",
+    enablejsapi: "1",
+  });
+  const o = pageOrigin.trim();
+  if (o) q.set("origin", o);
+  return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId.trim())}?${q.toString()}`;
+}
+
+const YT_MSG_ORIGINS = new Set(["https://www.youtube.com", "https://www.youtube-nocookie.com"]);
+/** YT.PlayerState.ENDED */
+const YT_STATE_ENDED = 0;
+
+export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters?: boolean } = {}) {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = params.courseId as string;
   const batchIdFromQuery = searchParams.get("batchId") ?? undefined;
   const [data, setData] = useState<BatchCourse | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
-  const [showChapters, setShowChapters] = useState(false);
+  const [showChapters, setShowChapters] = useState(defaultShowChapters);
   const [loading, setLoading] = useState(true);
   const [markingComplete, setMarkingComplete] = useState(false);
   const [markCompleteSuccess, setMarkCompleteSuccess] = useState(false);
@@ -71,8 +90,39 @@ export default function CourseViewerPage() {
   const [generatingCert, setGeneratingCert] = useState(false);
   const [certSuccess, setCertSuccess] = useState<string | null>(null);
   const [certError, setCertError] = useState<string | null>(null);
-    const [completedJustNow, setCompletedJustNow] = useState<{ moduleOrder: number; part: "content" | "video" | "youtube" } | null>(null);
-  const [certCouponCode, setCertCouponCode] = useState("");
+  const [completedJustNow, setCompletedJustNow] = useState<{ moduleOrder: number; part: "content" | "video" | "youtube" } | null>(null);
+  const [ytPageOrigin, setYtPageOrigin] = useState("");
+  const youtubeAutoMarkedRef = useRef("");
+  const ytListenerGenRef = useRef(0);
+  const selectedYoutubeSnapRef = useRef<{ order: number; vid: string; done: boolean }>({ order: -1, vid: "", done: true });
+  const markYoutubeDoneRef = useRef<() => void>(() => {});
+  const youtubeFrameRef = useRef<HTMLIFrameElement | null>(null);
+
+  useEffect(() => {
+    setYtPageOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
+
+  /** Tell the nocookie embed we listen for state — required for infoDelivery / onStateChange without loading iframe_api.js. */
+  const wireYoutubeIframeListening = useCallback(() => {
+    const w = youtubeFrameRef.current?.contentWindow;
+    if (!w) return;
+    const target = "https://www.youtube-nocookie.com";
+    try {
+      w.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), target);
+      w.postMessage(
+        JSON.stringify({
+          event: "command",
+          func: "addEventListener",
+          args: ["onStateChange"],
+          id: 1,
+          channel: "widget",
+        }),
+        target
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const fetchCourse = (): Promise<void> => {
     if (!courseId) return Promise.resolve();
@@ -93,6 +143,31 @@ export default function CourseViewerPage() {
       if (r.success && r.data) setData(r.data);
     }).finally(() => setLoading(false));
   }, [courseId, batchIdFromQuery]);
+
+  const modules = useMemo(() => {
+    if (!data?.courseSnapshot?.modules?.length) return [];
+    return [...data.courseSnapshot.modules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [data]);
+
+  const selected = useMemo(() => {
+    if (modules.length === 0) return null;
+    if (selectedOrder !== null) return modules.find((m) => m.order === selectedOrder) ?? modules[0];
+    return modules[0];
+  }, [modules, selectedOrder]);
+
+  const batchQs = batchIdFromQuery ? `?batchId=${encodeURIComponent(batchIdFromQuery)}` : "";
+  const learnRoute = `/courses/${encodeURIComponent(courseId)}/learn${batchQs}`;
+  const courseRoute = `/courses/${encodeURIComponent(courseId)}${batchQs}`;
+
+  useEffect(() => {
+    if (showChapters && selectedOrder === null && modules[0]) {
+      setSelectedOrder(modules[0].order);
+    }
+  }, [showChapters, selectedOrder, modules]);
+
+  const hasYoutube = !!(selected?.youtubeVideoId || selected?.youtubeEmbedUrl);
+
+  const selectedYoutubeKey = selected ? `${selected.order}:${selected.youtubeVideoId ?? ""}` : "";
 
   type Part = "content" | "video" | "youtube";
   async function handleMarkPartComplete(part: Part) {
@@ -118,6 +193,7 @@ export default function CourseViewerPage() {
       if (res.success) {
         setMarkCompleteSuccess(true);
         setTimeout(() => setMarkCompleteSuccess(false), 3000);
+        if (res.data?.moduleCompleted) emitStudentMeRefresh();
         await fetchCourse();
         setCompletedJustNow(null);
       } else {
@@ -133,6 +209,65 @@ export default function CourseViewerPage() {
       setMarkingComplete(false);
     }
   }
+
+  markYoutubeDoneRef.current = () => {
+    void handleMarkPartComplete("youtube");
+  };
+
+  const coursePlayerOpen =
+    !!data && !loading && data.hasAccess !== false && data.accessBlocked !== true;
+  selectedYoutubeSnapRef.current =
+    selected?.youtubeVideoId && coursePlayerOpen
+      ? {
+          order: selected.order,
+          vid: selected.youtubeVideoId.trim(),
+          done: !!selected.youtubeCompleted,
+        }
+      : { order: -1, vid: "", done: true };
+
+  useEffect(() => {
+    youtubeAutoMarkedRef.current = "";
+    ytListenerGenRef.current += 1;
+  }, [selectedYoutubeKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!selected?.youtubeVideoId?.trim() || selected.youtubeCompleted) return;
+    if (!coursePlayerOpen) return;
+
+    const gen = ytListenerGenRef.current;
+
+    const onMessage = (event: MessageEvent) => {
+      if (ytListenerGenRef.current !== gen) return;
+      if (!YT_MSG_ORIGINS.has(event.origin)) return;
+      let body: Record<string, unknown>;
+      try {
+        body = typeof event.data === "string" ? (JSON.parse(event.data) as Record<string, unknown>) : (event.data as Record<string, unknown>);
+      } catch {
+        return;
+      }
+      if (!body || typeof body !== "object") return;
+
+      let state: number | undefined;
+      if (body.event === "onStateChange" && typeof body.info === "number") {
+        state = body.info;
+      } else if (body.event === "infoDelivery" && body.info && typeof body.info === "object") {
+        const ps = (body.info as { playerState?: number }).playerState;
+        if (typeof ps === "number") state = ps;
+      }
+      if (state !== YT_STATE_ENDED) return;
+
+      const cur = selectedYoutubeSnapRef.current;
+      if (!cur.vid || cur.done) return;
+      const key = `${cur.order}:${cur.vid}`;
+      if (youtubeAutoMarkedRef.current === key) return;
+      youtubeAutoMarkedRef.current = key;
+      markYoutubeDoneRef.current();
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [coursePlayerOpen, selected?.youtubeVideoId, selected?.order, selected?.youtubeCompleted, selectedYoutubeKey, ytPageOrigin]);
 
   const isPartCompleted = (part: Part) => {
     if (!selected) return false;
@@ -151,7 +286,6 @@ export default function CourseViewerPage() {
         method: "POST",
         body: JSON.stringify({
           batchId: data.batchId,
-          ...(certCouponCode.trim() ? { couponCode: certCouponCode.trim() } : {}),
         }),
       });
       if (res.success && res.data?.certificateId) setCertSuccess(res.data.certificateId);
@@ -172,23 +306,21 @@ export default function CourseViewerPage() {
   }
 
   const hasAccess = data.hasAccess !== false;
+  const blockedByAdmin = data.accessBlocked === true;
   const courseTitle = data.courseSnapshot?.title ?? data.name;
   const courseDescription = data.courseSnapshot?.description ?? "";
-  const modules = (data.courseSnapshot?.modules ?? []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const hasProgress = modules.some((m) => m.completed);
-  const selected = selectedOrder !== null ? modules.find((m) => m.order === selectedOrder) ?? modules[0] : modules[0];
   const completedCount = modules.filter((m) => m.completed).length;
   const totalModules = modules.length;
   const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
   const hasLessons = !!(selected?.description || selected?.content);
-  const hasYoutube = !!selected?.youtubeUrl;
-  const hasHostedVideo = !!selected?.videoUrl;
+  const hasHostedVideo = !!selected?.videoPlaybackUrl;
   const hasResourceLink = !!selected?.resourceLinkUrl?.trim?.();
   const hasAssignments = !!selected?.linkedAssignmentId;
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 pb-8">
-      <div className="flex shrink-0 items-center gap-3">
+    <AppPageShell className="max-w-7xl pb-8">
+      <div className="page-hero flex shrink-0 items-center gap-3 border-black/10 py-5">
         <Link href="/courses" className="inline-flex items-center gap-2 rounded-lg border-2 border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/70 shadow-sm transition hover:border-black/20 hover:bg-funt-honey/30 hover:text-black">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           Back to Courses
@@ -201,25 +333,41 @@ export default function CourseViewerPage() {
         )}
       </div>
 
-      <div className="flex flex-col rounded-2xl border-2 border-black/10 bg-white shadow-xl shadow-black/5">
-        <div className="border-b border-black/10 bg-gradient-to-b from-funt-honey/40 to-white px-6 py-6">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-black tracking-tight text-black">{courseTitle}</h1>
-            {courseDescription && (
-              <div className="mt-5 max-w-3xl text-black/70 text-sm leading-relaxed prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal [&_.ql-cursor]:hidden" dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
-            )}
+      <DataPanel className="flex flex-col border border-black/10 bg-white/95 shadow-xl shadow-black/10">
+        {!showChapters && (
+          <div className="border-b border-black/10 bg-gradient-to-b from-funt-honey/40 to-white px-6 py-6">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-black tracking-tight text-black">{courseTitle}</h1>
+              {courseDescription && (
+                <div className={`mt-5 w-full text-black/70 text-sm ${RICH_TEXT_VIEW_CLASS} [&_.ql-cursor]:hidden`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="bg-funt-honey/20 px-6 py-6">
-          {!hasAccess ? (
-            <div className="mx-auto max-w-lg rounded-2xl border-2 border-black/10 bg-white p-10 shadow-lg">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-funt-gold/30 text-black mb-4">
+          {blockedByAdmin ? (
+            <div className="surface-blocked mx-auto max-w-lg">
+              <p className="label-overline text-rose-800/90">Access</p>
+              <div className="mt-3 flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 text-rose-700 ring-1 ring-rose-200/80">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <h2 className="mt-4 text-xl font-semibold tracking-tight text-rose-950">Blocked by administrator</h2>
+              <p className="text-muted mt-3 text-rose-900/90">
+                LMS access is off for this enrollment — not billing or license redemption. Contact your school.
+              </p>
+            </div>
+          ) : !hasAccess ? (
+            <div className="card-elevated mx-auto max-w-lg p-10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-funt-gold/25 text-black ring-1 ring-funt-gold/35 mb-4">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </div>
-              <p className="text-black font-semibold">You are not enrolled in this course yet.</p>
-              <p className="mt-1 text-sm text-black/55">
-                Complete payment first. After you submit your transaction details, wait for an administrator to verify and start your access.
+              <p className="text-lg font-semibold tracking-tight text-black">Not enrolled</p>
+              <p className="text-muted mt-2">
+                Choose <strong className="text-black">Pay</strong> to submit UPI or Razorpay proof, or{" "}
+                <strong className="text-black">Enter license key</strong> if your school gave you a code.
               </p>
               {data?.hasRejectedCoursePayment ? (
                 <p className="mt-4 rounded-xl border-2 border-black bg-funt-honey px-4 py-3 text-sm font-medium text-black">
@@ -232,7 +380,9 @@ export default function CourseViewerPage() {
               ) : null}
               {modules.length > 0 && (
                 <div className="mt-6 rounded-xl border-2 border-black/10 bg-funt-honey/40 p-4">
-                  <h3 className="text-sm font-bold text-black mb-2">What you&apos;ll learn ({modules.length} chapter{modules.length !== 1 ? "s" : ""})</h3>
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-black/45">
+                    Chapters ({modules.length})
+                  </h3>
                   <ul className="space-y-1.5">
                     {modules.slice().sort((a, b) => a.order - b.order).map((m) => (
                       <li key={m.order} className="flex items-center gap-2 text-sm text-black/70">
@@ -259,28 +409,44 @@ export default function CourseViewerPage() {
                     href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}`}
                     className="inline-flex items-center justify-center rounded-xl bg-funt-gold px-6 py-3 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
                   >
-                    Go to payment page
+                    Pay for access
                   </Link>
                 ) : null}
+                <div className="rounded-xl border border-dashed border-black/15 bg-funt-honey/25 px-4 py-4">
+                  <p className="text-sm font-semibold text-black">Have a license key?</p>
+                  <Link href="/enroll-license" className="btn-secondary mt-3 inline-flex w-full items-center justify-center py-2.5 text-sm font-semibold">
+                    Enter license key
+                  </Link>
+                </div>
               </div>
             </div>
           ) : (
             <>
               {!showChapters ? (
-                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border-2 border-black/10 bg-white p-10 shadow-lg">
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-black/10 bg-white/95 p-10 shadow-lg shadow-black/10 ring-1 ring-black/5">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-funt-honey text-black mb-4">
                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                   </div>
                   <span className="rounded-full bg-funt-gold/30 px-3 py-1 text-sm font-bold text-black">{modules.length} chapter{modules.length !== 1 ? "s" : ""}</span>
                   <p className="mt-4 text-black/65">Open the chapter list and start learning.</p>
-                  <button type="button" onClick={() => { setShowChapters(true); if (modules[0]) setSelectedOrder(modules[0].order); }} className="mt-6 rounded-xl bg-funt-gold px-10 py-3.5 text-base font-bold text-black shadow-lg shadow-black/10 transition hover:bg-funt-gold-hover hover:shadow-black/15">
+                  <button type="button" onClick={() => router.push(learnRoute)} className="mt-6 rounded-xl bg-funt-gold px-10 py-3.5 text-base font-bold text-black shadow-lg shadow-black/10 transition hover:bg-funt-gold-hover hover:shadow-black/15">
                     {hasProgress ? "Continue" : "Start"}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border-2 border-black/10 bg-white p-5 shadow-md lg:w-80">
-                    <button type="button" onClick={() => setShowChapters(false)} className="mb-3 flex w-fit items-center gap-1.5 text-sm font-semibold text-black/60 hover:text-black">
+                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-black/10 bg-white/95 p-5 shadow-lg shadow-black/10 ring-1 ring-black/5 lg:w-80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (defaultShowChapters) {
+                          router.push(courseRoute);
+                          return;
+                        }
+                        setShowChapters(false);
+                      }}
+                      className="mb-3 flex w-fit items-center gap-1.5 text-sm font-semibold text-black/60 hover:text-black"
+                    >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                       Back
                     </button>
@@ -306,23 +472,7 @@ export default function CourseViewerPage() {
                         ) : (
                           <div className="space-y-2">
                             <p className="text-xs font-bold text-black">Course completed</p>
-                            {(data.certificatePriceCoins ?? 0) > 0 ? (
-                              <p className="text-xs text-black/80">
-                                Certificate fee: <strong>{data.certificatePriceCoins} FUNT coins</strong> (deducted when you generate; coins expire 365 days after each grant).
-                              </p>
-                            ) : (
-                              <p className="text-xs text-black/65">No coin fee for this batch — generating is free once you are eligible.</p>
-                            )}
-                            <label className="block text-xs font-semibold text-black/70">
-                              Coupon code (optional)
-                              <input
-                                className="input mt-1 w-full text-sm"
-                                value={certCouponCode}
-                                onChange={(e) => setCertCouponCode(e.target.value)}
-                                placeholder="If you have a course coupon"
-                                autoComplete="off"
-                              />
-                            </label>
+                            <p className="text-xs text-black/70">Certificates are free — tap generate when you are eligible.</p>
                             <button type="button" onClick={handleGenerateCertificate} disabled={generatingCert} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-funt-gold px-3 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">
                               {generatingCert ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />Generating…</> : <>Generate certificate</>}
                             </button>
@@ -337,14 +487,17 @@ export default function CourseViewerPage() {
                           <li key={m.order}>
                             <button type="button" onClick={() => setSelectedOrder(m.order)} disabled={!m.unlocked} className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${selected?.order === m.order ? "bg-funt-gold text-black shadow-md ring-2 ring-black/10" : m.unlocked ? "text-black/80 hover:bg-funt-honey/50 hover:text-black" : "cursor-not-allowed text-black/35"}`}>
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">{m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}</span>
-                              <span className="truncate">{m.title}</span>
+                              <span className="min-w-0 flex-1 truncate">{m.title}</span>
+                              <span className="shrink-0 text-[11px] font-semibold text-black/55">
+                                {m.completed ? "Completed" : m.unlocked ? "In Progress" : "Not Started"}
+                              </span>
                             </button>
                           </li>
                         ))}
                       </ul>
                     </div>
                   </aside>
-                  <div className="min-w-0 flex-1 rounded-2xl border-2 border-black/10 bg-white p-6 shadow-md">
+                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-white/95 p-6 shadow-lg shadow-black/10 ring-1 ring-black/5">
                     {selected ? (
                       <div className="space-y-8">
                         <h2 className="text-xl font-black tracking-tight text-black border-b border-black/10 pb-4">{selected.title}</h2>
@@ -352,9 +505,9 @@ export default function CourseViewerPage() {
                           <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Content</h3>
                             {selected.description && (
-                              <div className="text-black/70 text-sm mb-4 prose prose-sm max-w-none [&_h1]:text-lg [&_h2]:text-base [&_p]:my-1 [&_ul]:list-disc [&_ol]:list-decimal" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
+                              <div className={`text-black/70 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
                             )}
-                            {selected.content && <div className="text-black/80 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
+                            {selected.content && <div className={`text-black/80 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
                             {selected.hasContent && (
                               <div className="mt-4">
                                 {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
@@ -365,31 +518,86 @@ export default function CourseViewerPage() {
                         {hasYoutube && (
                           <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">YouTube Video</h3>
-                            {(() => {
-                              const embedSrc = selected.youtubeUrl ? toYouTubeEmbedUrl(selected.youtubeUrl) : null;
-                              if (!embedSrc) return <a href={selected.youtubeUrl!.startsWith("http") ? selected.youtubeUrl! : `https://${selected.youtubeUrl}`} target="_blank" rel="noopener noreferrer" className="font-medium text-funt-gold-deep hover:underline">Watch video: {selected.youtubeUrl}</a>;
-                              return (
-                                <>
-                                  <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
-                                    <iframe title={selected.title} src={embedSrc} className="w-full h-full" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" />
-                                  </div>
-                                  <div className="mt-4">
-                                    {selected.youtubeCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("youtube")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
-                                    {markCompleteError && <p className="mt-2 text-sm font-medium text-black">{markCompleteError}</p>}
-                                  </div>
-                                </>
-                              );
-                            })()}
+                            {selected.youtubeVideoId ? (
+                              <>
+                                <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner ring-1 ring-black/10">
+                                  <iframe
+                                    ref={youtubeFrameRef}
+                                    title={selected.title}
+                                    src={youtubeNocookieEmbedSrc(selected.youtubeVideoId, ytPageOrigin)}
+                                    className="h-full w-full min-h-[220px]"
+                                    referrerPolicy="strict-origin-when-cross-origin"
+                                    allowFullScreen
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    suppressHydrationWarning
+                                    onLoad={() => {
+                                      wireYoutubeIframeListening();
+                                      window.setTimeout(wireYoutubeIframeListening, 400);
+                                    }}
+                                  />
+                                </div>
+                                <div className="mt-4 space-y-2">
+                                  <span
+                                    className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold ${
+                                      selected.youtubeCompleted
+                                        ? "border-black/15 bg-funt-honey text-black"
+                                        : selected.unlocked
+                                          ? "border-black/10 bg-white text-black/75"
+                                          : "border-black/10 bg-white text-black/55"
+                                    }`}
+                                  >
+                                    {selected.youtubeCompleted
+                                      ? "Completed"
+                                      : selected.unlocked
+                                        ? "In Progress"
+                                        : "Not Started"}
+                                  </span>
+                                  {markCompleteError && <p className="text-sm font-medium text-black">{markCompleteError}</p>}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="rounded-xl border border-black/10 bg-funt-honey/30 p-4 text-sm text-black/80">
+                                <p className="font-medium text-black">Inline player needs a course refresh</p>
+                                <p className="mt-2 text-black/70">
+                                  This chapter has no embed id yet. Ask your admin to re-save the course, or open the video in a new tab (your LMS tab stays here).
+                                </p>
+                                {selected.youtubeEmbedUrl ? (
+                                  <a
+                                    href={resolveMediaPlaybackUrl(selected.youtubeEmbedUrl)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover"
+                                  >
+                                    Open video in new tab
+                                  </a>
+                                ) : null}
+                              </div>
+                            )}
                           </section>
                         )}
                         {hasHostedVideo && (
                           <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Video</h3>
                             <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
-                              <video src={selected.videoUrl} controls className="w-full h-full" />
+                              <video
+                                src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
+                                controls
+                                controlsList="nodownload noremoteplayback"
+                                disablePictureInPicture
+                                className="w-full h-full"
+                                onEnded={() => {
+                                  if (!isPartCompleted("video")) void handleMarkPartComplete("video");
+                                }}
+                              />
                             </div>
                             <div className="mt-4">
-                              {isPartCompleted("video") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("video")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
+                              {isPartCompleted("video") ? (
+                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black/70">
+                                  Auto-completes after full video playback.
+                                </span>
+                              )}
                               {markCompleteError && <p className="mt-2 text-sm font-medium text-black">{markCompleteError}</p>}
                             </div>
                           </section>
@@ -425,7 +633,9 @@ export default function CourseViewerPage() {
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DataPanel>
+    </AppPageShell>
   );
 }
+
+export default CourseViewerPage;

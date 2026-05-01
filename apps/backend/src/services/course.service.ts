@@ -12,6 +12,39 @@ import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 const ENTITY_COURSE = "Course";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
+function decodeEncodedRichText(input: string | undefined | null): string {
+  let out = (input ?? "").replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ");
+  // Keep literal tag examples visible; decode < > only for fully escaped HTML payloads.
+  for (let i = 0; i < 2; i += 1) {
+    const next = out
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&amp;/gi, "&");
+    if (next === out) break;
+    out = next;
+  }
+  const hasRealHtml = /<[a-z][\s\S]*>/i.test(out);
+  const looksLikeEscapedHtml = /&lt;\s*(?:p|h[1-6]|ul|ol|li|blockquote|pre|code|a|img|hr|div|span|strong|em|u|s|br)\b/i.test(out);
+  if (!hasRealHtml && looksLikeEscapedHtml) {
+    for (let i = 0; i < 2; i += 1) {
+      const next = out
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">")
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/&amp;/gi, "&");
+      if (next === out) break;
+      out = next;
+    }
+  }
+  out = out.replace(/\bclassName=/gi, "class=");
+  out = out.replace(
+    /^\s*<div\b[^>]*\bclass=(["'])[^"']*\b(?:ql-editor|rte-prosemirror)\b[^"']*\1[^>]*>([\s\S]*?)<\/div>\s*$/i,
+    "$2"
+  );
+  return out;
+}
+
 export async function findCourseByParam(id: string) {
   if (!id?.trim()) return null;
   const t = id.trim();
@@ -54,6 +87,7 @@ function assertCanArchiveCourse(userId: string, course: { createdBy: string }) {
 export interface CreateCourseInput {
   title: string;
   description: string;
+  durationText?: string;
   globalModuleIds: string[];
   createdBy: string;
 }
@@ -61,6 +95,7 @@ export interface CreateCourseInput {
 export interface UpdateCourseInput {
   title?: string;
   description?: string;
+  durationText?: string;
   moderatorIds?: string[];
 }
 
@@ -76,14 +111,17 @@ export interface UpdateCourseModuleInput {
     linkedAssignmentInstructionsOverride?: string;
     linkedAssignmentSubmissionTypeOverride?: string;
     linkedAssignmentSkillTagsOverride?: string[];
+  /** XP awarded when a student fully completes this module (captured on new batches from this snapshot). */
+  xpReward?: number;
 }
 
-function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: string; description: string; modules: unknown[]; version: number; status: string; createdBy: string; moderatorIds?: string[] | null; createdAt: Date; updatedAt: Date }) {
+function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: string; description: string; durationText?: string; modules: unknown[]; version: number; status: string; createdBy: string; moderatorIds?: string[] | null; createdAt: Date; updatedAt: Date }) {
   return {
     id: String(doc._id),
     courseId: doc.courseId ?? undefined,
     title: doc.title,
     description: doc.description,
+    durationText: doc.durationText ?? "",
     modules: doc.modules,
     version: doc.version,
     status: doc.status,
@@ -160,15 +198,19 @@ export async function createCourse(input: CreateCourseInput) {
         versionAtSnapshot: m.version,
         linkedAssignmentId,
         order: getModuleOrder(m as { _id: unknown; moduleId?: string }),
+        xpReward: 40,
       };
     })
     .sort((a, b) => a.order - b.order);
 
+  const normalizedDescription = decodeEncodedRichText(input.description);
+  const normalizedDurationText = String(input.durationText ?? "").trim();
   const courseId = await generateCourseId();
   const doc = await CourseModel.create({
     courseId,
     title: input.title.trim(),
-    description: input.description.trim(),
+    description: normalizedDescription.trim(),
+    durationText: normalizedDurationText,
     modules: snapshots,
     version: 1,
     status: COURSE_STATUS.ACTIVE,
@@ -204,7 +246,8 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
     throw new AppError("Cannot update an archived course", 400);
   }
   if (input.title !== undefined) doc.title = input.title.trim();
-  if (input.description !== undefined) doc.description = input.description.trim();
+  if (input.description !== undefined) doc.description = decodeEncodedRichText(input.description).trim();
+  if (input.durationText !== undefined) (doc as { durationText?: string }).durationText = String(input.durationText).trim();
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0
@@ -245,14 +288,17 @@ export async function updateCourseModule(
   }
   const mod = { ...modules[moduleIndex] } as (typeof modules)[number];
   if (input.title !== undefined) mod.title = input.title.trim();
-  if (input.description !== undefined) mod.description = input.description.trim();
-  if (input.content !== undefined) mod.content = input.content;
+  if (input.description !== undefined) mod.description = decodeEncodedRichText(input.description).trim();
+  if (input.content !== undefined) mod.content = decodeEncodedRichText(input.content);
   if (input.youtubeUrl !== undefined) mod.youtubeUrl = input.youtubeUrl?.trim() || undefined;
   if (input.videoUrl !== undefined) mod.videoUrl = input.videoUrl?.trim() || undefined;
   if (input.resourceLinkUrl !== undefined) (mod as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl?.trim() || undefined;
   if (input.linkedAssignmentId !== undefined) mod.linkedAssignmentId = input.linkedAssignmentId?.trim() || undefined;
   if (input.linkedAssignmentTitleOverride !== undefined) (mod as { linkedAssignmentTitleOverride?: string }).linkedAssignmentTitleOverride = input.linkedAssignmentTitleOverride?.trim() || undefined;
-  if (input.linkedAssignmentInstructionsOverride !== undefined) (mod as { linkedAssignmentInstructionsOverride?: string }).linkedAssignmentInstructionsOverride = input.linkedAssignmentInstructionsOverride ?? undefined;
+  if (input.linkedAssignmentInstructionsOverride !== undefined) {
+    const normalized = decodeEncodedRichText(input.linkedAssignmentInstructionsOverride);
+    (mod as { linkedAssignmentInstructionsOverride?: string }).linkedAssignmentInstructionsOverride = normalized || undefined;
+  }
   if (input.linkedAssignmentSubmissionTypeOverride !== undefined) {
     const v = input.linkedAssignmentSubmissionTypeOverride?.trim();
     if (v && !Object.values(SUBMISSION_TYPE).includes(v as (typeof SUBMISSION_TYPE)[keyof typeof SUBMISSION_TYPE])) {
@@ -268,6 +314,13 @@ export async function updateCourseModule(
       if (invalid.length > 0) throw new AppError(`linkedAssignmentSkillTagsOverride must only include: ${Object.values(SKILL_TAG).join(", ")}`, 400);
     }
     (mod as { linkedAssignmentSkillTagsOverride?: string[] }).linkedAssignmentSkillTagsOverride = arr;
+  }
+  if (input.xpReward !== undefined) {
+    const x = Math.floor(Number(input.xpReward));
+    if (!Number.isFinite(x) || x < 0 || x > 100_000) {
+      throw new AppError("xpReward must be an integer from 0 to 100,000", 400);
+    }
+    (mod as { xpReward?: number }).xpReward = x;
   }
   modules[moduleIndex] = mod;
   doc.set("modules", modules);

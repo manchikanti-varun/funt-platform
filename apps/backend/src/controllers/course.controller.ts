@@ -12,8 +12,8 @@ function getUserId(req: Request): string {
 
 export const createCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { title, description, globalModuleIds } = req.body ?? {};
-  const data = await service.createCourse({ title, description, globalModuleIds, createdBy });
+  const { title, description, durationText, globalModuleIds } = req.body ?? {};
+  const data = await service.createCourse({ title, description, durationText, globalModuleIds, createdBy });
   successRes(res, data, "Course created", 201);
 });
 
@@ -35,8 +35,8 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, moderatorIds } = req.body ?? {};
-  const data = await service.updateCourse(id, { title, description, moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined }, performedBy);
+  const { title, description, durationText, moderatorIds } = req.body ?? {};
+  const data = await service.updateCourse(id, { title, description, durationText, moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined }, performedBy);
   successRes(res, data, "Course updated");
 });
 
@@ -56,11 +56,11 @@ export const updateCourseModule = asyncHandler(async (req: Request, res: Respons
   if (!id) throw new AppError("Course ID is required", 400);
   const moduleIndex = indexParam != null ? parseInt(indexParam, 10) : NaN;
   if (Number.isNaN(moduleIndex) || moduleIndex < 0) throw new AppError("Valid module index is required", 400);
-  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride } = req.body ?? {};
+  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride, xpReward } = req.body ?? {};
   const data = await service.updateCourseModule(
     id,
     moduleIndex,
-    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride: Array.isArray(linkedAssignmentSkillTagsOverride) ? linkedAssignmentSkillTagsOverride : undefined },
+    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride: Array.isArray(linkedAssignmentSkillTagsOverride) ? linkedAssignmentSkillTagsOverride : undefined, xpReward },
     performedBy
   );
   successRes(res, data, "Module snapshot updated");

@@ -5,12 +5,11 @@ import { BatchModel } from "../models/Batch.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { UserModel } from "../models/User.model.js";
-import { grantCoinsWithExpiry, spendCoins } from "./coinBalance.service.js";
-import { assertCourseCouponForCertificate, recordCouponRedemption } from "./coupon.service.js";
+import { grantCoinsWithExpiry } from "./coinBalance.service.js";
 import { ENROLLMENT_STATUS, CERTIFICATE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { generateCertificateId } from "../utils/funtIdGenerator.js";
-import { ensureFirstCourseCompletedBadge } from "./achievement.service.js";
+import { ensureFirstCourseCompletedBadge, awardBadge } from "./achievement.service.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -105,15 +104,41 @@ function getFirstSnapshotCourseId(batch: unknown): string {
   return first?.courseId ?? "";
 }
 
-export async function generateCertificate(
+/** Completion coins live on each course snapshot in the batch (like fee). Legacy batches may only have root `completionRewardCoins` for the first course. */
+function getCompletionRewardCoinsForCertificate(batch: unknown, certCourseId: string): number {
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  if (snaps.length === 0) return 0;
+  const snap =
+    (snaps.find((s) => String((s as { courseId?: string }).courseId ?? "") === String(certCourseId ?? "")) ??
+      snaps[0]) as { courseId?: string; completionRewardCoins?: unknown };
+  const raw = snap?.completionRewardCoins;
+  if (raw !== undefined && raw !== null && String(raw) !== "") {
+    const n = Math.floor(Number(raw));
+    if (Number.isFinite(n) && n >= 0) return Math.min(1_000_000, n);
+  }
+  const legacy = Math.max(0, Math.floor(Number((batch as { completionRewardCoins?: number }).completionRewardCoins ?? 0)));
+  const first = snaps[0] as { courseId?: string } | undefined;
+  if (legacy > 0 && String(first?.courseId ?? "") === String(certCourseId)) return legacy;
+  return 0;
+}
+
+function getCompletionBadgeTypesForCertificate(batch: unknown, certCourseId: string): string[] {
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  if (snaps.length === 0) return [];
+  const snap =
+    (snaps.find((s) => String((s as { courseId?: string }).courseId ?? "") === String(certCourseId ?? "")) ??
+      snaps[0]) as { completionBadgeTypes?: unknown };
+  const raw = (snap as { completionBadgeTypes?: unknown }).completionBadgeTypes;
+  const arr = Array.isArray(raw) ? raw : [];
+  return [...new Set(arr.map((x) => String(x ?? "").trim().toUpperCase()).filter(Boolean))];
+}
+
+async function issueCertificateDocument(
   studentId: string,
   batchId: string,
   issuedBy: string,
-  opts?: { coinReward?: number; couponCode?: string }
+  opts?: { coinReward?: number }
 ) {
-  const { eligible, reason } = await checkEligibility(studentId, batchId);
-  if (!eligible) throw new AppError(reason ?? "Not eligible for certificate", 400);
-
   const batch = await findBatchByParam(batchId);
   if (!batch) throw new AppError("Batch not found", 404);
   const batchMongoId = String((batch as { _id: unknown })._id);
@@ -122,23 +147,6 @@ export async function generateCertificate(
     (batch.courseSnapshot as { courseId?: string } | undefined)?.courseId ||
     "";
   if (!courseId) throw new AppError("Batch has no course", 400);
-
-  const selfIssued = issuedBy === studentId;
-  let courseCouponId: string | null = null;
-  if (selfIssued) {
-    const baseFee = Math.max(0, Math.floor(Number((batch as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0)));
-    const { finalPrice, couponId } = await assertCourseCouponForCertificate(
-      opts?.couponCode,
-      batchMongoId,
-      courseId,
-      studentId,
-      baseFee
-    );
-    courseCouponId = couponId;
-    if (finalPrice > 0) {
-      await spendCoins(studentId, finalPrice);
-    }
-  }
 
   let coinReward = 0;
   if (opts?.coinReward != null) {
@@ -159,13 +167,20 @@ export async function generateCertificate(
     coinReward,
   });
 
+  const completionRewardCoins = getCompletionRewardCoinsForCertificate(batch, courseId);
+  if (completionRewardCoins > 0) {
+    await grantCoinsWithExpiry(studentId, completionRewardCoins, "BATCH_COMPLETION", doc.certificateId);
+  }
+  const completionBadges = getCompletionBadgeTypesForCertificate(batch, courseId);
+  if (completionBadges.length > 0) {
+    for (const bt of completionBadges) {
+      await awardBadge(studentId, bt, { batchId: batchMongoId, courseId, certificateId: doc.certificateId }, "auto").catch(() => {});
+    }
+  }
+
   await createAuditLog("CERTIFICATE_GENERATED", issuedBy, "Certificate", String(doc._id));
   await ensureFirstCourseCompletedBadge(studentId, batchMongoId).catch(() => {});
   await UserModel.updateOne({ _id: studentId }, { $inc: { studentLevel: 1 } }).exec();
-
-  if (selfIssued && courseCouponId) {
-    await recordCouponRedemption(courseCouponId, studentId, `certificate:${batchMongoId}:${courseId}`);
-  }
 
   return {
     id: String(doc._id),
@@ -179,6 +194,34 @@ export async function generateCertificate(
     coinReward: doc.coinReward ?? 0,
     coinRewardGrantedAt: doc.coinRewardGrantedAt ?? null,
   };
+}
+
+export async function generateCertificate(
+  studentId: string,
+  batchId: string,
+  issuedBy: string,
+  opts?: { coinReward?: number }
+) {
+  const { eligible, reason } = await checkEligibility(studentId, batchId);
+  if (!eligible) throw new AppError(reason ?? "Not eligible for certificate", 400);
+  return issueCertificateDocument(studentId, batchId, issuedBy, opts);
+}
+
+/**
+ * Same persistence as {@link generateCertificate} but skips eligibility checks.
+ * For local scripts that replace an existing issued row (e.g. PDF testing). Disabled in production.
+ */
+export async function reissueCertificateWithoutEligibilityDev(
+  studentId: string,
+  batchId: string,
+  issuedBy: string,
+  opts?: { coinReward?: number }
+) {
+  const nodeEnv = process.env.NODE_ENV ?? "development";
+  if (nodeEnv === "production") {
+    throw new AppError("reissueCertificateWithoutEligibilityDev is disabled in production", 403);
+  }
+  return issueCertificateDocument(studentId, batchId, issuedBy, opts);
 }
 
 export async function setCertificateCoinReward(certificateId: string, coinReward: number, actorId: string) {
@@ -256,16 +299,34 @@ export async function getCertificateDataForPdf(certificateId: string) {
   if (!cert) return null;
   const [student, batch] = await Promise.all([
     UserModel.findById(cert.studentId).select("name").lean().exec(),
-    BatchModel.findById(cert.batchId).select("courseSnapshot courseSnapshots").lean().exec(),
+    BatchModel.findById(cert.batchId).select("courseSnapshot courseSnapshots startDate endDate").lean().exec(),
   ]);
   const courseName = batch
     ? (getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { title?: string } | undefined)?.title ?? "Course"
     : "Course";
+  const snapshotDuration =
+    batch
+      ? String(
+          ((getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { durationText?: string } | undefined)
+            ?.durationText ?? "")
+        ).trim()
+      : "";
+  const startDate = (batch as { startDate?: Date } | null)?.startDate;
+  const endDate = (batch as { endDate?: Date } | null)?.endDate;
+  const fallbackDuration =
+    startDate && endDate
+      ? `${Math.max(1, Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1)} days`
+      : startDate
+        ? `From ${new Date(startDate).toLocaleDateString()}`
+        : "—";
+  const durationText = snapshotDuration || fallbackDuration;
+
   return {
     certificateId: cert.certificateId,
     studentName: student?.name ?? "Student",
     courseName,
     issuedAt: cert.issuedAt,
+    durationText,
   };
 }
 
@@ -278,6 +339,7 @@ export async function generateCertificatePdfBuffer(certificateId: string): Promi
     studentName: data.studentName,
     courseName: data.courseName,
     issuedAt: data.issuedAt,
+    durationText: data.durationText,
   });
 }
 

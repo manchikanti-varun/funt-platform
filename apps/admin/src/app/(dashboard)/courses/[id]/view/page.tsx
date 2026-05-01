@@ -4,19 +4,23 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { sanitizeHtml } from "@/lib/sanitizeHtml";
+import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { COURSE_STATUS } from "@funt-platform/constants";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 
 interface CourseModule {
   title: string;
   order: number;
   originalGlobalModuleId?: string;
+  xpReward?: number;
 }
 
 interface Course {
   id: string;
+  courseId?: string;
   title: string;
   description: string;
+  durationText?: string;
   modules: CourseModule[];
   version: number;
   status: string;
@@ -46,6 +50,7 @@ export default function ViewCoursePage() {
   }
 
   const sortedModules = [...(course.modules ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const sanitizedDescription = sanitizeHtml(course.description ?? "");
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -59,7 +64,7 @@ export default function ViewCoursePage() {
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">{course.title}</h1>
-          <p className="mt-1 text-sm text-slate-500">View only. Use the actions below to edit or duplicate.</p>
+          <p className="mt-1 text-sm text-slate-500">View only. License keys and cohort access are managed from each batch.</p>
           <div className="mt-3 flex items-center gap-3">
             <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{course.version}</span>
             <span
@@ -86,43 +91,46 @@ export default function ViewCoursePage() {
                 </svg>
                 Edit course
               </Link>
-              <Link
-                href={`/courses/${id}/duplicate`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                Duplicate course
+              <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
+                <DuplicateIcon />
+                Duplicate
               </Link>
             </div>
           </section>
+
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Description</h2>
-            <div className="prose prose-sm max-w-none text-slate-700 [&_p]:my-2 [&_ul]:list-disc [&_ol]:list-decimal [&_h1]:text-lg [&_h2]:text-base" dangerouslySetInnerHTML={{ __html: sanitizeHtml(course.description ?? "") }} />
+            <div className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
+          </section>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Duration</h2>
+            <p className="text-sm font-medium text-slate-800">{(course.durationText ?? "").trim() || "Not set"}</p>
           </section>
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Modules ({sortedModules.length})</h2>
             <ul className="rounded-xl border border-slate-200 bg-slate-50/50 divide-y divide-slate-200">
               {sortedModules.map((m, i) => (
                 <li key={i}>
-                  {m.originalGlobalModuleId ? (
-                    <Link
-                      href={`/global-modules/${m.originalGlobalModuleId}/view`}
-                      className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-slate-800 transition hover:bg-slate-100 hover:text-teal-600"
-                    >
-                      <span className="font-medium text-slate-500 w-6">{i + 1}.</span>
-                      {m.title}
-                    </Link>
-                  ) : (
-                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-800">
-                      <span className="font-medium text-slate-500 w-6">{i + 1}.</span>
-                      {m.title}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-800">
+                    <span className="font-medium text-slate-500 w-6">{i + 1}.</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{m.title}</span>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                      {Math.max(0, Math.floor(Number(m.xpReward ?? 40)))} XP
+                    </span>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                      Snapshot
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>
+            <p className="mt-2 text-xs text-slate-500">
+              These are course snapshots. Edit them from{" "}
+              <Link href={`/courses/${id}`} className="font-medium text-teal-700 hover:underline">
+                Edit course
+              </Link>
+              , not Global Modules.
+            </p>
           </section>
         </div>
       </div>

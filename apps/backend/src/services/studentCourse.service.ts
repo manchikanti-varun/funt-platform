@@ -5,9 +5,11 @@ import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { UserModel } from "../models/User.model.js";
 import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
+import { normalizeAllowedPaymentMethods, formatPaymentMethodsLabel } from "../utils/coursePaymentMethods.js";
 import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
 import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
+import { ensureFirstModuleCompletedBadge } from "./achievement.service.js";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return (err as { code?: number })?.code === 11000;
@@ -22,6 +24,7 @@ type ModuleSnapshot = {
   videoUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
+  xpReward?: unknown;
   [k: string]: unknown;
 };
 
@@ -54,6 +57,16 @@ function isModuleFullyCompleted(parts: ReturnType<typeof moduleParts>, p: Progre
   return true;
 }
 
+function isCourseBlockedInEnrollment(enrollment: unknown, courseId: string): boolean {
+  if (!enrollment || !courseId) return false;
+  const raw = (enrollment as { courseAccessBlocked?: unknown }).courseAccessBlocked;
+  if (raw instanceof Map) return !!raw.get(courseId);
+  if (raw && typeof raw === "object") {
+    return !!(raw as Record<string, boolean>)[courseId];
+  }
+  return false;
+}
+
 /** Get one course's content from a batch (by courseId when batch has multiple courses). */
 export async function getBatchCourseForStudent(studentId: string, batchId: string, courseId?: string) {
   const batch = await findBatchByParam(batchId);
@@ -77,7 +90,20 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   }).exec();
 
   const blocked = !!(enrollment as { accessBlocked?: boolean } | null)?.accessBlocked;
-  const hasAccess = !!enrollment && !blocked;
+  const courseBlocked = isCourseBlockedInEnrollment(
+    enrollment as ({ courseAccessBlocked?: Map<string, boolean> | Record<string, boolean> } & Record<string, unknown>) | null,
+    snapshotCourseId
+  );
+  const enrollmentPriceInPaise = Math.max(
+    0,
+    Math.floor(Number((snapshot as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0))
+  );
+  let hasVerifiedCoursePayment = false;
+  if (!!enrollment && !blocked && enrollmentPriceInPaise >= 100) {
+    const payState = await getLatestCoursePaymentState(studentId, batchMongoId, snapshotCourseId);
+    hasVerifiedCoursePayment = payState?.status === "VERIFIED";
+  }
+  const hasAccess = !!enrollment && !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedCoursePayment);
 
   const rawModules = snapshot?.modules ?? [];
 
@@ -148,11 +174,25 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     status: string;
     certificatePriceCoins?: number;
   };
+  const tid = String(batchDoc.trainerId ?? "").trim();
+  let trainerName: string | undefined;
+  let trainerUsername: string | undefined;
+  if (/^[a-fA-F0-9]{24}$/.test(tid)) {
+    const tu = await UserModel.findById(tid).select("name username").lean().exec();
+    if (tu) {
+      trainerName = String((tu as { name?: string }).name ?? "").trim() || undefined;
+      trainerUsername = String((tu as { username?: string }).username ?? "").trim() || undefined;
+    }
+  }
   return {
     batchId: batchMongoId,
     batchFuntId: batchDoc.batchId,
     name: batchDoc.name,
     hasAccess,
+    /** True when student is enrolled but an admin disabled LMS access for this enrollment. */
+    accessBlocked: blocked || courseBlocked,
+    /** True when an enrollment row exists (active/completed), regardless of block. */
+    isEnrolled: !!enrollment,
     courseId: snapshotCourseId,
     certificatePriceCoins: Math.max(0, Math.floor(Number(batchDoc.certificatePriceCoins ?? 0))),
     courseSnapshot: {
@@ -162,6 +202,7 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
       modules,
     },
     trainerId: batchDoc.trainerId,
+    ...(trainerName ? { trainerName, trainerUsername } : {}),
     startDate: batchDoc.startDate,
     endDate: batchDoc.endDate,
     zoomLink: batchDoc.zoomLink,
@@ -198,10 +239,20 @@ async function computeProgressPercent(
   return Math.round((completed / rawModules.length) * 100);
 }
 
-const XP_PER_CHAPTER = 40;
+const DEFAULT_MODULE_XP = 40;
+
+function xpAwardForModuleSnapshot(m: ModuleSnapshot): number {
+  const raw = m.xpReward;
+  if (raw === undefined || raw === null) return DEFAULT_MODULE_XP;
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n) || n < 0) return DEFAULT_MODULE_XP;
+  return Math.min(100_000, n);
+}
 
 async function awardChapterXp(studentId: string, amount: number) {
-  await UserModel.updateOne({ _id: studentId }, { $inc: { studentXp: amount } }).exec();
+  const n = Math.floor(Number(amount));
+  if (!Number.isFinite(n) || n < 1) return;
+  await UserModel.updateOne({ _id: studentId }, { $inc: { studentXp: n } }).exec();
 }
 
 /** XP-only award (e.g. approved assignment). Course completion level is increased when a certificate is issued. */
@@ -237,14 +288,33 @@ export async function getMyCoursesForStudent(studentId: string) {
     const batch = batchById.get(e.batchId);
     if (!batch) continue;
     const blocked = !!(e as { accessBlocked?: boolean }).accessBlocked;
+    const courseBlockMapRaw = (e as { courseAccessBlocked?: unknown }).courseAccessBlocked;
+    const courseBlockMap =
+      courseBlockMapRaw instanceof Map
+        ? courseBlockMapRaw
+        : courseBlockMapRaw && typeof courseBlockMapRaw === "object"
+          ? new Map(Object.entries(courseBlockMapRaw as Record<string, boolean>))
+          : new Map<string, boolean>();
     const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
     for (const snap of snapshots) {
       const s = snap as { courseId?: string; title?: string; description?: string; modules?: ModuleSnapshot[] };
       const courseId = s?.courseId ?? String(batch._id);
+      const courseBlocked = !!courseBlockMap.get(courseId);
       const modules = Array.isArray(s?.modules) ? s.modules : [];
-      const pct = blocked
-        ? 0
-        : await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length);
+      const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((s as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
+      const payState =
+        !blocked && !courseBlocked && enrollmentPriceInPaise >= 100
+          ? await getLatestCoursePaymentState(studentId, String(batch._id), courseId)
+          : null;
+      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || payState?.status === "VERIFIED");
+      const isAdminBlocked = blocked || courseBlocked;
+
+      // Keep "My Courses" aligned with course detail access semantics:
+      // show courses the student can access, plus explicitly blocked enrollments.
+      if (!hasCourseAccess && !isAdminBlocked) continue;
+      const pct = hasCourseAccess
+        ? await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length)
+        : 0;
       result.push({
         courseId,
         courseTitle: s?.title ?? "Course",
@@ -252,7 +322,7 @@ export async function getMyCoursesForStudent(studentId: string) {
         moduleCount: modules.length,
         batchId: String(batch._id),
         progressPercent: pct,
-        accessBlocked: blocked,
+        accessBlocked: isAdminBlocked,
       });
     }
   }
@@ -275,11 +345,25 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
   if (batchId) batches = batches.filter((b) => String(b._id) === batchId);
 
   const batchIds = batches.map((b) => String(b._id));
-  const enrollment = await EnrollmentModel.findOne({
-    studentId,
-    batchId: { $in: batchIds },
-    status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
-  }).exec();
+  const enrolledStatuses = { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] };
+  let enrollment = null;
+  const queryBatchId = batchId?.trim();
+  if (queryBatchId && batchIds.includes(queryBatchId)) {
+    enrollment = await EnrollmentModel.findOne({
+      studentId,
+      batchId: queryBatchId,
+      status: enrolledStatuses,
+    }).exec();
+  }
+  if (!enrollment) {
+    enrollment = await EnrollmentModel.findOne({
+      studentId,
+      batchId: { $in: batchIds },
+      status: enrolledStatuses,
+    })
+      .sort({ enrolledAt: -1 })
+      .exec();
+  }
 
   const resolvedBatchId = enrollment ? enrollment.batchId : String(batches[0]._id);
   const data = await getBatchCourseForStudent(studentId, resolvedBatchId, normalizedCourseId);
@@ -288,7 +372,8 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
   let hasPendingCoursePaymentFlag = false;
   let hasRejectedCoursePayment = false;
   let coursePaymentRejectReason: string | undefined;
-  if (!data.hasAccess) {
+  /** Do not mix payment / request messaging with admin access block — student must see “blocked by admin” only. */
+  if (!data.hasAccess && !data.accessBlocked) {
     const pending = await EnrollmentRequestModel.findOne({
       studentId,
       batchId: { $in: batchIds },
@@ -316,18 +401,35 @@ export async function listCoursesForExplore() {
     .sort({ createdAt: -1 })
     .lean()
     .exec();
-  const byCourseId = new Map<string, { batchId: string; courseTitle: string; description?: string; moduleCount: number }>();
+  const byCourseId = new Map<
+    string,
+    {
+      batchId: string;
+      courseTitle: string;
+      description?: string;
+      moduleCount: number;
+      enrollmentPriceInPaise: number;
+      paymentOptionsLabel: string;
+    }
+  >();
   for (const batch of batches) {
     const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
     for (const snap of snapshots) {
       const s = snap as { courseId?: string; title?: string; description?: string; modules?: unknown[] };
       const courseId = s?.courseId ?? String(batch._id);
       if (byCourseId.has(courseId)) continue;
+      const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((s as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
+      const allowed =
+        enrollmentPriceInPaise >= 100
+          ? normalizeAllowedPaymentMethods((s as { allowedPaymentMethods?: unknown }).allowedPaymentMethods)
+          : [];
       byCourseId.set(courseId, {
         batchId: String(batch._id),
         courseTitle: s?.title ?? "Course",
         description: s?.description,
         moduleCount: Array.isArray(s?.modules) ? s.modules.length : 0,
+        enrollmentPriceInPaise,
+        paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
       });
     }
   }
@@ -337,6 +439,8 @@ export async function listCoursesForExplore() {
     description: v.description,
     moduleCount: v.moduleCount,
     batchId: v.batchId,
+    enrollmentPriceInPaise: v.enrollmentPriceInPaise,
+    paymentOptionsLabel: v.paymentOptionsLabel,
   }));
 }
 
@@ -368,6 +472,14 @@ export async function markModulePartComplete(
   }).exec();
   if (!enrollment) throw new AppError("You are not enrolled in this batch", 403);
   if ((enrollment as { accessBlocked?: boolean }).accessBlocked) {
+    throw new AppError("Access to this course has been disabled", 403);
+  }
+  if (
+    isCourseBlockedInEnrollment(
+      enrollment,
+      snapshotCourseId
+    )
+  ) {
     throw new AppError("Access to this course has been disabled", 403);
   }
 
@@ -406,7 +518,8 @@ export async function markModulePartComplete(
       { $set: { completedAt: now } }
     ).exec();
     if (!(prevProgress as ProgressDoc | null)?.completedAt) {
-      await awardChapterXp(studentId, XP_PER_CHAPTER);
+      await awardChapterXp(studentId, xpAwardForModuleSnapshot(mod));
+      await ensureFirstModuleCompletedBadge(studentId, batchMongoId, moduleOrder).catch(() => {});
     }
   }
 
@@ -433,6 +546,14 @@ export async function markModuleComplete(studentId: string, batchId: string, mod
   }).exec();
   if (!enrollment) throw new AppError("You are not enrolled in this batch", 403);
   if ((enrollment as { accessBlocked?: boolean }).accessBlocked) {
+    throw new AppError("Access to this course has been disabled", 403);
+  }
+  if (
+    isCourseBlockedInEnrollment(
+      enrollment,
+      snapshotCourseId
+    )
+  ) {
     throw new AppError("Access to this course has been disabled", 403);
   }
 
@@ -473,7 +594,9 @@ export async function markModuleComplete(studentId: string, batchId: string, mod
 
   const wasComplete = !!(before as ProgressDoc | null)?.completedAt;
   if (!wasComplete) {
-    await awardChapterXp(studentId, XP_PER_CHAPTER);
+    const modSnap = modules[moduleOrder] as ModuleSnapshot;
+    await awardChapterXp(studentId, xpAwardForModuleSnapshot(modSnap));
+    await ensureFirstModuleCompletedBadge(studentId, batchMongoId, moduleOrder).catch(() => {});
   }
 
   return { batchId: batchMongoId, courseId: snapshotCourseId, moduleOrder, completed: true };
