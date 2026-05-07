@@ -13,7 +13,7 @@ interface Submission {
   id: string;
   studentId: string;
   batchId: string;
-  moduleOrder: number;
+  chapterOrder?: number;
   assignmentId: string;
   submissionType: string;
   status: string;
@@ -163,7 +163,7 @@ export default function AssignmentsReviewPage() {
               <tr>
                 {hasPending ? <th className="w-10 px-2 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600"><span className="sr-only">Select</span></th> : null}
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Student</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Module</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Chapter</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Submitted</th>
                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
@@ -185,7 +185,7 @@ export default function AssignmentsReviewPage() {
                     </td>
                   ) : null}
                   <td className="px-4 py-3 text-sm font-medium text-slate-800">{s.studentId}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">Module {s.moduleOrder + 1}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">Chapter {(s.chapterOrder ?? 0) + 1}</td>
                   <td className="px-4 py-3">
                     <span className={s.status === SUBMISSION_REVIEW_STATUS.PENDING ? "badge-warning" : s.status === SUBMISSION_REVIEW_STATUS.APPROVED ? "badge-success" : "badge bg-red-100 text-red-800"}>{s.status}</span>
                   </td>

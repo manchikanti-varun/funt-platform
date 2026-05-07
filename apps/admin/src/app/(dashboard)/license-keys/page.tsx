@@ -2,13 +2,14 @@ import Link from "next/link";
 import { CourseLicenseKeyGenerator } from "@/components/CourseLicenseKeyGenerator";
 import { PageHeader } from "@/components/ui/PageHeader";
 
-export default function LicenseKeysPage({
+export default async function LicenseKeysPage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const batchId = typeof searchParams.batchId === "string" ? searchParams.batchId.trim() : undefined;
-  const courseId = typeof searchParams.courseId === "string" ? searchParams.courseId.trim() : undefined;
+  const params = await searchParams;
+  const batchId = typeof params.batchId === "string" ? params.batchId.trim() : undefined;
+  const courseId = typeof params.courseId === "string" ? params.courseId.trim() : undefined;
 
   if (!batchId) {
     return (

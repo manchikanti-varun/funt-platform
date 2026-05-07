@@ -26,9 +26,11 @@ interface Batch {
   startDate: string;
   endDate?: string;
   zoomLink?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
   status: string;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
+  headerImageUrl?: string;
   courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
   courseSnapshots?: Array<{
     title?: string;
@@ -56,7 +58,7 @@ interface BadgeOption {
 const INPUT_CLASS =
   "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
 
-const MAX_QR_FILE_BYTES = 350_000;
+const MAX_UPLOAD_IMAGE_BYTES = 1_500_000;
 
 function readImageFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -64,8 +66,8 @@ function readImageFileAsDataUrl(file: File): Promise<string> {
       reject(new Error("Choose a PNG, JPEG, GIF, or WebP image."));
       return;
     }
-    if (file.size > MAX_QR_FILE_BYTES) {
-      reject(new Error("Image must be under about 350 KB."));
+    if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
+      reject(new Error("Image must be under about 1.5 MB."));
       return;
     }
     const r = new FileReader();
@@ -93,6 +95,7 @@ export default function EditBatchPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [zoomLink, setZoomLink] = useState("");
+  const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
   const [enrollmentInrByCourseId, setEnrollmentInrByCourseId] = useState<Record<string, string>>({});
   const [paymentByCourseId, setPaymentByCourseId] = useState<Record<string, { upiManual: boolean; razorpay: boolean }>>({});
   const [loading, setLoading] = useState(false);
@@ -101,6 +104,9 @@ export default function EditBatchPage() {
   const [upiQrNewDataUrl, setUpiQrNewDataUrl] = useState<string | null>(null);
   const [upiQrRemoved, setUpiQrRemoved] = useState(false);
   const [upiQrPickName, setUpiQrPickName] = useState("");
+  const [headerImageNewDataUrl, setHeaderImageNewDataUrl] = useState<string | null>(null);
+  const [headerImageRemoved, setHeaderImageRemoved] = useState(false);
+  const [headerImagePickName, setHeaderImagePickName] = useState("");
   const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
   const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
@@ -147,6 +153,9 @@ export default function EditBatchPage() {
         setUpiQrNewDataUrl(null);
         setUpiQrRemoved(false);
         setUpiQrPickName("");
+        setHeaderImageNewDataUrl(null);
+        setHeaderImageRemoved(false);
+        setHeaderImagePickName("");
         setShowFallbackQrUploader(!!r.data.manualUpiQrUrl);
         setBatch(r.data);
         setName(r.data.name);
@@ -158,6 +167,7 @@ export default function EditBatchPage() {
         setStartDate(r.data.startDate ? r.data.startDate.slice(0, 10) : "");
         setEndDate(r.data.endDate ? r.data.endDate.slice(0, 10) : "");
         setZoomLink(r.data.zoomLink ?? "");
+        setVisibility(r.data.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC");
         const snaps =
           Array.isArray(r.data.courseSnapshots) && r.data.courseSnapshots.length > 0
             ? r.data.courseSnapshots
@@ -253,6 +263,7 @@ export default function EditBatchPage() {
       startDate: startDate || undefined,
       endDate: endDate || undefined,
       zoomLink: zoomLink || undefined,
+      visibility,
       ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
       ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
       ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
@@ -260,6 +271,8 @@ export default function EditBatchPage() {
     };
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
+    if (headerImageRemoved) body.headerImageUrl = null;
+    else if (headerImageNewDataUrl) body.headerImageUrl = headerImageNewDataUrl;
 
     const res = await api(`/api/batches/${id}`, {
       method: "PUT",
@@ -387,6 +400,62 @@ export default function EditBatchPage() {
                   disabled={trainerOnly}
                   required={!trainerOnly}
                 />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Visibility in student explore</label>
+                <select
+                  value={visibility}
+                  onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "PRIVATE")}
+                  className={INPUT_CLASS}
+                >
+                  <option value="PUBLIC">Public (visible in Explore courses)</option>
+                  <option value="PRIVATE">Private (hidden from Explore courses)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Batch header image (optional)</label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    void readImageFileAsDataUrl(f)
+                      .then((url) => {
+                        setHeaderImageNewDataUrl(url);
+                        setHeaderImageRemoved(false);
+                        setHeaderImagePickName(f.name);
+                      })
+                      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Invalid image"));
+                    e.target.value = "";
+                  }}
+                />
+                {(() => {
+                  const preview = headerImageRemoved ? null : headerImageNewDataUrl ?? batch?.headerImageUrl ?? null;
+                  if (!preview) {
+                    return <p className="mt-2 text-xs text-slate-500">No header image uploaded.</p>;
+                  }
+                  return (
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <img src={preview} alt="Batch header image preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
+                      <div className="flex flex-col gap-2 text-xs">
+                        {headerImageNewDataUrl ? <span className="font-medium text-slate-800">{headerImagePickName || "New image"}</span> : null}
+                        <button
+                          type="button"
+                          className="w-fit font-semibold text-rose-700 hover:underline"
+                          onClick={() => {
+                            setHeaderImageRemoved(true);
+                            setHeaderImageNewDataUrl(null);
+                            setHeaderImagePickName("");
+                          }}
+                        >
+                          Remove header image
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </section>
@@ -633,7 +702,7 @@ export default function EditBatchPage() {
               <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">Fallback QR image (optional)</label>
                 <p className="mb-3 text-xs text-slate-600">
-                  Students are shown a direct static QR from platform UPI + exact amount. Upload here only as a <strong>fallback</strong> when auto QR cannot be generated, or if you need a fixed manual override image. Max ~350 KB.
+                  Students are shown a direct static QR from platform UPI + exact amount. Upload here only as a <strong>fallback</strong> when auto QR cannot be generated, or if you need a fixed manual override image. Max ~1.5 MB.
                 </p>
                 {!showFallbackQrUploader && !batch?.manualUpiQrUrl && !upiQrNewDataUrl ? (
                   <button

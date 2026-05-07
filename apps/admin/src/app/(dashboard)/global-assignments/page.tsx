@@ -11,6 +11,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { Eye } from "lucide-react";
 
 interface AssignmentItem {
   id: string;
@@ -112,7 +113,7 @@ export default function GlobalAssignmentsPage() {
       <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Global Assignments</h2>
-          <p className="mt-1 text-sm text-slate-600">Create and manage assignment templates. Link them to modules in Global Modules.</p>
+          <p className="mt-1 text-sm text-slate-600">Create and manage assignment templates. Link them to chapters in Global Chapters.</p>
           <div className="mt-4">
             <input
               type="text"
@@ -160,7 +161,7 @@ export default function GlobalAssignmentsPage() {
                 {sortedList.map((a) => (
                   <tr key={a.id} className="transition hover:bg-slate-50/80">
                     <td className="px-5 py-4 text-sm font-medium text-slate-800">{a.title}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{a.type === "general" ? "General" : "Module"}</td>
+                    <td className="px-5 py-4 text-sm text-slate-600">{a.type === "general" ? "General" : "Chapter"}</td>
                     <td className="px-5 py-4 text-sm text-slate-600">{(a.skillTags ?? []).join(", ") || "—"}</td>
                     <td className="px-5 py-4">
                       <span
@@ -180,10 +181,7 @@ export default function GlobalAssignmentsPage() {
                           title="View"
                           className="admin-table-action"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
+                          <Eye className="h-4 w-4" aria-hidden />
                         </Link>
                         {!readOnly && (
                           <button

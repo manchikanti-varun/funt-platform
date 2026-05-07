@@ -34,6 +34,7 @@ async function staffDisplayByMongoIds(ids: string[]): Promise<StaffMap> {
 }
 
 const MAX_MANUAL_UPI_QR_URL_LEN = 500_000;
+const MAX_BATCH_HEADER_IMAGE_URL_LEN = 2_500_000;
 
 export function assertManualUpiQrUrl(raw: string): string {
   const t = raw.trim();
@@ -45,6 +46,20 @@ export function assertManualUpiQrUrl(raw: string): string {
   const urlOk = /^https?:\/\//i.test(t);
   if (!dataOk && !urlOk) {
     throw new AppError("UPI QR must be an image (PNG, JPEG, GIF, or WebP as a data URL) or an http(s) URL to the QR image.", 400);
+  }
+  return t;
+}
+
+export function assertBatchHeaderImageUrl(raw: string): string {
+  const t = raw.trim();
+  if (!t) throw new AppError("Batch header image value is empty", 400);
+  if (t.length > MAX_BATCH_HEADER_IMAGE_URL_LEN) {
+    throw new AppError("Batch header image is too large. Use a smaller image or host the file and paste an https URL.", 400);
+  }
+  const dataOk = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(t);
+  const urlOk = /^https?:\/\//i.test(t);
+  if (!dataOk && !urlOk) {
+    throw new AppError("Batch header image must be an image data URL or an http(s) URL.", 400);
   }
   return t;
 }
@@ -159,10 +174,12 @@ export interface CreateBatchInput {
   coursePaymentMethods?: Record<string, { upiManual?: boolean; razorpay?: boolean }>;
   /** Optional batch-level UPI QR (data URL or https) for manual UPI checkout; overrides server env default. */
   manualUpiQrUrl?: string;
+  headerImageUrl?: string;
   /** Per course (keys: course Mongo id or human `courseId`): FUNT coins credited when a certificate is issued for that course in this batch. */
   courseCompletionRewardCoins?: Record<string, number>;
   /** Per course (keys: course Mongo id or human `courseId`): badge key(s) auto-awarded on completion certificate. */
   courseCompletionBadgeTypes?: Record<string, string | string[]>;
+  visibility?: "PUBLIC" | "PRIVATE";
 }
 
 export interface UpdateBatchInput {
@@ -177,8 +194,10 @@ export interface UpdateBatchInput {
   coursePaymentMethods?: Record<string, { upiManual?: boolean; razorpay?: boolean }>;
   /** Set to null to remove stored QR and fall back to server default (if any). */
   manualUpiQrUrl?: string | null;
+  headerImageUrl?: string | null;
   courseCompletionRewardCoins?: Record<string, number>;
   courseCompletionBadgeTypes?: Record<string, string | string[]>;
+  visibility?: "PUBLIC" | "PRIVATE";
 }
 
 type BatchDoc = {
@@ -198,6 +217,8 @@ type BatchDoc = {
   moderatorIds?: string[] | null;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string | null;
+  headerImageUrl?: string | null;
+  visibility?: "PUBLIC" | "PRIVATE";
 };
 
 export function getBatchCourseSnapshots(doc: BatchDoc): unknown[] {
@@ -234,6 +255,7 @@ function toBatchResponse(doc: BatchDoc, listView = false, staff?: StaffMap) {
   const courseSnapshots = getBatchCourseSnapshots(doc);
   const courseSnapshot = courseSnapshots[0] ?? null;
   const qr = (doc as { manualUpiQrUrl?: string | null }).manualUpiQrUrl?.trim();
+  const headerImage = (doc as { headerImageUrl?: string | null }).headerImageUrl?.trim();
   const tid = String(doc.trainerId ?? "").trim();
   const trainer = tid && staff?.get(tid);
   return {
@@ -251,17 +273,20 @@ function toBatchResponse(doc: BatchDoc, listView = false, staff?: StaffMap) {
     createdBy: doc.createdBy ?? undefined,
     moderatorIds: doc.moderatorIds ?? [],
     certificatePriceCoins: Math.max(0, Math.floor(Number((doc as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0))),
+    visibility: (doc.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC") as "PUBLIC" | "PRIVATE",
     ...(listView || !qr ? {} : { manualUpiQrUrl: qr }),
+    ...(headerImage ? { headerImageUrl: headerImage } : {}),
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
 }
 
-function copyCourseToSnapshot(course: { _id: unknown; courseId?: string | null; title: string; description: string; durationText?: string; modules: unknown[]; version: number }) {
+function copyCourseToSnapshot(course: { _id: unknown; courseId?: string | null; title: string; description: string; headerImageUrl?: string; durationText?: string; modules: unknown[]; version: number }) {
   return {
     courseId: course.courseId ?? String(course._id),
     title: course.title,
     description: course.description,
+    headerImageUrl: String(course.headerImageUrl ?? "").trim() || undefined,
     durationText: course.durationText ?? "",
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
@@ -338,6 +363,10 @@ export async function createBatch(input: CreateBatchInput) {
     input.manualUpiQrUrl != null && String(input.manualUpiQrUrl).trim()
       ? assertManualUpiQrUrl(String(input.manualUpiQrUrl))
       : undefined;
+  const headerImageUrl =
+    input.headerImageUrl != null && String(input.headerImageUrl).trim()
+      ? assertBatchHeaderImageUrl(String(input.headerImageUrl))
+      : undefined;
 
   const doc = await BatchModel.create({
     batchId,
@@ -351,7 +380,9 @@ export async function createBatch(input: CreateBatchInput) {
     createdBy: input.createdBy,
     moderatorIds,
     certificatePriceCoins: 0,
+    visibility: input.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
     ...(manualUpiQrUrl ? { manualUpiQrUrl } : {}),
+    ...(headerImageUrl ? { headerImageUrl } : {}),
   });
 
   await createAuditLog("BATCH_CREATED", input.createdBy, ENTITY_BATCH, String(doc._id));
@@ -386,7 +417,13 @@ export async function listBatches(filters?: { status?: string; trainerId?: strin
 }
 
 export async function listAllBatchesForExplore() {
-  const list = await BatchModel.find({}).sort({ createdAt: -1 }).lean().exec();
+  const list = await BatchModel.find({
+    status: { $ne: BATCH_STATUS.ARCHIVED },
+    $or: [{ visibility: "PUBLIC" }, { visibility: { $exists: false } }],
+  })
+    .sort({ createdAt: -1 })
+    .lean()
+    .exec();
   const staff = await staffDisplayByMongoIds(list.map((d) => String((d as BatchDoc).trainerId ?? "")));
   return list.map((d) => toBatchResponse(d as unknown as Parameters<typeof toBatchResponse>[0], true, staff));
 }
@@ -421,6 +458,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
   if (input.startDate !== undefined) doc.startDate = new Date(input.startDate);
   if (input.endDate !== undefined) doc.endDate = input.endDate ? new Date(input.endDate) : undefined;
   if (input.zoomLink !== undefined) doc.zoomLink = input.zoomLink?.trim() || undefined;
+  if (input.visibility !== undefined) (doc as { visibility?: "PUBLIC" | "PRIVATE" }).visibility = input.visibility;
   if (input.moderatorIds !== undefined) {
     (doc as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds)
       ? await resolveStaffUserIds(input.moderatorIds)
@@ -431,6 +469,13 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       (doc as { manualUpiQrUrl?: string }).manualUpiQrUrl = "";
     } else {
       (doc as { manualUpiQrUrl?: string }).manualUpiQrUrl = assertManualUpiQrUrl(String(input.manualUpiQrUrl));
+    }
+  }
+  if (input.headerImageUrl !== undefined) {
+    if (input.headerImageUrl === null || input.headerImageUrl === "") {
+      (doc as { headerImageUrl?: string }).headerImageUrl = "";
+    } else {
+      (doc as { headerImageUrl?: string }).headerImageUrl = assertBatchHeaderImageUrl(String(input.headerImageUrl));
     }
   }
   if (
@@ -588,6 +633,7 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
   const trainerId =
     input.trainerId !== undefined ? await resolveStaffUserId(input.trainerId) : source.trainerId;
   const dupQr = (source as { manualUpiQrUrl?: string }).manualUpiQrUrl?.trim();
+  const dupHeaderImage = (source as { headerImageUrl?: string }).headerImageUrl?.trim();
   const doc = await BatchModel.create({
     batchId,
     name: input.name?.trim() ?? `${source.name} (Copy)`,
@@ -597,9 +643,11 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
     endDate: source.endDate,
     zoomLink: source.zoomLink,
     status: BATCH_STATUS.ACTIVE,
+    visibility: src.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
     createdBy: input.performedBy ?? sourceDoc.createdBy,
     certificatePriceCoins: Math.max(0, Math.floor(Number((src as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0))),
     ...(dupQr ? { manualUpiQrUrl: dupQr } : {}),
+    ...(dupHeaderImage ? { headerImageUrl: dupHeaderImage } : {}),
   });
   await createAuditLog("BATCH_DUPLICATED", input.performedBy, ENTITY_BATCH, String(doc._id));
   const staff = await staffDisplayByMongoIds([String(doc.trainerId)]);

@@ -6,6 +6,7 @@ const enrollmentRequestSchema = new Schema(
   {
     studentId: { type: String, required: true },
     batchId: { type: String, required: true },
+    requestedCourseId: { type: String, required: false },
     status: {
       type: String,
       required: true,

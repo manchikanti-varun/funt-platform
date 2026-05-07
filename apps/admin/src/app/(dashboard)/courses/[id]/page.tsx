@@ -139,7 +139,7 @@ export default function EditCoursePage() {
     setSavingModule(true);
     setError("");
     try {
-      const res = await api<Course>(`/api/courses/${id}/modules/${editingIndex}`, {
+      const res = await api<Course>(`/api/courses/${id}/chapters/${editingIndex}`, {
         method: "PATCH",
         body: JSON.stringify({
           title: moduleEdit.title,
@@ -160,10 +160,10 @@ export default function EditCoursePage() {
         setCourse(res.data);
         cancelEditModule();
       } else {
-        setError(res.message ?? "Failed to update module.");
+        setError(res.message ?? "Failed to update chapter.");
       }
     } catch {
-      setError("Failed to update module.");
+      setError("Failed to update chapter.");
     } finally {
       setSavingModule(false);
     }
@@ -175,13 +175,13 @@ export default function EditCoursePage() {
     if (direction === "up" && clickedIndex > 0) {
       const indices = sorted.map((_, i) => i);
       [indices[clickedIndex - 1], indices[clickedIndex]] = [indices[clickedIndex], indices[clickedIndex - 1]];
-      const res = await api(`/api/courses/${id}/reorder`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
+      const res = await api(`/api/courses/${id}/reorder-chapters`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
       if (res.success && res.data) setCourse(res.data as Course);
     }
     if (direction === "down" && clickedIndex < sorted.length - 1) {
       const indices = sorted.map((_, i) => i);
       [indices[clickedIndex], indices[clickedIndex + 1]] = [indices[clickedIndex + 1], indices[clickedIndex]];
-      const res = await api(`/api/courses/${id}/reorder`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
+      const res = await api(`/api/courses/${id}/reorder-chapters`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
       if (res.success && res.data) setCourse(res.data as Course);
     }
   }
@@ -217,7 +217,7 @@ export default function EditCoursePage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-slate-900">Edit Course</h2>
-              <p className="mt-1 text-sm text-slate-600">Update title, description, reorder modules, or edit a module copy (content, video, etc.) for this course only.</p>
+              <p className="mt-1 text-sm text-slate-600">Update title, description, reorder chapters, or edit a chapter copy (content, video, etc.) for this course only.</p>
               <div className="mt-2 inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
                 Snapshot context
               </div>
@@ -275,8 +275,8 @@ export default function EditCoursePage() {
             <p className="mt-1 text-xs text-slate-500">Used in certificates for this course.</p>
           </div>
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Modules in this course</h3>
-            <p className="mt-1 text-sm text-slate-600">These are copies of global modules for this course. You can edit the module copy (title, content, video, etc.) here, or reorder with Up/Down.</p>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Chapters in this course</h3>
+            <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can edit the chapter copy (title, content, video, etc.) here, or reorder with Up/Down.</p>
             <ul className="mt-3 space-y-2">
               {sortedModules.map((m, i) => (
                 <li key={m.originalGlobalModuleId} className="rounded-xl border border-slate-200 bg-slate-50/50 overflow-hidden">
@@ -291,7 +291,7 @@ export default function EditCoursePage() {
                         type="button"
                         onClick={() => startEditModule(m, i)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-300 bg-teal-50 text-teal-700 transition hover:bg-teal-100"
-                        title="Edit module"
+                        title="Edit chapter"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -323,7 +323,7 @@ export default function EditCoursePage() {
                   </div>
                   {editingIndex === i && (
                     <div className="border-t border-slate-200 bg-white p-4 space-y-4">
-                      <h4 className="text-sm font-semibold text-slate-800">Edit module for this course</h4>
+                      <h4 className="text-sm font-semibold text-slate-800">Edit chapter for this course</h4>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">Title</label>
                         <input
@@ -333,7 +333,7 @@ export default function EditCoursePage() {
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-slate-600">XP on module completion</label>
+                        <label className="mb-1 block text-xs font-medium text-slate-600">XP on chapter completion</label>
                         <input
                           type="number"
                           min={0}
@@ -343,7 +343,7 @@ export default function EditCoursePage() {
                           onChange={(e) => setModuleEdit((p) => ({ ...p, xpReward: Math.floor(Number(e.target.value)) || 0 }))}
                           className="w-full max-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
                         />
-                        <p className="mt-1 text-xs text-slate-500">Awarded when the learner finishes this module in a batch. New batches copy values from this course snapshot.</p>
+                        <p className="mt-1 text-xs text-slate-500">Awarded when the learner finishes this chapter in a batch. New batches copy values from this course snapshot.</p>
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">Description</label>
@@ -388,7 +388,7 @@ export default function EditCoursePage() {
                             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
                             placeholder="e.g. Google Drive, slides, docs, or any other URL"
                           />
-                          <p className="mt-1 text-xs text-slate-500">Share Drive folders, slides, or other resources. Students see this as a link in the module.</p>
+                          <p className="mt-1 text-xs text-slate-500">Share Drive folders, slides, or other resources. Students see this as a link in the chapter.</p>
                         </div>
                       </div>
                       <div>
@@ -483,7 +483,7 @@ export default function EditCoursePage() {
                           disabled={savingModule}
                           className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
                         >
-                          {savingModule ? "Saving…" : "Save module"}
+                          {savingModule ? "Saving…" : "Save chapter"}
                         </button>
                         <button
                           type="button"

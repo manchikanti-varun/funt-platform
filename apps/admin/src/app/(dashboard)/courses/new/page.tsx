@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
-interface ModuleOption {
+interface ChapterOption {
   id: string;
   title: string;
   status: string;
@@ -18,8 +18,8 @@ import { BackLink } from "@/components/ui/BackLink";
 
 export default function NewCoursePage() {
   const router = useRouter();
-  const [modules, setModules] = useState<ModuleOption[]>([]);
-  const [moduleSearch, setModuleSearch] = useState("");
+  const [chapters, setChapters] = useState<ChapterOption[]>([]);
+  const [chapterSearch, setChapterSearch] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [durationText, setDurationText] = useState("");
@@ -28,17 +28,17 @@ export default function NewCoursePage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<ModuleOption[]>("/api/global-modules")
+    api<ChapterOption[]>("/api/global-chapters")
       .then((r) => {
-        if (r.success && Array.isArray(r.data)) setModules(r.data.filter((m) => m.status !== "ARCHIVED"));
+        if (r.success && Array.isArray(r.data)) setChapters(r.data.filter((m) => m.status !== "ARCHIVED"));
       });
   }, []);
 
-  const filteredModules = useMemo(() => {
-    const q = moduleSearch.trim().toLowerCase();
-    if (!q) return modules;
-    return modules.filter((m) => m.title.toLowerCase().includes(q));
-  }, [modules, moduleSearch]);
+  const filteredChapters = useMemo(() => {
+    const q = chapterSearch.trim().toLowerCase();
+    if (!q) return chapters;
+    return chapters.filter((m) => m.title.toLowerCase().includes(q));
+  }, [chapters, chapterSearch]);
 
   function toggle(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -65,14 +65,14 @@ export default function NewCoursePage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (selectedIds.length === 0) {
-      setError("Select at least one module.");
+      setError("Select at least one chapter.");
       return;
     }
     setError("");
     setLoading(true);
     const res = await api<{ id: string }>("/api/courses", {
       method: "POST",
-      body: JSON.stringify({ title, description, durationText: durationText.trim(), globalModuleIds: selectedIds }),
+      body: JSON.stringify({ title, description, durationText: durationText.trim(), globalChapterIds: selectedIds }),
     });
     setLoading(false);
     if (res.success && res.data?.id) {
@@ -82,7 +82,7 @@ export default function NewCoursePage() {
     setError(res.message ?? "Failed to create course.");
   }
 
-  const selectedModules = selectedIds.map((id) => modules.find((m) => m.id === id)).filter(Boolean) as ModuleOption[];
+  const selectedChapters = selectedIds.map((id) => chapters.find((m) => m.id === id)).filter(Boolean) as ChapterOption[];
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -94,7 +94,7 @@ export default function NewCoursePage() {
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">New Course</h2>
-          <p className="mt-1 text-sm text-slate-600">Add a title, description, and select Global Modules in the order they will appear in the course.</p>
+          <p className="mt-1 text-sm text-slate-600">Add a title, description, and select Global Chapters in the order they will appear in the course.</p>
         </div>
 
         <form onSubmit={submit} className="p-6 space-y-6">
@@ -127,26 +127,26 @@ export default function NewCoursePage() {
           </div>
 
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Add Global Modules</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Add Global Chapters</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Search and select modules. When you have many modules, use the search box to find them quickly. Order the selected list with Up/Down.
+              Search and select chapters. When you have many chapters, use the search box to find them quickly. Order the selected list with Up/Down.
             </p>
             <div className="mt-3">
               <input
                 type="text"
-                value={moduleSearch}
-                onChange={(e) => setModuleSearch(e.target.value)}
-                placeholder="Search modules by title…"
+                value={chapterSearch}
+                onChange={(e) => setChapterSearch(e.target.value)}
+                placeholder="Search chapters by title…"
                 className="mb-3 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               />
               <div className="min-h-0 max-h-72 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
-                {filteredModules.length === 0 ? (
+                {filteredChapters.length === 0 ? (
                   <p className="py-4 text-center text-sm text-slate-500">
-                    {moduleSearch.trim() ? "No modules match your search." : "No non-archived modules available. Create some in Global Modules first."}
+                    {chapterSearch.trim() ? "No chapters match your search." : "No non-archived chapters available. Create some in Global Chapters first."}
                   </p>
                 ) : (
                   <ul className="space-y-1">
-                    {filteredModules.map((m) => (
+                    {filteredChapters.map((m) => (
                       <li key={m.id}>
                         <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-white">
                           <input
@@ -166,9 +166,9 @@ export default function NewCoursePage() {
 
             {selectedIds.length > 0 && (
               <div className="mt-4">
-                <p className="mb-2 text-sm font-medium text-slate-700">Selected order ({selectedModules.length})</p>
+                <p className="mb-2 text-sm font-medium text-slate-700">Selected order ({selectedChapters.length})</p>
                 <ul className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
-                  {selectedModules.map((m, i) => (
+                  {selectedChapters.map((m, i) => (
                     <li
                       key={m.id}
                       className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
@@ -190,7 +190,7 @@ export default function NewCoursePage() {
                         <button
                           type="button"
                           onClick={() => moveDown(i)}
-                          disabled={i === selectedModules.length - 1}
+                          disabled={i === selectedChapters.length - 1}
                           title="Move down"
                           className="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         >

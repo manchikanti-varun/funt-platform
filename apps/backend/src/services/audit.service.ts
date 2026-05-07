@@ -139,12 +139,27 @@ export async function listAuditLogs(
     }
   }
 
-  const certIds = logs.filter((d) => d.targetEntity === "Certificate").map((d) => d.targetId);
+  const certIds = logs.filter((d) => d.targetEntity === "Certificate").map((d) => String(d.targetId ?? "").trim()).filter(Boolean);
   const certMap = new Map<string, string>();
   if (certIds.length > 0) {
-    const certs = await CertificateModel.find({ _id: { $in: certIds } }).select("_id certificateId").lean().exec();
+    const certMongoIds = certIds.filter((id) => isMongoId(id));
+    const certHumanIds = certIds.filter((id) => !isMongoId(id));
+    const certs = await CertificateModel.find({
+      $or: [
+        ...(certMongoIds.length > 0 ? [{ _id: { $in: certMongoIds } }] : []),
+        ...(certHumanIds.length > 0 ? [{ certificateId: { $in: certHumanIds } }] : []),
+      ],
+    })
+      .select("_id certificateId")
+      .lean()
+      .exec();
     for (const c of certs) {
-      certMap.set(String((c as { _id: unknown })._id), (c as { certificateId: string }).certificateId);
+      const mongoId = String((c as { _id: unknown })._id);
+      const humanId = String((c as { certificateId?: string }).certificateId ?? "").trim();
+      if (humanId) {
+        certMap.set(mongoId, humanId);
+        certMap.set(humanId, humanId);
+      }
     }
   }
 

@@ -10,6 +10,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { Eye } from "lucide-react";
 
 interface CourseItem {
   id: string;
@@ -98,7 +99,7 @@ export default function CoursesPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Courses</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Create courses from Global Modules. Add courses to batches to give students access.
+            Create courses from Global Chapters. Add courses to batches to give students access.
           </p>
           <div className="mt-4">
             <input
@@ -123,7 +124,7 @@ export default function CoursesPage() {
               </svg>
             </div>
             <p className="mt-4 text-base font-medium text-slate-700">No courses yet</p>
-            <p className="mt-1 text-sm text-slate-500">Create your first course by adding Global Modules in order.</p>
+            <p className="mt-1 text-sm text-slate-500">Create your first course by adding Global Chapters in order.</p>
             <Link
               href="/courses/new"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-teal-700"
@@ -138,7 +139,7 @@ export default function CoursesPage() {
                 <tr>
                   <SortableTh label="Title" columnKey="title" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Description" columnKey="description" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Modules" columnKey="modules" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Chapters" columnKey="modules" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Version" columnKey="version" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Status" columnKey="status" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
@@ -173,10 +174,7 @@ export default function CoursesPage() {
                           title="View"
                           className="admin-table-action"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
+                          <Eye className="h-4 w-4" aria-hidden />
                         </Link>
                         {!readOnly && (
                           <Link

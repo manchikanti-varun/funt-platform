@@ -1,7 +1,7 @@
 
 import mongoose, { Schema } from "mongoose";
 
-const moduleProgressSchema = new Schema(
+const chapterProgressSchema = new Schema(
   {
     studentId: { type: String, required: true },
     batchId: { type: String, required: true },
@@ -19,6 +19,23 @@ const moduleProgressSchema = new Schema(
   { timestamps: false }
 );
 
-moduleProgressSchema.index({ studentId: 1, batchId: 1, courseId: 1, moduleOrder: 1 }, { unique: true });
+chapterProgressSchema.pre("validate", function (next) {
+  const doc = this as { moduleOrder?: number; chapterOrder?: number };
+  if ((doc.moduleOrder == null || Number.isNaN(Number(doc.moduleOrder))) && doc.chapterOrder != null) {
+    doc.moduleOrder = Number(doc.chapterOrder);
+  }
+  next();
+});
 
-export const ModuleProgressModel = mongoose.model("ModuleProgress", moduleProgressSchema);
+chapterProgressSchema.set("toJSON", {
+  virtuals: true,
+  transform: (_doc, ret: { moduleOrder?: number; chapterOrder?: number }) => {
+    if (ret.chapterOrder == null && ret.moduleOrder != null) ret.chapterOrder = ret.moduleOrder;
+    return ret;
+  },
+});
+
+chapterProgressSchema.index({ studentId: 1, batchId: 1, courseId: 1, moduleOrder: 1 }, { unique: true });
+
+export const ChapterProgressModel = mongoose.model("ChapterProgress", chapterProgressSchema);
+export const ModuleProgressModel = ChapterProgressModel;

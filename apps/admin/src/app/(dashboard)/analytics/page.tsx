@@ -91,7 +91,7 @@ export default function AnalyticsPage() {
   const contentBarData = [
     { name: "Courses", count: courses.length, fill: COLORS[0] },
     { name: "Batches", count: batches.length, fill: COLORS[1] },
-    { name: "Global Modules", count: modulesCount, fill: COLORS[2] },
+    { name: "Global Chapters", count: modulesCount, fill: COLORS[2] },
     { name: "Global Assignments", count: assignmentsCount, fill: COLORS[3] },
   ];
 
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
     .map(([month, count]) => ({ month, batches: count }));
   if (batchesByMonth.length === 0) batchesByMonth.push({ month: "—", batches: 0 });
 
-  // Modules per course (top courses by module count)
+  // Chapters per course (top courses by chapter count)
   const courseModuleCounts = courses
     .map((c) => ({
       name: c.title.length > 18 ? c.title.slice(0, 18) + "…" : c.title,
@@ -155,7 +155,7 @@ export default function AnalyticsPage() {
           <p className="mt-1 text-2xl font-bold tabular-nums text-violet-700">{batches.length}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-amber-500">
-          <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Global Modules</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Global Chapters</p>
           <p className="mt-1 text-2xl font-bold tabular-nums text-amber-700">{modulesCount}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-emerald-500">
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
 
       {}
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-slate-800">Modules per course (top 8)</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-800">Chapters per course (top 8)</h2>
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -286,7 +286,7 @@ export default function AnalyticsPage() {
               <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} stroke="#64748b" width={76} />
               <Tooltip
                 contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0" }}
-                formatter={(value: number) => [value, "Modules"]}
+                formatter={(value: number) => [value, "Chapters"]}
               />
               <Bar dataKey="modules" fill="#7c3aed" radius={[0, 4, 4, 0]} />
             </BarChart>

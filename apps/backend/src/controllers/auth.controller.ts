@@ -11,6 +11,7 @@ import {
   createSuperAdmin,
   changePassword as changePasswordService,
   lookupStudentUsernameByEmail,
+  validateStrongPassword,
 } from "../services/auth.service.js";
 import {
   getGoogleAuthUrl,
@@ -509,30 +510,8 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
   res.redirect(302, callbackUrl);
 });
 
-const PASSWORD_MIN_LENGTH = 8;
-const PASSWORD_REGEX = {
-  upper: /[A-Z]/,
-  lower: /[a-z]/,
-  number: /[0-9]/,
-  special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/,
-};
-
 function validateSignupPassword(password: string): void {
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    throw new AppError("Password must be at least 8 characters", 400);
-  }
-  if (!PASSWORD_REGEX.upper.test(password)) {
-    throw new AppError("Password must contain at least one uppercase letter", 400);
-  }
-  if (!PASSWORD_REGEX.lower.test(password)) {
-    throw new AppError("Password must contain at least one lowercase letter", 400);
-  }
-  if (!PASSWORD_REGEX.number.test(password)) {
-    throw new AppError("Password must contain at least one number", 400);
-  }
-  if (!PASSWORD_REGEX.special.test(password)) {
-    throw new AppError("Password must contain at least one special character", 400);
-  }
+  validateStrongPassword(password);
 }
 
 export const googleSignupPreview = (req: Request, res: Response): void => {

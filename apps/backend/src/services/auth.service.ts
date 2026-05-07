@@ -15,6 +15,13 @@ import {
 const SALT_ROUNDS = 12;
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 60 * 60 * 1000;
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = {
+  upper: /[A-Z]/,
+  lower: /[a-z]/,
+  number: /[0-9]/,
+  special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/,
+};
 
 export interface CreateStudentInput {
   username: string;
@@ -132,6 +139,25 @@ async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
+export function validateStrongPassword(password: string): void {
+  const raw = String(password ?? "");
+  if (raw.length < PASSWORD_MIN_LENGTH) {
+    throw new AppError("Password must be at least 8 characters", 400);
+  }
+  if (!PASSWORD_REGEX.upper.test(raw)) {
+    throw new AppError("Password must contain at least one uppercase letter", 400);
+  }
+  if (!PASSWORD_REGEX.lower.test(raw)) {
+    throw new AppError("Password must contain at least one lowercase letter", 400);
+  }
+  if (!PASSWORD_REGEX.number.test(raw)) {
+    throw new AppError("Password must contain at least one number", 400);
+  }
+  if (!PASSWORD_REGEX.special.test(raw)) {
+    throw new AppError("Password must contain at least one special character", 400);
+  }
+}
+
 function randomTemporaryPassword(): string {
   return crypto.randomBytes(12).toString("base64url");
 }
@@ -141,6 +167,7 @@ export async function createStudent(input: CreateStudentInput): Promise<{ id: st
   if (uErr) throw new AppError(uErr, 400);
   const uname = normalizeStudentUsername(input.username);
   if (input.age < 7) throw new AppError("Minimum age is 7 years", 400);
+  validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const gradeVal = input.grade?.trim();
   const gradeOther = input.gradeOther?.trim();
@@ -166,6 +193,7 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
   const uErr = validateStudentUsername(input.username);
   if (uErr) throw new AppError(uErr, 400);
   const uname = normalizeStudentUsername(input.username);
+  validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const user = await UserModel.create({
     username: uname,
@@ -180,6 +208,7 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
 }
 
 export async function createAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
+  validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
@@ -195,6 +224,7 @@ export async function createAdmin(input: CreateAdminInput): Promise<{ id: string
 }
 
 export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; username: string }> {
+  validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
   const user = await UserModel.create({
@@ -624,6 +654,7 @@ export async function updateUserIdentityByAdmin(
 export async function changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
   if (!currentPassword?.trim()) throw new AppError("Current password is required", 400);
   if (!newPassword?.trim()) throw new AppError("New password is required", 400);
+  validateStrongPassword(newPassword.trim());
   const user = await UserModel.findById(userId).select("+passwordHash").lean().exec();
   if (!user) throw new AppError("User not found", 404);
   const hash = (user as unknown as { passwordHash: string }).passwordHash;
@@ -640,15 +671,14 @@ export async function changePassword(userId: string, currentPassword: string, ne
   ).exec();
 }
 
-export async function resetLoginAttempts(userIdentifier: string): Promise<{ temporaryPassword: string }> {
-  const v = (userIdentifier ?? "").trim();
-  if (!v) throw new AppError("User identifier (username or user ID) is required", 400);
-  const query = OBJECT_ID_REGEX.test(v) ? { _id: v } : { username: v.toLowerCase() };
-  const user = await UserModel.findOne(query).select("_id").lean().exec();
-  if (!user) throw new AppError("User not found (invalid username or user ID)", 404);
+export async function resetLoginAttemptsByUsername(username: string, newPassword: string): Promise<void> {
+  const uname = (username ?? "").trim().toLowerCase();
+  if (!uname) throw new AppError("Username is required", 400);
+  validateStrongPassword(String(newPassword ?? "").trim());
+  const user = await UserModel.findOne({ username: uname }).select("_id").lean().exec();
+  if (!user) throw new AppError("User not found (invalid username)", 404);
   const userId = String(user._id);
-  const temporaryPassword = randomTemporaryPassword();
-  const passwordHash = await bcrypt.hash(temporaryPassword, SALT_ROUNDS);
+  const passwordHash = await bcrypt.hash(newPassword.trim(), SALT_ROUNDS);
   await UserModel.updateOne(
     { _id: userId },
     {
@@ -656,5 +686,4 @@ export async function resetLoginAttempts(userIdentifier: string): Promise<{ temp
       $inc: { tokenVersion: 1 },
     }
   ).exec();
-  return { temporaryPassword };
 }

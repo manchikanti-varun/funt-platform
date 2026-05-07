@@ -12,14 +12,15 @@ function getUserId(req: Request): string {
 
 export const overrideProgressHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const performedBy = getUserId(req);
-  const { studentId, batchId, moduleOrder, reason } = req.body ?? {};
-  if (!studentId || !batchId || moduleOrder === undefined) {
-    throw new AppError("studentId, batchId, moduleOrder are required", 400);
+  const { studentId, batchId, chapterOrder, moduleOrder, reason } = req.body ?? {};
+  const resolvedChapterOrder = chapterOrder ?? moduleOrder;
+  if (!studentId || !batchId || resolvedChapterOrder === undefined) {
+    throw new AppError("studentId, batchId, chapterOrder are required", 400);
   }
   const data = await overrideProgress({
     studentId,
     batchId,
-    moduleOrder: Number(moduleOrder),
+    chapterOrder: Number(resolvedChapterOrder),
     reason: reason ?? "Manual override",
     performedBy,
   });

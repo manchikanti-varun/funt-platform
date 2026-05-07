@@ -44,7 +44,7 @@ export default function AchievementsPage() {
       </header>
       <PageSection>
         {rows.length === 0 ? (
-          <p className="text-sm text-black/60">No achievements yet. Complete modules, assignments, and courses to unlock medals.</p>
+          <p className="text-sm text-black/60">No achievements yet. Complete chapters, assignments, and courses to unlock medals.</p>
         ) : (
           <ul className="divide-y divide-black/10">
             {rows.map((a) => (

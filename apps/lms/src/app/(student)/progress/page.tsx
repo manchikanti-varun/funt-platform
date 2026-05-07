@@ -16,6 +16,7 @@ interface MyCourse {
   courseTitle: string;
   batchId: string;
   progressPercent: number;
+  chapterCount?: number;
   moduleCount: number;
   accessBlocked?: boolean;
 }
@@ -92,7 +93,7 @@ export default function ProgressPage() {
                   <div>
                     <p className="font-bold text-black">{c.courseTitle}</p>
                     <p className="text-xs text-black/50">
-                      {c.moduleCount} chapters
+                      {c.chapterCount ?? c.moduleCount} chapters
                       {c.accessBlocked ? " · blocked by admin" : ""}
                     </p>
                   </div>

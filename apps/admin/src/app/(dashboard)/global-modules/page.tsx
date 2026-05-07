@@ -13,8 +13,9 @@ import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
+import { Eye, SquarePen } from "lucide-react";
 
-interface ModuleItem {
+interface ChapterItem {
   id: string;
   title: string;
   description: string;
@@ -22,10 +23,10 @@ interface ModuleItem {
   status: string;
 }
 
-export default function GlobalModulesPage() {
+export default function GlobalChaptersPage() {
   const { roles } = useAdminUser();
   const router = useRouter();
-  const [list, setList] = useState<ModuleItem[]>([]);
+  const [list, setList] = useState<ChapterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -66,24 +67,24 @@ export default function GlobalModulesPage() {
   useEffect(() => {
     setLoading(true);
     const url = debouncedSearch.trim()
-      ? `/api/global-modules?search=${encodeURIComponent(debouncedSearch.trim())}`
-      : "/api/global-modules";
-    api<ModuleItem[]>(url)
+      ? `/api/global-chapters?search=${encodeURIComponent(debouncedSearch.trim())}`
+      : "/api/global-chapters";
+    api<ChapterItem[]>(url)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setList(r.data);
       })
       .finally(() => setLoading(false));
   }, [debouncedSearch]);
 
-  async function handleDuplicate(moduleId: string) {
-    setDuplicatingId(moduleId);
-    const res = await api<{ id: string }>(`/api/global-modules/${moduleId}/duplicate`, { method: "POST" });
+  async function handleDuplicate(chapterId: string) {
+    setDuplicatingId(chapterId);
+    const res = await api<{ id: string }>(`/api/global-chapters/${chapterId}/duplicate`, { method: "POST" });
     setDuplicatingId(null);
     if (res.success && res.data?.id) {
       router.push(`/global-modules/${res.data.id}`);
       return;
     }
-    const r = await api<ModuleItem[]>("/api/global-modules");
+    const r = await api<ChapterItem[]>("/api/global-chapters");
     if (r.success && Array.isArray(r.data)) setList(r.data);
   }
 
@@ -101,7 +102,7 @@ export default function GlobalModulesPage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              New Module
+              New Chapter
             </Link>
           )}
         </div>
@@ -109,14 +110,14 @@ export default function GlobalModulesPage() {
 
       <DataPanel className="min-h-0 flex-1 overflow-auto shadow-lg">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">Global Modules</h2>
-          <p className="mt-1 text-sm text-slate-600">Create and manage module templates. Add them to courses in order.</p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Global Chapters</h2>
+          <p className="mt-1 text-sm text-slate-600">Create and manage chapter templates. Add them to courses in order.</p>
           <div className="mt-4">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search modules by title or description…"
+              placeholder="Search chapters by title or description…"
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
@@ -124,7 +125,7 @@ export default function GlobalModulesPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-            <p className="mt-4 text-sm text-slate-500">Loading modules…</p>
+            <p className="mt-4 text-sm text-slate-500">Loading chapters…</p>
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -133,13 +134,13 @@ export default function GlobalModulesPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <p className="mt-4 text-base font-medium text-slate-700">No modules yet</p>
-            <p className="mt-1 text-sm text-slate-500">Create your first global module to get started.</p>
+            <p className="mt-4 text-base font-medium text-slate-700">No chapters yet</p>
+            <p className="mt-1 text-sm text-slate-500">Create your first global chapter to get started.</p>
             <Link
               href="/global-modules/new"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
             >
-              New Module
+              New Chapter
             </Link>
           </div>
         ) : (
@@ -176,11 +177,17 @@ export default function GlobalModulesPage() {
                           title="View"
                           className="admin-table-action"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
+                          <Eye className="h-4 w-4" aria-hidden />
                         </Link>
+                        {!readOnly && (
+                          <Link
+                            href={`/global-modules/${m.id}`}
+                            title="Edit"
+                            className="admin-table-action"
+                          >
+                            <SquarePen className="h-4 w-4" aria-hidden />
+                          </Link>
+                        )}
                         {!readOnly && (
                           <button
                             type="button"

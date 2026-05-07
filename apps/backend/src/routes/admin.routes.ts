@@ -7,6 +7,7 @@ import {
   createStudentHandler,
   createTrainerHandler,
   createAdminHandler,
+  createSuperAdminHandler,
   resetLoginHandler,
   patchUserIdentityHandler,
   listPeopleByRoleHandler,
@@ -67,7 +68,8 @@ router.use(authMiddleware);
 router.post("/users/student", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), createStudentHandler);
 router.post("/users/trainer", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), createTrainerHandler);
 router.post("/users/admin", requireRoles(ROLE.SUPER_ADMIN), createAdminHandler);
-router.post("/users/:userId/reset-login", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), resetLoginHandler);
+router.post("/users/super-admin", requireRoles(ROLE.SUPER_ADMIN), createSuperAdminHandler);
+router.post("/users/:username/reset-login", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), resetLoginHandler);
 router.patch("/users/:userId/identity", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchUserIdentityHandler);
 router.get("/people", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listPeopleByRoleHandler);
 router.get("/people/:userId", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getPersonDetailsHandler);
@@ -100,10 +102,10 @@ router.get("/shop/orders", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listShopO
 router.patch("/shop/orders/:orderId/status", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchShopOrderStatus);
 router.get("/shop/stock-insights", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getShopStockInsightsAdmin);
 
-router.get("/coupons", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listCoupons);
+router.get("/coupons", requireRoles(ROLE.SUPER_ADMIN), listCoupons);
 router.get("/coupons/audit", requireRoles(ROLE.SUPER_ADMIN), getCouponAudit);
-router.post("/coupons", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postCoupon);
-router.patch("/coupons/:id", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchCoupon);
+router.post("/coupons", requireRoles(ROLE.SUPER_ADMIN), postCoupon);
+router.patch("/coupons/:id", requireRoles(ROLE.SUPER_ADMIN), patchCoupon);
 router.post("/generate-qr", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postGeneratePaymentQr);
 router.get("/qr-history", requireRoles(ROLE.SUPER_ADMIN), getPaymentQrHistory);
 router.get("/payment-upi/config", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminPaymentUpiConfig);

@@ -228,6 +228,14 @@ export async function createCouponAdmin(input: {
   if (discountValue < 1 || discountValue > 100) {
     throw new AppError("Percent discount must be 1–100", 400);
   }
+  const maxRedemptions =
+    input.maxRedemptions == null
+      ? null
+      : (Number.isFinite(Number(input.maxRedemptions))
+          ? Math.max(0, Math.floor(Number(input.maxRedemptions)))
+          : (() => {
+              throw new AppError("maxRedemptions must be a valid number", 400);
+            })());
 
   try {
     const doc = await CouponModel.create({
@@ -237,7 +245,7 @@ export async function createCouponAdmin(input: {
       shopScope: input.kind === "SHOP" ? (input.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS") : undefined,
       discountType: "PERCENT",
       discountValue,
-      maxRedemptions: input.maxRedemptions === undefined ? null : input.maxRedemptions,
+      maxRedemptions,
       perStudentLimit: 1,
       validFrom: input.validFrom ?? undefined,
       validUntil: input.validUntil ?? undefined,

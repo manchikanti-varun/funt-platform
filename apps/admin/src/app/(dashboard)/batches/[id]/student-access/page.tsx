@@ -223,21 +223,29 @@ export default function BatchStudentAccessPage() {
                         {courseSnapshots.map((c, idx) => {
                           const cId = String(c.courseId ?? "").trim();
                           if (!cId) return null;
-                          const blocked = !!s.courseAccessBlocked?.[cId];
+                          const blockedByBatch = !!s.accessBlocked;
+                          const blockedByCourse = !!s.courseAccessBlocked?.[cId];
+                          const blocked = blockedByBatch || blockedByCourse;
                           return (
                             <button
                               key={`${s.studentId}-${cId}-${idx}`}
                               type="button"
-                              disabled={actionLoading || !s.enrollmentId}
-                              onClick={() => setCourseAccessBlocked(s.enrollmentId, cId, !blocked)}
+                              disabled={actionLoading || !s.enrollmentId || blockedByBatch}
+                              onClick={() => setCourseAccessBlocked(s.enrollmentId, cId, !blockedByCourse)}
                               className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
                                 blocked
                                   ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
                                   : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                               }`}
-                              title={blocked ? "Course access blocked for this batch" : "Course access allowed for this batch"}
+                              title={
+                                blockedByBatch
+                                  ? "Batch access is locked. Unlock batch access first."
+                                  : blockedByCourse
+                                    ? "Course access blocked for this student."
+                                    : "Course access allowed for this student."
+                              }
                             >
-                              {c.title ?? "Course"}: {blocked ? "Blocked" : "Allowed"}
+                              {c.title ?? "Course"}: {blockedByBatch ? "Blocked (Batch locked)" : blockedByCourse ? "Blocked" : "Allowed"}
                             </button>
                           );
                         })}

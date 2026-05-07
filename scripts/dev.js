@@ -8,7 +8,7 @@ const backendDir = path.join(root, "apps", "backend");
 process.chdir(root);
 
 function startBackend(port) {
-  return spawn("npm", ["run", "dev"], {
+  return spawn("npm", ["run", "dev:watch"], {
     cwd: backendDir,
     stdio: "inherit",
     env: { ...process.env, PORT: String(port) },

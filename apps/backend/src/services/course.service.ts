@@ -88,7 +88,7 @@ export interface CreateCourseInput {
   title: string;
   description: string;
   durationText?: string;
-  globalModuleIds: string[];
+  globalChapterIds: string[];
   createdBy: string;
 }
 
@@ -135,11 +135,11 @@ function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: 
 export async function createCourse(input: CreateCourseInput) {
   if (!input.title?.trim()) throw new AppError("title is required", 400);
   if (!input.description?.trim()) throw new AppError("description is required", 400);
-  if (!Array.isArray(input.globalModuleIds) || input.globalModuleIds.length === 0) {
-    throw new AppError("At least one global module is required", 400);
+  if (!Array.isArray(input.globalChapterIds) || input.globalChapterIds.length === 0) {
+    throw new AppError("At least one global chapter is required", 400);
   }
 
-  const ids = input.globalModuleIds.map((x) => x.trim()).filter(Boolean);
+  const ids = input.globalChapterIds.map((x) => x.trim()).filter(Boolean);
   const byObjectId = ids.filter((x) => OBJECT_ID_REGEX.test(x));
   const byModuleId = ids.filter((x) => !OBJECT_ID_REGEX.test(x));
   const globalModules = await GlobalModuleModel.find({
@@ -152,10 +152,10 @@ export async function createCourse(input: CreateCourseInput) {
   const foundByMongo = new Set(globalModules.map((m) => String(m._id)));
   const foundByHuman = new Set(globalModules.map((m) => (m as { moduleId?: string }).moduleId).filter(Boolean));
   const missing = ids.filter((id) => !foundByMongo.has(id) && !foundByHuman.has(id));
-  if (missing.length > 0) throw new AppError(`Global module(s) not found: ${missing.join(", ")}`, 400);
+  if (missing.length > 0) throw new AppError(`Global chapter(s) not found: ${missing.join(", ")}`, 400);
 
   const archived = globalModules.filter((m) => m.status === MODULE_STATUS.ARCHIVED);
-  if (archived.length > 0) throw new AppError("Cannot add archived global modules to a course", 400);
+  if (archived.length > 0) throw new AppError("Cannot add archived global chapters to a course", 400);
 
   const orderByInput = new Map(ids.map((id, i) => [id, i]));
   const getModuleOrder = (m: { _id: unknown; moduleId?: string }) =>

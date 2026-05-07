@@ -8,18 +8,18 @@ import { SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 
-interface BatchModuleOption {
+interface BatchChapterOption {
   courseId: string;
   courseTitle: string;
-  moduleOrder: number;
-  moduleTitle: string;
+  chapterOrder: number;
+  chapterTitle: string;
   label: string;
 }
 
 interface BatchSnapshot {
   courseId?: string;
   title?: string;
-  modules?: Array<{ order?: number; title?: string }>;
+  chapters?: Array<{ order?: number; title?: string }>;
 }
 
 interface Batch {
@@ -34,7 +34,7 @@ interface Submission {
   studentId: string;
   batchId: string;
   courseId?: string;
-  moduleOrder: number;
+  chapterOrder?: number;
   assignmentId: string;
   submissionType: string;
   submissionContent?: string;
@@ -53,8 +53,8 @@ export default function BatchSubmissionsPage() {
   const params = useParams();
   const id = params.id as string;
   const [batch, setBatch] = useState<Batch | null>(null);
-  const [moduleOptions, setModuleOptions] = useState<BatchModuleOption[]>([]);
-  const [selectedModule, setSelectedModule] = useState<BatchModuleOption | null>(null);
+  const [chapterOptions, setChapterOptions] = useState<BatchChapterOption[]>([]);
+  const [selectedChapter, setSelectedChapter] = useState<BatchChapterOption | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -76,12 +76,12 @@ export default function BatchSubmissionsPage() {
           : r.data.courseSnapshot
             ? [r.data.courseSnapshot]
             : [];
-        const options: BatchModuleOption[] = [];
+        const options: BatchChapterOption[] = [];
         snapshots.forEach((snap) => {
           const courseId = snap.courseId ?? "";
           const courseTitle = snap.title ?? "Course";
-          const modules = snap.modules ?? [];
-          modules
+          const chapters = snap.chapters ?? [];
+          chapters
             .slice()
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             .forEach((mod, idx) => {
@@ -89,35 +89,35 @@ export default function BatchSubmissionsPage() {
               options.push({
                 courseId,
                 courseTitle,
-                moduleOrder: order,
-                moduleTitle: mod.title ?? `Module ${order + 1}`,
+                chapterOrder: order,
+                chapterTitle: mod.title ?? `Chapter ${order + 1}`,
                 label: snapshots.length > 1
-                  ? `${courseTitle} — Module ${order + 1}: ${mod.title ?? ""}`
-                  : `Module ${order + 1}: ${mod.title ?? ""}`,
+                  ? `${courseTitle} — Chapter ${order + 1}: ${mod.title ?? ""}`
+                  : `Chapter ${order + 1}: ${mod.title ?? ""}`,
               });
             });
         });
-        setModuleOptions(options);
-        if (options.length > 0 && !selectedModule) setSelectedModule(options[0]);
+        setChapterOptions(options);
+        if (options.length > 0 && !selectedChapter) setSelectedChapter(options[0]);
       }
     });
   }, [id]);
 
   useEffect(() => {
-    if (!id || !selectedModule) {
+    if (!id || !selectedChapter) {
       setSubmissions([]);
       return;
     }
     setLoading(true);
-    const params = new URLSearchParams({ batchId: id, moduleOrder: String(selectedModule.moduleOrder) });
-    if (selectedModule.courseId) params.set("courseId", selectedModule.courseId);
+    const params = new URLSearchParams({ batchId: id, chapterOrder: String(selectedChapter.chapterOrder) });
+    if (selectedChapter.courseId) params.set("courseId", selectedChapter.courseId);
     api<Submission[]>(`/api/assignments/submissions?${params.toString()}`)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setSubmissions(r.data);
         else setSubmissions([]);
       })
       .finally(() => setLoading(false));
-  }, [id, selectedModule]);
+  }, [id, selectedChapter]);
 
   async function submitReview(subId: string) {
     setSubmitting(true);
@@ -135,9 +135,9 @@ export default function BatchSubmissionsPage() {
       setReviewingId(null);
       setFeedback("");
       setRating("");
-      if (selectedModule) {
-        const params = new URLSearchParams({ batchId: id, moduleOrder: String(selectedModule.moduleOrder) });
-        if (selectedModule.courseId) params.set("courseId", selectedModule.courseId);
+      if (selectedChapter) {
+        const params = new URLSearchParams({ batchId: id, chapterOrder: String(selectedChapter.chapterOrder) });
+        if (selectedChapter.courseId) params.set("courseId", selectedChapter.courseId);
         const r = await api<Submission[]>(`/api/assignments/submissions?${params.toString()}`);
         if (r.success && Array.isArray(r.data)) setSubmissions(r.data);
       }
@@ -180,9 +180,9 @@ export default function BatchSubmissionsPage() {
       setSelectedIds(new Set());
       setFeedback("");
       setRating("");
-      if (selectedModule) {
-        const q = new URLSearchParams({ batchId: id, moduleOrder: String(selectedModule.moduleOrder) });
-        if (selectedModule.courseId) q.set("courseId", selectedModule.courseId);
+      if (selectedChapter) {
+        const q = new URLSearchParams({ batchId: id, chapterOrder: String(selectedChapter.chapterOrder) });
+        if (selectedChapter.courseId) q.set("courseId", selectedChapter.courseId);
         const r = await api<Submission[]>(`/api/assignments/submissions?${q.toString()}`);
         if (r.success && Array.isArray(r.data)) setSubmissions(r.data);
       }
@@ -228,20 +228,20 @@ export default function BatchSubmissionsPage() {
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
-          <p className="text-sm text-slate-600">Select a module to see and review submissions for that module.</p>
+          <p className="text-sm text-slate-600">Select a chapter to see and review submissions for that chapter.</p>
           <div className="mt-4">
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Module</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Chapter</label>
             <select
-              value={selectedModule ? `${selectedModule.courseId}-${selectedModule.moduleOrder}` : ""}
+              value={selectedChapter ? `${selectedChapter.courseId}-${selectedChapter.chapterOrder}` : ""}
               onChange={(e) => {
                 const val = e.target.value;
-                const opt = moduleOptions.find((o) => `${o.courseId}-${o.moduleOrder}` === val);
-                if (opt) setSelectedModule(opt);
+                const opt = chapterOptions.find((o) => `${o.courseId}-${o.chapterOrder}` === val);
+                if (opt) setSelectedChapter(opt);
               }}
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             >
-              {moduleOptions.map((opt) => (
-                <option key={`${opt.courseId}-${opt.moduleOrder}`} value={`${opt.courseId}-${opt.moduleOrder}`}>
+              {chapterOptions.map((opt) => (
+                <option key={`${opt.courseId}-${opt.chapterOrder}`} value={`${opt.courseId}-${opt.chapterOrder}`}>
                   {opt.label}
                 </option>
               ))}
@@ -262,7 +262,7 @@ export default function BatchSubmissionsPage() {
           </div>
         ) : submissions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-slate-600">No submissions for this module yet.</p>
+            <p className="text-slate-600">No submissions for this chapter yet.</p>
             <p className="mt-1 text-sm text-slate-500">Students will appear here when they submit.</p>
           </div>
         ) : (

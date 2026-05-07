@@ -13,14 +13,15 @@ function getUserId(req: Request): string {
 
 export const submitAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
-  const { batchId, moduleOrder, assignmentId, submissionType, submissionContent, courseId } = req.body ?? {};
-  if (!batchId || moduleOrder === undefined || !assignmentId || !submissionType || submissionContent == null) {
-    throw new AppError("batchId, moduleOrder, assignmentId, submissionType, submissionContent are required", 400);
+  const { batchId, chapterOrder, moduleOrder, assignmentId, submissionType, submissionContent, courseId } = req.body ?? {};
+  const resolvedChapterOrder = chapterOrder ?? moduleOrder;
+  if (!batchId || resolvedChapterOrder === undefined || !assignmentId || !submissionType || submissionContent == null) {
+    throw new AppError("batchId, chapterOrder, assignmentId, submissionType, submissionContent are required", 400);
   }
   const data = await service.submitAssignment({
     studentId,
     batchId,
-    moduleOrder: Number(moduleOrder),
+    chapterOrder: Number(resolvedChapterOrder),
     assignmentId,
     submissionType,
     submissionContent: String(submissionContent),
@@ -85,10 +86,10 @@ export const bulkReviewSubmissions = asyncHandler(async (req: Request, res: Resp
 export const listSubmissions = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const batchId = req.query.batchId as string;
   const studentId = req.query.studentId as string | undefined;
-  const moduleOrderParam = req.query.moduleOrder as string | undefined;
+  const chapterOrderParam = (req.query.chapterOrder as string | undefined) ?? (req.query.moduleOrder as string | undefined);
   const courseId = req.query.courseId as string | undefined;
   if (!batchId) throw new AppError("batchId query is required", 400);
-  const moduleOrder = moduleOrderParam != null && moduleOrderParam !== "" ? parseInt(moduleOrderParam, 10) : undefined;
+  const chapterOrder = chapterOrderParam != null && chapterOrderParam !== "" ? parseInt(chapterOrderParam, 10) : undefined;
   const isTrainer = Boolean(req.user?.roles?.includes(ROLE.TRAINER));
   const userId = getUserId(req);
   if (isTrainer) {
@@ -100,7 +101,7 @@ export const listSubmissions = asyncHandler(async (req: Request, res: Response):
   }
   const data = await service.listSubmissionsForBatch(batchId, {
     studentId,
-    ...(Number.isInteger(moduleOrder) && !Number.isNaN(moduleOrder as number) && { moduleOrder: moduleOrder as number }),
+    ...(Number.isInteger(chapterOrder) && !Number.isNaN(chapterOrder as number) && { chapterOrder: chapterOrder as number }),
     ...(courseId != null && courseId !== "" && { courseId }),
   });
   successRes(res, data);

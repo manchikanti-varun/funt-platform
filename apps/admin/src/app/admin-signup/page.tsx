@@ -353,7 +353,7 @@ function AdminSignupForm() {
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>
             )}
             <button type="submit" disabled={submitting} className="btn-primary w-full">
-              {submitting ? "Submitting…" : roleType === "SUPER_ADMIN" ? "Create / Request Super Admin" : "Submit Admin Request"}
+              {submitting ? "Submitting…" : roleType === "SUPER_ADMIN" ? "Create or Request Super Admin" : "Submit Admin Request"}
             </button>
           </form>
         )}

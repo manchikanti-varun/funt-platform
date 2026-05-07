@@ -2,7 +2,7 @@
 import { CertificateModel } from "../models/Certificate.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { BatchModel } from "../models/Batch.model.js";
-import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
+import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { UserModel } from "../models/User.model.js";
 import { grantCoinsWithExpiry } from "./coinBalance.service.js";
@@ -39,7 +39,7 @@ export async function checkEligibility(
   const modules = getFirstSnapshotModules(batch);
   if (modules.length === 0) return { eligible: false, reason: "Batch has no modules" };
 
-  const completedCount = await ModuleProgressModel.countDocuments({
+  const completedCount = await ChapterProgressModel.countDocuments({
     studentId,
     batchId: batchMongoId,
     completedAt: { $exists: true, $ne: null },
@@ -356,7 +356,7 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
       .select("studentId certificateId coinReward coinRewardGrantedAt")
       .lean()
       .exec(),
-    ModuleProgressModel.find({ batchId: batchMongoId })
+    ChapterProgressModel.find({ batchId: batchMongoId })
       .select("studentId completedAt")
       .lean()
       .exec(),

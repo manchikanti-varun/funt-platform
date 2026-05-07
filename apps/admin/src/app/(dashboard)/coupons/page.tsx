@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel, FormPanel } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { RequireRoles } from "@/components/auth/RequireRoles";
+import { useAdminUser } from "@/contexts/AdminUserContext";
+import { ROLE } from "@funt-platform/constants";
 
 interface CouponRow {
   id: string;
@@ -20,6 +22,7 @@ interface CouponRow {
   validUntil?: string;
   active: boolean;
   notes: string;
+  audience?: "ALL_STUDENTS" | "BATCH_STUDENTS";
 }
 
 interface BatchCourseSnapshot {
@@ -35,18 +38,30 @@ interface BatchOpt {
   courseSnapshot?: BatchCourseSnapshot | null;
 }
 
+interface CourseOpt {
+  id?: string;
+  courseId?: string;
+  title?: string;
+}
+
 function kindLabel(k: CouponRow["kind"]) {
   return k === "SHOP" ? "Shop cart" : "Course checkout";
 }
 
 function scopeLabel(r: CouponRow): string {
-  if (r.kind === "COURSE") return `Course: ${r.courseId}`;
+  if (r.kind === "COURSE") {
+    const audience = r.audience === "BATCH_STUDENTS" ? "Batch students" : "All students";
+    return `Course: ${r.courseId} · ${audience}`;
+  }
   return r.shopScope === "FIRST_ORDER" ? "Shop: first order only" : "Shop: all orders";
 }
 
 export default function AdminCouponsPage() {
+  const { roles } = useAdminUser();
+  const canCreateCoupons = roles.includes(ROLE.SUPER_ADMIN);
   const [rows, setRows] = useState<CouponRow[]>([]);
   const [batches, setBatches] = useState<BatchOpt[]>([]);
+  const [courses, setCourses] = useState<CourseOpt[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -56,6 +71,7 @@ export default function AdminCouponsPage() {
   const [shopScope, setShopScope] = useState<"ALL_ORDERS" | "FIRST_ORDER">("ALL_ORDERS");
   const [selectedBatchId, setSelectedBatchId] = useState("");
   const [courseId, setCourseId] = useState("");
+  const [courseAudience, setCourseAudience] = useState<"ALL_STUDENTS" | "BATCH_STUDENTS">("ALL_STUDENTS");
   const [discountPercent, setDiscountPercent] = useState(10);
   const [validUntil, setValidUntil] = useState("");
   const [notes, setNotes] = useState("");
@@ -66,6 +82,16 @@ export default function AdminCouponsPage() {
   );
 
   const selectedBatchCourseOptions = useMemo(() => {
+    if (courseAudience === "ALL_STUDENTS") {
+      const dedup = new Map<string, string>();
+      for (const c of courses) {
+        const cid = String(c.courseId ?? c.id ?? "").trim();
+        if (!cid) continue;
+        const title = String(c.title ?? cid).trim() || cid;
+        if (!dedup.has(cid)) dedup.set(cid, title);
+      }
+      return Array.from(dedup.entries()).map(([cid, title]) => ({ courseId: cid, title }));
+    }
     if (!selectedBatch) return [];
     const snapshots = Array.isArray(selectedBatch.courseSnapshots)
       ? selectedBatch.courseSnapshots
@@ -80,15 +106,16 @@ export default function AdminCouponsPage() {
       if (!dedup.has(cid)) dedup.set(cid, title);
     }
     return Array.from(dedup.entries()).map(([cid, title]) => ({ courseId: cid, title }));
-  }, [selectedBatch]);
+  }, [selectedBatch, courseAudience, courses]);
 
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
       api<CouponRow[]>("/api/admin/coupons"),
       api<BatchOpt[]>("/api/batches"),
+      api<CourseOpt[]>("/api/courses"),
     ])
-      .then(([cRes, batchRes]) => {
+      .then(([cRes, batchRes, courseRes]) => {
         if (cRes.success && Array.isArray(cRes.data)) {
           setRows(cRes.data.filter((r) => r.kind === "SHOP" || r.kind === "COURSE"));
         } else {
@@ -99,6 +126,11 @@ export default function AdminCouponsPage() {
           setBatches(batchRes.data);
         } else {
           setBatches([]);
+        }
+        if (courseRes.success && Array.isArray(courseRes.data)) {
+          setCourses(courseRes.data);
+        } else {
+          setCourses([]);
         }
       })
       .finally(() => setLoading(false));
@@ -138,6 +170,7 @@ export default function AdminCouponsPage() {
         kind,
         shopScope: kind === "SHOP" ? shopScope : undefined,
         courseId: kind === "COURSE" ? courseId.trim() : undefined,
+        audience: kind === "COURSE" ? courseAudience : undefined,
         discountValue: percent,
         validUntil: validUntil.trim() ? new Date(validUntil).toISOString() : undefined,
         notes: notes.trim() || undefined,
@@ -149,6 +182,7 @@ export default function AdminCouponsPage() {
       setNotes("");
       setSelectedBatchId("");
       setCourseId("");
+      setCourseAudience("ALL_STUDENTS");
       load();
     } else {
       setMsg(res.message ?? "Failed");
@@ -177,7 +211,7 @@ export default function AdminCouponsPage() {
 
   return (
     <AppPageShell className="w-full gap-8">
-      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <RequireRoles roles={[ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <PageHeader
         title="Coupons"
         subtitle="Simple model: SHOP cart coupons and COURSE coupons. Admin sets code + percent, validity, and active state."
@@ -185,10 +219,11 @@ export default function AdminCouponsPage() {
 
       {msg && <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800">{msg}</div>}
 
-      <FormPanel className="space-y-4 p-6">
-        <form onSubmit={createCoupon} className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Create coupon</h2>
-          <p className="text-sm text-slate-600">One user can use a coupon only once. Discount is always percentage based.</p>
+      {canCreateCoupons ? (
+        <FormPanel className="space-y-4 p-6">
+          <form onSubmit={createCoupon} className="space-y-4">
+            <h2 className="text-lg font-semibold text-slate-900">Create coupon</h2>
+            <p className="text-sm text-slate-600">One user can use a coupon only once. Discount is always percentage based.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="font-medium text-slate-700">Code</span>
@@ -233,6 +268,17 @@ export default function AdminCouponsPage() {
             </label>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm sm:col-span-2">
+                <span className="font-medium text-slate-700">Eligibility</span>
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={courseAudience}
+                  onChange={(e) => setCourseAudience(e.target.value as "ALL_STUDENTS" | "BATCH_STUDENTS")}
+                >
+                  <option value="ALL_STUDENTS">All students</option>
+                  <option value="BATCH_STUDENTS">Only selected batch students</option>
+                </select>
+              </label>
               <label className="block text-sm">
                 <span className="font-medium text-slate-700">Batch</span>
                 <select
@@ -242,9 +288,10 @@ export default function AdminCouponsPage() {
                     setSelectedBatchId(e.target.value);
                     setCourseId("");
                   }}
-                  required
+                  required={courseAudience === "BATCH_STUDENTS"}
+                  disabled={courseAudience === "ALL_STUDENTS"}
                 >
-                  <option value="">Select batch</option>
+                  <option value="">{courseAudience === "ALL_STUDENTS" ? "Batch not required for all students" : "Select batch"}</option>
                   {batches.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name} ({b.batchId || b.id})
@@ -259,16 +306,22 @@ export default function AdminCouponsPage() {
                   value={courseId}
                   onChange={(e) => setCourseId(e.target.value)}
                   required
-                  disabled={!selectedBatchId}
+                  disabled={courseAudience === "BATCH_STUDENTS" && !selectedBatchId}
                 >
-                  <option value="">{selectedBatchId ? "Select course" : "Select batch first"}</option>
+                  <option value="">
+                    {courseAudience === "BATCH_STUDENTS"
+                      ? selectedBatchId
+                        ? "Select course"
+                        : "Select batch first"
+                      : "Select course"}
+                  </option>
                   {selectedBatchCourseOptions.map((c) => (
                     <option key={c.courseId} value={c.courseId}>
                       {c.title} ({c.courseId})
                     </option>
                   ))}
                 </select>
-                {selectedBatchId && selectedBatchCourseOptions.length === 0 && (
+                {courseAudience === "BATCH_STUDENTS" && selectedBatchId && selectedBatchCourseOptions.length === 0 && (
                   <p className="mt-1 text-xs text-amber-700">
                     This batch has no course snapshots. Pick another batch or update batch courses.
                   </p>
@@ -303,11 +356,16 @@ export default function AdminCouponsPage() {
             <span className="font-medium text-slate-700">Internal notes</span>
             <input className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
-          <button type="submit" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
-            Create coupon
-          </button>
-        </form>
-      </FormPanel>
+            <button type="submit" className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700">
+              Create coupon
+            </button>
+          </form>
+        </FormPanel>
+      ) : (
+        <FormPanel className="p-6">
+          <p className="text-sm font-medium text-amber-800">Only Super Admin can create coupons.</p>
+        </FormPanel>
+      )}
 
       <DataPanel>
         <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">

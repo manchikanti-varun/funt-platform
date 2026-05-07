@@ -16,7 +16,7 @@ interface AssignmentOption {
   title: string;
 }
 
-export default function NewGlobalModulePage() {
+export default function NewGlobalChapterPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -45,7 +45,7 @@ export default function NewGlobalModulePage() {
     // Keep rich formatting in the short "Description" preview.
     const preview = truncateRichTextHtml(content, 160);
     const autoDescription = preview.trim() ? preview : title.trim();
-    const res = await api<{ id: string }>("/api/global-modules", {
+    const res = await api<{ id: string }>("/api/global-chapters", {
       method: "POST",
         body: JSON.stringify({
         title,
@@ -62,20 +62,20 @@ export default function NewGlobalModulePage() {
       router.push("/global-modules");
       return;
     }
-    setError(res.message ?? "Failed to create module.");
+    setError(res.message ?? "Failed to create chapter.");
   }
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="shrink-0 pb-4">
-        <BackLink href="/global-modules">Back to Modules</BackLink>
+        <BackLink href="/global-modules">Back to Chapters</BackLink>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-lg ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white px-6 py-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">New Global Module</h1>
-          <p className="mt-1 text-sm text-slate-500">Create a module with content, video, and optional assignment.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">New Global Chapter</h1>
+          <p className="mt-1 text-sm text-slate-500">Create a chapter with content, video, and optional assignment.</p>
         </div>
 
         <form onSubmit={submit} className="p-6 sm:p-8">
@@ -89,7 +89,7 @@ export default function NewGlobalModulePage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="input"
-            placeholder="Module title"
+            placeholder="Chapter title"
           />
         </div>
         <div>
@@ -157,7 +157,7 @@ export default function NewGlobalModulePage() {
                 disabled={loading}
                 className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "Creating…" : "Create Module"}
+                {loading ? "Creating…" : "Create Chapter"}
               </button>
               <Link
                 href="/global-modules"

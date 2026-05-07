@@ -8,8 +8,8 @@ import {
   listCourses,
   getCourse,
   updateCourse,
-  reorderModules,
-  updateCourseModule,
+  reorderModules as reorderChapters,
+  updateCourseModule as updateCourseChapter,
   duplicateCourse,
   archiveCourse,
 } from "../controllers/course.controller.js";
@@ -22,8 +22,8 @@ router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), createCourse);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listCourses);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getCourse);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourse);
-router.patch("/:id/reorder", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), reorderModules);
-router.patch("/:id/modules/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourseModule);
+router.patch("/:id/reorder-chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), reorderChapters);
+router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourseChapter);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateCourse);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveCourse);
 

@@ -10,6 +10,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { Eye, SquarePen } from "lucide-react";
 
 interface BatchItem {
   id: string;
@@ -20,8 +21,9 @@ interface BatchItem {
   trainerUsername?: string;
   startDate: string;
   status: string;
-  courseSnapshot?: { title?: string };
-  courseSnapshots?: Array<{ title?: string }>;
+  visibility?: "PUBLIC" | "PRIVATE";
+  courseSnapshot?: { title?: string; courseId?: string };
+  courseSnapshots?: Array<{ title?: string; courseId?: string }>;
 }
 
 export default function BatchesPage() {
@@ -32,14 +34,20 @@ export default function BatchesPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [visibilityFilter, setVisibilityFilter] = useState<"ALL" | "PUBLIC" | "PRIVATE">("ALL");
   const [trainerOnly, setTrainerOnly] = useState(false);
   useEffect(() => {
     setTrainerOnly(isTrainerOnly(roles));
   }, [roles]);
 
+  const filteredList = useMemo(() => {
+    if (visibilityFilter === "ALL") return list;
+    return list.filter((b) => (b.visibility ?? "PUBLIC") === visibilityFilter);
+  }, [list, visibilityFilter]);
+
   const sortedList = useMemo(() => {
-    if (!sortKey) return list;
-    return [...list].sort((a, b) => {
+    if (!sortKey) return filteredList;
+    return [...filteredList].sort((a, b) => {
       let av: unknown = (a as unknown as Record<string, unknown>)[sortKey];
       let bv: unknown = (b as unknown as Record<string, unknown>)[sortKey];
       if (sortKey === "trainerName") {
@@ -59,7 +67,7 @@ export default function BatchesPage() {
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [list, sortKey, sortDir]);
+  }, [filteredList, sortKey, sortDir]);
 
   function handleSort(key: string) {
     if (sortKey === key) {
@@ -114,7 +122,7 @@ export default function BatchesPage() {
       <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">Search</p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-end gap-3">
             <input
               type="text"
               value={search}
@@ -122,6 +130,18 @@ export default function BatchesPage() {
               placeholder="Search batches by name or batch ID…"
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+              Visibility
+              <select
+                value={visibilityFilter}
+                onChange={(e) => setVisibilityFilter(e.target.value as "ALL" | "PUBLIC" | "PRIVATE")}
+                className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              >
+                <option value="ALL">All</option>
+                <option value="PUBLIC">Public</option>
+                <option value="PRIVATE">Private</option>
+              </select>
+            </label>
           </div>
         </div>
         {loading ? (
@@ -155,6 +175,7 @@ export default function BatchesPage() {
                   <SortableTh label="Course" columnKey="courseTitle" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Start" columnKey="startDate" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Status" columnKey="status" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Visibility</th>
                   <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
                 </tr>
               </thead>
@@ -191,6 +212,17 @@ export default function BatchesPage() {
                         {b.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
                       </span>
                     </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={
+                          b.visibility === "PRIVATE"
+                            ? "rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800"
+                            : "rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800"
+                        }
+                      >
+                        {b.visibility === "PRIVATE" ? "Private" : "Public"}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
@@ -198,19 +230,14 @@ export default function BatchesPage() {
                           title="View"
                           className="admin-table-action"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
+                          <Eye className="h-4 w-4" aria-hidden />
                         </Link>
                         <Link
                           href={`/batches/${b.id}`}
                           title="Edit"
                           className="admin-table-action"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
+                          <SquarePen className="h-4 w-4" aria-hidden />
                         </Link>
                         {!trainerOnly && (
                           <Link

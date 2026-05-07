@@ -21,15 +21,21 @@ export function signMediaToken(input: {
   studentId: string;
   batchId: string;
   courseId: string;
-  moduleOrder: number;
+  chapterOrder?: number;
+  moduleOrder?: number;
   kind: MediaKind;
   expiresIn?: string;
 }): string {
+  const resolvedOrder =
+    input.chapterOrder != null ? Number(input.chapterOrder) : input.moduleOrder != null ? Number(input.moduleOrder) : NaN;
+  if (!Number.isFinite(resolvedOrder)) {
+    throw new Error("chapterOrder or moduleOrder is required");
+  }
   const payload: Omit<MediaTokenPayload, "iat" | "exp"> = {
     uid: input.studentId,
     bid: input.batchId,
     cid: input.courseId,
-    ord: input.moduleOrder,
+    ord: resolvedOrder,
     kind: input.kind,
   };
   return jwt.sign(payload, mediaSecret(), {

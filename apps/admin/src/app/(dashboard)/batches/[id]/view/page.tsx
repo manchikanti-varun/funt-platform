@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { BATCH_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { Check, Copy } from "lucide-react";
 
 interface Batch {
   id: string;
@@ -18,6 +19,8 @@ interface Batch {
   startDate: string;
   endDate?: string;
   zoomLink?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+  headerImageUrl?: string;
   status: string;
   courseSnapshot?: { title?: string; courseId?: string };
   courseSnapshots?: Array<{ title?: string; courseId?: string }>;
@@ -27,6 +30,24 @@ export default function ViewBatchPage() {
   const params = useParams();
   const id = params.id as string;
   const [batch, setBatch] = useState<Batch | null>(null);
+  const [copiedCourseId, setCopiedCourseId] = useState<string | null>(null);
+
+  function buildStudentCourseLink(courseId: string): string {
+    const path = `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(id)}`;
+    if (typeof window === "undefined") return path;
+    const url = new URL(window.location.origin);
+    if (url.hostname === "localhost" && url.port === "3000") {
+      url.port = "3001";
+    }
+    return `${url.origin}${path}`;
+  }
+
+  async function copyCourseLink(courseId: string) {
+    const link = buildStudentCourseLink(courseId);
+    await navigator.clipboard.writeText(link);
+    setCopiedCourseId(courseId);
+    window.setTimeout(() => setCopiedCourseId((v) => (v === courseId ? null : v)), 1500);
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -78,7 +99,21 @@ export default function ViewBatchPage() {
             >
               {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
             </span>
+            <span
+              className={
+                batch.visibility === "PRIVATE"
+                  ? "rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800"
+                  : "rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800"
+              }
+            >
+              {batch.visibility === "PRIVATE" ? "Private" : "Public"}
+            </span>
           </div>
+          {batch.headerImageUrl ? (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <img src={batch.headerImageUrl} alt={`${batch.name} header`} className="h-40 w-full object-cover" />
+            </div>
+          ) : null}
         </div>
         <div className="p-6 space-y-6">
           <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
@@ -182,6 +217,16 @@ export default function ViewBatchPage() {
                   </dd>
                 </div>
               )}
+              {batch.headerImageUrl ? (
+                <div>
+                  <dt className="text-slate-500">Header image</dt>
+                  <dd>
+                    <a href={batch.headerImageUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">
+                      Open image
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           </section>
           <section>
@@ -230,12 +275,32 @@ export default function ViewBatchPage() {
                           </div>
                         )}
                       </div>
-                      <Link
-                        href={`/license-keys?${keyQs.toString()}`}
-                        className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-900 transition hover:bg-violet-100"
-                      >
-                        License keys
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {c.courseId ? (
+                          <button
+                            type="button"
+                            onClick={() => void copyCourseLink(c.courseId!)}
+                            title={copiedCourseId === c.courseId ? "Copied" : "Copy course link"}
+                            className={`inline-flex items-center justify-center rounded-lg border p-1.5 transition ${
+                              copiedCourseId === c.courseId
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                : "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100"
+                            }`}
+                          >
+                            {copiedCourseId === c.courseId ? (
+                              <Check className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <Copy className="h-4 w-4" aria-hidden />
+                            )}
+                          </button>
+                        ) : null}
+                        <Link
+                          href={`/license-keys?${keyQs.toString()}`}
+                          className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-900 transition hover:bg-violet-100"
+                        >
+                          License keys
+                        </Link>
+                      </div>
                     </li>
                   );
                 })}

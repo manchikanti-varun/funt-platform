@@ -31,6 +31,22 @@ const assignmentSubmissionSchema = new Schema(
   { timestamps: true }
 );
 
+assignmentSubmissionSchema.pre("validate", function (next) {
+  const doc = this as { moduleOrder?: number; chapterOrder?: number };
+  if ((doc.moduleOrder == null || Number.isNaN(Number(doc.moduleOrder))) && doc.chapterOrder != null) {
+    doc.moduleOrder = Number(doc.chapterOrder);
+  }
+  next();
+});
+
+assignmentSubmissionSchema.set("toJSON", {
+  virtuals: true,
+  transform: (_doc, ret: { moduleOrder?: number; chapterOrder?: number }) => {
+    if (ret.chapterOrder == null && ret.moduleOrder != null) ret.chapterOrder = ret.moduleOrder;
+    return ret;
+  },
+});
+
 assignmentSubmissionSchema.index({ studentId: 1, batchId: 1, courseId: 1, moduleOrder: 1 });
 
 export const AssignmentSubmissionModel = mongoose.model(

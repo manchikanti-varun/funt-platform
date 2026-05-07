@@ -22,13 +22,13 @@ interface GlobalAssignment extends AssignmentInfo {
 
 interface MySubmissionItem {
   id: string;
-  type: "module" | "general";
+  type: "chapter" | "general";
   assignmentId: string;
   assignmentTitle: string;
   batchId?: string;
   batchName?: string;
   courseId?: string;
-  moduleOrder?: number;
+  chapterOrder?: number;
   status: string;
   feedback?: string;
   rating?: number;
@@ -52,12 +52,12 @@ export default function AssignmentsPage() {
   const searchParams = useSearchParams();
   const batchId = searchParams.get("batchId") ?? "";
   const courseIdParam = searchParams.get("courseId") ?? "";
-  const moduleOrder = searchParams.get("moduleOrder") ?? "";
+  const chapterOrder = searchParams.get("chapterOrder") ?? searchParams.get("moduleOrder") ?? "";
   const assignmentIdParam = searchParams.get("assignmentId") ?? "";
-  const isInModuleMode = !!(batchId && moduleOrder !== "" && assignmentIdParam);
+  const isInChapterMode = !!(batchId && chapterOrder !== "" && assignmentIdParam);
 
   const [assignments, setAssignments] = useState<GlobalAssignment[]>([]);
-  const [moduleAssignment, setModuleAssignment] = useState<AssignmentInfo | null>(null);
+  const [chapterAssignment, setChapterAssignment] = useState<AssignmentInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -65,32 +65,42 @@ export default function AssignmentsPage() {
   const [assignmentId, setAssignmentId] = useState("");
   const [submissionType, setSubmissionType] = useState(SUBMISSION_TYPE.TEXT);
   const [submissionContent, setSubmissionContent] = useState("");
-  const [mySubmissions, setMySubmissions] = useState<{ moduleSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] } | null>(null);
-  /** Set to true after a successful module submit so the UI shows "Already submitted" immediately without waiting for refetch. */
+  const [mySubmissions, setMySubmissions] = useState<{ chapterSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] } | null>(null);
+  /** Set to true after a successful chapter submit so the UI shows "Already submitted" immediately without waiting for refetch. */
   const [submittedJustNow, setSubmittedJustNow] = useState(false);
 
   useEffect(() => {
-    if (isInModuleMode) {
-      const params = new URLSearchParams({ batchId, moduleOrder });
+    if (isInChapterMode) {
+      const params = new URLSearchParams({ batchId, chapterOrder });
       if (courseIdParam) params.set("courseId", courseIdParam);
       const assignUrl = `/api/student/assignments/${assignmentIdParam}?${params.toString()}`;
       Promise.all([
         api<AssignmentInfo>(assignUrl),
-        api<{ moduleSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions"),
+        api<{ chapterSubmissions?: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions"),
       ])
         .then(([assignRes, subsRes]) => {
           if (assignRes.success && assignRes.data) {
-            setModuleAssignment(assignRes.data);
+            setChapterAssignment(assignRes.data);
             setSubmissionType(toSubmissionType(assignRes.data.submissionType));
           }
-          if (subsRes.success && subsRes.data) setMySubmissions(subsRes.data);
+          if (subsRes.success && subsRes.data) {
+            setMySubmissions({
+              chapterSubmissions: subsRes.data.chapterSubmissions ?? [],
+              generalSubmissions: subsRes.data.generalSubmissions ?? [],
+            });
+          }
         })
         .finally(() => setLoading(false));
     } else {
       Promise.all([
         api<GlobalAssignment[]>("/api/student/assignments/general").then((r) => (r.success && Array.isArray(r.data) ? r.data : [])),
-        api<{ moduleSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) =>
-          r.success && r.data ? r.data : { moduleSubmissions: [], generalSubmissions: [] }
+        api<{ chapterSubmissions?: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) =>
+          r.success && r.data
+            ? {
+                chapterSubmissions: r.data.chapterSubmissions ?? [],
+                generalSubmissions: r.data.generalSubmissions ?? [],
+              }
+            : { chapterSubmissions: [], generalSubmissions: [] }
         ),
       ])
         .then(([a, subs]) => {
@@ -99,15 +109,15 @@ export default function AssignmentsPage() {
         })
         .finally(() => setLoading(false));
     }
-  }, [isInModuleMode, assignmentIdParam, batchId, courseIdParam, moduleOrder]);
+  }, [isInChapterMode, assignmentIdParam, batchId, courseIdParam, chapterOrder]);
 
-  const hasAlreadySubmittedModule =
-    isInModuleMode &&
+  const hasAlreadySubmittedChapter =
+    isInChapterMode &&
     (submittedJustNow ||
-      !!mySubmissions?.moduleSubmissions.some(
+      !!mySubmissions?.chapterSubmissions.some(
         (s) =>
           s.batchId === batchId &&
-          s.moduleOrder === Number(moduleOrder) &&
+          s.chapterOrder === Number(chapterOrder) &&
           (courseIdParam ? (s as { courseId?: string }).courseId === courseIdParam : true)
       ));
 
@@ -139,8 +149,13 @@ export default function AssignmentsPage() {
       if (res.success) {
         setMessage({ type: "success", text: "Successfully submitted." });
         resetForm();
-        api<{ moduleSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) =>
-          r.success && r.data ? setMySubmissions(r.data) : null
+        api<{ chapterSubmissions?: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) =>
+          r.success && r.data
+            ? setMySubmissions({
+                chapterSubmissions: r.data.chapterSubmissions ?? [],
+                generalSubmissions: r.data.generalSubmissions ?? [],
+              })
+            : null
         );
       } else {
         setMessage({ type: "error", text: res.message ?? "Submission failed." });
@@ -152,9 +167,9 @@ export default function AssignmentsPage() {
     }
   }
 
-  async function submitInModule(e: React.FormEvent) {
+  async function submitInChapter(e: React.FormEvent) {
     e.preventDefault();
-    if (!moduleAssignment) return;
+    if (!chapterAssignment) return;
     setMessage(null);
     setSubmitLoading(true);
     try {
@@ -163,9 +178,9 @@ export default function AssignmentsPage() {
         body: JSON.stringify({
           batchId,
           courseId: courseIdParam || undefined,
-          moduleOrder: Number(moduleOrder),
+          chapterOrder: Number(chapterOrder),
           assignmentId: assignmentIdParam,
-          submissionType: moduleAssignment.submissionType,
+          submissionType: chapterAssignment.submissionType,
           submissionContent: submissionContent.trim(),
         }),
       });
@@ -174,8 +189,13 @@ export default function AssignmentsPage() {
         setSubmissionContent("");
         setSubmittedJustNow(true);
         // Refetch so submissions list is up to date when they navigate there
-        api<{ moduleSubmissions: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) => {
-          if (r.success && r.data) setMySubmissions(r.data);
+        api<{ chapterSubmissions?: MySubmissionItem[]; generalSubmissions: MySubmissionItem[] }>("/api/student/assignments/my-submissions").then((r) => {
+          if (r.success && r.data) {
+            setMySubmissions({
+              chapterSubmissions: r.data.chapterSubmissions ?? [],
+              generalSubmissions: r.data.generalSubmissions ?? [],
+            });
+          }
         });
       } else {
         setMessage({ type: "error", text: res.message ?? "Submission failed." });
@@ -213,8 +233,8 @@ export default function AssignmentsPage() {
     );
   }
 
-  if (isInModuleMode) {
-    if (!moduleAssignment) {
+  if (isInChapterMode) {
+    if (!chapterAssignment) {
       return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 pb-8">
           <Link href="/assignments" className={backButtonClass}>
@@ -231,7 +251,7 @@ export default function AssignmentsPage() {
 
     const courseBackHref = courseIdParam ? `/courses/${encodeURIComponent(courseIdParam)}${batchId ? `?batchId=${encodeURIComponent(batchId)}` : ""}` : "/courses";
     const courseLearnHref = courseIdParam
-      ? `/courses/${encodeURIComponent(courseIdParam)}/learn${batchId ? `?batchId=${encodeURIComponent(batchId)}` : ""}`
+      ? `/courses/${encodeURIComponent(courseIdParam)}${batchId ? `?batchId=${encodeURIComponent(batchId)}&learn=1` : "?learn=1"}`
       : "/courses";
 
     return (
@@ -249,11 +269,11 @@ export default function AssignmentsPage() {
         <DataPanel className="flex flex-col border-2 border-black/10 shadow-xl shadow-black/5">
           <div className="border-b border-black/10 bg-gradient-to-b from-funt-honey/40 to-white px-6 py-6">
             <p className="text-sm font-bold uppercase tracking-wider text-black/55">Chapter assignment</p>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-black">{moduleAssignment.title}</h1>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-black">{chapterAssignment.title}</h1>
           </div>
 
           <div className="px-6 py-6">
-          {hasAlreadySubmittedModule ? (
+          {hasAlreadySubmittedChapter ? (
             <>
               <div className="flex items-center gap-3 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-4 text-black">
                 <svg className="h-6 w-6 shrink-0 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -275,23 +295,23 @@ export default function AssignmentsPage() {
               </div>
             </>
           ) : (
-          <form onSubmit={submitInModule} className="space-y-5">
-            {moduleAssignment.instructions && (
+          <form onSubmit={submitInChapter} className="space-y-5">
+            {chapterAssignment.instructions && (
               <div className="rounded-xl border-2 border-black/10 bg-funt-honey/30 px-4 py-3">
                 <p className="text-sm font-bold text-black">Instructions</p>
-                <div className={`mt-1 text-sm text-black/75 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(moduleAssignment.instructions) }} />
+                <div className={`mt-1 text-sm text-black/75 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(chapterAssignment.instructions) }} />
               </div>
             )}
             <div>
               <label htmlFor="content-module" className="block text-sm font-bold text-black">
-                {moduleAssignment.submissionType === SUBMISSION_TYPE.LINK ? "Your link" : "Your submission (text)"}
+                {chapterAssignment.submissionType === SUBMISSION_TYPE.LINK ? "Your link" : "Your submission (text)"}
               </label>
               <textarea
                 id="content-module"
                 required
                 value={submissionContent}
                 onChange={(e) => setSubmissionContent(e.target.value)}
-                placeholder={moduleAssignment.submissionType === SUBMISSION_TYPE.LINK ? "Paste your link here" : "Write your submission here"}
+                placeholder={chapterAssignment.submissionType === SUBMISSION_TYPE.LINK ? "Paste your link here" : "Write your submission here"}
                 className="mt-2 min-h-[180px] w-full resize-y rounded-xl border-2 border-black/10 bg-white px-3.5 py-3 text-sm text-black placeholder-black/35 focus:border-funt-gold focus:outline-none focus:ring-2 focus:ring-funt-gold/25"
                 rows={6}
               />
@@ -435,7 +455,7 @@ export default function AssignmentsPage() {
         {}
         <section>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Submissions</h2>
-          {mySubmissions && (mySubmissions.moduleSubmissions.length > 0 || mySubmissions.generalSubmissions.length > 0) ? (
+          {mySubmissions && (mySubmissions.chapterSubmissions.length > 0 || mySubmissions.generalSubmissions.length > 0) ? (
             <DataPanel className="mt-3">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -449,14 +469,14 @@ export default function AssignmentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...mySubmissions.moduleSubmissions, ...mySubmissions.generalSubmissions]
+                    {[...mySubmissions.chapterSubmissions, ...mySubmissions.generalSubmissions]
                       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
                       .map((sub) => (
                         <tr key={sub.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                           <td className="px-4 py-3 font-medium text-slate-800">{sub.assignmentTitle}</td>
                           <td className="px-4 py-3 text-slate-600">
-                            {sub.type === "module" && sub.batchName != null
-                              ? `${sub.batchName} · Module ${(sub.moduleOrder ?? 0) + 1}`
+                            {sub.type === "chapter" && sub.batchName != null
+                              ? `${sub.batchName} · Chapter ${(sub.chapterOrder ?? 0) + 1}`
                               : "General"}
                           </td>
                           <td className="px-4 py-3">
@@ -471,7 +491,7 @@ export default function AssignmentsPage() {
                             >
                               {sub.status === "PENDING" ? "Pending" : sub.status === "APPROVED" ? "Approved" : "Rejected"}
                             </span>
-                            {sub.type === "module" && sub.rating != null && (
+                            {sub.type === "chapter" && sub.rating != null && (
                               <span className="ml-1.5 text-slate-500">★ {sub.rating}</span>
                             )}
                           </td>

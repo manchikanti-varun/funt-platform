@@ -8,10 +8,10 @@ import { SUBMISSION_TYPE } from "@funt-platform/constants";
 
 const STORAGE_KEY = "new_global_assignment_type";
 
-function getStoredType(): "general" | "module" {
-  if (typeof window === "undefined") return "module";
+function getStoredType(): "general" | "chapter" {
+  if (typeof window === "undefined") return "chapter";
   const v = window.sessionStorage.getItem(STORAGE_KEY);
-  return v === "general" ? "general" : "module";
+  return v === "general" ? "general" : "chapter";
 }
 
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -28,17 +28,17 @@ export default function NewGlobalAssignmentPage() {
   const [instructions, setInstructions] = useState("");
   const [submissionType, setSubmissionType] = useState(SUBMISSION_TYPE.TEXT);
   const [skillTags, setSkillTags] = useState<string[]>([]);
-  const [type, setTypeState] = useState<"general" | "module">(getStoredType);
+  const [type, setTypeState] = useState<"general" | "chapter">(getStoredType);
   const [moderatorIds, setModeratorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const setType = useCallback((value: "general" | "module") => {
+  const setType = useCallback((value: "general" | "chapter") => {
     setTypeState(value);
     if (typeof window !== "undefined") window.sessionStorage.setItem(STORAGE_KEY, value);
   }, []);
 
-  const typeRef = useRef<"general" | "module">(type);
+  const typeRef = useRef<"general" | "chapter">(type);
   useEffect(() => {
     typeRef.current = type;
   }, [type]);
@@ -91,15 +91,15 @@ export default function NewGlobalAssignmentPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
               <div className="flex gap-6">
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="type" checked={type === "module"} onChange={() => setType("module")} className="text-teal-600" />
-                  <span className="text-sm text-slate-700">Module</span>
+                  <input type="radio" name="type" checked={type === "chapter"} onChange={() => setType("chapter")} className="text-teal-600" />
+                  <span className="text-sm text-slate-700">Chapter</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2">
                   <input type="radio" name="type" checked={type === "general"} onChange={() => setType("general")} className="text-teal-600" />
                   <span className="text-sm text-slate-700">General</span>
                 </label>
               </div>
-              <p className="mt-1 text-xs text-slate-500">Module = linked inside course modules. General = standalone; you give access to students by username.</p>
+              <p className="mt-1 text-xs text-slate-500">Chapter = linked inside course chapters. General = standalone; you give access to students by username.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>

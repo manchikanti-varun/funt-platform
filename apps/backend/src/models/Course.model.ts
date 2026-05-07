@@ -29,6 +29,8 @@ const courseSchema = new Schema(
         courseId: { type: String, required: false, unique: true, sparse: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    /** Optional course header/banner image used by student course cards. */
+    headerImageUrl: { type: String, required: false },
     durationText: { type: String, required: false, default: "" },
     modules: {
       type: [courseModuleSnapshotSchema],
@@ -47,5 +49,21 @@ const courseSchema = new Schema(
   },
   { timestamps: true }
 );
+
+courseSchema.pre("validate", function (next) {
+  const doc = this as { modules?: unknown[]; chapters?: unknown[] };
+  if ((!Array.isArray(doc.modules) || doc.modules.length === 0) && Array.isArray(doc.chapters)) {
+    doc.modules = doc.chapters;
+  }
+  next();
+});
+
+courseSchema.set("toJSON", {
+  virtuals: true,
+  transform: (_doc, ret: { modules?: unknown[]; chapters?: unknown[] }) => {
+    if (!Array.isArray(ret.chapters)) ret.chapters = Array.isArray(ret.modules) ? ret.modules : [];
+    return ret;
+  },
+});
 
 export const CourseModel = mongoose.model("Course", courseSchema);

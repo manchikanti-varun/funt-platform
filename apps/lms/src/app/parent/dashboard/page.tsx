@@ -62,6 +62,26 @@ interface ParentStudentProfile {
       completionPercent: number;
     }>;
   };
+  chapterProgressSummary?: {
+    chaptersCompleted: number;
+    chaptersPending: number;
+    chaptersTotal: number;
+    completionPercent: number;
+    courses: Array<{
+      courseKey: string;
+      batchName?: string;
+      courseName: string;
+      chapters: Array<{
+        order: number;
+        title: string;
+        completed: boolean;
+      }>;
+      chaptersCompleted: number;
+      chaptersPending: number;
+      chaptersTotal: number;
+      completionPercent: number;
+    }>;
+  };
 }
 
 function StatCard({ title, value, accentClass }: { title: string; value: string | number; accentClass: string }) {
@@ -210,8 +230,20 @@ export default function ParentDashboardPage() {
     }
   }
 
-  const moduleProgress = data.moduleProgressSummary;
-  const courseModuleBreakdown = moduleProgress?.courses ?? [];
+  const moduleProgress = data.chapterProgressSummary ?? data.moduleProgressSummary;
+  const courseModuleBreakdown =
+    data.chapterProgressSummary?.courses?.map((c) => ({
+      courseKey: c.courseKey,
+      batchName: c.batchName,
+      courseName: c.courseName,
+      modules: c.chapters,
+      modulesCompleted: c.chaptersCompleted,
+      modulesPending: c.chaptersPending,
+      modulesTotal: c.chaptersTotal,
+      completionPercent: c.completionPercent,
+    })) ??
+    moduleProgress?.courses ??
+    [];
 
   // Some course snapshots may have an empty `courseName` string.
   // Parent UI should never hide such courses; fall back to a safe label.
@@ -355,7 +387,7 @@ export default function ParentDashboardPage() {
           <div>
             <p className="label-overline">Parent dashboard</p>
             <h2 className="mt-1 text-xl font-black tracking-tight text-black">Enrolled courses progress</h2>
-            <p className="mt-1 text-xs text-black/60">Clean snapshots. Tap a course to see full module names.</p>
+            <p className="mt-1 text-xs text-black/60">Clean snapshots. Tap a course to see full chapter names.</p>
           </div>
           <span className="rounded-full border border-black/10 bg-white/70 px-3 py-1 text-xs font-semibold text-black/60">
             {finalCourseViews.length ? `${finalCourseViews.length} courses` : "—"}
@@ -441,7 +473,7 @@ export default function ParentDashboardPage() {
                       <p className="mt-1 font-semibold text-black truncate">{c.courseName}</p>
                       <p className="mt-0.5 text-[11px] text-black/60">
                         {!c.modulesKnown ? (
-                          "Module details unavailable"
+                          "Chapter details unavailable"
                         ) : c.inProgressModule ? (
                           <>
                             In progress: <span className="font-semibold text-black">{c.inProgressModule.title}</span>
@@ -452,12 +484,12 @@ export default function ParentDashboardPage() {
                             <span className="font-semibold text-black">{c.yetToStartModules[0]?.title ?? "—"}</span>
                           </>
                         ) : (
-                          "All modules completed"
+                          "All chapters completed"
                         )}
                       </p>
 
                       <p className="mt-1 text-[11px] text-black/55">
-                        Modules:{" "}
+                        Chapters:{" "}
                         <span className="font-semibold text-black">{c.completedModules.length}</span> done •{" "}
                         <span className="font-semibold text-black">{c.inProgressModule ? 1 : 0}</span> in progress •{" "}
                         <span className="font-semibold text-black">{c.yetToStartModules.length}</span> yet to start
@@ -522,7 +554,7 @@ export default function ParentDashboardPage() {
               <div className="h-[calc(100%-56px)] overflow-y-auto px-4 py-4">
                 {!selectedCourse.modulesKnown ? (
                   <div className="rounded-xl border border-black/10 bg-white/80 px-3 py-3">
-                    <p className="text-sm font-semibold text-black">Module details unavailable</p>
+                    <p className="text-sm font-semibold text-black">Chapter details unavailable</p>
                     <p className="mt-1 text-xs text-black/60">Refresh the dashboard and try again.</p>
                   </div>
                 ) : (
@@ -605,7 +637,7 @@ export default function ParentDashboardPage() {
 
                     {selectedCourse.yetToStartModules.length ? (
                       <div className="rounded-xl border border-black/10 bg-white/80 px-3 py-3">
-                        <p className="text-xs font-semibold text-black/55">Next module</p>
+                        <p className="text-xs font-semibold text-black/55">Next chapter</p>
                         <p className="mt-1 text-sm font-semibold text-black">{selectedCourse.yetToStartModules[0].title}</p>
                       </div>
                     ) : null}

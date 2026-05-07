@@ -22,7 +22,7 @@ export const createAssignment = asyncHandler(async (req: Request, res: Response)
   const { title, instructions, submissionType, skillTags, allowedStudentIds, moderatorIds } = body;
   const rawType = body.type;
   const assignmentType =
-    typeof rawType === "string" && String(rawType).toLowerCase() === "general" ? "general" : "module";
+    typeof rawType === "string" && String(rawType).toLowerCase() === "general" ? "general" : "chapter";
   const data = await service.createAssignment({
     title,
     instructions,
@@ -61,7 +61,7 @@ export const updateAssignment = asyncHandler(async (req: Request, res: Response)
     typeof rawType === "string"
       ? String(rawType).toLowerCase() === "general"
         ? "general"
-        : "module"
+        : "chapter"
       : undefined;
   const data = await service.updateAssignment(
     id,
@@ -155,9 +155,9 @@ export const getSubmissionsForAssignment = asyncHandler(async (req: Request, res
   if (!isGeneral) {
     successRes(res, {
       assignment: { id: assignment.id, title: assignment.title },
-      moduleSubmissions: [],
+      chapterSubmissions: [],
       generalSubmissions: [],
-      message: "Module-linked assignment submissions are reviewed in Batches → [batch] → Assignment submissions.",
+      message: "Chapter-linked assignment submissions are reviewed in Batches → [batch] → Assignment submissions.",
     });
     return;
   }
@@ -165,7 +165,7 @@ export const getSubmissionsForAssignment = asyncHandler(async (req: Request, res
   const generalWithType = generalSubmissions.map((s) => ({ ...s, type: "general" as const }));
   successRes(res, {
     assignment: { id: assignment.id, title: assignment.title },
-    moduleSubmissions: [],
+    chapterSubmissions: [],
     generalSubmissions: generalWithType,
   });
 });

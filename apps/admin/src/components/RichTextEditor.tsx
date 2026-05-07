@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { RichTextEditor as RichTextEditorCore, type RichTextEditorApi } from "@funt-platform/rich-text-editor";
 
-const EDITOR_BASE = "rounded-xl overflow-hidden border border-slate-200 bg-white";
+const EDITOR_BASE =
+  "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-teal-400 focus-within:shadow-md focus-within:shadow-teal-100/60";
 
 export interface RichTextEditorProps {
   value: string;
@@ -79,8 +80,31 @@ export function RichTextEditor({
     <div className={`${EDITOR_BASE} ${className}`.trim()}>
       <div ref={rootRef} />
       <style jsx>{`
+        div :global(.rte-toolbar) {
+          padding: 12px;
+          background: linear-gradient(to bottom, #f8fafc, #ffffff);
+        }
+
+        div :global(.rte-content) {
+          padding: 16px 18px 22px;
+        }
+
         div :global(.rte-prosemirror) {
           min-height: ${Math.max(minHeight - 40, 80)}px;
+          padding: 4px 2px;
+        }
+
+        div :global(.rte-prosemirror p),
+        div :global(.rte-prosemirror ul),
+        div :global(.rte-prosemirror ol),
+        div :global(.rte-prosemirror blockquote),
+        div :global(.rte-prosemirror pre) {
+          margin-left: 2px;
+          margin-right: 2px;
+        }
+
+        div :global(.rte-prosemirror.is-editor-empty:first-child::before) {
+          color: #94a3b8;
         }
       `}</style>
     </div>

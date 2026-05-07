@@ -4,24 +4,34 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { api, clearToken } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { Compass, CreditCard, ExternalLink, Eye, GraduationCap, LayoutGrid, Search, Table2 } from "lucide-react";
 
 interface MyCourse {
   courseId: string;
   courseTitle: string;
   description?: string;
+  chapterCount?: number;
   moduleCount: number;
   batchId: string;
   accessBlocked?: boolean;
+  courseHeaderImageUrl?: string;
 }
 
 interface ExploreCourse {
   courseId: string;
   courseTitle: string;
   description?: string;
+  chapterCount?: number;
   moduleCount: number;
   batchId: string;
   enrollmentPriceInPaise?: number;
   paymentOptionsLabel?: string;
+  courseHeaderImageUrl?: string;
+}
+
+function randomPlaceholderImage(seed: string): string {
+  const safeSeed = encodeURIComponent(seed || "course");
+  return `https://picsum.photos/seed/${safeSeed}/960/420`;
 }
 
 function filterBySearch<T>(
@@ -37,6 +47,24 @@ function filterBySearch<T>(
     const subtitle = getSubtitle ? getSubtitle(item).toLowerCase() : "";
     return title.includes(q) || subtitle.includes(q);
   });
+}
+
+function dedupeMyCoursesByCourseId(items: MyCourse[]): MyCourse[] {
+  const byCourseId = new Map<string, MyCourse>();
+  for (const item of items) {
+    const key = String(item.courseId ?? "").trim();
+    if (!key) continue;
+    const prev = byCourseId.get(key);
+    if (!prev) {
+      byCourseId.set(key, item);
+      continue;
+    }
+    // Prefer an unblocked row when duplicates exist for same course.
+    if (!!prev.accessBlocked && !item.accessBlocked) {
+      byCourseId.set(key, item);
+    }
+  }
+  return Array.from(byCourseId.values());
 }
 
 export default function CoursesPage() {
@@ -71,13 +99,15 @@ export default function CoursesPage() {
   }, []);
 
   const myCourses = useMemo(
-    () =>
-      filterBySearch(
+    () => {
+      const filtered = filterBySearch(
         myCoursesList,
         searchQuery,
         (c) => c.courseTitle,
         (c) => c.description ?? ""
-      ),
+      );
+      return dedupeMyCoursesByCourseId(filtered);
+    },
     [myCoursesList, searchQuery]
   );
 
@@ -92,7 +122,14 @@ export default function CoursesPage() {
     [exploreCoursesList, searchQuery]
   );
 
+  const enrolledKeySet = useMemo(() => {
+    return new Set(
+      myCoursesList.map((c) => `${String(c.courseId).trim()}::${String(c.batchId).trim()}`)
+    );
+  }, [myCoursesList]);
+
   const [activeTab, setActiveTab] = useState<"my" | "explore">("my");
+  const [layout, setLayout] = useState<"table" | "cards">("table");
 
   if (loading) {
     return (
@@ -103,7 +140,7 @@ export default function CoursesPage() {
   }
 
   return (
-    <AppPageShell className="flex h-full min-h-0 flex-1 flex-col gap-5">
+    <AppPageShell className="flex flex-col gap-3">
       <div className="page-hero flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Learning</p>
@@ -111,9 +148,7 @@ export default function CoursesPage() {
         </div>
         <div className="relative w-full sm:max-w-sm">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search className="h-5 w-5" aria-hidden />
           </span>
           <input
             type="search"
@@ -126,7 +161,7 @@ export default function CoursesPage() {
       </div>
 
       {}
-      <div className="shrink-0 flex gap-1 rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-md shadow-black/5 ring-1 ring-black/5">
+      <div className="shrink-0 flex items-center gap-2 rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-md shadow-black/5 ring-1 ring-black/5">
         <button
           type="button"
           onClick={() => setActiveTab("my")}
@@ -136,7 +171,10 @@ export default function CoursesPage() {
               : "text-slate-600 hover:bg-white/80 hover:text-slate-800 hover:ring-1 hover:ring-slate-200/60"
           }`}
         >
-          Courses
+          <span className="inline-flex items-center gap-2">
+            <GraduationCap className="h-4 w-4" aria-hidden />
+            Courses
+          </span>
         </button>
         <button
           type="button"
@@ -147,12 +185,43 @@ export default function CoursesPage() {
               : "text-slate-600 hover:bg-white/80 hover:text-slate-800 hover:ring-1 hover:ring-slate-200/60"
           }`}
         >
-          Explore courses
+          <span className="inline-flex items-center gap-2">
+            <Compass className="h-4 w-4" aria-hidden />
+            Explore
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayout("table")}
+          title="Table layout"
+          aria-label="Switch to table layout"
+          className={`ml-auto rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            layout === "table" ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <Table2 className="h-4 w-4" aria-hidden />
+            Table
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setLayout("cards")}
+          title="Card layout"
+          aria-label="Switch to card layout"
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            layout === "cards" ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <LayoutGrid className="h-4 w-4" aria-hidden />
+            Cards
+          </span>
         </button>
       </div>
 
       {}
-      <DataPanel className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+      <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
         {activeTab === "my" ? (
           <>
             <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
@@ -167,8 +236,8 @@ export default function CoursesPage() {
                     : "You are not enrolled in any course yet. Switch to Explore courses or request enrollment."}
                 </p>
               </div>
-            ) : (
-              <div className="min-h-0 flex-1 overflow-auto">
+            ) : layout === "table" ? (
+              <div className="min-h-0 flex-1 overflow-x-auto">
                 <table className="w-full min-w-[600px] border-collapse text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
                     <tr>
@@ -180,14 +249,12 @@ export default function CoursesPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {myCourses.map((c) => (
-                      <tr key={c.courseId} className="transition hover:bg-slate-50/80">
+                      <tr key={`${c.courseId}::${c.batchId}`} className="transition hover:bg-slate-50/80">
                         <td className="px-6 py-3.5 font-medium text-slate-800">{c.courseTitle}</td>
-                        <td className="px-6 py-3.5 text-slate-600">{c.moduleCount}</td>
+                        <td className="px-6 py-3.5 text-slate-600">{c.chapterCount ?? c.moduleCount}</td>
                         <td className="px-6 py-3.5">
                           {c.accessBlocked ? (
-                            <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">
-                              Blocked by admin
-                            </span>
+                            <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">Blocked by admin</span>
                           ) : (
                             <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
                           )}
@@ -195,6 +262,8 @@ export default function CoursesPage() {
                         <td className="px-6 py-3.5 text-right">
                           <Link
                             href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                            title={c.accessBlocked ? "View status" : "Open course"}
+                            aria-label={c.accessBlocked ? "View status" : "Open course"}
                             className={
                               c.accessBlocked
                                 ? "inline-flex items-center gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-950 shadow-sm transition duration-200 hover:bg-red-100"
@@ -202,15 +271,43 @@ export default function CoursesPage() {
                             }
                           >
                             {c.accessBlocked ? "View status" : "Open"}
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
                           </Link>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+                {myCourses.map((c) => (
+                  <article key={`${c.courseId}::${c.batchId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <img
+                      src={c.courseHeaderImageUrl || randomPlaceholderImage(`${c.courseId}`)}
+                      alt={c.courseTitle}
+                      className="h-32 w-full object-cover"
+                    />
+                    <div className="space-y-2.5 p-3.5">
+                      <h3 className="text-base font-semibold text-slate-900">{c.courseTitle}</h3>
+                      <p className="text-xs text-slate-500">{c.chapterCount ?? c.moduleCount} chapters</p>
+                      {c.accessBlocked ? (
+                        <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">Blocked by admin</span>
+                      ) : (
+                        <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                      )}
+                      <div>
+                        <Link
+                          href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                          title={c.accessBlocked ? "View status" : "Open course"}
+                          aria-label={c.accessBlocked ? "View status" : "Open course"}
+                          className={c.accessBlocked ? "inline-flex rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900" : "inline-flex rounded-xl bg-funt-gold px-3 py-2 text-sm font-semibold text-black"}
+                        >
+                          {c.accessBlocked ? "View status" : "Open"}
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
               </div>
             )}
           </>
@@ -254,8 +351,8 @@ export default function CoursesPage() {
                     : "No courses in the platform yet."}
                 </p>
               </div>
-            ) : (
-              <div className="min-h-0 flex-1 overflow-auto">
+            ) : layout === "table" ? (
+              <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] border-collapse text-left text-sm">
                   <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
                     <tr>
@@ -268,9 +365,9 @@ export default function CoursesPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {exploreCourses.map((c) => (
-                      <tr key={c.courseId} className="transition hover:bg-slate-50/80">
+                      <tr key={`${c.courseId}::${c.batchId}`} className="transition hover:bg-slate-50/80">
                         <td className="px-6 py-3.5 font-medium text-slate-800">{c.courseTitle}</td>
-                        <td className="px-6 py-3.5 text-slate-600">{c.moduleCount}</td>
+                        <td className="px-6 py-3.5 text-slate-600">{c.chapterCount ?? c.moduleCount}</td>
                         <td className="px-6 py-3.5 text-slate-600">
                           {c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
                             <span>
@@ -285,28 +382,97 @@ export default function CoursesPage() {
                           )}
                         </td>
                         <td className="px-6 py-3.5">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
+                          {enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`) ? (
+                            <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
+                          )}
                         </td>
                         <td className="px-6 py-3.5 text-right">
                           <div className="flex flex-wrap items-center justify-end gap-2">
-                            <Link
-                              href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50"
-                            >
-                              Details
-                            </Link>
-                            <Link
-                              href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
-                            >
-                              Pay
-                            </Link>
+                            {enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`) ? (
+                              <Link
+                                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                                title="Open course"
+                                aria-label="Open course"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                              >
+                                Open
+                              </Link>
+                            ) : (
+                              <>
+                                <Link
+                                  href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                                  title="View course details"
+                                  aria-label="View course details"
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50"
+                                >
+                                  Details
+                                </Link>
+                                <Link
+                                  href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
+                                  title="Pay for course"
+                                  aria-label="Pay for course"
+                                  className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                                >
+                                  Pay
+                                </Link>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+                {exploreCourses.map((c) => {
+                  const enrolled = enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`);
+                  return (
+                    <article key={`${c.courseId}::${c.batchId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <img
+                        src={c.courseHeaderImageUrl || randomPlaceholderImage(`${c.courseId}`)}
+                        alt={c.courseTitle}
+                        className="h-32 w-full object-cover"
+                      />
+                      <div className="space-y-2.5 p-3.5">
+                        <h3 className="text-base font-semibold text-slate-900">{c.courseTitle}</h3>
+                        <p className="text-xs text-slate-500">{c.chapterCount ?? c.moduleCount} chapters</p>
+                        <p className="text-xs text-slate-600">
+                          {c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
+                            ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                            : "—"}
+                        </p>
+                        {enrolled ? (
+                          <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {enrolled ? (
+                            <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black" title="Open course" aria-label="Open course">
+                              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                              Open
+                            </Link>
+                          ) : (
+                            <>
+                              <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" title="Course details" aria-label="View course details">
+                                <Eye className="h-3.5 w-3.5" aria-hidden />
+                                Details
+                              </Link>
+                              <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black" title="Pay" aria-label="Pay for course">
+                                <CreditCard className="h-3.5 w-3.5" aria-hidden />
+                                Pay
+                              </Link>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </>

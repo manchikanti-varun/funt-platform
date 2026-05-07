@@ -20,7 +20,7 @@ interface VersionSnapshot {
   savedBy?: string;
 }
 
-interface Module {
+interface Chapter {
   id: string;
   title: string;
   description: string;
@@ -39,11 +39,11 @@ interface AssignmentOption {
   title: string;
 }
 
-export default function EditGlobalModulePage() {
+export default function EditGlobalChapterPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [module, setModule] = useState<Module | null>(null);
+  const [chapter, setChapter] = useState<Chapter | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -55,8 +55,8 @@ export default function EditGlobalModulePage() {
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  function applyModuleToForm(data: Module) {
-    setModule(data);
+  function applyChapterToForm(data: Chapter) {
+    setChapter(data);
     setTitle(data.title);
     setContent(data.content ?? "");
     setYoutubeUrl(data.youtubeUrl ?? "");
@@ -73,8 +73,8 @@ export default function EditGlobalModulePage() {
 
   useEffect(() => {
     if (!id) return;
-    api<Module>(`/api/global-modules/${id}`).then((r) => {
-      if (r.success && r.data) applyModuleToForm(r.data);
+    api<Chapter>(`/api/global-chapters/${id}`).then((r) => {
+      if (r.success && r.data) applyChapterToForm(r.data);
     });
   }, [id]);
 
@@ -85,7 +85,7 @@ export default function EditGlobalModulePage() {
     // Keep rich formatting in the short "Description" preview.
     const preview = truncateRichTextHtml(content, 160);
     const autoDescription = preview.trim() ? preview : title.trim();
-    const res = await api(`/api/global-modules/${id}`, {
+    const res = await api(`/api/global-chapters/${id}`, {
       method: "PUT",
       body: JSON.stringify({
         title,
@@ -106,26 +106,26 @@ export default function EditGlobalModulePage() {
   }
 
   async function archive() {
-    if (!confirm("Archive this module?")) return;
-    const res = await api(`/api/global-modules/${id}/archive`, { method: "PATCH" });
+    if (!confirm("Archive this chapter?")) return;
+    const res = await api(`/api/global-chapters/${id}/archive`, { method: "PATCH" });
     if (res.success) router.push("/global-modules");
-    else setError(res.message ?? "Failed to archive.");
+    else setError(res.message ?? "Failed to archive chapter.");
   }
 
   async function restoreVersionCopy(version: number) {
     if (!confirm(`Restore version ${version}? Current content will be saved as a version copy first.`)) return;
     setError("");
     setRestoringVersion(version);
-    const res = await api<Module>(`/api/global-modules/${id}/versions/restore`, {
+    const res = await api<Chapter>(`/api/global-chapters/${id}/versions/restore`, {
       method: "POST",
       body: JSON.stringify({ version }),
     });
     setRestoringVersion(null);
-    if (res.success && res.data) applyModuleToForm(res.data);
+    if (res.success && res.data) applyChapterToForm(res.data);
     else setError(res.message ?? "Failed to restore version.");
   }
 
-  if (!module) {
+  if (!chapter) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
@@ -138,11 +138,11 @@ export default function EditGlobalModulePage() {
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
-        <BackLink href="/global-modules">Back to Modules</BackLink>
+        <BackLink href="/global-modules">Back to Chapters</BackLink>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{module.version}</span>
-          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${module.status === MODULE_STATUS.ARCHIVED ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"}`}>{module.status === MODULE_STATUS.ARCHIVED ? "Archived" : "Active"}</span>
-          {module.status !== MODULE_STATUS.ARCHIVED && (
+          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{chapter.version}</span>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${chapter.status === MODULE_STATUS.ARCHIVED ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"}`}>{chapter.status === MODULE_STATUS.ARCHIVED ? "Archived" : "Active"}</span>
+          {chapter.status !== MODULE_STATUS.ARCHIVED && (
             <button type="button" onClick={archive} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50">Archive</button>
           )}
         </div>
@@ -150,7 +150,7 @@ export default function EditGlobalModulePage() {
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-lg ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white px-6 py-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Module</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Chapter</h1>
           <p className="mt-1 text-sm text-slate-500">Update content, video links, and linked assignment.</p>
           <div className="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
             Global source
@@ -232,12 +232,12 @@ export default function EditGlobalModulePage() {
               <Link href="/global-modules" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">Cancel</Link>
             </div>
 
-            {module.versionSnapshots && module.versionSnapshots.length > 0 && (
+            {chapter.versionSnapshots && chapter.versionSnapshots.length > 0 && (
               <div className="mt-10 border-t border-slate-200 pt-8">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Version copies</h3>
-                <p className="text-sm text-slate-500 mb-4">Previous versions saved when you update the module. Restore to make that version the current content.</p>
+                <p className="text-sm text-slate-500 mb-4">Previous versions saved when you update the chapter. Restore to make that version the current content.</p>
                 <ul className="space-y-2">
-                  {[...module.versionSnapshots].reverse().map((snap) => (
+                  {[...chapter.versionSnapshots].reverse().map((snap) => (
                     <li key={`${snap.version}-${snap.savedAt}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-4 py-3">
                       <span className="text-sm font-medium text-slate-800">Version {snap.version}</span>
                       <span className="text-xs text-slate-500">{new Date(snap.savedAt).toLocaleString()}</span>

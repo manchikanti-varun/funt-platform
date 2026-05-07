@@ -9,7 +9,7 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 interface Stats {
   courses: number;
   batches: number;
-  globalModules: number;
+  globalChapters: number;
   globalAssignments: number;
 }
 
@@ -40,7 +40,7 @@ function getGreeting(): string {
 }
 
 const QUICK_LINKS = [
-  { href: "/global-modules", label: "Modules", icon: "book" },
+  { href: "/global-modules", label: "Chapters", icon: "book" },
   { href: "/global-assignments", label: "Assignments", icon: "document" },
   { href: "/courses", label: "Courses", icon: "academic" },
   { href: "/batches", label: "Batches", icon: "users" },
@@ -108,7 +108,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({
     courses: 0,
     batches: 0,
-    globalModules: 0,
+    globalChapters: 0,
     globalAssignments: 0,
   });
   const [recentBatches, setRecentBatches] = useState<BatchSummary[]>([]);
@@ -124,15 +124,15 @@ export default function DashboardPage() {
     Promise.all([
       api<unknown[]>("/api/courses").then((r) => (Array.isArray(r.data) ? r.data : [])),
       api<BatchSummary[]>("/api/batches").then((r) => (Array.isArray(r.data) ? r.data : [])),
-      isAdminOrSuper ? api<unknown[]>("/api/global-modules").then((r) => (Array.isArray(r.data) ? r.data : [])) : Promise.resolve([]),
+      isAdminOrSuper ? api<unknown[]>("/api/global-chapters").then((r) => (Array.isArray(r.data) ? r.data : [])) : Promise.resolve([]),
       isAdminOrSuper ? api<unknown[]>("/api/global-assignments").then((r) => (Array.isArray(r.data) ? r.data : [])) : Promise.resolve([]),
       isAdminOrSuper ? api<FinanceSummary>("/api/admin/payments/finance").then((r) => (r.success && r.data ? r.data : null)) : Promise.resolve(null),
     ])
-      .then(([courses, batches, modules, assignments, financePayload]) => {
+      .then(([courses, batches, chapters, assignments, financePayload]) => {
         setStats({
           courses: Array.isArray(courses) ? courses.length : 0,
           batches: Array.isArray(batches) ? batches.length : 0,
-          globalModules: Array.isArray(modules) ? modules.length : 0,
+          globalChapters: Array.isArray(chapters) ? chapters.length : 0,
           globalAssignments: Array.isArray(assignments) ? assignments.length : 0,
         });
         const batchList = Array.isArray(batches) ? batches : [];
@@ -167,7 +167,7 @@ export default function DashboardPage() {
     ? [
         { title: "Courses", value: stats.courses, style: STAT_STYLES[0] },
         { title: "Batches", value: stats.batches, style: STAT_STYLES[1] },
-        { title: "Modules", value: stats.globalModules, style: STAT_STYLES[2] },
+        { title: "Chapters", value: stats.globalChapters, style: STAT_STYLES[2] },
         { title: "Assignments", value: stats.globalAssignments, style: STAT_STYLES[3] },
       ]
     : isTrainer

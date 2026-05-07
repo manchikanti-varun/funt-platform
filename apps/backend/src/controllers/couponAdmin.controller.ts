@@ -11,6 +11,16 @@ function uid(req: Request): string {
   return id;
 }
 
+function parseOptionalMaxRedemptions(raw: unknown): number | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  const text = String(raw).trim();
+  if (!text) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n)) throw new AppError("maxRedemptions must be a valid number", 400);
+  return Math.max(0, Math.floor(n));
+}
+
 export const listCoupons = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const data = await service.listCouponsAdmin();
   successRes(res, data);
@@ -46,7 +56,7 @@ export const postCoupon = asyncHandler(async (req: Request, res: Response): Prom
     shopScope: b.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS",
     discountType: "PERCENT",
     discountValue: Number(b.discountValue),
-    maxRedemptions: b.maxRedemptions === null || b.maxRedemptions === "" ? null : Number(b.maxRedemptions),
+    maxRedemptions: parseOptionalMaxRedemptions(b.maxRedemptions),
     validFrom: validFrom && !Number.isNaN(validFrom.getTime()) ? validFrom : undefined,
     validUntil: validUntil && !Number.isNaN(validUntil.getTime()) ? validUntil : undefined,
     active: b.active !== false,
@@ -62,7 +72,7 @@ export const patchCoupon = asyncHandler(async (req: Request, res: Response): Pro
   const b = req.body as Record<string, unknown>;
   const data = await service.patchCouponAdmin(id, {
     active: typeof b.active === "boolean" ? b.active : undefined,
-    maxRedemptions: b.maxRedemptions === undefined ? undefined : b.maxRedemptions === null ? null : Number(b.maxRedemptions),
+    maxRedemptions: parseOptionalMaxRedemptions(b.maxRedemptions),
     validUntil: b.validUntil === undefined ? undefined : b.validUntil === null ? null : new Date(String(b.validUntil)),
     notes: b.notes != null ? String(b.notes) : undefined,
   });

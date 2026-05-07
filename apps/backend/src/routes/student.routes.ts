@@ -13,7 +13,7 @@ import {
   getGeneralAssignments,
   getAssignmentForStudent,
   getTrainers,
-  postMarkModuleComplete,
+  postMarkChapterComplete,
   postSubmitGlobalAssignment,
   postEnrollmentRequest,
   getMySubmissions,
@@ -41,7 +41,8 @@ router.get("/courses/explore", getExploreCourses);
 router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
 router.get("/media/play", getStudentMediaPlaybackRedirect);
-router.post("/batches/:batchId/progress", postMarkModuleComplete);
+router.post("/batches/:batchId/progress", postMarkChapterComplete);
+router.post("/batches/:batchId/chapters/progress", postMarkChapterComplete);
 router.post("/enrollment-requests", postEnrollmentRequest);
 router.post("/enroll/license", postRedeemLicense);
 router.post("/payments/razorpay/order", postStudentRazorpayOrder);
@@ -52,6 +53,7 @@ router.get("/payments/timeline", getStudentPaymentTimelineView);
 router.get("/coin-grants", getMyCoinGrants);
 router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);
+router.get("/assignments/my-chapter-submissions", getMySubmissions);
 router.get("/assignments/:assignmentId", getAssignmentForStudent);
 router.post("/assignments/general/submit", postSubmitGlobalAssignment);
 router.get("/trainers", getTrainers);

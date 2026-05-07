@@ -9,7 +9,7 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
-type Tab = "requests" | "student" | "trainer" | "admin" | "reset";
+type Tab = "requests" | "student" | "trainer" | "admin" | "superAdmin" | "reset";
 
 interface RegistrationRequestRow {
   id: string;
@@ -29,6 +29,23 @@ const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 
 function isValidEmailFormat(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function validateStrongPassword(value: string): string | null {
+  if (value.length < 8) return "Password must be at least 8 characters.";
+  if (!/[A-Z]/.test(value)) return "Password must contain at least one uppercase letter.";
+  if (!/[a-z]/.test(value)) return "Password must contain at least one lowercase letter.";
+  if (!/[0-9]/.test(value)) return "Password must contain at least one number.";
+  if (!/[!@#$%^&*()_+\-=[\]{};':\"\\|,.<>/?]/.test(value)) return "Password must contain at least one special character.";
+  return null;
+}
+
+function PasswordRulesHint() {
+  return (
+    <p className="mt-1 text-xs text-slate-500">
+      Password must be at least 8 characters and include at least 1 uppercase letter (A-Z), 1 lowercase letter (a-z), 1 number (0-9), and 1 special character (for example: ! @ # $ %).
+    </p>
+  );
 }
 
 export default function AdminManagementPage() {
@@ -56,6 +73,7 @@ export default function AdminManagementPage() {
     { id: "student", label: "Create Student" },
     { id: "trainer", label: "Create Trainer" },
     { id: "admin", label: "Create Admin", show: isSuperAdmin },
+    { id: "superAdmin", label: "Create Super Admin", show: isSuperAdmin },
     { id: "reset", label: "Reset Login" },
   ];
   const tabs = allTabs.filter((t) => t.show !== false);
@@ -140,6 +158,12 @@ export default function AdminManagementPage() {
             onError={(m) => setMessageAndClear("error", m)}
           />
         )}
+        {tab === "superAdmin" && isSuperAdmin && (
+          <CreateSuperAdminForm
+            onSuccess={(m) => setMessageAndClear("success", m)}
+            onError={(m) => setMessageAndClear("error", m)}
+          />
+        )}
         {tab === "reset" && (
           <ResetLoginForm
             onSuccess={(m) => setMessageAndClear("success", m)}
@@ -215,7 +239,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Registration requests</h2>
           <p className="mt-0.5 text-sm text-slate-500">
-            Requests from Google Admin signup appear here. Approve or reject to create the account (temporary password is shown on approval). Use <strong>Refresh</strong> to load the latest.
+            Requests from Google Admin signup appear here. Approve or reject to create the account. Use <strong>Refresh</strong> to load the latest.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -345,6 +369,60 @@ function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
   );
 }
 
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        required
+        type={show ? "text" : "password"}
+        className={`${INPUT_CLASS} pr-10`}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onCopy={(e) => e.preventDefault()}
+        onCut={(e) => e.preventDefault()}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+        aria-label={show ? "Hide password" : "Show password"}
+      >
+        {show ? (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+            />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
 function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
@@ -352,6 +430,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   const [countryCode, setCountryCode] = useState("+91");
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [age, setAge] = useState("10");
   const [loading, setLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<{
@@ -397,6 +476,15 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     }
     if (usernameStatus.available === false) {
       onError(usernameStatus.message || "Username is already taken.");
+      return;
+    }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) {
+      onError(pwdErr);
+      return;
+    }
+    if (password !== confirmPassword) {
+      onError("Confirm password does not match.");
       return;
     }
     setLoading(true);
@@ -505,7 +593,12 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         </div>
         <div>
           <Label htmlFor="student-password">Password</Label>
-          <input id="student-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
+          <PasswordInput id="student-password" placeholder="Initial password" value={password} onChange={setPassword} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="student-confirm-password">Confirm Password</Label>
+          <PasswordInput id="student-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
@@ -522,6 +615,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   const [countryCode, setCountryCode] = useState("+91");
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<{
     checking: boolean;
@@ -566,6 +660,15 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     }
     if (usernameStatus.available === false) {
       onError(usernameStatus.message || "Username is already taken.");
+      return;
+    }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) {
+      onError(pwdErr);
+      return;
+    }
+    if (password !== confirmPassword) {
+      onError("Confirm password does not match.");
       return;
     }
     setLoading(true);
@@ -654,7 +757,12 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         </div>
         <div>
           <Label htmlFor="trainer-password">Password</Label>
-          <input id="trainer-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
+          <PasswordInput id="trainer-password" placeholder="Initial password" value={password} onChange={setPassword} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="trainer-confirm-password">Confirm Password</Label>
+          <PasswordInput id="trainer-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
@@ -670,6 +778,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
   const [countryCode, setCountryCode] = useState("+91");
   const [mobileNumber, setMobileNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -680,6 +789,15 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
     }
     if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
       onError("Enter a valid mobile number.");
+      return;
+    }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) {
+      onError(pwdErr);
+      return;
+    }
+    if (password !== confirmPassword) {
+      onError("Confirm password does not match.");
       return;
     }
     setLoading(true);
@@ -744,7 +862,12 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
         </div>
         <div>
           <Label htmlFor="admin-password">Password</Label>
-          <input id="admin-password" required type="password" className={INPUT_CLASS} placeholder="Initial password" value={password} onChange={(e) => setPassword(e.target.value)} onCopy={(e) => e.preventDefault()} onCut={(e) => e.preventDefault()} />
+          <PasswordInput id="admin-password" placeholder="Initial password" value={password} onChange={setPassword} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="admin-confirm-password">Confirm Password</Label>
+          <PasswordInput id="admin-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
@@ -754,26 +877,131 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
   );
 }
 
-function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
-  const [userIdentifier, setUserIdentifier] = useState("");
+function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!userIdentifier.trim()) return onError("Username or user ID required.");
+    if (!isValidEmailFormat(email)) {
+      onError("Enter a valid email address.");
+      return;
+    }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
+      onError("Enter a valid mobile number.");
+      return;
+    }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) {
+      onError(pwdErr);
+      return;
+    }
+    if (password !== confirmPassword) {
+      onError("Confirm password does not match.");
+      return;
+    }
     setLoading(true);
-    const res = await api<{ temporaryPassword?: string; message?: string }>(
-      `/api/admin/users/${encodeURIComponent(userIdentifier.trim())}/reset-login`,
-      { method: "POST" }
+    const res = await api<{ username?: string }>("/api/admin/users/super-admin", {
+      method: "POST",
+      body: JSON.stringify({ name, email, mobile: `${countryCode}${mobileNumber.trim()}`, password }),
+    });
+    setLoading(false);
+    if (res.success) {
+      const u = res.data?.username;
+      onSuccess(u ? `Super Admin created. Username: ${u}` : "Super Admin created.");
+    } else onError(res.message ?? "Failed to create super admin.");
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-800">Create Super Admin</h2>
+        <p className="mt-1 text-sm text-slate-500">Super Admin only. Create another Super Admin account directly from Admin panel.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="super-admin-name">Name</Label>
+          <input id="super-admin-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="super-admin-email">Email</Label>
+          <input id="super-admin-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {email.trim() && !isValidEmailFormat(email) ? (
+            <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
+          ) : null}
+        </div>
+        <div>
+          <Label htmlFor="super-admin-mobile">Mobile</Label>
+          <div className="grid grid-cols-[120px,1fr] gap-2">
+            <div className="relative">
+              <select
+                id="super-admin-country-code"
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                className={`${INPUT_CLASS} appearance-none pr-9`}
+              >
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+              <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              id="super-admin-mobile"
+              required
+              className={INPUT_CLASS}
+              placeholder="9876543210"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+            />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="super-admin-password">Password</Label>
+          <PasswordInput id="super-admin-password" placeholder="Initial password" value={password} onChange={setPassword} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="super-admin-confirm-password">Confirm Password</Label>
+          <PasswordInput id="super-admin-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
+        </div>
+      </div>
+      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+        {loading ? "Creating…" : "Create Super Admin"}
+      </button>
+    </form>
+  );
+}
+
+function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const [username, setUsername] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!username.trim()) return onError("Username is required.");
+    const pwdErr = validateStrongPassword(newPassword);
+    if (pwdErr) return onError(pwdErr);
+    if (newPassword !== confirmPassword) return onError("Confirm password does not match.");
+    setLoading(true);
+    const res = await api<{ message?: string }>(
+      `/api/admin/users/${encodeURIComponent(username.trim())}/reset-login`,
+      { method: "POST", body: JSON.stringify({ newPassword }) }
     );
     setLoading(false);
     if (res.success) {
-      const tp = res.data?.temporaryPassword;
-      onSuccess(
-        tp
-          ? `Login reset. Temporary password: ${tp}. Share it securely; user should sign in and change password.`
-          : (res.data?.message ?? "Login reset.")
-      );
+      onSuccess(res.data?.message ?? "Login reset.");
     } else onError(res.message ?? "Failed to reset.");
   }
 
@@ -782,19 +1010,28 @@ function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void
       <div>
         <h2 className="text-lg font-semibold text-slate-800">Reset Login</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Clear account lockout and set a new temporary password. Enter MongoDB user ID (24 hex chars) or username.
+          Clear account lockout and set a new password using username only (student, trainer, or admin).
         </p>
       </div>
       <div className="max-w-md">
-        <Label htmlFor="reset-user">Username or user ID</Label>
+        <Label htmlFor="reset-user">Username</Label>
         <input
           id="reset-user"
           required
           className={INPUT_CLASS}
-          placeholder="e.g. name@funt or 507f1f77bcf86cd799439011"
-          value={userIdentifier}
-          onChange={(e) => setUserIdentifier(e.target.value)}
+          placeholder="e.g. name@funt"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
         />
+      </div>
+      <div className="max-w-md">
+        <Label htmlFor="reset-new-password">New password</Label>
+        <PasswordInput id="reset-new-password" value={newPassword} onChange={setNewPassword} />
+        <PasswordRulesHint />
+      </div>
+      <div className="max-w-md">
+        <Label htmlFor="reset-confirm-password">Confirm new password</Label>
+        <PasswordInput id="reset-confirm-password" value={confirmPassword} onChange={setConfirmPassword} />
       </div>
       <button type="submit" disabled={loading} className="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700 disabled:opacity-60">
         {loading ? "Resetting…" : "Reset Login"}

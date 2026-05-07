@@ -131,8 +131,74 @@
   }
   .rich-text-view img {
     max-width: 100%;
-    margin: 0.7em 0;
+    margin: 1.5rem 0;
     border-radius: 8px;
+  }
+  .rich-text-view iframe,
+  .rich-text-view video {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 1.5rem auto;
+    border-radius: 12px;
+  }
+  .rich-text-view iframe {
+    aspect-ratio: 16 / 9;
+    min-height: 220px;
+    border: 0;
+  }
+  .rich-text-view .rte-image-align-right,
+  .rich-text-view .rte-video-align-right {
+    margin-left: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+    shape-margin: 0.8rem;
+  }
+  .rich-text-view .rte-image-align-left,
+  .rich-text-view .rte-video-align-left {
+    margin-right: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+    shape-margin: 0.8rem;
+  }
+  .rich-text-view img[style*="float: right"],
+  .rich-text-view iframe[style*="float: right"],
+  .rich-text-view video[style*="float: right"] {
+    margin-left: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+    shape-margin: 0.8rem;
+  }
+  .rich-text-view img[style*="float: left"],
+  .rich-text-view iframe[style*="float: left"],
+  .rich-text-view video[style*="float: left"] {
+    margin-right: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+    shape-margin: 0.8rem;
+  }
+  .rich-text-view img[style*="float: left"] ~ p,
+  .rich-text-view img[style*="float: left"] ~ ul,
+  .rich-text-view img[style*="float: left"] ~ ol,
+  .rich-text-view video[style*="float: left"] ~ p,
+  .rich-text-view video[style*="float: left"] ~ ul,
+  .rich-text-view video[style*="float: left"] ~ ol,
+  .rich-text-view iframe[style*="float: left"] ~ p,
+  .rich-text-view iframe[style*="float: left"] ~ ul,
+  .rich-text-view iframe[style*="float: left"] ~ ol {
+    margin-left: 0.75rem !important;
+  }
+  .rich-text-view img[style*="float: right"] ~ p,
+  .rich-text-view img[style*="float: right"] ~ ul,
+  .rich-text-view img[style*="float: right"] ~ ol,
+  .rich-text-view video[style*="float: right"] ~ p,
+  .rich-text-view video[style*="float: right"] ~ ul,
+  .rich-text-view video[style*="float: right"] ~ ol,
+  .rich-text-view iframe[style*="float: right"] ~ p,
+  .rich-text-view iframe[style*="float: right"] ~ ul,
+  .rich-text-view iframe[style*="float: right"] ~ ol {
+    margin-right: 0.75rem !important;
+  }
+  .rich-text-view img + *,
+  .rich-text-view iframe + *,
+  .rich-text-view video + * {
+    margin-top: 1rem !important;
   }
   .app-page-shell {
     @apply mx-auto w-full max-w-6xl space-y-6;

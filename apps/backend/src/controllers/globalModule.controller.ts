@@ -23,7 +23,7 @@ export const createModule = asyncHandler(async (req: Request, res: Response): Pr
     linkedAssignmentId,
     createdBy,
   });
-  successRes(res, data, "Module created", 201);
+  successRes(res, data, "Chapter created", 201);
 });
 
 export const listModules = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -35,7 +35,7 @@ export const listModules = asyncHandler(async (req: Request, res: Response): Pro
 
 export const getModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
-  if (!id) throw new AppError("Module ID is required", 400);
+  if (!id) throw new AppError("Chapter ID is required", 400);
   const data = await service.getModuleById(id);
   successRes(res, data);
 });
@@ -43,37 +43,37 @@ export const getModule = asyncHandler(async (req: Request, res: Response): Promi
 export const updateModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
-  if (!id) throw new AppError("Module ID is required", 400);
+  if (!id) throw new AppError("Chapter ID is required", 400);
   const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId } = req.body ?? {};
   const data = await service.updateModule(
     id,
     { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId },
     performedBy
   );
-  successRes(res, data, "Module updated");
+  successRes(res, data, "Chapter updated");
 });
 
 export const archiveModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
-  if (!id) throw new AppError("Module ID is required", 400);
+  if (!id) throw new AppError("Chapter ID is required", 400);
   const data = await service.archiveModule(id, performedBy);
-  successRes(res, data, "Module archived");
+  successRes(res, data, "Chapter archived");
 });
 
 export const duplicateModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
-  if (!id) throw new AppError("Module ID is required", 400);
+  if (!id) throw new AppError("Chapter ID is required", 400);
   const data = await service.duplicateModule(id, performedBy);
-  successRes(res, data, "Module duplicated", 201);
+  successRes(res, data, "Chapter duplicated", 201);
 });
 
 export const restoreVersion = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);
   const version = Number(req.body?.version);
-  if (!id) throw new AppError("Module ID is required", 400);
+  if (!id) throw new AppError("Chapter ID is required", 400);
   if (version === undefined || Number.isNaN(version)) throw new AppError("version is required (number)", 400);
   const data = await service.restoreVersionCopy(id, version, performedBy);
   successRes(res, data, "Version restored");

@@ -46,5 +46,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Skip static files (anything with an extension) so assets in /public are served directly.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  // Public auth routes are excluded from proxy matching to avoid redirect loops and false 404s.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|login|admin-signup|auth/callback|.*\\..*).*)"],
 };

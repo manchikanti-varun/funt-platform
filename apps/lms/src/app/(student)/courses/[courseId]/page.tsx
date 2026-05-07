@@ -8,7 +8,7 @@ import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { AppPageShell, DataPanel } from "@/components/ui";
 
-interface ModuleItem {
+interface ChapterItem {
   order: number;
   title: string;
   description?: string;
@@ -36,6 +36,7 @@ interface ModuleItem {
 interface BatchCourse {
   batchId: string;
   courseId?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
   name: string;
   hasAccess?: boolean;
   /** Enrolled but admin disabled LMS access for this batch enrollment */
@@ -46,7 +47,7 @@ interface BatchCourse {
   hasRejectedCoursePayment?: boolean;
   coursePaymentRejectReason?: string;
   courseSnapshot: {
-    modules?: ModuleItem[];
+    chapters?: ChapterItem[];
     title?: string;
     description?: string;
   };
@@ -80,17 +81,19 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const searchParams = useSearchParams();
   const courseId = params.courseId as string;
   const batchIdFromQuery = searchParams.get("batchId") ?? undefined;
+  const learnMode = searchParams.get("learn") === "1";
   const [data, setData] = useState<BatchCourse | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
-  const [showChapters, setShowChapters] = useState(defaultShowChapters);
+  const [showChapters, setShowChapters] = useState(defaultShowChapters || learnMode);
   const [loading, setLoading] = useState(true);
   const [markingComplete, setMarkingComplete] = useState(false);
+  const [requestingAccess, setRequestingAccess] = useState(false);
   const [markCompleteSuccess, setMarkCompleteSuccess] = useState(false);
   const [markCompleteError, setMarkCompleteError] = useState<string | null>(null);
   const [generatingCert, setGeneratingCert] = useState(false);
   const [certSuccess, setCertSuccess] = useState<string | null>(null);
   const [certError, setCertError] = useState<string | null>(null);
-  const [completedJustNow, setCompletedJustNow] = useState<{ moduleOrder: number; part: "content" | "video" | "youtube" } | null>(null);
+  const [completedJustNow, setCompletedJustNow] = useState<{ chapterOrder: number; part: "content" | "video" | "youtube" } | null>(null);
   const [ytPageOrigin, setYtPageOrigin] = useState("");
   const youtubeAutoMarkedRef = useRef("");
   const ytListenerGenRef = useRef(0);
@@ -144,26 +147,30 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     }).finally(() => setLoading(false));
   }, [courseId, batchIdFromQuery]);
 
-  const modules = useMemo(() => {
-    if (!data?.courseSnapshot?.modules?.length) return [];
-    return [...data.courseSnapshot.modules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const chapters = useMemo(() => {
+    if (!data?.courseSnapshot?.chapters?.length) return [];
+    return [...data.courseSnapshot.chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [data]);
 
   const selected = useMemo(() => {
-    if (modules.length === 0) return null;
-    if (selectedOrder !== null) return modules.find((m) => m.order === selectedOrder) ?? modules[0];
-    return modules[0];
-  }, [modules, selectedOrder]);
+    if (chapters.length === 0) return null;
+    if (selectedOrder !== null) return chapters.find((m) => m.order === selectedOrder) ?? chapters[0];
+    return chapters[0];
+  }, [chapters, selectedOrder]);
 
   const batchQs = batchIdFromQuery ? `?batchId=${encodeURIComponent(batchIdFromQuery)}` : "";
-  const learnRoute = `/courses/${encodeURIComponent(courseId)}/learn${batchQs}`;
+  const learnRoute = `/courses/${encodeURIComponent(courseId)}${batchQs}${batchQs ? "&" : "?"}learn=1`;
   const courseRoute = `/courses/${encodeURIComponent(courseId)}${batchQs}`;
 
   useEffect(() => {
-    if (showChapters && selectedOrder === null && modules[0]) {
-      setSelectedOrder(modules[0].order);
+    if (learnMode) setShowChapters(true);
+  }, [learnMode]);
+
+  useEffect(() => {
+    if (showChapters && selectedOrder === null && chapters[0]) {
+      setSelectedOrder(chapters[0].order);
     }
-  }, [showChapters, selectedOrder, modules]);
+  }, [showChapters, selectedOrder, chapters]);
 
   const hasYoutube = !!(selected?.youtubeVideoId || selected?.youtubeEmbedUrl);
 
@@ -172,23 +179,23 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   type Part = "content" | "video" | "youtube";
   async function handleMarkPartComplete(part: Part) {
     if (!data?.batchId || !data || selected?.order === undefined) return;
-    const moduleOrder = selected.order;
+    const chapterOrder = selected.order;
     setMarkingComplete(true);
     setMarkCompleteError(null);
-    setCompletedJustNow({ moduleOrder, part });
+    setCompletedJustNow({ chapterOrder, part });
     setData((prev) => {
-      if (!prev?.courseSnapshot?.modules) return prev;
-      const modules = prev.courseSnapshot.modules.map((m) => {
-        if (m.order !== moduleOrder) return m;
+      if (!prev?.courseSnapshot?.chapters) return prev;
+      const chapters = prev.courseSnapshot.chapters.map((m) => {
+        if (m.order !== chapterOrder) return m;
         const key = part === "content" ? "contentCompleted" : part === "video" ? "videoCompleted" : "youtubeCompleted";
         return { ...m, [key]: true };
       });
-      return { ...prev, courseSnapshot: { ...prev.courseSnapshot, modules } };
+      return { ...prev, courseSnapshot: { ...prev.courseSnapshot, chapters } };
     });
     try {
       const res = await api<{ completed: boolean; moduleCompleted?: boolean }>(`/api/student/batches/${data.batchId}/progress`, {
         method: "POST",
-        body: JSON.stringify({ moduleOrder, part, courseId: data.courseId }),
+        body: JSON.stringify({ chapterOrder, part, courseId: data.courseId }),
       });
       if (res.success) {
         setMarkCompleteSuccess(true);
@@ -272,7 +279,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const isPartCompleted = (part: Part) => {
     if (!selected) return false;
     const fromServer = part === "content" ? selected.contentCompleted : part === "video" ? selected.videoCompleted : selected.youtubeCompleted;
-    const justNow = completedJustNow?.moduleOrder === selected.order && completedJustNow?.part === part;
+    const justNow = completedJustNow?.chapterOrder === selected.order && completedJustNow?.part === part;
     return !!fromServer || !!justNow;
   };
 
@@ -297,6 +304,27 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     }
   }
 
+  async function handleRequestAccess() {
+    if (!data?.batchId) return;
+    setRequestingAccess(true);
+    setMarkCompleteError(null);
+    try {
+      const res = await api("/api/student/enrollment-requests", {
+        method: "POST",
+        body: JSON.stringify({ batchId: data.batchId, courseId: data.courseId }),
+      });
+      if (res.success) {
+        await fetchCourse();
+      } else {
+        setMarkCompleteError(res.message ?? "Could not send access request");
+      }
+    } catch (err) {
+      setMarkCompleteError(err instanceof Error ? err.message : "Could not send access request");
+    } finally {
+      setRequestingAccess(false);
+    }
+  }
+
   if (loading || !data) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
@@ -309,10 +337,10 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const blockedByAdmin = data.accessBlocked === true;
   const courseTitle = data.courseSnapshot?.title ?? data.name;
   const courseDescription = data.courseSnapshot?.description ?? "";
-  const hasProgress = modules.some((m) => m.completed);
-  const completedCount = modules.filter((m) => m.completed).length;
-  const totalModules = modules.length;
-  const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+  const hasProgress = chapters.some((m) => m.completed);
+  const completedCount = chapters.filter((m) => m.completed).length;
+  const totalChapters = chapters.length;
+  const progressPercent = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 0;
   const hasLessons = !!(selected?.description || selected?.content);
   const hasHostedVideo = !!selected?.videoPlaybackUrl;
   const hasResourceLink = !!selected?.resourceLinkUrl?.trim?.();
@@ -366,8 +394,14 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
               </div>
               <p className="text-lg font-semibold tracking-tight text-black">Not enrolled</p>
               <p className="text-muted mt-2">
-                Choose <strong className="text-black">Pay</strong> to submit UPI or Razorpay proof, or{" "}
-                <strong className="text-black">Enter license key</strong> if your school gave you a code.
+                {data.visibility === "PRIVATE"
+                  ? "This is a private batch. Ask management for access, or send an access request."
+                  : (
+                    <>
+                      Choose <strong className="text-black">Pay</strong> to submit UPI or Razorpay proof, or{" "}
+                      <strong className="text-black">Enter license key</strong> if your school gave you a code.
+                    </>
+                  )}
               </p>
               {data?.hasRejectedCoursePayment ? (
                 <p className="mt-4 rounded-xl border-2 border-black bg-funt-honey px-4 py-3 text-sm font-medium text-black">
@@ -378,13 +412,13 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                   <span className="mt-2 block font-normal text-black/80">Submit a new payment below with the correct details.</span>
                 </p>
               ) : null}
-              {modules.length > 0 && (
+              {chapters.length > 0 && (
                 <div className="mt-6 rounded-xl border-2 border-black/10 bg-funt-honey/40 p-4">
                   <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-black/45">
-                    Chapters ({modules.length})
+                    Chapters ({chapters.length})
                   </h3>
                   <ul className="space-y-1.5">
-                    {modules.slice().sort((a, b) => a.order - b.order).map((m) => (
+                    {chapters.slice().sort((a, b) => a.order - b.order).map((m) => (
                       <li key={m.order} className="flex items-center gap-2 text-sm text-black/70">
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 text-xs font-bold text-black">{(m.order ?? 0) + 1}</span>
                         {m.title}
@@ -404,7 +438,21 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       : "Enrollment request pending — waiting for admin approval."}
                   </p>
                 ) : null}
-                {data?.batchId && courseId && !data?.hasPendingCoursePayment ? (
+                {data.visibility === "PRIVATE" ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleRequestAccess()}
+                    disabled={requestingAccess || !!data?.hasPendingRequest}
+                    className="inline-flex items-center justify-center rounded-xl bg-funt-gold px-6 py-3 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover disabled:opacity-60"
+                  >
+                    {data?.hasPendingRequest
+                      ? "Access request pending"
+                      : requestingAccess
+                        ? "Requesting access…"
+                        : "Request access"}
+                  </button>
+                ) : null}
+                {data?.batchId && courseId && !data?.hasPendingCoursePayment && data.visibility !== "PRIVATE" ? (
                   <Link
                     href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}`}
                     className="inline-flex items-center justify-center rounded-xl bg-funt-gold px-6 py-3 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
@@ -427,7 +475,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-funt-honey text-black mb-4">
                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                   </div>
-                  <span className="rounded-full bg-funt-gold/30 px-3 py-1 text-sm font-bold text-black">{modules.length} chapter{modules.length !== 1 ? "s" : ""}</span>
+                  <span className="rounded-full bg-funt-gold/30 px-3 py-1 text-sm font-bold text-black">{chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</span>
                   <p className="mt-4 text-black/65">Open the chapter list and start learning.</p>
                   <button type="button" onClick={() => router.push(learnRoute)} className="mt-6 rounded-xl bg-funt-gold px-10 py-3.5 text-base font-bold text-black shadow-lg shadow-black/10 transition hover:bg-funt-gold-hover hover:shadow-black/15">
                     {hasProgress ? "Continue" : "Start"}
@@ -458,11 +506,11 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
                         <div className="h-full rounded-full bg-funt-gold-deep transition-all duration-300" style={{ width: `${progressPercent}%` }} />
                       </div>
-                      <p className="mt-2 text-sm font-semibold text-black">{completedCount} of {totalModules} completed</p>
-                      <p className="text-xs text-black/50">{totalModules - completedCount} pending</p>
+                      <p className="mt-2 text-sm font-semibold text-black">{completedCount} of {totalChapters} completed</p>
+                      <p className="text-xs text-black/50">{totalChapters - completedCount} pending</p>
                       {markCompleteSuccess && <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-black">Progress saved</p>}
                     </div>
-                    {totalModules > 0 && progressPercent === 100 && (
+                    {totalChapters > 0 && progressPercent === 100 && (
                       <div className="mb-4 rounded-xl border-2 border-black/10 bg-funt-honey/50 p-3">
                         {certSuccess ? (
                           <div className="space-y-2">
@@ -483,7 +531,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                     )}
                     <div className="-mx-1 px-1">
                       <ul className="space-y-1.5">
-                        {modules.map((m) => (
+                        {chapters.map((m) => (
                           <li key={m.order}>
                             <button type="button" onClick={() => setSelectedOrder(m.order)} disabled={!m.unlocked} className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${selected?.order === m.order ? "bg-funt-gold text-black shadow-md ring-2 ring-black/10" : m.unlocked ? "text-black/80 hover:bg-funt-honey/50 hover:text-black" : "cursor-not-allowed text-black/35"}`}>
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">{m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}</span>
@@ -620,7 +668,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Assignment</h3>
                             <p className="text-black/70 mb-4">Course assignment for this chapter. Submit and wait for admin approval to complete this part.</p>
-                            {selected.assignmentCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Approved</span> : <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&moduleOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover">Submit Assignment</Link>}
+                            {selected.assignmentCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Approved</span> : <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover">Submit Assignment</Link>}
                           </section>
                         )}
                       </div>

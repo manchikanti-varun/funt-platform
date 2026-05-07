@@ -137,6 +137,7 @@ export async function listLicenseKeyAudit(input: {
   rows: Array<{
     id: string;
     keyMasked: string;
+    key: string;
     courseId: string;
     courseTitle: string | null;
     batchId: string | null;
@@ -240,6 +241,7 @@ export async function listLicenseKeyAudit(input: {
     return {
       id: String(d._id),
       keyMasked: maskLicenseKey(String(d.key)),
+      key: String(d.key),
       courseId: d.courseId,
       courseTitle: courseTitle || null,
       batchId: d.batchId ? String(d.batchId) : null,

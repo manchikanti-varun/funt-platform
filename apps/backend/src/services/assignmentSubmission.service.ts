@@ -2,7 +2,7 @@
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { BatchModel } from "../models/Batch.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
-import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
+import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
 import { UserModel } from "../models/User.model.js";
 import { findBatchByParam, getBatchCourseSnapshots, getModuleAssignmentOverrides } from "./batch.service.js";
 import { findAssignmentByParam } from "./globalAssignment.service.js";
@@ -17,7 +17,7 @@ import { AppError } from "../utils/AppError.js";
 export interface SubmitAssignmentInput {
   studentId: string;
   batchId: string;
-  moduleOrder: number;
+  chapterOrder: number;
   assignmentId: string;
   submissionType: string;
   submissionContent: string;
@@ -36,16 +36,16 @@ export async function submitAssignment(input: SubmitAssignmentInput) {
     : snapshots[0];
   if (!snapshot) throw new AppError("Course not found in batch", 404);
   const snapshotCourseId = (snapshot as { courseId?: string }).courseId ?? String((batch as { _id: unknown })._id);
-  const modules = (snapshot as { modules?: unknown[] }).modules ?? [];
-  const moduleAt = modules[input.moduleOrder];
-  if (!moduleAt) throw new AppError("Module not found in batch", 404);
+  const chapters = (snapshot as { modules?: unknown[] }).modules ?? [];
+  const chapterAt = chapters[input.chapterOrder];
+  if (!chapterAt) throw new AppError("Chapter not found in batch", 404);
 
   const assignmentDoc = await findAssignmentByParam(input.assignmentId);
   if (!assignmentDoc) throw new AppError("Assignment not found", 404);
   const assignmentMongoId = String((assignmentDoc as { _id: unknown })._id);
   const assignment = assignmentDoc.toObject ? assignmentDoc.toObject() : assignmentDoc;
 
-  const overrides = await getModuleAssignmentOverrides(input.batchId, input.courseId, input.moduleOrder);
+  const overrides = await getModuleAssignmentOverrides(input.batchId, input.courseId, input.chapterOrder);
   const effectiveSubmissionType = overrides?.submissionType?.trim() || (assignment as { submissionType: string }).submissionType;
 
   const validTypes = Object.values(SUBMISSION_TYPE);
@@ -59,10 +59,10 @@ export async function submitAssignment(input: SubmitAssignmentInput) {
   const existing = await AssignmentSubmissionModel.findOne({
     studentId: input.studentId,
     batchId: batchMongoId,
-    moduleOrder: input.moduleOrder,
+    moduleOrder: input.chapterOrder,
     $or: [{ courseId: snapshotCourseId }, { courseId: null }, { courseId: { $exists: false } }],
   }).exec();
-  if (existing) throw new AppError("You can only submit once for this module assignment.", 400);
+  if (existing) throw new AppError("You can only submit once for this chapter assignment.", 400);
 
   const submissionId = await generateSubmissionId();
   const doc = await AssignmentSubmissionModel.create({
@@ -70,7 +70,7 @@ export async function submitAssignment(input: SubmitAssignmentInput) {
     studentId: input.studentId,
     batchId: batchMongoId,
     courseId: snapshotCourseId,
-    moduleOrder: input.moduleOrder,
+    moduleOrder: input.chapterOrder,
     assignmentId: assignmentMongoId,
     submissionType: input.submissionType,
     submissionContent: input.submissionContent,
@@ -85,6 +85,7 @@ export async function submitAssignment(input: SubmitAssignmentInput) {
     studentId: doc.studentId,
     batchId: doc.batchId,
     courseId: doc.courseId ?? undefined,
+    chapterOrder: doc.moduleOrder,
     moduleOrder: doc.moduleOrder,
     assignmentId: doc.assignmentId,
     submissionType: doc.submissionType,
@@ -139,7 +140,7 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
       subCourseId != null
         ? { studentId: sub.studentId, batchId: sub.batchId, courseId: subCourseId, moduleOrder: sub.moduleOrder }
         : { studentId: sub.studentId, batchId: sub.batchId, moduleOrder: sub.moduleOrder, $or: [{ courseId: null }, { courseId: { $exists: false } }] };
-    const updated = await ModuleProgressModel.findOneAndUpdate(
+    const updated = await ChapterProgressModel.findOneAndUpdate(
       progressQuery,
       {
         $set: {
@@ -157,12 +158,12 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
     const batch = await BatchModel.findById(sub.batchId).lean().exec();
     const snapshots = batch ? getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]) : [];
     const snapshot = subCourseId ? snapshots.find((s) => (s as { courseId?: string }).courseId === subCourseId) : snapshots[0];
-    const rawModules = (snapshot as { modules?: Array<{ content?: string; videoUrl?: string; youtubeUrl?: string; resourceLinkUrl?: string; linkedAssignmentId?: string }> })?.modules ?? [];
-    const mod = rawModules[sub.moduleOrder];
-    const hasContent = !!mod?.content?.trim?.();
-    const hasVideo = !!mod?.videoUrl?.trim?.();
-    const hasYoutube = !!mod?.youtubeUrl?.trim?.();
-    const hasAssignment = !!mod?.linkedAssignmentId?.trim?.();
+    const rawChapters = (snapshot as { modules?: Array<{ content?: string; videoUrl?: string; youtubeUrl?: string; resourceLinkUrl?: string; linkedAssignmentId?: string }> })?.modules ?? [];
+    const chapter = rawChapters[sub.moduleOrder];
+    const hasContent = !!chapter?.content?.trim?.();
+    const hasVideo = !!chapter?.videoUrl?.trim?.();
+    const hasYoutube = !!chapter?.youtubeUrl?.trim?.();
+    const hasAssignment = !!chapter?.linkedAssignmentId?.trim?.();
     const p = updated as { contentCompletedAt?: Date; videoCompletedAt?: Date; youtubeCompletedAt?: Date; assignmentCompletedAt?: Date };
     const allDone =
       (!hasContent || !!p.contentCompletedAt) &&
@@ -170,7 +171,7 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
       (!hasYoutube || !!p.youtubeCompletedAt) &&
       (!hasAssignment || !!p.assignmentCompletedAt);
     if (allDone) {
-      await ModuleProgressModel.updateOne(progressQuery, { $set: { completedAt: now } }).exec();
+      await ChapterProgressModel.updateOne(progressQuery, { $set: { completedAt: now } }).exec();
     }
   } else {
     await createAuditLog("ASSIGNMENT_REJECTED", input.reviewedBy, "AssignmentSubmission", String(sub._id));
@@ -181,6 +182,7 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
     submissionId: (sub as { submissionId?: string }).submissionId,
     studentId: sub.studentId,
     batchId: sub.batchId,
+    chapterOrder: sub.moduleOrder,
     moduleOrder: sub.moduleOrder,
     status: sub.status,
     feedback: sub.feedback,
@@ -253,14 +255,14 @@ async function getStudentUsernameMap(studentIds: string[]): Promise<Map<string, 
 
 export async function listSubmissionsForBatch(
   batchId: string,
-  options: { trainerId?: string; studentId?: string; moduleOrder?: number; courseId?: string }
+  options: { trainerId?: string; studentId?: string; chapterOrder?: number; courseId?: string }
 ) {
   const batch = await findBatchByParam(batchId);
   if (!batch) return [];
   const batchMongoId = String((batch as { _id: unknown })._id);
   const query: Record<string, unknown> = { batchId: batchMongoId };
   if (options.studentId) query.studentId = options.studentId;
-  if (options.moduleOrder !== undefined && options.moduleOrder !== null) query.moduleOrder = options.moduleOrder;
+  if (options.chapterOrder !== undefined && options.chapterOrder !== null) query.moduleOrder = options.chapterOrder;
   if (options.courseId !== undefined && options.courseId !== null && options.courseId !== "") {
     query.$or = [{ courseId: options.courseId }, { courseId: null }, { courseId: { $exists: false } }];
   }
@@ -272,6 +274,7 @@ export async function listSubmissionsForBatch(
     studentId: usernameMap.get(d.studentId) ?? d.studentId,
     batchId: d.batchId,
     courseId: (d as { courseId?: string }).courseId ?? undefined,
+    chapterOrder: d.moduleOrder,
     moduleOrder: d.moduleOrder,
     assignmentId: d.assignmentId,
     submissionType: d.submissionType,
@@ -286,7 +289,7 @@ export async function listSubmissionsForBatch(
 }
 
 /** List all submissions by a student (for "my submissions" with feedback). */
-export async function listModuleSubmissionsByStudentId(studentId: string) {
+export async function listChapterSubmissionsByStudentId(studentId: string) {
   const list = await AssignmentSubmissionModel.find({ studentId }).sort({ submittedAt: -1 }).lean().exec();
   if (list.length === 0) return [];
   const assignmentIds = [...new Set(list.map((d) => d.assignmentId))];
@@ -300,12 +303,13 @@ export async function listModuleSubmissionsByStudentId(studentId: string) {
   return list.map((d) => ({
     id: String(d._id),
     submissionId: (d as { submissionId?: string }).submissionId,
-    type: "module" as const,
+    type: "chapter" as const,
     assignmentId: d.assignmentId,
     assignmentTitle: assignmentMap.get(d.assignmentId) ?? "Assignment",
     batchId: d.batchId,
     batchName: batchMap.get(d.batchId) ?? d.batchId,
     courseId: (d as { courseId?: string }).courseId ?? undefined,
+    chapterOrder: d.moduleOrder,
     moduleOrder: d.moduleOrder,
     status: d.status,
     feedback: d.feedback,
@@ -332,10 +336,11 @@ export async function listSubmissionsByAssignmentId(assignmentId: string) {
   return list.map((d) => ({
     id: String(d._id),
     submissionId: (d as { submissionId?: string }).submissionId,
-    type: "module" as const,
+    type: "chapter" as const,
     studentId: usernameMap.get(d.studentId) ?? d.studentId,
     batchId: d.batchId,
     batchName: batchMap.get(d.batchId) ?? d.batchId,
+    chapterOrder: d.moduleOrder,
     moduleOrder: d.moduleOrder,
     assignmentId: d.assignmentId,
     submissionType: d.submissionType,

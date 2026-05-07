@@ -1,7 +1,7 @@
 import DOMPurify from "isomorphic-dompurify";
 
 export const RICH_TEXT_VIEW_CLASS =
-  "rich-text-view !p-0 max-w-none leading-7 [overflow-wrap:anywhere] [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:list-item [&_li>p]:my-0 [&_li[data-list='bullet']]:list-item [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:ml-6 [&_li[data-list='ordered']]:list-item [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:ml-6 [&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through [&_a]:font-medium [&_a]:text-teal-700 [&_a]:underline [&_a]:decoration-teal-300 [&_a]:underline-offset-2 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-24 [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:text-slate-100 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5";
+  "rich-text-view max-w-none leading-7 [overflow-wrap:anywhere] [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:list-item [&_li>p]:my-0 [&_li[data-list='bullet']]:list-item [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:ml-6 [&_li[data-list='ordered']]:list-item [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:ml-6 [&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through [&_a]:font-medium [&_a]:text-teal-700 [&_a]:underline [&_a]:decoration-teal-300 [&_a]:underline-offset-2 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-24 [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:text-slate-100 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_img]:my-4 [&_img]:block [&_img]:max-w-full [&_img]:rounded-xl [&_video]:my-4 [&_video]:block [&_video]:max-w-full [&_video]:rounded-xl [&_.rte-image-align-left]:ml-0 [&_.rte-image-align-left]:mr-auto [&_.rte-image-align-center]:mx-auto [&_.rte-image-align-right]:ml-auto [&_.rte-image-align-right]:mr-0 [&_.rte-video-align-left]:ml-0 [&_.rte-video-align-left]:mr-auto [&_.rte-video-align-center]:mx-auto [&_.rte-video-align-right]:ml-auto [&_.rte-video-align-right]:mr-0";
 
 function normalizeQuillLists(html: string): string {
   return html.replace(/<ol>([\s\S]*?)<\/ol>/gi, (full, inner: string) => {
@@ -209,7 +209,34 @@ export function sanitizeHtml(html: string | undefined | null): string {
   );
   const safe = DOMPurify.sanitize(normalized, {
     USE_PROFILES: { html: true },
-    ALLOWED_ATTR: ["class", "href", "target", "rel", "data-list"],
+    ADD_TAGS: ["video", "source", "iframe"],
+    ADD_ATTR: [
+      "class",
+      "href",
+      "target",
+      "rel",
+      "data-list",
+      "src",
+      "alt",
+      "controls",
+      "poster",
+      "preload",
+      "playsinline",
+      "muted",
+      "loop",
+      "type",
+      "style",
+      "data-width",
+      "data-align",
+      "data-rte-video",
+      "data-render-kind",
+      "allow",
+      "allowfullscreen",
+      "frameborder",
+      "loading",
+      "referrerpolicy",
+      "title",
+    ],
   });
   return safe;
 }

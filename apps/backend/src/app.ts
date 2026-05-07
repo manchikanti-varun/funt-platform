@@ -61,6 +61,7 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/general-attendance", generalAttendanceRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/global-modules", globalModuleRoutes);
+app.use("/api/global-chapters", globalModuleRoutes);
 app.use("/api/global-assignments", globalAssignmentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/progress", progressRoutes);

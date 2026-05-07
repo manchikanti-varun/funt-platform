@@ -37,7 +37,7 @@ export interface CreateAssignmentInput {
   instructions: string;
   submissionType: string;
   skillTags: string[];
-  type?: "general" | "module";
+  type?: "general" | "chapter";
   allowedStudentIds?: string[];
   moderatorIds?: string[];
   createdBy: string;
@@ -48,7 +48,7 @@ export interface UpdateAssignmentInput {
   instructions?: string;
   submissionType?: string;
   skillTags?: string[];
-  type?: "general" | "module";
+  type?: "general" | "chapter";
   allowedStudentIds?: string[];
   moderatorIds?: string[];
 }
@@ -78,7 +78,7 @@ export async function createAssignment(input: CreateAssignmentInput) {
   validateSubmissionType(input.submissionType);
   const skillTagsNorm = normalizeSkillTags(input.skillTags ?? []);
   const type =
-    input.type != null && String(input.type).toLowerCase() === "general" ? "general" : "module";
+    input.type != null && String(input.type).toLowerCase() === "general" ? "general" : "chapter";
   const allowedStudentIds = Array.isArray(input.allowedStudentIds) ? input.allowedStudentIds : [];
   const moderatorIds =
     Array.isArray(input.moderatorIds) && input.moderatorIds.length > 0
@@ -127,7 +127,7 @@ function toAssignmentResponse(d: { _id: unknown; assignmentId?: string | null; t
     submissionType: d.submissionType,
     skillTags: d.skillTags,
     status: d.status,
-    type: d.type ?? "module",
+    type: d.type ?? "chapter",
     allowedStudentIds: d.allowedStudentIds ?? [],
     createdBy: d.createdBy,
     moderatorIds: d.moderatorIds ?? [],
@@ -203,7 +203,7 @@ export async function updateAssignment(
   if (input.skillTags !== undefined) existing.skillTags = normalizeSkillTags(input.skillTags);
   if (input.type !== undefined)
     (existing as { type?: string }).type =
-      String(input.type).toLowerCase() === "general" ? "general" : "module";
+      String(input.type).toLowerCase() === "general" ? "general" : "chapter";
   if (input.allowedStudentIds !== undefined) (existing as { allowedStudentIds?: string[] }).allowedStudentIds = Array.isArray(input.allowedStudentIds) ? input.allowedStudentIds : [];
   if (input.moderatorIds !== undefined) {
     (existing as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds)
@@ -247,7 +247,7 @@ export async function duplicateAssignment(id: string, performedBy: string) {
     submissionType: source.submissionType,
     skillTags: source.skillTags ?? [],
     status: ASSIGNMENT_STATUS.ACTIVE,
-    type: src.type ?? "module",
+    type: src.type ?? "chapter",
     allowedStudentIds: src.allowedStudentIds ?? [],
     createdBy: performedBy,
     moderatorIds: [],

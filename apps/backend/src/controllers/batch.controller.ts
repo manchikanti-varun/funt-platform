@@ -29,6 +29,13 @@ function parseManualUpiQrForCreate(raw: unknown): string | undefined {
   return service.assertManualUpiQrUrl(t);
 }
 
+function parseBatchHeaderImageForCreate(raw: unknown): string | undefined {
+  if (raw == null || typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t) return undefined;
+  return service.assertBatchHeaderImageUrl(t);
+}
+
 function parseCourseCompletionRewardCoins(raw: unknown): Record<string, number> | undefined {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const out: Record<string, number> = {};
@@ -64,6 +71,16 @@ function parseManualUpiQrForUpdate(body: Record<string, unknown>): string | null
   return service.assertManualUpiQrUrl(t);
 }
 
+function parseBatchHeaderImageForUpdate(body: Record<string, unknown>): string | null | undefined {
+  if (!("headerImageUrl" in body)) return undefined;
+  const raw = body.headerImageUrl;
+  if (raw === null) return null;
+  if (typeof raw !== "string") throw new AppError("headerImageUrl must be a string or null", 400);
+  const t = raw.trim();
+  if (!t) return null;
+  return service.assertBatchHeaderImageUrl(t);
+}
+
 function parseCoursePaymentMethods(
   raw: unknown
 ): Record<string, { upiManual?: boolean; razorpay?: boolean }> | undefined {
@@ -82,6 +99,14 @@ function parseCoursePaymentMethods(
   return Object.keys(out).length ? out : undefined;
 }
 
+function parseBatchVisibility(raw: unknown): "PUBLIC" | "PRIVATE" | undefined {
+  if (raw == null) return undefined;
+  const t = String(raw).trim().toUpperCase();
+  if (!t) return undefined;
+  if (t === "PUBLIC" || t === "PRIVATE") return t;
+  throw new AppError("visibility must be PUBLIC or PRIVATE", 400);
+}
+
 export const createBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
   const {
@@ -98,6 +123,8 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     courseCompletionRewardCoins,
     courseCompletionBadgeTypes,
     manualUpiQrUrl: manualUpiQrUrlRaw,
+    headerImageUrl: headerImageUrlRaw,
+    visibility,
   } = req.body ?? {};
   if (!startDate) throw new AppError("startDate is required", 400);
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : []);
@@ -114,8 +141,10 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     courseEnrollmentPrices: parseCourseEnrollmentPrices(courseEnrollmentPrices),
     coursePaymentMethods: parseCoursePaymentMethods(coursePaymentMethods),
     manualUpiQrUrl: parseManualUpiQrForCreate(manualUpiQrUrlRaw),
+    headerImageUrl: parseBatchHeaderImageForCreate(headerImageUrlRaw),
     courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
     courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
+    visibility: parseBatchVisibility(visibility),
   });
   successRes(res, data, "Batch created", 201);
 });
@@ -179,6 +208,7 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
     coursePaymentMethods,
     courseCompletionRewardCoins,
     courseCompletionBadgeTypes,
+    visibility,
   } = body;
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : undefined);
   const data = await service.updateBatch(
@@ -194,8 +224,10 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
       courseEnrollmentPrices: parseCourseEnrollmentPrices(courseEnrollmentPrices),
       coursePaymentMethods: parseCoursePaymentMethods(coursePaymentMethods),
       manualUpiQrUrl: parseManualUpiQrForUpdate(body),
+      headerImageUrl: parseBatchHeaderImageForUpdate(body),
       courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
       courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
+      visibility: parseBatchVisibility(visibility),
     },
     performedBy
   );

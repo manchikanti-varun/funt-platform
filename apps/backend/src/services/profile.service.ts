@@ -6,7 +6,7 @@ import { AppError } from "../utils/AppError.js";
 import { getMyEnrollments } from "./enrollment.service.js";
 import { listCertificatesForStudent } from "./certificate.service.js";
 import { getAttendanceSummaryForStudent, type StudentAttendanceSummaryItem } from "./attendance.service.js";
-import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
+import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
 import { listCoinGrantHistoryForUser } from "./coinBalance.service.js";
 import { listAchievements } from "./achievement.service.js";
 
@@ -159,6 +159,26 @@ export interface ProfileResult {
       completionPercent: number;
     }>;
   };
+  chapterProgressSummary?: {
+    chaptersCompleted: number;
+    chaptersPending: number;
+    chaptersTotal: number;
+    completionPercent: number;
+    courses: Array<{
+      courseKey: string;
+      batchName?: string;
+      courseName: string;
+      chapters: Array<{
+        order: number;
+        title: string;
+        completed: boolean;
+      }>;
+      chaptersCompleted: number;
+      chaptersPending: number;
+      chaptersTotal: number;
+      completionPercent: number;
+    }>;
+  };
 }
 
 
@@ -186,7 +206,7 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
     ]);
 
     // Module progress for parents/students:
-    // We build module-level completion using `ModuleProgressModel` (completedAt != null)
+    // We build chapter-level completion using `ChapterProgressModel` (completedAt != null)
     // matched against the module snapshots found in each enrolled batch.
     const batchIds = enrollments.map((e) => String(e.batchId)).filter(Boolean);
 
@@ -194,7 +214,7 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
     const completedByCourseOrder = new Map<string, Map<number, boolean>>();
     const progressDocs =
       batchIds.length > 0
-        ? await ModuleProgressModel.find({
+        ? await ChapterProgressModel.find({
             studentId,
             batchId: { $in: batchIds },
           })
@@ -261,7 +281,7 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
 
         const modules = rawModules.map((m, idx) => {
           const order = typeof m.order === "number" ? m.order : idx;
-          const title = (m.title ?? `Module ${order + 1}`) as string;
+          const title = (m.title ?? `Chapter ${order + 1}`) as string;
           const inner = completedByCourseOrder.get(courseKey);
           const completed = inner?.get(order) ?? false;
           return { order, title, completed };
@@ -338,6 +358,22 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
       modulesTotal,
       completionPercent,
       courses,
+    };
+    result.chapterProgressSummary = {
+      chaptersCompleted: modulesCompleted,
+      chaptersPending: modulesPending,
+      chaptersTotal: modulesTotal,
+      completionPercent,
+      courses: courses.map((c) => ({
+        courseKey: c.courseKey,
+        batchName: c.batchName,
+        courseName: c.courseName,
+        chapters: c.modules,
+        chaptersCompleted: c.modulesCompleted,
+        chaptersPending: c.modulesPending,
+        chaptersTotal: c.modulesTotal,
+        completionPercent: c.completionPercent,
+      })),
     };
   }
 

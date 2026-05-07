@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 interface AuditRow {
   id: string;
   keyMasked: string;
+  key: string;
   courseId: string;
   courseTitle: string | null;
   batchId: string | null;
@@ -44,7 +45,10 @@ function fmtDate(iso: string | null | undefined): string {
 
 function courseCell(row: AuditRow): string {
   const t = row.courseTitle?.trim();
+  const cid = row.courseId?.trim();
+  if (t && cid) return `${t} (${cid})`;
   if (t) return t;
+  if (cid) return cid;
   return "Course name unavailable";
 }
 
@@ -54,6 +58,8 @@ function batchCell(row: AuditRow): string {
   if (name && code) return `${name} (${code})`;
   if (name) return name;
   if (code) return code;
+  const raw = row.batchId?.trim();
+  if (raw) return raw;
   return "—";
 }
 
@@ -64,6 +70,7 @@ export default function LicenseKeyAuditPage() {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [usedOnly, setUsedOnly] = useState(false);
+  const [revealedKeyIds, setRevealedKeyIds] = useState<Record<string, boolean>>({});
   const limit = 25;
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
@@ -155,7 +162,18 @@ export default function LicenseKeyAuditPage() {
               <tbody className="divide-y divide-slate-100">
                 {data.rows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/80">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-800">{row.keyMasked}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRevealedKeyIds((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
+                        }
+                        className="font-mono text-xs text-slate-800 underline decoration-dotted underline-offset-2 hover:text-teal-700"
+                        title={revealedKeyIds[row.id] ? "Hide original key" : "Show original key"}
+                      >
+                        {revealedKeyIds[row.id] ? row.key : row.keyMasked}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-slate-800">
                       <div className="max-w-[16rem] font-medium leading-snug">{courseCell(row)}</div>
                     </td>

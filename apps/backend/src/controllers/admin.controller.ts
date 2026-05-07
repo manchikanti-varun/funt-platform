@@ -5,7 +5,8 @@ import {
   createStudent,
   createTrainer,
   createAdmin,
-  resetLoginAttempts,
+  createSuperAdmin,
+  resetLoginAttemptsByUsername,
   updateUserIdentityByAdmin,
 } from "../services/auth.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -223,13 +224,21 @@ export const createAdminHandler = asyncHandler(async (req: Request, res: Respons
   res.status(201).json(result);
 });
 
+export const createSuperAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { name, email, mobile, password } = req.body;
+  if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
+  const result = await createSuperAdmin({ name, email, mobile, password });
+  res.status(201).json(result);
+});
+
 export const resetLoginHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { userId } = req.params;
-  if (!userId) throw new AppError("userId is required", 400);
-  const { temporaryPassword } = await resetLoginAttempts(userId);
+  const { username } = req.params;
+  const { newPassword } = req.body as { newPassword?: string };
+  if (!username?.trim()) throw new AppError("username is required", 400);
+  if (!newPassword?.trim()) throw new AppError("newPassword is required", 400);
+  await resetLoginAttemptsByUsername(username, newPassword);
   res.status(200).json({
-    message: "Login reset. Share the temporary password with the user; they should sign in and change it.",
-    temporaryPassword,
+    message: "Login reset. Account lockout cleared and password updated.",
   });
 });
 

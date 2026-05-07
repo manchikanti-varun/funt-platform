@@ -29,6 +29,8 @@ const courseSnapshotSchema = new Schema(
     courseId: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    /** Optional course-level header image (copied from source course when batch is created). */
+    headerImageUrl: { type: String, required: false },
     durationText: { type: String, required: false, default: "" },
     modules: { type: [courseModuleSnapshotSchema], required: true, default: [] },
     version: { type: Number, required: true },
@@ -43,6 +45,22 @@ const courseSnapshotSchema = new Schema(
   },
   { _id: false }
 );
+
+courseSnapshotSchema.pre("validate", function (next) {
+  const snap = this as { modules?: unknown[]; chapters?: unknown[] };
+  if ((!Array.isArray(snap.modules) || snap.modules.length === 0) && Array.isArray(snap.chapters)) {
+    snap.modules = snap.chapters;
+  }
+  next();
+});
+
+courseSnapshotSchema.set("toJSON", {
+  virtuals: true,
+  transform: (_doc, ret: { modules?: unknown[]; chapters?: unknown[] }) => {
+    if (!Array.isArray(ret.chapters)) ret.chapters = Array.isArray(ret.modules) ? ret.modules : [];
+    return ret;
+  },
+});
 
 const batchSchema = new Schema(
   {
@@ -66,6 +84,14 @@ const batchSchema = new Schema(
     certificatePriceCoins: { type: Number, required: false, default: 0, min: 0 },
     /** Manual UPI QR for this batch: https image URL or data:image/...;base64,... (shown at student checkout when UPI manual is enabled). */
     manualUpiQrUrl: { type: String, required: false },
+    /** Optional batch header/banner image shown on student course cards. */
+    headerImageUrl: { type: String, required: false },
+    visibility: {
+      type: String,
+      required: true,
+      enum: ["PUBLIC", "PRIVATE"],
+      default: "PUBLIC",
+    },
   },
   { timestamps: true }
 );

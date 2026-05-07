@@ -57,13 +57,13 @@ const FAQ_GROUPS: FaqGroup[] = [
         question: "How is my day-to-day study flow organised?",
         intro: "A typical week on FUNT Learn follows a simple loop: learn → practise → submit → track.",
         details: [
-          "Your institute places you in a batch and assigns courses. Each course has modules (lessons, videos, readings) and often assignments that trainers review.",
+          "Your institute places you in a batch and assigns courses. Each course has chapters (lessons, videos, readings) and often assignments that trainers review.",
           "Attendance may be marked by your batch—check Attendance so you know you are marked present for live or lab sessions.",
           "If something looks missing (no course card, wrong batch), note your exact course name and tell support or your centre coordinator so they can align your enrollment.",
         ],
         steps: [
           "Open Courses and pick the course you are actively studying.",
-          "Work through modules in order when your trainer recommends it, or jump to assigned topics if your batch allows.",
+          "Work through chapters in order when your trainer recommends it, or jump to assigned topics if your batch allows.",
           "Submit assignments before deadlines where shown; late submissions depend on your centre’s rules.",
           "Glance at Progress or Dashboard to see what is still pending.",
         ],
@@ -85,14 +85,14 @@ const FAQ_GROUPS: FaqGroup[] = [
         question: "How do I start or continue a course?",
         intro: "Your enrolled courses appear under Courses. Each card usually shows the course title, batch, and how far you have progressed.",
         details: [
-          "Tap a course to open its detail page. From there you can open the learning view, see payment or access notices, and continue modules.",
+          "Tap a course to open its detail page. From there you can open the learning view, see payment or access notices, and continue chapters.",
           "If you see “Continue learning” or similar on Dashboard, it shortcuts you to the last place you studied—useful when you have several active courses.",
-          "Progress bars update as you finish lessons or approved activities. If a bar does not move after you finished a lesson, refresh once; if it still fails, contact support with the course name and module title.",
+          "Progress bars update as you finish lessons or approved activities. If a bar does not move after you finished a lesson, refresh once; if it still fails, contact support with the course name and chapter title.",
         ],
         steps: [
           "Go to Courses from the sidebar.",
           "Select the course card for your current batch.",
-          "Open Learn (or the primary action shown) and pick the next module or lesson.",
+          "Open Learn (or the primary action shown) and pick the next chapter or lesson.",
           "Mark lessons complete only after you have actually finished the content, so your record matches your real effort.",
         ],
         actions: [
@@ -150,8 +150,8 @@ const FAQ_GROUPS: FaqGroup[] = [
         question: "What are XP, level, and the Progress page?",
         intro: "FUNT Learn surfaces motivation metrics so you can see consistency, not just a single score.",
         details: [
-          "How much XP you earn per module is decided by your academy when they set up the course (each module can have its own XP). Staff can update those course snapshots later if your centre adjusts the programme.",
-          "XP generally increases when you fully complete a module or when assignments are approved—exact behaviour follows your batch and course rules.",
+          "How much XP you earn per chapter is decided by your academy when they set up the course (each chapter can have its own XP). Staff can update those course snapshots later if your centre adjusts the programme.",
+          "XP generally increases when you fully complete a chapter or when assignments are approved—exact behaviour follows your batch and course rules.",
           "Level is a simple milestone built on top of XP so you can celebrate streaks of learning.",
           "The Progress page summarises how you are doing across courses so you can spot what needs attention before deadlines pile up.",
         ],
@@ -170,7 +170,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         intro: "Skills highlights competencies or tags your centre maps to your learning path.",
         details: [
           "Use it to understand strengths and gaps your trainers want you to focus on next.",
-          "It complements certificates: certificates prove completion of a programme; skills views describe abilities across modules.",
+          "It complements certificates: certificates prove completion of a programme; skills views describe abilities across chapters.",
         ],
         actions: [{ label: "Skills", href: "/skills" }],
       },
@@ -285,7 +285,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         question: "When and how do I get certificates?",
         intro: "Certificates are official documents issued when you meet the completion rules for that programme.",
         details: [
-          "Typical requirements include finishing required modules, passing assignments, and settling fees—your centre defines the exact checklist.",
+          "Typical requirements include finishing required chapters, passing assignments, and settling fees—your centre defines the exact checklist.",
           "Once issued, certificates appear under Certificates with download options where enabled.",
           "Anyone can verify authenticity using the public Verify page with your certificate ID—useful for schools or competitions.",
         ],

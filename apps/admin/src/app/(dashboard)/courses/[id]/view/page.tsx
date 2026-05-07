@@ -107,7 +107,7 @@ export default function ViewCoursePage() {
             <p className="text-sm font-medium text-slate-800">{(course.durationText ?? "").trim() || "Not set"}</p>
           </section>
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Modules ({sortedModules.length})</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Chapters ({sortedModules.length})</h2>
             <ul className="rounded-xl border border-slate-200 bg-slate-50/50 divide-y divide-slate-200">
               {sortedModules.map((m, i) => (
                 <li key={i}>
@@ -129,7 +129,7 @@ export default function ViewCoursePage() {
               <Link href={`/courses/${id}`} className="font-medium text-teal-700 hover:underline">
                 Edit course
               </Link>
-              , not Global Modules.
+              , not Global Chapters.
             </p>
           </section>
         </div>

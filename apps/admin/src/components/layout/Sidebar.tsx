@@ -89,7 +89,7 @@ export function Sidebar({ roles }: SidebarProps) {
           <>
             <p className={SECTION_LABEL_CLASS}>Content</p>
             <SidebarNavLink href="/global-modules" isActive={pathname.startsWith("/global-modules")}>
-              Modules
+              Chapters
             </SidebarNavLink>
             <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
               Assignments
@@ -117,9 +117,11 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
               Shop
             </SidebarNavLink>
-            <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
-              Coupons
-            </SidebarNavLink>
+            {isSuperAdmin && (
+              <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
+                Coupons
+              </SidebarNavLink>
+            )}
             <SidebarNavLink
               href="/attendance"
               isActive={pathname === "/attendance" || (pathname.startsWith("/batches") && pathname.includes("/attendance"))}

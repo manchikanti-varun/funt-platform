@@ -31,6 +31,7 @@ export async function resolveBatchForRequest(batchId?: string, courseId?: string
 
 export async function createEnrollmentRequest(studentId: string, batchIdOrCourseId: { batchId?: string; courseId?: string }) {
   const batchMongoId = await resolveBatchForRequest(batchIdOrCourseId.batchId, batchIdOrCourseId.courseId);
+  const requestedCourseId = String(batchIdOrCourseId.courseId ?? "").trim() || undefined;
 
   const batch = await BatchModel.findById(batchMongoId).lean().exec();
   if (!batch) throw new AppError("Batch not found", 404);
@@ -44,13 +45,20 @@ export async function createEnrollmentRequest(studentId: string, batchIdOrCourse
 
   const existing = await EnrollmentRequestModel.findOne({ studentId, batchId: batchMongoId }).exec();
   if (existing) {
+    const existingCourseId = String((existing as { requestedCourseId?: string }).requestedCourseId ?? "").trim() || undefined;
+    const sameCourseRequest = existingCourseId === requestedCourseId || (!existingCourseId && !requestedCourseId);
     if (existing.status === "PENDING") {
-      return { id: String(existing._id), status: "PENDING", message: "Request already sent" };
+      return {
+        id: String(existing._id),
+        status: "PENDING",
+        message: sameCourseRequest ? "Request already sent" : "A request for this batch is already pending",
+      };
     }
     existing.status = "PENDING";
     existing.requestedAt = new Date();
     existing.respondedAt = undefined;
     existing.respondedBy = undefined;
+    (existing as { requestedCourseId?: string }).requestedCourseId = requestedCourseId;
     await existing.save();
     return {
       id: String(existing._id),
@@ -62,6 +70,7 @@ export async function createEnrollmentRequest(studentId: string, batchIdOrCourse
   const doc = await EnrollmentRequestModel.create({
     studentId,
     batchId: batchMongoId,
+    ...(requestedCourseId ? { requestedCourseId } : {}),
     status: "PENDING",
     requestedAt: new Date(),
   });
@@ -73,8 +82,8 @@ export async function createEnrollmentRequest(studentId: string, batchIdOrCourse
   };
 }
 
-export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: string) {
-  const batches = await BatchModel.find({ createdBy: adminId }).lean().exec();
+export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: string, isSuperAdmin = false) {
+  const batches = await BatchModel.find(isSuperAdmin ? {} : { createdBy: adminId }).lean().exec();
   let batchIds = batches.map((b) => String(b._id));
   if (batchId?.trim()) {
     const batch = await findBatchByParam(batchId.trim());
@@ -103,13 +112,18 @@ export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: 
     const batch = batchMap.get(r.batchId);
     const student = studentMap.get(r.studentId);
     const snapshots = batch ? getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]) : [];
+    const requestedCourseId = String((r as { requestedCourseId?: string }).requestedCourseId ?? "").trim();
+    const requestedSnap = requestedCourseId
+      ? (snapshots.find((s) => String((s as { courseId?: string }).courseId ?? "").trim() === requestedCourseId) as { title?: string } | undefined)
+      : undefined;
     const firstSnap = snapshots[0] as { title?: string } | undefined;
-    const courseTitle = firstSnap?.title ?? "Course";
+    const courseTitle = requestedSnap?.title ?? firstSnap?.title ?? "Course";
     return {
       id: String(r._id),
       batchId: r.batchId,
       batchName: (batch as { name?: string })?.name,
       batchFuntId: (batch as { batchId?: string })?.batchId,
+      requestedCourseId: requestedCourseId || undefined,
       courseTitle,
       studentId: r.studentId,
       studentUsername: (student as { username?: string })?.username,
@@ -123,7 +137,8 @@ export async function listEnrollmentRequestsForAdmin(adminId: string, batchId?: 
 export async function respondToEnrollmentRequest(
   requestId: string,
   action: "APPROVE" | "REJECT",
-  performedBy: string
+  performedBy: string,
+  isSuperAdmin = false
 ) {
   const request = await EnrollmentRequestModel.findById(requestId).exec();
   if (!request) throw new AppError("Enrollment request not found", 404);
@@ -133,7 +148,7 @@ export async function respondToEnrollmentRequest(
   if (!batch) throw new AppError("Batch not found", 404);
   const createdBy = (batch as { createdBy?: string }).createdBy ?? "";
   const moderatorIds = (batch as { moderatorIds?: string[] }).moderatorIds ?? [];
-  if (createdBy !== performedBy && !moderatorIds.includes(performedBy)) {
+  if (!isSuperAdmin && createdBy !== performedBy && !moderatorIds.includes(performedBy)) {
     throw new AppError("Only the batch creator or a moderator can approve or reject this request", 403);
   }
 

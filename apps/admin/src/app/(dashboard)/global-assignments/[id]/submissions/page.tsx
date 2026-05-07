@@ -12,13 +12,14 @@ interface AssignmentInfo {
   title: string;
 }
 
-interface ModuleSubmission {
+interface ChapterSubmission {
   id: string;
-  type: "module";
+  type: "chapter";
   studentId: string;
   batchId: string;
   batchName: string;
-  moduleOrder: number;
+  chapterOrder?: number;
+  moduleOrder?: number;
   assignmentId: string;
   submissionType: string;
   submissionContent: string;
@@ -44,7 +45,7 @@ interface GeneralSubmission {
   reviewedBy?: string;
 }
 
-type SubmissionRow = ModuleSubmission | GeneralSubmission;
+type SubmissionRow = ChapterSubmission | GeneralSubmission;
 
 import { BackLink } from "@/components/ui/BackLink";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
@@ -64,7 +65,7 @@ export default function AssignmentSubmissionsPage() {
   const params = useParams();
   const id = params.id as string;
   const [assignment, setAssignment] = useState<AssignmentInfo | null>(null);
-  const [moduleSubmissions, setModuleSubmissions] = useState<ModuleSubmission[]>([]);
+  const [chapterSubmissions, setChapterSubmissions] = useState<ChapterSubmission[]>([]);
   const [generalSubmissions, setGeneralSubmissions] = useState<GeneralSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState<SubmissionRow | null>(null);
@@ -80,13 +81,13 @@ export default function AssignmentSubmissionsPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    api<{ assignment: AssignmentInfo; moduleSubmissions: ModuleSubmission[]; generalSubmissions: GeneralSubmission[] }>(
+    api<{ assignment: AssignmentInfo; chapterSubmissions?: ChapterSubmission[]; generalSubmissions: GeneralSubmission[] }>(
       `/api/global-assignments/${id}/submissions`
     )
       .then((r) => {
         if (r.success && r.data) {
           setAssignment(r.data.assignment);
-          setModuleSubmissions(r.data.moduleSubmissions ?? []);
+          setChapterSubmissions(r.data.chapterSubmissions ?? []);
           setGeneralSubmissions(r.data.generalSubmissions ?? []);
         }
       })
@@ -96,8 +97,8 @@ export default function AssignmentSubmissionsPage() {
   async function submitReview(sub: SubmissionRow) {
     setSubmitting(true);
     setError("");
-    const isModule = sub.type === "module";
-    const url = isModule
+    const isChapter = sub.type === "chapter";
+    const url = isChapter
       ? `/api/assignments/${sub.id}/review`
       : `/api/global-assignments/submissions/${sub.id}/review`;
     const res = await api(url, {
@@ -105,7 +106,7 @@ export default function AssignmentSubmissionsPage() {
       body: JSON.stringify({
         status: reviewStatus,
         feedback: feedback || undefined,
-        ...(isModule && rating ? { rating: Number(rating) } : {}),
+        ...(isChapter && rating ? { rating: Number(rating) } : {}),
       }),
     });
     setSubmitting(false);
@@ -113,11 +114,11 @@ export default function AssignmentSubmissionsPage() {
       setReviewing(null);
       setFeedback("");
       setRating("");
-      const refetch = await api<{ assignment: AssignmentInfo; moduleSubmissions: ModuleSubmission[]; generalSubmissions: GeneralSubmission[] }>(
+      const refetch = await api<{ assignment: AssignmentInfo; chapterSubmissions?: ChapterSubmission[]; generalSubmissions: GeneralSubmission[] }>(
         `/api/global-assignments/${id}/submissions`
       );
       if (refetch.success && refetch.data) {
-        setModuleSubmissions(refetch.data.moduleSubmissions ?? []);
+        setChapterSubmissions(refetch.data.chapterSubmissions ?? []);
         setGeneralSubmissions(refetch.data.generalSubmissions ?? []);
       }
     } else {
@@ -125,9 +126,9 @@ export default function AssignmentSubmissionsPage() {
     }
   }
 
-  const pendingModuleIds = moduleSubmissions.filter((s) => s.status === SUBMISSION_REVIEW_STATUS.PENDING).map((s) => s.id);
+  const pendingChapterIds = chapterSubmissions.filter((s) => s.status === SUBMISSION_REVIEW_STATUS.PENDING).map((s) => s.id);
   const pendingGeneralIds = generalSubmissions.filter((s) => s.status === SUBMISSION_REVIEW_STATUS.PENDING).map((s) => s.id);
-  const allPendingIds = [...pendingModuleIds, ...pendingGeneralIds];
+  const allPendingIds = [...pendingChapterIds, ...pendingGeneralIds];
   const hasPending = allPendingIds.length > 0;
 
   function toggleSelect(id: string) {
@@ -147,17 +148,17 @@ export default function AssignmentSubmissionsPage() {
   async function bulkReview(status: "APPROVED" | "REJECTED") {
     const ids = Array.from(selectedIds).filter((id) => allPendingIds.includes(id));
     if (ids.length === 0) return;
-    const moduleIds = ids.filter((id) => pendingModuleIds.includes(id));
+    const chapterIds = ids.filter((id) => pendingChapterIds.includes(id));
     const generalIds = ids.filter((id) => pendingGeneralIds.includes(id));
     setBulkSubmitting(true);
     setError("");
     const errors: string[] = [];
-    if (moduleIds.length > 0) {
+    if (chapterIds.length > 0) {
       const res = await api<{ reviewed: number; skipped: number; errors: string[] }>("/api/assignments/bulk-review", {
         method: "POST",
-        body: JSON.stringify({ submissionIds: moduleIds, status, feedback: bulkFeedback || undefined }),
+        body: JSON.stringify({ submissionIds: chapterIds, status, feedback: bulkFeedback || undefined }),
       });
-      if (!res.success) errors.push(res.message ?? "Module bulk failed");
+      if (!res.success) errors.push(res.message ?? "Chapter bulk failed");
       else if (res.data?.errors?.length) errors.push(...(res.data.errors as string[]));
     }
     if (generalIds.length > 0) {
@@ -172,16 +173,16 @@ export default function AssignmentSubmissionsPage() {
     setSelectedIds(new Set());
     setBulkFeedback("");
     if (errors.length) setError(errors.join("; "));
-    const refetch = await api<{ assignment: AssignmentInfo; moduleSubmissions: ModuleSubmission[]; generalSubmissions: GeneralSubmission[] }>(
+    const refetch = await api<{ assignment: AssignmentInfo; chapterSubmissions?: ChapterSubmission[]; generalSubmissions: GeneralSubmission[] }>(
       `/api/global-assignments/${id}/submissions`
     );
     if (refetch.success && refetch.data) {
-      setModuleSubmissions(refetch.data.moduleSubmissions ?? []);
+      setChapterSubmissions(refetch.data.chapterSubmissions ?? []);
       setGeneralSubmissions(refetch.data.generalSubmissions ?? []);
     }
   }
 
-  const allSubmissions: SubmissionRow[] = [...moduleSubmissions, ...generalSubmissions].sort(
+  const allSubmissions: SubmissionRow[] = [...chapterSubmissions, ...generalSubmissions].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
   );
   const pendingCount = allSubmissions.filter((s) => s.status === SUBMISSION_REVIEW_STATUS.PENDING).length;
@@ -309,7 +310,7 @@ export default function AssignmentSubmissionsPage() {
                       </td>
                     ) : null}
                     <td className="px-4 py-3 text-sm text-slate-600">
-                      {s.type === "module" ? `${s.batchName} · Module ${(s.moduleOrder ?? 0) + 1}` : "General"}
+                      {s.type === "chapter" ? `${s.batchName} · Chapter ${((s.chapterOrder ?? s.moduleOrder) ?? 0) + 1}` : "General"}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-slate-800">{s.studentId}</td>
                     <td className="max-w-xs px-4 py-3 text-sm text-slate-600">
@@ -386,7 +387,7 @@ export default function AssignmentSubmissionsPage() {
                   placeholder="Optional feedback for the student"
                 />
               </div>
-              {reviewing.type === "module" && (
+              {reviewing.type === "chapter" && (
                 <div>
                   <label className="mb-1 block text-sm font-semibold text-slate-700">Rating (optional, 1–5)</label>
                   <input

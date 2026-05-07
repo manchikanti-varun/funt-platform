@@ -28,6 +28,11 @@ interface AuditResponse {
   limit: number;
 }
 
+function entityLabel(entity: string): string {
+  if (entity === "GlobalModule") return "GlobalChapter";
+  return entity;
+}
+
 export default function AuditLogPage() {
   const searchParams = useSearchParams();
   const { roles } = useAdminUser();
@@ -87,6 +92,14 @@ export default function AuditLogPage() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+  const pageNumbers = (() => {
+    const windowSize = 2;
+    const start = Math.max(1, page - windowSize);
+    const end = Math.min(totalPages, page + windowSize);
+    const pages: number[] = [];
+    for (let p = start; p <= end; p += 1) pages.push(p);
+    return pages;
+  })();
 
   return (
     <div className="w-full space-y-6">
@@ -168,17 +181,57 @@ export default function AuditLogPage() {
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">{new Date(log.timestamp).toLocaleString()}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{log.action}</td>
                     <td className="px-4 py-3 font-medium text-slate-800">{log.performedByDisplay}</td>
-                    <td className="px-4 py-3 text-slate-600">{log.targetEntity}</td>
+                    <td className="px-4 py-3 text-slate-600">{entityLabel(log.targetEntity)}</td>
                     <td className="max-w-md px-4 py-3 text-slate-800">{log.targetIdDisplay}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary text-sm">
               Previous
             </button>
+            {pageNumbers[0] && pageNumbers[0] > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setPage(1)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                    page === 1 ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  1
+                </button>
+                {pageNumbers[0] > 2 ? <span className="px-1 text-sm text-slate-400">…</span> : null}
+              </>
+            ) : null}
+            {pageNumbers.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPage(p)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                  page === p ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            {pageNumbers.length > 0 && pageNumbers[pageNumbers.length - 1] < totalPages ? (
+              <>
+                {pageNumbers[pageNumbers.length - 1] < totalPages - 1 ? <span className="px-1 text-sm text-slate-400">…</span> : null}
+                <button
+                  type="button"
+                  onClick={() => setPage(totalPages)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                    page === totalPages ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               onClick={() => setPage((p) => p + 1)}

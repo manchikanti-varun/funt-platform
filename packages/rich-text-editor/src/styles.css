@@ -11,6 +11,7 @@
   border: 1px solid var(--rte-border);
   border-radius: 12px;
   overflow: visible;
+  position: relative;
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -97,6 +98,22 @@
   letter-spacing: 0.02em;
 }
 
+.rte-number-input {
+  height: 34px;
+  width: 74px;
+  border: 1px solid var(--rte-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rte-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 8px;
+}
+
+.rte-number-input:disabled {
+  opacity: 0.45;
+}
+
 .rte-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -112,6 +129,89 @@
 .rte-content {
   position: relative;
   padding: 8px 12px 18px;
+}
+
+.rte-media-resize-overlay {
+  position: absolute;
+  border: 2px solid #6366f1;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 12;
+  box-sizing: border-box;
+}
+
+.rte-media-resize-overlay.hidden {
+  display: none;
+}
+
+.rte-media-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #4338ca;
+  background: #fff;
+  pointer-events: auto;
+  padding: 0;
+}
+
+.rte-media-handle[data-dir="nw"] { top: -8px; left: -8px; cursor: nwse-resize; }
+.rte-media-handle[data-dir="n"] { top: -8px; left: calc(50% - 6px); cursor: ns-resize; }
+.rte-media-handle[data-dir="ne"] { top: -8px; right: -8px; cursor: nesw-resize; }
+.rte-media-handle[data-dir="e"] { top: calc(50% - 6px); right: -8px; cursor: ew-resize; }
+.rte-media-handle[data-dir="se"] { bottom: -8px; right: -8px; cursor: nwse-resize; }
+.rte-media-handle[data-dir="s"] { bottom: -8px; left: calc(50% - 6px); cursor: ns-resize; }
+.rte-media-handle[data-dir="sw"] { bottom: -8px; left: -8px; cursor: nesw-resize; }
+.rte-media-handle[data-dir="w"] { top: calc(50% - 6px); left: -8px; cursor: ew-resize; }
+
+.rte-media-editbar {
+  position: absolute;
+  z-index: 13;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.35);
+}
+
+.rte-media-editbar.hidden {
+  display: none;
+}
+
+.rte-media-edit-btn {
+  height: 26px;
+  min-width: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rte-media-edit-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.rte-media-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.rte-media-edit-btn.danger {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+.rte-media-edit-range {
+  width: 96px;
 }
 
 .rte-prosemirror {
@@ -191,6 +291,125 @@
   max-width: 100%;
   border-radius: 8px;
   margin: 0.7em 0;
+}
+
+.rte-prosemirror img.rte-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.rte-prosemirror img.rte-image[style*="float: right"] {
+  margin-left: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.rte-prosemirror img.rte-image[style*="float: left"] {
+  margin-right: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.rte-prosemirror img.rte-image[style*="float: left"] ~ p,
+.rte-prosemirror img.rte-image[style*="float: left"] ~ ul,
+.rte-prosemirror img.rte-image[style*="float: left"] ~ ol,
+.rte-prosemirror video.rte-video[style*="float: left"] ~ p,
+.rte-prosemirror video.rte-video[style*="float: left"] ~ ul,
+.rte-prosemirror video.rte-video[style*="float: left"] ~ ol,
+.rte-prosemirror iframe.rte-video-embed[style*="float: left"] ~ p,
+.rte-prosemirror iframe.rte-video-embed[style*="float: left"] ~ ul,
+.rte-prosemirror iframe.rte-video-embed[style*="float: left"] ~ ol {
+  margin-left: 0.75rem;
+}
+
+.rte-prosemirror img.rte-image[style*="float: right"] ~ p,
+.rte-prosemirror img.rte-image[style*="float: right"] ~ ul,
+.rte-prosemirror img.rte-image[style*="float: right"] ~ ol,
+.rte-prosemirror video.rte-video[style*="float: right"] ~ p,
+.rte-prosemirror video.rte-video[style*="float: right"] ~ ul,
+.rte-prosemirror video.rte-video[style*="float: right"] ~ ol,
+.rte-prosemirror iframe.rte-video-embed[style*="float: right"] ~ p,
+.rte-prosemirror iframe.rte-video-embed[style*="float: right"] ~ ul,
+.rte-prosemirror iframe.rte-video-embed[style*="float: right"] ~ ol {
+  margin-right: 0.75rem;
+}
+
+.rte-prosemirror img.rte-image.rte-image-align-left {
+  margin-left: 0;
+  margin-right: auto;
+  margin-right: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
+}
+
+.rte-prosemirror img.rte-image.rte-image-align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rte-prosemirror img.rte-image.rte-image-align-right {
+  margin-left: auto;
+  margin-right: 0;
+  margin-left: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
+}
+
+.rte-prosemirror video.rte-video {
+  display: block;
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+
+.rte-prosemirror iframe.rte-video-embed {
+  display: block;
+  max-width: 100%;
+  border: 0;
+  border-radius: 10px;
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+
+.rte-prosemirror video.rte-video.rte-video-align-left {
+  margin-left: 0;
+  margin-right: auto;
+  margin-right: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
+}
+.rte-prosemirror iframe.rte-video-embed.rte-video-align-left {
+  margin-left: 0;
+  margin-right: auto;
+  margin-right: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
+}
+
+.rte-prosemirror video.rte-video.rte-video-align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+.rte-prosemirror iframe.rte-video-embed.rte-video-align-center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rte-prosemirror video.rte-video.rte-video-align-right {
+  margin-left: auto;
+  margin-right: 0;
+  margin-left: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
+}
+.rte-prosemirror iframe.rte-video-embed.rte-video-align-right {
+  margin-left: auto;
+  margin-right: 0;
+  margin-left: 1.5rem;
+  margin-bottom: 1.25rem;
+  shape-margin: 0.8rem;
 }
 
 .rte-prosemirror hr {

@@ -29,7 +29,7 @@ import {
   type PlatformUpiSummaryState,
 } from "@/components/admin/PlatformUpiCheckoutSummary";
 
-const MAX_QR_FILE_BYTES = 350_000;
+const MAX_UPLOAD_IMAGE_BYTES = 1_500_000;
 
 function readImageFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -37,8 +37,8 @@ function readImageFileAsDataUrl(file: File): Promise<string> {
       reject(new Error("Choose a PNG, JPEG, GIF, or WebP image."));
       return;
     }
-    if (file.size > MAX_QR_FILE_BYTES) {
-      reject(new Error("Image must be under about 350 KB."));
+    if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
+      reject(new Error("Image must be under about 1.5 MB."));
       return;
     }
     const r = new FileReader();
@@ -62,10 +62,13 @@ export default function NewBatchPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [zoomLink, setZoomLink] = useState("");
+  const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
   const [enrollmentInrByCourseId, setEnrollmentInrByCourseId] = useState<Record<string, string>>({});
   const [paymentByCourseId, setPaymentByCourseId] = useState<Record<string, { upiManual: boolean; razorpay: boolean }>>({});
   const [manualUpiQrDataUrl, setManualUpiQrDataUrl] = useState("");
   const [manualUpiQrName, setManualUpiQrName] = useState("");
+  const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
+  const [headerImageName, setHeaderImageName] = useState("");
   const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
   const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
@@ -206,9 +209,11 @@ export default function NewBatchPage() {
           startDate: startDate || undefined,
           endDate: endDate || undefined,
           zoomLink: zoomLink || undefined,
+          visibility,
           ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
           ...(Object.keys(coursePaymentMethods).length > 0 ? { coursePaymentMethods } : {}),
           ...(manualUpiQrDataUrl.trim() ? { manualUpiQrUrl: manualUpiQrDataUrl.trim() } : {}),
+          ...(headerImageDataUrl.trim() ? { headerImageUrl: headerImageDataUrl.trim() } : {}),
           ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
           ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
         }),
@@ -288,6 +293,54 @@ export default function NewBatchPage() {
                 className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 placeholder="https://..."
               />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Visibility in student explore</label>
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "PRIVATE")}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              >
+                <option value="PUBLIC">Public (visible in Explore courses)</option>
+                <option value="PRIVATE">Private (hidden from Explore courses)</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Batch header image (optional)</label>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  void readImageFileAsDataUrl(f)
+                    .then((url) => {
+                      setHeaderImageDataUrl(url);
+                      setHeaderImageName(f.name);
+                    })
+                    .catch((err: unknown) => setError(err instanceof Error ? err.message : "Invalid image"));
+                  e.target.value = "";
+                }}
+              />
+              {headerImageDataUrl ? (
+                <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <img src={headerImageDataUrl} alt="Header image preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
+                  <div className="text-xs text-slate-600">
+                    <p className="font-medium text-slate-800">{headerImageName || "Selected image"}</p>
+                    <button
+                      type="button"
+                      className="mt-1 font-semibold text-rose-700 hover:underline"
+                      onClick={() => {
+                        setHeaderImageDataUrl("");
+                        setHeaderImageName("");
+                      }}
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
             </div>
           </section>
