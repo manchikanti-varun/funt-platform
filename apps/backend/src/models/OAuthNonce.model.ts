@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const oauthNonceSchema = new Schema(
   {
     nonce: { type: String, required: true, unique: true, index: true },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
     consumedAt: { type: Date, required: false },
   },
   { timestamps: true }
