@@ -35,6 +35,7 @@ function clearAuthHintCookie(): void {
 }
 
 export function markClientLoggedIn(): void {
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
   setAuthHintCookie();
 }
 

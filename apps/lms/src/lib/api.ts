@@ -51,6 +51,7 @@ function clearAuthHintCookie(): void {
 
 /** Call after successful login/signup responses that set the httpOnly cookie (same-origin fetch with credentials). */
 export function markClientLoggedIn(): void {
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
   setAuthHintCookie();
 }
 
