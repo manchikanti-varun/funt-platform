@@ -159,6 +159,12 @@ Production-critical:
 - `FRONTEND_ADMIN_URL`
 - `FRONTEND_LMS_URL`
 
+Production template:
+
+```bash
+cp apps/backend/.env.production.example apps/backend/.env
+```
+
 In production, backend validates:
 - required values present
 - URL format correctness
@@ -173,6 +179,12 @@ cp apps/admin/.env.example apps/admin/.env.local
 Set:
 - `NEXT_PUBLIC_API_URL=https://<backend-domain>`
 
+Production template:
+
+```bash
+cp apps/admin/.env.production.example apps/admin/.env.local
+```
+
 ### LMS (`apps/lms/.env.local`)
 
 ```bash
@@ -181,6 +193,12 @@ cp apps/lms/.env.example apps/lms/.env.local
 
 Set:
 - `NEXT_PUBLIC_API_URL=https://<backend-domain>`
+
+Production template:
+
+```bash
+cp apps/lms/.env.production.example apps/lms/.env.local
+```
 
 ---
 
@@ -239,6 +257,20 @@ Typical setup:
 For complete deployment order, variable matrix, rollback and smoke checks, use:
 
 - `docs/DEPLOYMENT.md`
+
+Quick production order:
+
+1. Fill:
+   - `apps/backend/.env.production.example`
+   - `apps/admin/.env.production.example`
+   - `apps/lms/.env.production.example`
+2. Run release gate at repo root:
+   - `npm ci`
+   - `npm run predeploy:check`
+3. Deploy backend first, then admin/lms.
+4. Verify health and login flows:
+   - backend: `/health`, `/health/ping`, `/health/ready`
+   - admin/lms: login, dashboard, one basic read/write flow
 
 ---
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { richTextToPlainPreview } from "@/lib/sanitizeHtml";
 import { AppPageShell, PageSection } from "@/components/ui";
-import { ArrowRight, CalendarClock, Flame, Goal, Lock, Sparkles, Target, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, Flame, Lock, Sparkles, Target, Users } from "lucide-react";
 
 interface MyCourse {
   courseId: string;

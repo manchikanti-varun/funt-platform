@@ -34,6 +34,12 @@ Required environment variables:
 - `FRONTEND_ADMIN_URL=https://<admin-domain>`
 - `FRONTEND_LMS_URL=https://<lms-domain>`
 
+Current production target (this project):
+- `BACKEND_PUBLIC_URL=https://api.funt.in`
+- `FRONTEND_ADMIN_URL=https://admin.funt.in`
+- `FRONTEND_LMS_URL=https://learn.funt.in`
+- `CORS_ORIGINS=https://admin.funt.in,https://learn.funt.in`
+
 Optional but recommended:
 - `JWT_EXPIRES_IN_ADMIN=8h`
 - `JWT_EXPIRES_IN_LMS=12h`
@@ -58,6 +64,9 @@ Project settings:
 Environment variables:
 - `NEXT_PUBLIC_API_URL=https://<backend-domain>`
 
+Current production target:
+- `NEXT_PUBLIC_API_URL=https://api.funt.in`
+
 Notes:
 - Admin now uses `proxy.ts` (Next proxy convention), not `middleware.ts`.
 - In production, `NEXT_PUBLIC_API_URL` is required.
@@ -71,6 +80,9 @@ Project settings:
 
 Environment variables:
 - `NEXT_PUBLIC_API_URL=https://<backend-domain>`
+
+Current production target:
+- `NEXT_PUBLIC_API_URL=https://api.funt.in`
 
 Notes:
 - LMS uses `proxy.ts` for auth gating.

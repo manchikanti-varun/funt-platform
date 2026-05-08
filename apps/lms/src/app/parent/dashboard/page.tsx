@@ -230,20 +230,48 @@ export default function ParentDashboardPage() {
     }
   }
 
-  const moduleProgress = data.chapterProgressSummary ?? data.moduleProgressSummary;
-  const courseModuleBreakdown =
-    data.chapterProgressSummary?.courses?.map((c) => ({
+  const courseModuleBreakdown = (
+    data.chapterProgressSummary?.courses ??
+    data.moduleProgressSummary?.courses ??
+    []
+  ).map((c) => {
+    const chapterLike = c as {
+      chapters?: Array<{ order: number; title: string; completed: boolean }>;
+      chaptersCompleted?: number;
+      chaptersPending?: number;
+      chaptersTotal?: number;
+    };
+    const moduleLike = c as {
+      modules?: Array<{ order: number; title: string; completed: boolean }>;
+      modulesCompleted?: number;
+      modulesPending?: number;
+      modulesTotal?: number;
+    };
+    const modules = Array.isArray(chapterLike.chapters)
+      ? chapterLike.chapters
+      : Array.isArray(moduleLike.modules)
+        ? moduleLike.modules
+        : [];
+    return {
       courseKey: c.courseKey,
       batchName: c.batchName,
       courseName: c.courseName,
-      modules: c.chapters,
-      modulesCompleted: c.chaptersCompleted,
-      modulesPending: c.chaptersPending,
-      modulesTotal: c.chaptersTotal,
-      completionPercent: c.completionPercent,
-    })) ??
-    moduleProgress?.courses ??
-    [];
+      modules,
+      modulesCompleted:
+        Number.isFinite(chapterLike.chaptersCompleted)
+          ? Number(chapterLike.chaptersCompleted)
+          : Number(moduleLike.modulesCompleted ?? 0),
+      modulesPending:
+        Number.isFinite(chapterLike.chaptersPending)
+          ? Number(chapterLike.chaptersPending)
+          : Number(moduleLike.modulesPending ?? 0),
+      modulesTotal:
+        Number.isFinite(chapterLike.chaptersTotal)
+          ? Number(chapterLike.chaptersTotal)
+          : Number(moduleLike.modulesTotal ?? modules.length),
+      completionPercent: Number(c.completionPercent ?? 0),
+    };
+  });
 
   // Some course snapshots may have an empty `courseName` string.
   // Parent UI should never hide such courses; fall back to a safe label.
