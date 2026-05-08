@@ -92,6 +92,20 @@ export function clearToken(): void {
   });
 }
 
+function authRedirectError(message: string | undefined): string {
+  const raw = (message ?? "").trim().toLowerCase();
+  if (raw.includes("session revoked")) {
+    return "You were signed out because your account was used to sign in on another device.";
+  }
+  if (raw.includes("session expired after password change")) {
+    return "You were signed out because your password was changed. Please sign in again.";
+  }
+  if (raw.includes("session expired due to inactivity")) {
+    return "You were signed out due to inactivity. Please sign in again.";
+  }
+  return "Your session expired. Please sign in again.";
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}
@@ -109,14 +123,20 @@ export async function api<T>(
   const json = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    const serverMessage = (json as { message?: string }).message;
     if (res.status === 401) {
       clearToken();
       if (typeof window !== "undefined") {
+        const message = authRedirectError(serverMessage);
         const path = window.location.pathname;
-        window.location.href = path.startsWith("/parent") ? "/parent/profiles" : "/login";
+        if (path.startsWith("/parent")) {
+          window.location.href = `/parent/profiles?error=${encodeURIComponent(message)}`;
+        } else {
+          window.location.href = `/login?error=${encodeURIComponent(message)}`;
+        }
       }
     }
-    const msg = (json as { message?: string }).message ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
+    const msg = serverMessage ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
     return { success: false, message: msg };
   }
   return { success: true, data: (json as { data?: T }).data ?? (json as T), message: (json as { message?: string }).message };

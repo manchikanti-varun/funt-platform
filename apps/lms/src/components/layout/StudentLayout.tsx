@@ -42,6 +42,14 @@ function getInitials(name: string): string {
   return name.trim().split(/\s+/).map((s) => s[0]).join("").toUpperCase().slice(0, 2);
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName?.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select";
+}
+
 const NAV_SECTIONS: Array<{
   title: string;
   items: Array<{ href: string; label: string; Icon: typeof IconOverview }>;
@@ -322,6 +330,55 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function onContextMenu(e: MouseEvent) {
+      e.preventDefault();
+    }
+
+    function onDragStart(e: DragEvent) {
+      const t = e.target as HTMLElement | null;
+      if (!t) return;
+      const tag = t.tagName?.toLowerCase();
+      if (tag === "img" || tag === "video" || t.closest("img, video")) {
+        e.preventDefault();
+      }
+    }
+
+    function onKeyDown(e: KeyboardEvent) {
+      const key = e.key.toLowerCase();
+      const ctrlOrMeta = e.ctrlKey || e.metaKey;
+      const blockedInspectShortcuts =
+        key === "f12" ||
+        (ctrlOrMeta && e.shiftKey && (key === "i" || key === "j" || key === "c")) ||
+        (ctrlOrMeta && key === "u") ||
+        (ctrlOrMeta && key === "s");
+      if (blockedInspectShortcuts) {
+        e.preventDefault();
+        return;
+      }
+
+      // Best-effort protection: cannot truly disable OS screenshots.
+      if (key === "printscreen") {
+        e.preventDefault();
+        void navigator.clipboard?.writeText?.("");
+      }
+
+      // Prevent copy/cut on non-editable content in student area.
+      if (ctrlOrMeta && (key === "c" || key === "x") && !isEditableTarget(e.target)) {
+        e.preventDefault();
+      }
+    }
+
+    document.addEventListener("contextmenu", onContextMenu);
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
 
   if (loading || !user) {
     return (

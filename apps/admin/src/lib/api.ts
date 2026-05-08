@@ -73,6 +73,17 @@ export function clearToken(): void {
   });
 }
 
+function authRedirectError(message: string | undefined): string {
+  const raw = (message ?? "").trim().toLowerCase();
+  if (raw.includes("session revoked")) {
+    return "You were signed out because your account was used to sign in on another device.";
+  }
+  if (raw.includes("session expired after password change")) {
+    return "You were signed out because your password was changed. Please sign in again.";
+  }
+  return "Your session expired. Please sign in again.";
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}
@@ -93,12 +104,16 @@ export async function api<T>(
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (!res.ok) {
+    const serverMessage = typeof json.message === "string" ? json.message : undefined;
     if (res.status === 401) {
       clearToken();
-      if (typeof window !== "undefined") window.location.href = "/login";
+      if (typeof window !== "undefined") {
+        const message = authRedirectError(serverMessage);
+        window.location.href = `/login?error=${encodeURIComponent(message)}`;
+      }
     }
     const msg =
-      (typeof json.message === "string" ? json.message : undefined) ??
+      serverMessage ??
       (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
     return { success: false, message: msg };
   }

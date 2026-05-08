@@ -366,9 +366,10 @@ export async function login(
     throw new AppError("Invalid username or password", 401);
   }
 
-  await UserModel.updateOne(
+  const updated = await UserModel.findOneAndUpdate(
     { _id: user._id },
     {
+      $inc: { tokenVersion: 1 },
       $set: { loginAttempts: 0, lockedUntil: null },
       $push: {
         loginHistory: {
@@ -377,14 +378,20 @@ export async function login(
         },
       },
     }
-  ).exec();
+  )
+    .select("tokenVersion")
+    .lean()
+    .exec();
+  if (!updated) {
+    throw new AppError("User not found", 401);
+  }
 
   const token = signToken(
     {
       userId: String(user._id),
       username: user.username ?? "",
       roles: user.roles as ROLE[],
-      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
+      tokenVersion: Number((updated as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn
@@ -432,9 +439,10 @@ export async function parentLogin(
     throw new AppError("Invalid mobile or student link", 401);
   }
 
-  await UserModel.updateOne(
+  const updated = await UserModel.findOneAndUpdate(
     { _id: user._id },
     {
+      $inc: { tokenVersion: 1 },
       $set: { loginAttempts: 0, lockedUntil: null },
       $push: {
         loginHistory: {
@@ -443,14 +451,20 @@ export async function parentLogin(
         },
       },
     }
-  ).exec();
+  )
+    .select("tokenVersion")
+    .lean()
+    .exec();
+  if (!updated) {
+    throw new AppError("User not found", 401);
+  }
 
   const token = signToken(
     {
       userId: String(user._id),
       username: user.username ?? "",
       roles: user.roles as ROLE[],
-      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
+      tokenVersion: Number((updated as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn

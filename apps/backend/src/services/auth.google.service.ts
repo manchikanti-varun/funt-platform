@@ -111,9 +111,10 @@ export async function loginWithGoogleEmail(
   if (user.status !== ACCOUNT_STATUS.ACTIVE) {
     throw new AppError("Account is suspended or archived", 403);
   }
-  await UserModel.updateOne(
+  const updated = await UserModel.findOneAndUpdate(
     { _id: user._id },
     {
+      $inc: { tokenVersion: 1 },
       $push: {
         loginHistory: {
           $each: [{ timestamp: new Date(), userAgent: meta?.userAgent, ip: meta?.ip }],
@@ -121,13 +122,19 @@ export async function loginWithGoogleEmail(
         },
       },
     }
-  ).exec();
+  )
+    .select("tokenVersion")
+    .lean()
+    .exec();
+  if (!updated) {
+    throw new AppError("User not found", 401);
+  }
   const token = signToken(
     {
       userId: String(user._id),
       username: user.username ?? "",
       roles: user.roles as ROLE[],
-      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
+      tokenVersion: Number((updated as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn
