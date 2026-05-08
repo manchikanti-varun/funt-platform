@@ -55,7 +55,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       )}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar user={{ name: user.name, username: user.username, roles: user.roles }} onMenuClick={() => setSidebarOpen((o) => !o)} />
-        <main className="flex min-h-0 flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 overscroll-contain sm:p-6">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 overscroll-contain sm:p-6">
+          {children}
+        </main>
       </div>
     </div>
     </AdminUserProvider>
