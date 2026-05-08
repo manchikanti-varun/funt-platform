@@ -12,6 +12,7 @@ const PUBLIC_EXACT = new Set([
 const PUBLIC_PREFIXES = ["/auth/callback", "/verify"];
 const AUTH_COOKIE = "funt_auth_lms";
 const PARENT_DELEGATE_COOKIE = "funt_parent_delegate";
+const AUTH_HINT_COOKIE = "funt_lms_auth";
 
 function hasValidUnexpiredJwt(token: string | undefined): boolean {
   if (!token) return false;
@@ -33,7 +34,13 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE)?.value;
   const delegate = request.cookies.get(PARENT_DELEGATE_COOKIE)?.value;
-  const hasAuth = hasValidUnexpiredJwt(token) || hasValidUnexpiredJwt(delegate);
+  // In split-domain deployments (learn + api on different subdomains),
+  // middleware may not see the backend httpOnly LMS cookie.
+  // Trust short-lived client auth hint set after successful session establishment.
+  const hasAuth =
+    hasValidUnexpiredJwt(token) ||
+    hasValidUnexpiredJwt(delegate) ||
+    request.cookies.get(AUTH_HINT_COOKIE)?.value === "1";
 
   const isPublic =
     PUBLIC_EXACT.has(pathname) ||

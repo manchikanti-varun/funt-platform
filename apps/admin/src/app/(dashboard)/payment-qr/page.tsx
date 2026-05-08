@@ -454,12 +454,6 @@ export default function PaymentQrPage() {
               <p className="text-sm text-slate-500">Generate a QR to preview</p>
             )}
           </div>
-          {paymentLink ? (
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Payment Link</p>
-              <p className="mt-1 break-all font-mono text-xs text-slate-700">{paymentLink}</p>
-            </div>
-          ) : null}
         </div>
         ) : null}
       </div>

@@ -151,7 +151,6 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
   if (!courseId || !batchId) throw new AppError("courseId and batchId are required", 400);
   const pricing = await getEnrollmentCheckoutPricing(studentId, batchId, courseId, couponCode);
   let upiQrUrl = pricing.upiQrUrl ?? "";
-  let upiPaymentLink: string | undefined;
   let upiQrRefreshAfterSeconds: number | undefined;
   if (pricing.allowUpiManual && pricing.finalPaise > 0) {
     try {
@@ -162,7 +161,6 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
         amountPaise: pricing.finalPaise,
       });
       upiQrUrl = staticQr.qrDataUrl;
-      upiPaymentLink = staticQr.paymentLink;
       upiQrRefreshAfterSeconds = undefined;
     } catch {
       // Fallback: keep static QR (batch or env) if configured.
@@ -182,7 +180,6 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
     couponApplied: pricing.couponApplied,
     couponMessage: pricing.couponMessage,
     upiQrUrl,
-    upiPaymentLink,
     upiQrRefreshAfterSeconds,
     allowUpiManual: pricing.allowUpiManual,
     allowRazorpayMethod: pricing.allowRazorpayMethod,

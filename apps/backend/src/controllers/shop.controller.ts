@@ -43,7 +43,6 @@ export const postShopCheckoutQuote = asyncHandler(async (req: Request, res: Resp
   });
 
   let upiQrUrl = "";
-  let upiPaymentLink = "";
   if (summary.payablePaise > 0) {
     try {
       const cfg = await getPaymentUpiConfig();
@@ -53,13 +52,11 @@ export const postShopCheckoutQuote = asyncHandler(async (req: Request, res: Resp
         amountPaise: summary.payablePaise,
       });
       upiQrUrl = staticQr.qrDataUrl;
-      upiPaymentLink = staticQr.paymentLink;
     } catch {
       upiQrUrl = process.env.PAYMENT_UPI_QR_URL?.trim() ?? "";
-      upiPaymentLink = "";
     }
   }
-  successRes(res, { ...summary, upiQrUrl, upiPaymentLink });
+  successRes(res, { ...summary, upiQrUrl });
 });
 
 export const postShopCheckoutSubmit = asyncHandler(async (req: Request, res: Response): Promise<void> => {

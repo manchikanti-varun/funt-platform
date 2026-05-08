@@ -65,7 +65,6 @@ export async function generatePaymentQrRecord(input: {
     receiverName,
     prefillAmount: input.prefillAmount,
     amountRupees: amountPaise != null ? amountPaise / 100 : null,
-    paymentLink,
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : new Date().toISOString(),
   };
 }
@@ -94,7 +93,6 @@ export async function listPaymentQrHistory(input: { page: number; limit: number 
         receiverName: string;
         amountPaise?: number;
         prefillAmount: boolean;
-        paymentLink: string;
         createdAt?: Date;
       };
       const admin = adminMap.get(rr.adminId);
@@ -107,7 +105,6 @@ export async function listPaymentQrHistory(input: { page: number; limit: number 
         receiverName: rr.receiverName,
         prefillAmount: !!rr.prefillAmount,
         amountRupees: rr.amountPaise != null ? rr.amountPaise / 100 : null,
-        paymentLink: rr.paymentLink,
         createdAt: rr.createdAt ? new Date(rr.createdAt).toISOString() : "",
       };
     }),
