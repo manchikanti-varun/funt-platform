@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 const PUBLIC_EXACT = new Set(["/login", "/admin-signup"]);
 const PUBLIC_PREFIXES = ["/auth/callback"];
 const AUTH_COOKIE = "funt_auth_admin";
+const AUTH_HINT_COOKIE = "funt_admin_auth";
 
 function hasValidUnexpiredJwt(token: string | undefined): boolean {
   if (!token) return false;
@@ -24,7 +25,11 @@ function hasValidUnexpiredJwt(token: string | undefined): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(AUTH_COOKIE)?.value;
-  const hasAuth = hasValidUnexpiredJwt(token);
+  // `funt_auth_admin` is an httpOnly cookie set by backend.
+  // In split-domain deployments (admin + api on different subdomains),
+  // middleware may not see it, so we allow pass-through when the client
+  // callback has set the short auth hint cookie.
+  const hasAuth = hasValidUnexpiredJwt(token) || request.cookies.get(AUTH_HINT_COOKIE)?.value === "1";
 
   const isPublic =
     PUBLIC_EXACT.has(pathname) ||
