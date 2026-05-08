@@ -82,14 +82,17 @@ export function setToken(_token: string): void {
   markClientLoggedIn();
 }
 
-export function clearToken(): void {
+export function clearToken(options?: { revokeServer?: boolean }): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   clearAuthHintCookie();
-  void fetch(`${API_URL}/api/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  });
+  const revokeServer = options?.revokeServer ?? true;
+  if (revokeServer) {
+    void fetch(`${API_URL}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+  }
 }
 
 function authRedirectError(message: string | undefined): string {
@@ -125,7 +128,9 @@ export async function api<T>(
   if (!res.ok) {
     const serverMessage = (json as { message?: string }).message;
     if (res.status === 401) {
-      clearToken();
+      // Important: avoid server logout on passive 401 to prevent
+      // revoking a newly established session in another tab/device.
+      clearToken({ revokeServer: false });
       if (typeof window !== "undefined") {
         const message = authRedirectError(serverMessage);
         const path = window.location.pathname;
