@@ -505,8 +505,24 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         message?: string;
         data?: { available?: boolean; message?: string };
       };
+      if (!res.ok) {
+        setUsernameStatus({
+          checking: false,
+          available: null,
+          message: body.message ?? "Could not verify username right now. Try again.",
+        });
+        return;
+      }
       const availableRaw = body.available ?? body.data?.available;
-      const available = typeof availableRaw === "boolean" ? availableRaw : false;
+      if (typeof availableRaw !== "boolean") {
+        setUsernameStatus({
+          checking: false,
+          available: null,
+          message: body.message ?? "Could not verify username right now. Try again.",
+        });
+        return;
+      }
+      const available = availableRaw;
       setUsernameStatus({
         checking: false,
         available,
@@ -720,8 +736,24 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         message?: string;
         data?: { available?: boolean; message?: string };
       };
+      if (!res.ok) {
+        setUsernameStatus({
+          checking: false,
+          available: null,
+          message: body.message ?? "Could not verify username right now. Try again.",
+        });
+        return;
+      }
       const availableRaw = body.available ?? body.data?.available;
-      const available = typeof availableRaw === "boolean" ? availableRaw : false;
+      if (typeof availableRaw !== "boolean") {
+        setUsernameStatus({
+          checking: false,
+          available: null,
+          message: body.message ?? "Could not verify username right now. Try again.",
+        });
+        return;
+      }
+      const available = availableRaw;
       setUsernameStatus({
         checking: false,
         available,

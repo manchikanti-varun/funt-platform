@@ -152,8 +152,24 @@ function SignupForm() {
           message?: string;
           data?: { available?: boolean; message?: string };
         };
+        if (!res.ok) {
+          setUsernameStatus({
+            checking: false,
+            available: null,
+            message: json.message ?? "Could not verify username right now. Try again.",
+          });
+          return;
+        }
         const availableRaw = json.available ?? json.data?.available;
-        const available = typeof availableRaw === "boolean" ? availableRaw : false;
+        if (typeof availableRaw !== "boolean") {
+          setUsernameStatus({
+            checking: false,
+            available: null,
+            message: json.message ?? "Could not verify username right now. Try again.",
+          });
+          return;
+        }
+        const available = availableRaw;
         setUsernameStatus({
           checking: false,
           available,
