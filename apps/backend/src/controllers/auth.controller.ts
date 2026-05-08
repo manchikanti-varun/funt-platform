@@ -26,7 +26,7 @@ import { UserModel } from "../models/User.model.js";
 import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 import { getEnv } from "../config/env.js";
 import { signToken, verifyToken } from "../utils/jwt.js";
-import { normalizeStudentUsername, validateStudentUsername } from "../utils/username.js";
+import { normalizeStudentUsername, validateAdminUsername, validateStudentUsername } from "../utils/username.js";
 import {
   setAuthCookie,
   setIdleCookie,
@@ -82,19 +82,52 @@ export const forgotStudentUsername = asyncHandler(async (req: Request, res: Resp
 export const checkUsernameAvailability = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const usernameRaw = String(req.query.username ?? "").trim();
   if (!usernameRaw) throw new AppError("username is required", 400);
-  const validationError = validateStudentUsername(usernameRaw);
+  const roleHint = String(req.query.role ?? "")
+    .trim()
+    .toLowerCase();
+  const isManagementRole =
+    roleHint === "trainer" ||
+    roleHint === "admin" ||
+    roleHint === "super_admin" ||
+    roleHint === "super-admin" ||
+    roleHint === "management" ||
+    roleHint === "staff";
+  const validationError = isManagementRole
+    ? validateAdminUsername(usernameRaw)
+    : validateStudentUsername(usernameRaw);
   if (validationError) {
-    res.status(200).json({ success: true, data: { available: false, message: validationError } });
+    res.status(200).json({ success: true, available: false, message: validationError });
     return;
   }
-  const username = normalizeStudentUsername(usernameRaw);
-  const existing = await UserModel.findOne({ username }).select("_id").lean().exec();
+  const username = isManagementRole ? usernameRaw.trim().toLowerCase() : normalizeStudentUsername(usernameRaw);
+  const excludeUserIdRaw = String(req.query.excludeUserId ?? "").trim();
+  let excludeUserId: string | null = null;
+  if (excludeUserIdRaw) {
+    const token = resolveAuthToken(req);
+    if (token) {
+      try {
+        const { jwtSecret } = getEnv();
+        const payload = verifyToken(token, jwtSecret);
+        if (String(payload.userId) === excludeUserIdRaw) {
+          excludeUserId = excludeUserIdRaw;
+        }
+      } catch {
+        excludeUserId = null;
+      }
+    }
+  }
+  const existing = await UserModel.findOne({
+    username,
+    ...(excludeUserId ? { _id: { $ne: excludeUserId } } : {}),
+  })
+    .select("_id")
+    .lean()
+    .exec();
+  const available = !existing;
   res.status(200).json({
     success: true,
-    data: {
-      available: !existing,
-      message: existing ? "Username is already taken" : "Username is available",
-    },
+    available,
+    message: available ? "Username available" : "Username already taken",
   });
 });
 
@@ -145,7 +178,8 @@ export const establishSession = asyncHandler(async (req: Request, res: Response)
   const expectedTokenVersion = Number((user as { tokenVersion?: number }).tokenVersion ?? 0);
   const payloadTokenVersion = Number(payload.tokenVersion ?? 0);
   if (payloadTokenVersion !== expectedTokenVersion) {
-    throw new AppError("Session revoked. Please sign in again.", 401);
+    clearAllAuthCookies(res);
+    throw new AppError("Session expired. You logged in from another device.", 401);
   }
   const passwordChangedAt = (user as { passwordChangedAt?: Date }).passwordChangedAt;
   if (passwordChangedAt && payload.iat && payload.iat * 1000 < passwordChangedAt.getTime()) {

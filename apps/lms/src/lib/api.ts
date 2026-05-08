@@ -57,17 +57,27 @@ export function markClientLoggedIn(): void {
 
 /** OAuth redirect / legacy: exchange a JWT for an httpOnly session cookie. */
 export async function establishSessionFromToken(token: string): Promise<{ roles: string[] } | null> {
+  const result = await establishSessionFromTokenDetailed(token);
+  return result.session;
+}
+
+export async function establishSessionFromTokenDetailed(
+  token: string
+): Promise<{ session: { roles: string[] } | null; error?: string }> {
   const res = await fetch(`${API_URL}/api/auth/session`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token: token.trim(), portal: "lms" }),
   });
-  const json = (await res.json().catch(() => ({}))) as { data?: { user?: { roles: string[] } } };
-  if (!res.ok) return null;
+  const json = (await res.json().catch(() => ({}))) as { data?: { user?: { roles: string[] } }; message?: string };
+  if (!res.ok) {
+    return { session: null, error: json.message ?? `Session setup failed (${res.status})` };
+  }
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   const roles = json.data?.user?.roles;
-  return roles ? { roles } : null;
+  if (!roles) return { session: null, error: "Session response missing user roles" };
+  return { session: { roles } };
 }
 
 /** One-time migration for users who still have a JWT in localStorage. */
@@ -97,7 +107,8 @@ export function clearToken(options?: { revokeServer?: boolean }): void {
 }
 
 function authRedirectError(message: string | undefined): string {
-  const raw = (message ?? "").trim().toLowerCase();
+  const normalized = (message ?? "").trim();
+  const raw = normalized.toLowerCase();
   if (raw.includes("session revoked")) {
     return "You were signed out because your account was used to sign in on another device.";
   }
@@ -107,6 +118,7 @@ function authRedirectError(message: string | undefined): string {
   if (raw.includes("session expired due to inactivity")) {
     return "You were signed out due to inactivity. Please sign in again.";
   }
+  if (normalized) return normalized;
   return "Your session expired. Please sign in again.";
 }
 

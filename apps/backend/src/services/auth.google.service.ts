@@ -121,7 +121,8 @@ export async function loginWithGoogleEmail(
           $slice: -20,
         },
       },
-    }
+    },
+    { new: true }
   )
     .select("tokenVersion")
     .lean()

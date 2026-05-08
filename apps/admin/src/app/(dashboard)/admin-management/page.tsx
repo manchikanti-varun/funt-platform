@@ -26,9 +26,45 @@ interface RegistrationRequestRow {
 const INPUT_CLASS =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
+const USERNAME_MIN_LENGTH = 4;
+const USERNAME_MAX_LENGTH = 32;
+const USERNAME_REGEX = /^[a-z0-9][a-z0-9._-]{3,31}$/;
 
 function isValidEmailFormat(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizeUsername(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function validateStudentUsernameInput(value: string): string | null {
+  const normalized = normalizeUsername(value);
+  if (!normalized) return null;
+  if (normalized.length < USERNAME_MIN_LENGTH || normalized.length > USERNAME_MAX_LENGTH) {
+    return `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters.`;
+  }
+  if (!USERNAME_REGEX.test(normalized)) {
+    return "Use lowercase letters, numbers, dot (.), underscore (_) or hyphen (-) only.";
+  }
+  if (normalized.endsWith("@funt")) {
+    return "This username is reserved.";
+  }
+  return null;
+}
+
+function validateManagementUsernameInput(value: string): string | null {
+  const normalized = normalizeUsername(value);
+  if (!normalized) return null;
+  if (!normalized.endsWith("@funt")) {
+    return "Management username must end with @funt.";
+  }
+  const local = normalized.slice(0, -"@funt".length);
+  if (local.length < 1 || local.length > 48) return "Invalid management username length.";
+  if (!/^[a-z0-9][a-z0-9._-]*$/.test(local)) {
+    return "Invalid characters in management username.";
+  }
+  return null;
 }
 
 function validateStrongPassword(value: string): string | null {
@@ -440,28 +476,50 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   }>({ checking: false, available: null, message: "" });
 
   useEffect(() => {
-    const candidate = username.trim();
+    const candidate = normalizeUsername(username);
     if (!candidate) {
       setUsernameStatus({ checking: false, available: null, message: "" });
       return;
     }
+    const validationError = validateStudentUsernameInput(candidate);
+    if (validationError) {
+      setUsernameStatus({ checking: false, available: false, message: validationError });
+      return;
+    }
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setUsernameStatus((s) => ({ ...s, checking: true }));
-      const res = await api<{ available?: boolean; message?: string }>(
-        `/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
-      );
-      if (!res.success) {
+      let res: Response;
+      try {
+        res = await fetch(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
         setUsernameStatus({ checking: false, available: null, message: "" });
         return;
       }
-      const available = Boolean(res.data?.available);
+      const body = (await res.json().catch(() => ({}))) as {
+        available?: boolean;
+        message?: string;
+        data?: { available?: boolean; message?: string };
+      };
+      const availableRaw = body.available ?? body.data?.available;
+      const available = typeof availableRaw === "boolean" ? availableRaw : false;
       setUsernameStatus({
         checking: false,
         available,
-        message: res.data?.message ?? (available ? "Username is available" : "Username is already taken"),
+        message:
+          body.message ??
+          body.data?.message ??
+          (available ? "\u2713 Username available" : "\u2717 Username already taken"),
       });
     }, 350);
-    return () => window.clearTimeout(timer);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
   }, [username]);
 
   async function submit(e: React.FormEvent) {
@@ -478,6 +536,11 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       onError(usernameStatus.message || "Username is already taken.");
       return;
     }
+    const usernameError = validateStudentUsernameInput(username);
+    if (usernameError) {
+      onError(usernameError);
+      return;
+    }
     const pwdErr = validateStrongPassword(password);
     if (pwdErr) {
       onError(pwdErr);
@@ -491,7 +554,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     const res = await api<{ username?: string }>("/api/admin/users/student", {
       method: "POST",
       body: JSON.stringify({
-        username,
+        username: normalizeUsername(username),
         name,
         email,
         mobile: `${countryCode}${mobileNumber.trim()}`,
@@ -523,6 +586,10 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
+          <p className="mt-1 text-xs text-slate-500">
+            Allowed: 4-32 chars, lowercase letters, numbers, dot (.), underscore (_) or hyphen (-). Example:
+            {" "}user.name, user_123, user-dev
+          </p>
           {username.trim() ? (
             <p
               className={`mt-1 text-xs ${
@@ -624,28 +691,50 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   }>({ checking: false, available: null, message: "" });
 
   useEffect(() => {
-    const candidate = username.trim();
+    const candidate = normalizeUsername(username);
     if (!candidate) {
       setUsernameStatus({ checking: false, available: null, message: "" });
       return;
     }
+    const validationError = validateManagementUsernameInput(candidate);
+    if (validationError) {
+      setUsernameStatus({ checking: false, available: false, message: validationError });
+      return;
+    }
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setUsernameStatus((s) => ({ ...s, checking: true }));
-      const res = await api<{ available?: boolean; message?: string }>(
-        `/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
-      );
-      if (!res.success) {
+      let res: Response;
+      try {
+        res = await fetch(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}&role=trainer`, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
         setUsernameStatus({ checking: false, available: null, message: "" });
         return;
       }
-      const available = Boolean(res.data?.available);
+      const body = (await res.json().catch(() => ({}))) as {
+        available?: boolean;
+        message?: string;
+        data?: { available?: boolean; message?: string };
+      };
+      const availableRaw = body.available ?? body.data?.available;
+      const available = typeof availableRaw === "boolean" ? availableRaw : false;
       setUsernameStatus({
         checking: false,
         available,
-        message: res.data?.message ?? (available ? "Username is available" : "Username is already taken"),
+        message:
+          body.message ??
+          body.data?.message ??
+          (available ? "\u2713 Username available" : "\u2717 Username already taken"),
       });
     }, 350);
-    return () => window.clearTimeout(timer);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
   }, [username]);
 
   async function submit(e: React.FormEvent) {
@@ -662,6 +751,11 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       onError(usernameStatus.message || "Username is already taken.");
       return;
     }
+    const usernameError = validateManagementUsernameInput(username);
+    if (usernameError) {
+      onError(usernameError);
+      return;
+    }
     const pwdErr = validateStrongPassword(password);
     if (pwdErr) {
       onError(pwdErr);
@@ -674,7 +768,13 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     setLoading(true);
     const res = await api<{ username?: string }>("/api/admin/users/trainer", {
       method: "POST",
-      body: JSON.stringify({ username, name, email, mobile: `${countryCode}${mobileNumber.trim()}`, password }),
+      body: JSON.stringify({
+        username: normalizeUsername(username),
+        name,
+        email,
+        mobile: `${countryCode}${mobileNumber.trim()}`,
+        password,
+      }),
     });
     setLoading(false);
     if (res.success) {
@@ -696,10 +796,14 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             id="trainer-username"
             required
             className={INPUT_CLASS}
-            placeholder="e.g. trainer.jane"
+            placeholder="e.g. trainer.user@funt"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
+          <p className="mt-1 text-xs text-slate-500">
+            Allowed management username: lowercase local part (letters, numbers, dot/underscore/hyphen) ending with
+            {" "}@funt. Example: trainer.user@funt
+          </p>
           {username.trim() ? (
             <p
               className={`mt-1 text-xs ${

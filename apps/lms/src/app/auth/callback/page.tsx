@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { establishSessionFromToken, markClientLoggedIn, clearToken } from "@/lib/api";
+import { establishSessionFromTokenDetailed, markClientLoggedIn, clearToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 function AuthCallbackContent() {
@@ -22,11 +22,14 @@ function AuthCallbackContent() {
     }
     let cancelled = false;
     (async () => {
-      const session = await establishSessionFromToken(token);
+      const result = await establishSessionFromTokenDetailed(token);
       if (cancelled) return;
+      const session = result.session;
       if (!session) {
         setMessage("Could not complete sign-in. Try again.");
-        window.location.replace("/login?error=" + encodeURIComponent("Session could not be established."));
+        window.location.replace(
+          "/login?error=" + encodeURIComponent(result.error ?? "Session could not be established.")
+        );
         return;
       }
       if (session.roles.includes(ROLE.PARENT)) {

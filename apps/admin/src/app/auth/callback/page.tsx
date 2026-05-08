@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { establishSessionFromToken, markClientLoggedIn } from "@/lib/api";
+import { establishSessionFromTokenDetailed, markClientLoggedIn } from "@/lib/api";
 
 function AuthCallbackContent() {
   const searchParams = useSearchParams();
@@ -21,11 +21,14 @@ function AuthCallbackContent() {
     }
     let cancelled = false;
     (async () => {
-      const session = await establishSessionFromToken(token);
+      const result = await establishSessionFromTokenDetailed(token);
       if (cancelled) return;
+      const session = result.session;
       if (!session) {
         setMessage("Could not complete sign-in.");
-        window.location.replace("/login?error=" + encodeURIComponent("Session could not be established."));
+        window.location.replace(
+          "/login?error=" + encodeURIComponent(result.error ?? "Session could not be established.")
+        );
         return;
       }
       markClientLoggedIn();

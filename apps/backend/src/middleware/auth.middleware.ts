@@ -10,6 +10,7 @@ import {
   AUTH_COOKIE_LMS,
   IDLE_COOKIE_ADMIN,
   IDLE_COOKIE_LMS,
+  clearAllAuthCookies,
   clearAuthCookie,
   setIdleCookie,
   type AuthPortal,
@@ -42,7 +43,8 @@ export async function authMiddleware(
     const expectedTokenVersion = Number((user as { tokenVersion?: number }).tokenVersion ?? 0);
     const payloadTokenVersion = Number(payload.tokenVersion ?? 0);
     if (payloadTokenVersion !== expectedTokenVersion) {
-      throw new AppError("Session revoked. Please sign in again.", 401);
+      clearAllAuthCookies(res);
+      throw new AppError("Session expired. You logged in from another device.", 401);
     }
     const passwordChangedAt = (user as { passwordChangedAt?: Date }).passwordChangedAt;
     if (passwordChangedAt && payload.iat && payload.iat * 1000 < passwordChangedAt.getTime()) {

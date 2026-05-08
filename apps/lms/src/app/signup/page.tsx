@@ -10,6 +10,9 @@ import { FormPanel } from "@/components/ui/FormPanel";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12", "other"];
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
+const USERNAME_MIN_LENGTH = 4;
+const USERNAME_MAX_LENGTH = 32;
+const USERNAME_REGEX = /^[a-z0-9][a-z0-9._-]{3,31}$/;
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return "Password must be at least 8 characters";
@@ -39,6 +42,25 @@ function passwordStrength(password: string) {
 
 function isValidEmailFormat(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizeUsername(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function validateUsername(value: string): string | null {
+  const normalized = normalizeUsername(value);
+  if (!normalized) return null;
+  if (normalized.length < USERNAME_MIN_LENGTH || normalized.length > USERNAME_MAX_LENGTH) {
+    return `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters`;
+  }
+  if (!USERNAME_REGEX.test(normalized)) {
+    return "Use lowercase letters, numbers, dot (.), underscore (_) or hyphen (-)";
+  }
+  if (normalized.endsWith("@funt")) {
+    return "This username is reserved";
+  }
+  return null;
 }
 
 function SignupForm() {
@@ -107,31 +129,48 @@ function SignupForm() {
   }, [token, router]);
 
   useEffect(() => {
-    const candidate = username.trim();
+    const candidate = normalizeUsername(username);
     if (!candidate) {
       setUsernameStatus({ checking: false, available: null, message: "" });
       return;
     }
+    const validationError = validateUsername(candidate);
+    if (validationError) {
+      setUsernameStatus({ checking: false, available: false, message: validationError });
+      return;
+    }
+    const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setUsernameStatus((s) => ({ ...s, checking: true }));
       try {
         const res = await fetch(
-          `${API_BASE}/api/auth/username-availability?username=${encodeURIComponent(candidate)}`
+          `${API_BASE}/api/auth/username-availability?username=${encodeURIComponent(candidate)}`,
+          { signal: controller.signal }
         );
         const json = (await res.json().catch(() => ({}))) as {
+          available?: boolean;
+          message?: string;
           data?: { available?: boolean; message?: string };
         };
-        const available = Boolean(json.data?.available);
+        const availableRaw = json.available ?? json.data?.available;
+        const available = typeof availableRaw === "boolean" ? availableRaw : false;
         setUsernameStatus({
           checking: false,
           available,
-          message: json.data?.message ?? (available ? "Username is available" : "Username not available"),
+          message:
+            json.message ??
+            json.data?.message ??
+            (available ? "\u2713 Username available" : "\u2717 Username already taken"),
         });
-      } catch {
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
         setUsernameStatus({ checking: false, available: null, message: "" });
       }
     }, 350);
-    return () => window.clearTimeout(timer);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
   }, [username]);
 
   function handleStep1Next(e: React.FormEvent) {
@@ -151,6 +190,11 @@ function SignupForm() {
     }
     if (!username.trim()) {
       setSubmitError("Username is required");
+      return;
+    }
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      setSubmitError(usernameError);
       return;
     }
     if (usernameStatus.available === false) {
@@ -202,7 +246,7 @@ function SignupForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(isGoogleFlow ? { signupToken: token } : {}),
-          username: username.trim(),
+          username: normalizeUsername(username),
           name: name.trim(),
           email: email.trim(),
           mobile: `${countryCode}${mobileNumber.trim()}`,
@@ -285,6 +329,10 @@ function SignupForm() {
                 placeholder="Choose a username"
                 autoComplete="username"
               />
+              <p className="mt-1 text-xs text-black/50">
+                Allowed: 4-32 chars, lowercase letters, numbers, dot (.), underscore (_) or hyphen (-). Example:
+                {" "}user.name, user_123, user-dev
+              </p>
               {username.trim() ? (
                 <p
                   className={`mt-1 text-xs ${

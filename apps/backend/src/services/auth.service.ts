@@ -190,13 +190,13 @@ export async function createStudent(input: CreateStudentInput): Promise<{ id: st
 }
 
 export async function createTrainer(input: CreateTrainerInput): Promise<{ id: string; username: string }> {
-  const uErr = validateStudentUsername(input.username);
+  const normalizedUsername = input.username.trim().toLowerCase();
+  const uErr = validateAdminUsername(normalizedUsername);
   if (uErr) throw new AppError(uErr, 400);
-  const uname = normalizeStudentUsername(input.username);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const user = await UserModel.create({
-    username: uname,
+    username: normalizedUsername,
     name: input.name,
     email: input.email,
     mobile: input.mobile,
@@ -377,7 +377,8 @@ export async function login(
           $slice: -20,
         },
       },
-    }
+    },
+    { new: true }
   )
     .select("tokenVersion")
     .lean()
@@ -450,7 +451,8 @@ export async function parentLogin(
           $slice: -20,
         },
       },
-    }
+    },
+    { new: true }
   )
     .select("tokenVersion")
     .lean()
@@ -617,7 +619,8 @@ export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername:
   const user = await UserModel.findById(targetUserId).exec();
   if (!user) throw new AppError("User not found", 404);
   const v = rawUsername.trim().toLowerCase();
-  const isStaff = user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN);
+  const isStaff =
+    user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN) || user.roles?.includes(ROLE.TRAINER);
   if (isStaff) {
     const e = validateAdminUsername(v);
     if (e) throw new AppError(e, 400);
@@ -640,7 +643,8 @@ export async function updateUserIdentityByAdmin(
   const updates: Record<string, string> = {};
   if (input.username != null) {
     const username = input.username.trim().toLowerCase();
-    const isStaff = user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN);
+    const isStaff =
+      user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN) || user.roles?.includes(ROLE.TRAINER);
     if (isStaff) {
       const e = validateAdminUsername(username);
       if (e) throw new AppError(e, 400);
