@@ -174,9 +174,7 @@ function SignupForm() {
           checking: false,
           available,
           message:
-            json.message ??
-            json.data?.message ??
-            (available ? "\u2713 Username available" : "\u2717 Username already taken"),
+            available ? "\u2713 Username available" : "\u2717 Username not available",
         });
       } catch (error) {
         if ((error as Error).name === "AbortError") return;

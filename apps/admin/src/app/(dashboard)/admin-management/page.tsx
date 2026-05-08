@@ -527,9 +527,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         checking: false,
         available,
         message:
-          body.message ??
-          body.data?.message ??
-          (available ? "\u2713 Username available" : "\u2717 Username already taken"),
+          available ? "\u2713 Username available" : "\u2717 Username not available",
       });
     }, 350);
     return () => {
@@ -758,9 +756,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         checking: false,
         available,
         message:
-          body.message ??
-          body.data?.message ??
-          (available ? "\u2713 Username available" : "\u2717 Username already taken"),
+          available ? "\u2713 Username available" : "\u2717 Username not available",
       });
     }, 350);
     return () => {
