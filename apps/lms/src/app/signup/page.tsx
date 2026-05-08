@@ -3,11 +3,10 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { markClientLoggedIn } from "@/lib/api";
+import { API_URL, markClientLoggedIn } from "@/lib/api";
 import { FormPanel } from "@/components/ui/FormPanel";
 
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
 const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12", "other"];
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 const USERNAME_MIN_LENGTH = 4;
@@ -111,7 +110,7 @@ function SignupForm() {
       setLoading(true);
       setPreviewError("");
       try {
-        const res = await fetch(`${API_BASE}/api/auth/google/signup-preview?token=${encodeURIComponent(token)}`);
+        const res = await fetch(`${API_URL}/api/auth/google/signup-preview?token=${encodeURIComponent(token)}`);
         const data = await res.json().catch(() => ({}));
         if (!cancelled && res.ok && data.email) {
           setEmail(data.email);
@@ -144,7 +143,7 @@ function SignupForm() {
       setUsernameStatus((s) => ({ ...s, checking: true }));
       try {
         const res = await fetch(
-          `${API_BASE}/api/auth/username-availability?username=${encodeURIComponent(candidate)}`,
+          `${API_URL}/api/auth/username-availability?username=${encodeURIComponent(candidate)}`,
           { signal: controller.signal }
         );
         const json = (await res.json().catch(() => ({}))) as {
@@ -253,7 +252,7 @@ function SignupForm() {
     }
     setSubmitting(true);
     try {
-      const endpoint = isGoogleFlow ? `${API_BASE}/api/auth/google/signup-complete` : `${API_BASE}/api/auth/signup`;
+      const endpoint = isGoogleFlow ? `${API_URL}/api/auth/google/signup-complete` : `${API_URL}/api/auth/signup`;
       const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
@@ -273,13 +272,18 @@ function SignupForm() {
           password,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { data?: { user?: unknown }; message?: string };
-      if (res.ok && data.data?.user) {
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        message?: string;
+        error?: string;
+        data?: { user?: unknown };
+      };
+      if (res.ok) {
         markClientLoggedIn();
         router.replace("/dashboard");
         router.refresh();
       } else {
-        setSubmitError(data.message ?? "Sign up failed. Try again.");
+        setSubmitError(data.message ?? data.error ?? `Sign up failed (${res.status}). Try again.`);
       }
     } catch {
       setSubmitError("Something went wrong. Try again.");
