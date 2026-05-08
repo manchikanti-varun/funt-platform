@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { AdminUserProvider, type AdminUser } from "@/contexts/AdminUserContext";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { StateScreen } from "@/components/ui/StateScreen";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -30,8 +31,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+      <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+        <StateScreen
+          tone="loading"
+          title="Checking your session"
+          description="Verifying access and loading your admin console..."
+        />
       </div>
     );
   }

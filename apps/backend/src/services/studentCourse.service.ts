@@ -349,6 +349,9 @@ export async function getCourseForStudentByCourseId(studentId: string, courseId:
   if (!batches.length) throw new AppError("Course not found", 404);
 
   if (batchId) batches = batches.filter((b) => String(b._id) === batchId);
+  if (!batches.length) {
+    throw new AppError("Course not found in this batch", 404);
+  }
 
   const batchIds = batches.map((b) => String(b._id));
   const enrolledStatuses = { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] };

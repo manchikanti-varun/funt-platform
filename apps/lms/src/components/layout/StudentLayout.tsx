@@ -23,6 +23,7 @@ import {
   IconKey,
   IconFaq,
 } from "@/components/icons/NavIcons";
+import { StateScreen } from "@/components/ui/StateScreen";
 
 interface UserMe {
   id: string;
@@ -324,8 +325,12 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-funt-paper">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+      <div className="min-h-screen bg-funt-paper p-4 sm:p-6">
+        <StateScreen
+          tone="loading"
+          title="Checking your account"
+          description="Verifying your session and loading your personalized dashboard..."
+        />
       </div>
     );
   }

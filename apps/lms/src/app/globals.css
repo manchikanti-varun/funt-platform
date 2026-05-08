@@ -370,4 +370,100 @@
   .student-premium [class*="ring-slate-"] {
     --tw-ring-color: rgba(180, 150, 60, 0.2) !important;
   }
+
+  .lms-state-wrap {
+    @apply flex min-h-[58vh] w-full items-center justify-center;
+  }
+  .lms-state-card {
+    @apply relative w-full max-w-2xl overflow-hidden rounded-3xl px-8 py-12 text-center shadow-[0_24px_60px_-28px_rgba(153,119,15,0.42)] sm:px-12;
+    border: 1px solid rgba(188, 149, 35, 0.34);
+    background: linear-gradient(140deg, rgba(255, 253, 242, 0.96) 0%, rgba(255, 247, 220, 0.96) 52%, rgba(250, 233, 172, 0.94) 100%);
+  }
+  .lms-state-card--loading {
+    border-color: rgba(188, 149, 35, 0.34);
+  }
+  .lms-state-card--error {
+    border-color: rgba(190, 56, 56, 0.3);
+    background: linear-gradient(145deg, rgba(255, 249, 246, 0.98) 0%, rgba(255, 239, 233, 0.96) 100%);
+  }
+  .lms-state-glow {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+    animation: lms-glow-float 6.5s ease-in-out infinite;
+  }
+  .lms-state-glow--one {
+    @apply -left-10 -top-10 h-40 w-40;
+    background: radial-gradient(circle, rgba(245, 210, 103, 0.45) 0%, rgba(245, 210, 103, 0) 72%);
+  }
+  .lms-state-glow--two {
+    @apply -bottom-10 -right-8 h-36 w-36;
+    background: radial-gradient(circle, rgba(230, 177, 58, 0.35) 0%, rgba(230, 177, 58, 0) 72%);
+    animation-delay: 1.2s;
+  }
+  .lms-state-shimmer {
+    @apply pointer-events-none absolute inset-0;
+    background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.5) 38%, transparent 54%);
+    transform: translateX(-120%);
+    animation: lms-shimmer 3.2s ease-in-out infinite;
+  }
+  .lms-state-icon {
+    @apply mx-auto flex h-20 w-20 items-center justify-center rounded-[1.4rem];
+  }
+  .lms-state-icon--loading {
+    color: #8a6710;
+    background: linear-gradient(135deg, rgba(255, 246, 213, 1) 0%, rgba(244, 220, 142, 0.9) 100%);
+    box-shadow: 0 16px 35px -20px rgba(151, 118, 17, 0.5);
+    animation: lms-icon-pulse 2s ease-in-out infinite;
+  }
+  .lms-state-icon--error {
+    color: #b63838;
+    background: linear-gradient(135deg, rgba(255, 235, 230, 1) 0%, rgba(255, 217, 205, 1) 100%);
+    box-shadow: 0 14px 30px -18px rgba(170, 49, 49, 0.42);
+    animation: lms-icon-pulse 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes lms-glow-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes lms-shimmer {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(140%);
+    opacity: 0;
+  }
+}
+
+@keyframes lms-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lms-state-glow,
+  .lms-state-shimmer,
+  .lms-state-icon--loading,
+  .lms-state-icon--error {
+    animation: none !important;
+  }
 }

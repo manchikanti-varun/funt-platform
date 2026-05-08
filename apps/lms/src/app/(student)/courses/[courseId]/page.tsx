@@ -86,6 +86,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
   const [showChapters, setShowChapters] = useState(defaultShowChapters || learnMode);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [markingComplete, setMarkingComplete] = useState(false);
   const [requestingAccess, setRequestingAccess] = useState(false);
   const [markCompleteSuccess, setMarkCompleteSuccess] = useState(false);
@@ -132,19 +133,42 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     const query = new URLSearchParams({ t: String(Date.now()) });
     if (batchIdFromQuery) query.set("batchId", batchIdFromQuery);
     return api<BatchCourse>(`/api/student/courses/${encodeURIComponent(courseId)}?${query.toString()}`, { cache: "no-store" }).then((r) => {
-      if (r.success && r.data) setData(r.data);
+      if (r.success && r.data) {
+        setData(r.data);
+        setLoadError(null);
+      }
     });
   };
 
   useEffect(() => {
-    if (!courseId) return;
+    if (!courseId) {
+      setLoading(false);
+      setData(null);
+      setLoadError("Invalid course link.");
+      return;
+    }
     const query = new URLSearchParams();
     if (batchIdFromQuery) query.set("batchId", batchIdFromQuery);
     const qs = query.toString();
     const url = qs ? `/api/student/courses/${encodeURIComponent(courseId)}?${qs}` : `/api/student/courses/${encodeURIComponent(courseId)}`;
-    api<BatchCourse>(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" }).then((r) => {
-      if (r.success && r.data) setData(r.data);
-    }).finally(() => setLoading(false));
+    setLoading(true);
+    setLoadError(null);
+    setData(null);
+    api<BatchCourse>(`${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`, { cache: "no-store" })
+      .then((r) => {
+        if (r.success && r.data) {
+          setData(r.data);
+          setLoadError(null);
+          return;
+        }
+        setData(null);
+        setLoadError(r.message ?? "Course not found in this batch.");
+      })
+      .catch(() => {
+        setData(null);
+        setLoadError("Could not load this course. Please try again.");
+      })
+      .finally(() => setLoading(false));
   }, [courseId, batchIdFromQuery]);
 
   const chapters = useMemo(() => {
@@ -171,6 +195,18 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
       setSelectedOrder(chapters[0].order);
     }
   }, [showChapters, selectedOrder, chapters]);
+
+  const normalizedLoadError = (loadError ?? "").toLowerCase();
+  const isNetworkIssue =
+    normalizedLoadError.includes("could not load") ||
+    normalizedLoadError.includes("network") ||
+    normalizedLoadError.includes("timeout");
+  const shouldRedirectToCourses = !loading && !data && !isNetworkIssue;
+
+  useEffect(() => {
+    if (!shouldRedirectToCourses) return;
+    router.replace("/courses");
+  }, [shouldRedirectToCourses, router]);
 
   const hasYoutube = !!(selected?.youtubeVideoId || selected?.youtubeEmbedUrl);
 
@@ -325,11 +361,60 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     }
   }
 
-  if (loading || !data) {
+  if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
       </div>
+    );
+  }
+
+  if (!data) {
+    if (shouldRedirectToCourses) {
+      return (
+        <div className="flex h-full min-h-0 flex-1 items-center justify-center">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
+        </div>
+      );
+    }
+    const title = isNetworkIssue
+      ? "Unable to load course"
+      : "Course unavailable";
+    const description = isNetworkIssue
+      ? "We could not fetch this course right now. Please retry or open your courses list."
+      : "This course is currently unavailable. Please open your courses list and select another course.";
+
+    return (
+      <AppPageShell className="max-w-6xl pb-8">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <DataPanel className="w-full max-w-3xl overflow-hidden border border-black/10 bg-white/95 shadow-xl shadow-black/10">
+          <div className="border-b border-black/10 bg-gradient-to-r from-funt-honey/35 via-white to-funt-honey/20 px-6 py-5">
+            <p className="label-overline">Course Access</p>
+            <h1 className="mt-1 text-xl font-black tracking-tight text-black">{title}</h1>
+            <p className="mt-1 text-sm text-black/70">
+              {description}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 px-6 py-5">
+            <Link href="/courses" className="btn-primary inline-flex items-center justify-center">
+              Back to courses
+            </Link>
+            {isNetworkIssue ? (
+              <Link
+                href={`/courses/${encodeURIComponent(courseId)}${batchIdFromQuery ? `?batchId=${encodeURIComponent(batchIdFromQuery)}` : ""}`}
+                className="btn-secondary inline-flex items-center justify-center"
+              >
+                Retry this page
+              </Link>
+            ) : (
+              <Link href="/dashboard" className="btn-secondary inline-flex items-center justify-center">
+                Go to dashboard
+              </Link>
+            )}
+          </div>
+          </DataPanel>
+        </div>
+      </AppPageShell>
     );
   }
 
