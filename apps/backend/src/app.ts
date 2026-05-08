@@ -27,6 +27,7 @@ import { achievementRoutes } from "./routes/achievement.routes.js";
 import { auditRoutes } from "./routes/audit.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
 import { shopRoutes } from "./routes/shop.routes.js";
+import { publicRoutes } from "./routes/public.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -50,6 +51,7 @@ app.options("/api/auth", (_, res) => res.sendStatus(204));
 app.use("/api/auth", authRateLimiter, authRoutes);
 app.use(apiRateLimiter);
 
+app.use("/api/public", publicRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
