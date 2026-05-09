@@ -10,6 +10,7 @@ export interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   minHeight?: number;
+  maxHeight?: number;
   placeholder?: string;
   className?: string;
   enableSlashCommands?: boolean;
@@ -19,9 +20,10 @@ export function RichTextEditor({
   value,
   onChange,
   minHeight = 120,
+  maxHeight = 720,
   placeholder,
   className = "",
-  enableSlashCommands = false
+  enableSlashCommands = true
 }: RichTextEditorProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<RichTextEditorApi | null>(null);
@@ -38,7 +40,9 @@ export function RichTextEditor({
       content: value || "",
       placeholder,
       toolbarMode: "top",
-      enableSlashCommands
+      enableSlashCommands,
+      maxHeight,
+      contentMinHeight: Math.max(minHeight + 40, 180)
     });
     editor.init(mount);
     unsubRef.current = editor.onChange(({ html }) => {

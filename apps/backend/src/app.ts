@@ -37,6 +37,16 @@ if (isProduction) {
 }
 
 app.use(helmetMiddleware());
+app.use((req, _res, next) => {
+  // Be tolerant of accidental double slashes from clients/proxies (e.g. //api/auth/google).
+  if (req.url.includes("//")) {
+    const queryIndex = req.url.indexOf("?");
+    const path = queryIndex >= 0 ? req.url.slice(0, queryIndex) : req.url;
+    const query = queryIndex >= 0 ? req.url.slice(queryIndex) : "";
+    req.url = `${path.replace(/\/{2,}/g, "/")}${query}`;
+  }
+  next();
+});
 app.use(cors({
   origin: corsOrigins.length > 0 ? corsOrigins : false,
   credentials: true,

@@ -5,7 +5,17 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import TextStyle from "@tiptap/extension-text-style";
 import FontFamily from "@tiptap/extension-font-family";
+import Color from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableHeader from "@tiptap/extension-table-header";
+import TableCell from "@tiptap/extension-table-cell";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import DOMPurify from "dompurify";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { sinkListItem, liftListItem } from "@tiptap/pm/schema-list";
@@ -28,6 +38,14 @@ import {
   Trash2,
   ImagePlus,
   Video,
+  ListChecks,
+  Palette,
+  Highlighter,
+  Eraser,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
+  Table2,
+  MessageSquareWarning,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -38,7 +56,7 @@ import {
   Redo2
 } from "lucide";
 import { SlashCommandsExtension } from "./slashCommands.js";
-import type { RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
+import type { EditorStats, RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
 
 const TOOLBAR_ACTIONS = {
   bold: "bold",
@@ -50,12 +68,20 @@ const TOOLBAR_ACTIONS = {
   h3: "h3",
   bulletList: "bulletList",
   orderedList: "orderedList",
+  taskList: "taskList",
   link: "link",
   blockquote: "blockquote",
   codeBlock: "codeBlock",
   divider: "divider",
   image: "image",
   video: "video",
+  callout: "callout",
+  table: "table",
+  textColor: "textColor",
+  textHighlight: "textHighlight",
+  clearFormatting: "clearFormatting",
+  superscript: "superscript",
+  subscript: "subscript",
   alignLeft: "alignLeft",
   alignCenter: "alignCenter",
   alignRight: "alignRight",
@@ -77,12 +103,20 @@ const ICONS = {
   h3: "heading-3",
   bulletList: "list",
   orderedList: "list-ordered",
+  taskList: "list-checks",
   link: "link-2",
   blockquote: "quote",
   codeBlock: "code-2",
   divider: "minus",
   image: "image-plus",
   video: "video",
+  callout: "message-square-warning",
+  table: "table-2",
+  textColor: "palette",
+  textHighlight: "highlighter",
+  clearFormatting: "eraser",
+  superscript: "superscript",
+  subscript: "subscript",
   alignLeft: "align-left",
   alignCenter: "align-center",
   alignRight: "align-right",
@@ -98,17 +132,29 @@ const FONT_OPTIONS = [
   { label: "Mono", value: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace" },
   { label: "Inter", value: "Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
   { label: "Poppins", value: "Poppins, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { label: "Outfit", value: "Outfit, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { label: "Manrope", value: "Manrope, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { label: "DM Sans", value: "'DM Sans', Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
   { label: "Montserrat", value: "Montserrat, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
   { label: "Lato", value: "Lato, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
   { label: "Nunito", value: "Nunito, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { label: "Rubik", value: "Rubik, Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  { label: "Lora", value: "Lora, Georgia, 'Times New Roman', serif" },
   { label: "Roboto Slab", value: "'Roboto Slab', Rockwell, 'Times New Roman', serif" },
   { label: "Merriweather", value: "Merriweather, Georgia, 'Times New Roman', serif" },
   { label: "Playfair", value: "'Playfair Display', Georgia, 'Times New Roman', serif" },
   { label: "Courier", value: "'Courier New', Courier, monospace" },
+  { label: "Fira Code", value: "'Fira Code', 'JetBrains Mono', Menlo, Monaco, Consolas, monospace" },
+  { label: "JetBrains Mono", value: "'JetBrains Mono', Menlo, Monaco, Consolas, monospace" },
   { label: "Source Code", value: "'Source Code Pro', Menlo, Monaco, Consolas, monospace" },
   { label: "Display", value: "'Trebuchet MS', 'Gill Sans', 'Segoe UI', sans-serif" },
   { label: "System UI", value: "system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif" }
 ] as const;
+
+const TEXT_COLOR_PRESETS_LIGHT = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#ec4899", "#6b7280"];
+const TEXT_COLOR_PRESETS_DARK = ["#f87171", "#60a5fa", "#4ade80", "#facc15", "#c084fc", "#fb923c", "#f472b6", "#9ca3af"];
+const HIGHLIGHT_PRESETS_LIGHT = ["#fef08a", "#bbf7d0", "#bfdbfe", "#fbcfe8", "#ddd6fe", "#fed7aa"];
+const HIGHLIGHT_PRESETS_DARK = ["#713f12", "#14532d", "#1e3a8a", "#831843", "#4c1d95", "#7c2d12"];
 
 type VideoAlign = "left" | "center" | "right";
 type MediaKind = "image" | "video";
@@ -308,6 +354,16 @@ export class RichTextEditor implements RichTextEditorApi {
   private resizeOverlay: HTMLDivElement | null = null;
   private mediaEditBar: HTMLDivElement | null = null;
   private fontSelect: HTMLSelectElement | null = null;
+  private textColorInput: HTMLInputElement | null = null;
+  private highlightColorInput: HTMLInputElement | null = null;
+  private textColorRecentRow: HTMLDivElement | null = null;
+  private highlightColorRecentRow: HTMLDivElement | null = null;
+  private textColorPresets = [...TEXT_COLOR_PRESETS_LIGHT];
+  private highlightPresets = [...HIGHLIGHT_PRESETS_LIGHT];
+  private recentTextColors: string[] = [];
+  private recentHighlightColors: string[] = [];
+  private statsBar: HTMLDivElement | null = null;
+  private floatingInlineBar: HTMLDivElement | null = null;
   private changeCallbacks = new Set<(payload: { html: string; json: JSONContent }) => void>();
   private options: Required<Omit<RichTextEditorOptions, "content" | "uploadImage">> &
     Pick<RichTextEditorOptions, "content" | "uploadImage">;
@@ -319,6 +375,8 @@ export class RichTextEditor implements RichTextEditorApi {
       toolbarMode: options.toolbarMode ?? "top",
       enableSlashCommands: options.enableSlashCommands ?? false,
       sanitizeOnGet: options.sanitizeOnGet ?? true,
+      maxHeight: Math.max(360, Math.floor(options.maxHeight ?? 720)),
+      contentMinHeight: Math.max(140, Math.floor(options.contentMinHeight ?? 220)),
       uploadImage: options.uploadImage
     };
   }
@@ -330,6 +388,9 @@ export class RichTextEditor implements RichTextEditorApi {
     this.root = element;
     this.root.innerHTML = "";
     this.root.classList.add("rte-shell");
+    this.root.style.setProperty("--rte-max-height", `${this.options.maxHeight}px`);
+    this.root.style.setProperty("--rte-content-min-height", `${this.options.contentMinHeight}px`);
+    this.refreshThemeAwarePalettes();
 
     this.toolbar = this.createToolbar();
     this.contentArea = document.createElement("div");
@@ -371,13 +432,24 @@ export class RichTextEditor implements RichTextEditorApi {
     `;
     this.slashMenu = document.createElement("div");
     this.slashMenu.className = "rte-slash-menu hidden";
+    this.floatingInlineBar = document.createElement("div");
+    this.floatingInlineBar.className = "rte-inline-toolbar hidden";
+    this.floatingInlineBar.innerHTML = `
+      <button type="button" class="rte-inline-btn" data-inline-action="bold">${this.iconMarkup("bold")}</button>
+      <button type="button" class="rte-inline-btn" data-inline-action="italic">${this.iconMarkup("italic")}</button>
+      <button type="button" class="rte-inline-btn" data-inline-action="underline">${this.iconMarkup("underline")}</button>
+      <button type="button" class="rte-inline-btn" data-inline-action="link">${this.iconMarkup("link-2")}</button>
+    `;
+    this.statsBar = document.createElement("div");
+    this.statsBar.className = "rte-stats";
 
     this.contentArea.appendChild(this.resizeOverlay);
     this.contentArea.appendChild(this.mediaEditBar);
-    this.root.append(this.toolbar, this.contentArea, this.slashMenu);
+    this.root.append(this.toolbar, this.contentArea, this.slashMenu, this.floatingInlineBar, this.statsBar);
     this.hydrateToolbarIcons();
     this.bindResizeHandles();
     this.bindMediaEditBar();
+    this.bindInlineToolbar();
 
     const self = this;
     const TabBehaviorExtension = Extension.create({
@@ -400,7 +472,17 @@ export class RichTextEditor implements RichTextEditorApi {
         }),
         TextStyle,
         FontFamily.configure({ types: ["textStyle"] }),
+        Color.configure({ types: ["textStyle"] }),
+        Highlight.configure({ multicolor: true }),
         TextAlign.configure({ types: ["heading", "paragraph"] }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        Subscript,
+        Superscript,
         Underline,
         Link.configure({ openOnClick: false, autolink: true }),
         CustomImage.configure({ allowBase64: true }),
@@ -417,17 +499,23 @@ export class RichTextEditor implements RichTextEditorApi {
       },
       onUpdate: ({ editor }) => {
         this.updateToolbarState();
+        this.updateStatsBar();
+        this.updateInlineToolbarPosition();
         const payload = {
           html: this.getUnsafeHTML(),
           json: editor.getJSON()
         };
         this.changeCallbacks.forEach((callback) => callback(payload));
       },
-      onSelectionUpdate: () => this.updateToolbarState()
+      onSelectionUpdate: () => {
+        this.updateToolbarState();
+        this.updateInlineToolbarPosition();
+      }
     });
 
     this.toolbar.classList.toggle("floating", this.options.toolbarMode === "floating");
     this.updateToolbarState();
+    this.updateStatsBar();
     this.contentArea.addEventListener("scroll", this.updateResizeOverlayPosition, { passive: true });
     this.contentArea.addEventListener("mousedown", this.handleContentMouseDown);
     this.contentArea.addEventListener("keydown", this.handleEditorKeyDown, true);
@@ -442,11 +530,30 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!this.options.sanitizeOnGet) {
       return html;
     }
-    return DOMPurify.sanitize(html, {
+    const sanitized = DOMPurify.sanitize(html, {
       USE_PROFILES: { html: true },
-      FORBID_TAGS: ["script", "style", "iframe"],
+      FORBID_TAGS: ["script", "style"],
       FORBID_ATTR: ["onerror", "onload", "onclick"]
     });
+    return this.filterUnsafeEmbeds(sanitized);
+  }
+
+  private filterUnsafeEmbeds(html: string): string {
+    if (typeof window === "undefined") return html;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const allowedHosts = ["youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "player.vimeo.com"];
+    doc.querySelectorAll("iframe").forEach((frame) => {
+      const src = frame.getAttribute("src")?.trim() ?? "";
+      let keep = false;
+      try {
+        const host = new URL(src).hostname.toLowerCase();
+        keep = allowedHosts.some((item) => host === item || host.endsWith(`.${item}`));
+      } catch {
+        keep = false;
+      }
+      if (!keep) frame.remove();
+    });
+    return doc.body.innerHTML;
   }
 
   private getUnsafeHTML(): string {
@@ -458,6 +565,18 @@ export class RichTextEditor implements RichTextEditorApi {
 
   getJSON(): JSONContent {
     return this.editor?.getJSON() ?? EMPTY_DOC;
+  }
+
+  getStats(): EditorStats {
+    if (!this.editor) {
+      return { words: 0, characters: 0, readingTimeMinutes: 0 };
+    }
+    const plain = this.editor.getText().trim();
+    if (!plain) return { words: 0, characters: 0, readingTimeMinutes: 0 };
+    const words = plain.split(/\s+/).filter(Boolean).length;
+    const characters = plain.length;
+    const readingTimeMinutes = Math.max(1, Math.ceil(words / 220));
+    return { words, characters, readingTimeMinutes };
   }
 
   setContent(content: RichTextContent): void {
@@ -556,7 +675,23 @@ export class RichTextEditor implements RichTextEditorApi {
   };
 
   private handleDocumentKeyDown = (event: KeyboardEvent): void => {
-    if (!this.editor || !this.contentArea || !this.isTabKey(event)) return;
+    if (!this.editor || !this.contentArea) return;
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "c") {
+      event.preventDefault();
+      this.textColorInput?.focus();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "h") {
+      event.preventDefault();
+      this.highlightColorInput?.focus();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase() === "h") {
+      event.preventDefault();
+      this.clearHighlightColor();
+      return;
+    }
+    if (!this.isTabKey(event)) return;
     const target = event.target;
     const isInsideEditorTarget = !!target && target instanceof globalThis.Node && this.contentArea.contains(target);
     const hasEditorFocus = this.editor.isFocused || this.editor.view.hasFocus();
@@ -751,8 +886,38 @@ export class RichTextEditor implements RichTextEditorApi {
     const toolbar = document.createElement("div");
     toolbar.className = "rte-toolbar";
     this.fontSelect = this.createFontFamilySelect();
+    const textColorControl = this.createColorControl({
+      label: "Text",
+      icon: "palette",
+      presets: this.textColorPresets,
+      onApply: (color, options) => this.applyTextColor(color, options),
+      onClear: () => this.clearTextColor(),
+      onBindInput: (input) => {
+        this.textColorInput = input;
+      },
+      onBindRecentRow: (row) => {
+        this.textColorRecentRow = row;
+      },
+      getCurrent: () => String(this.editor?.getAttributes("textStyle").color ?? "")
+    });
+    const highlightControl = this.createColorControl({
+      label: "Highlight",
+      icon: "highlighter",
+      presets: this.highlightPresets,
+      onApply: (color, options) => this.applyHighlightColor(color, options),
+      onClear: () => this.clearHighlightColor(),
+      onBindInput: (input) => {
+        this.highlightColorInput = input;
+      },
+      onBindRecentRow: (row) => {
+        this.highlightColorRecentRow = row;
+      },
+      getCurrent: () => String(this.editor?.getAttributes("highlight").color ?? "")
+    });
     toolbar.append(
       this.fontSelect,
+      textColorControl,
+      highlightControl,
       this.separator(),
       this.button(this.iconMarkup(ICONS.bold), "Bold", TOOLBAR_ACTIONS.bold),
       this.button(this.iconMarkup(ICONS.italic), "Italic", TOOLBAR_ACTIONS.italic),
@@ -765,10 +930,15 @@ export class RichTextEditor implements RichTextEditorApi {
       this.separator(),
       this.button(this.iconMarkup(ICONS.bulletList), "Bullet list", TOOLBAR_ACTIONS.bulletList),
       this.button(this.iconMarkup(ICONS.orderedList), "Numbered list", TOOLBAR_ACTIONS.orderedList),
+      this.button(this.iconMarkup(ICONS.taskList), "Task checklist", TOOLBAR_ACTIONS.taskList),
       this.button(this.iconMarkup(ICONS.link), "Link", TOOLBAR_ACTIONS.link),
       this.button(this.iconMarkup(ICONS.blockquote), "Blockquote", TOOLBAR_ACTIONS.blockquote),
       this.button(this.iconMarkup(ICONS.codeBlock), "Code block", TOOLBAR_ACTIONS.codeBlock),
+      this.button(this.iconMarkup(ICONS.subscript), "Subscript", TOOLBAR_ACTIONS.subscript),
+      this.button(this.iconMarkup(ICONS.superscript), "Superscript", TOOLBAR_ACTIONS.superscript),
       this.button(this.iconMarkup(ICONS.divider), "Divider", TOOLBAR_ACTIONS.divider),
+      this.button(this.iconMarkup(ICONS.callout), "Callout block", TOOLBAR_ACTIONS.callout),
+      this.button(this.iconMarkup(ICONS.table), "Insert table", TOOLBAR_ACTIONS.table),
       this.button(this.iconMarkup(ICONS.image), "Image", TOOLBAR_ACTIONS.image),
       this.button(this.iconMarkup(ICONS.video), "Video URL", TOOLBAR_ACTIONS.video),
       this.separator(),
@@ -778,10 +948,12 @@ export class RichTextEditor implements RichTextEditorApi {
       this.button(this.iconMarkup(ICONS.alignJustify), "Align justify", TOOLBAR_ACTIONS.alignJustify),
       this.button(this.iconMarkup(ICONS.indent), "Indent", TOOLBAR_ACTIONS.indent),
       this.button(this.iconMarkup(ICONS.outdent), "Outdent", TOOLBAR_ACTIONS.outdent),
+      this.button(this.iconMarkup(ICONS.clearFormatting), "Clear formatting", TOOLBAR_ACTIONS.clearFormatting),
       this.separator(),
       this.button(this.iconMarkup(ICONS.undo), "Undo", TOOLBAR_ACTIONS.undo),
       this.button(this.iconMarkup(ICONS.redo), "Redo", TOOLBAR_ACTIONS.redo)
     );
+    this.renderRecentColorButtons();
     return toolbar;
   }
 
@@ -802,6 +974,7 @@ export class RichTextEditor implements RichTextEditorApi {
         Heading3,
         List,
         ListOrdered,
+        ListChecks,
         Link2,
         Quote,
         Code2,
@@ -810,6 +983,13 @@ export class RichTextEditor implements RichTextEditorApi {
         Trash2,
         ImagePlus,
         Video,
+        Palette,
+        Highlighter,
+        Eraser,
+        Superscript: SuperscriptIcon,
+        Subscript: SubscriptIcon,
+        Table2,
+        MessageSquareWarning,
         AlignLeft,
         AlignCenter,
         AlignRight,
@@ -820,6 +1000,180 @@ export class RichTextEditor implements RichTextEditorApi {
         Redo2
       }
     });
+  }
+
+  private createColorControl(config: {
+    label: string;
+    icon: string;
+    presets: string[];
+    onApply: (color: string, options?: { recordRecent?: boolean }) => void;
+    onClear: () => void;
+    onBindInput: (input: HTMLInputElement) => void;
+    onBindRecentRow: (row: HTMLDivElement) => void;
+    getCurrent: () => string;
+  }): HTMLDivElement {
+    const wrapper = document.createElement("div");
+    wrapper.className = "rte-color-control";
+    const title = document.createElement("div");
+    title.className = "rte-color-title";
+    title.innerHTML = `<i data-lucide="${config.icon}" aria-hidden="true"></i><span>${config.label}</span>`;
+
+    const presets = document.createElement("div");
+    presets.className = "rte-color-swatches";
+    let previewing = false;
+    let previewBase = "";
+    config.presets.forEach((color) => {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "rte-color-swatch";
+      swatch.title = color;
+      swatch.style.backgroundColor = color;
+      swatch.addEventListener("mousedown", (event) => event.preventDefault());
+      swatch.addEventListener("mouseenter", () => {
+        if (previewing) return;
+        previewing = true;
+        previewBase = config.getCurrent();
+        config.onApply(color, { recordRecent: false });
+      });
+      swatch.addEventListener("mouseleave", () => {
+        if (!previewing) return;
+        previewing = false;
+        if (previewBase) config.onApply(previewBase);
+        else config.onClear();
+      });
+      swatch.addEventListener("click", () => {
+        previewing = false;
+        config.onApply(color);
+      });
+      presets.appendChild(swatch);
+    });
+
+    const input = document.createElement("input");
+    input.type = "color";
+    input.className = "rte-color-input";
+    input.setAttribute("aria-label", `${config.label} color`);
+    input.title = `${config.label} color`;
+    input.value = config.presets[0] ?? "#000000";
+    input.addEventListener("input", () => {
+      config.onApply(input.value);
+    });
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "rte-color-clear";
+    clear.textContent = "Clear";
+    clear.addEventListener("click", config.onClear);
+
+    const recentLabel = document.createElement("span");
+    recentLabel.className = "rte-color-recent-label";
+    recentLabel.textContent = "Recent";
+    const recentRow = document.createElement("div");
+    recentRow.className = "rte-color-recent";
+
+    const custom = document.createElement("div");
+    custom.className = "rte-color-custom";
+    custom.append(input, clear);
+    wrapper.append(title, presets, custom, recentLabel, recentRow);
+    config.onBindInput(input);
+    config.onBindRecentRow(recentRow);
+    return wrapper;
+  }
+
+  private applyTextColor(color: string, options?: { recordRecent?: boolean }): void {
+    if (!this.editor) return;
+    this.editor.chain().focus().setColor(color).run();
+    if (options?.recordRecent !== false) {
+      this.pushRecentColor(this.recentTextColors, color);
+      this.renderRecentColorButtons();
+    }
+  }
+
+  private applyHighlightColor(color: string, options?: { recordRecent?: boolean }): void {
+    if (!this.editor) return;
+    this.editor.chain().focus().setHighlight({ color }).run();
+    if (options?.recordRecent !== false) {
+      this.pushRecentColor(this.recentHighlightColors, color);
+      this.renderRecentColorButtons();
+    }
+  }
+
+  private clearTextColor(): void {
+    if (!this.editor) return;
+    this.editor.chain().focus().unsetColor().run();
+  }
+
+  private clearHighlightColor(): void {
+    if (!this.editor) return;
+    this.editor.chain().focus().unsetHighlight().run();
+  }
+
+  private pushRecentColor(target: string[], color: string): void {
+    const normalized = color.toLowerCase();
+    const next = [normalized, ...target.filter((item) => item !== normalized)].slice(0, 8);
+    target.splice(0, target.length, ...next);
+  }
+
+  private renderRecentColorButtons(): void {
+    const render = (container: HTMLDivElement | null, colors: string[], onClick: (color: string) => void) => {
+      if (!container) return;
+      container.innerHTML = "";
+      colors.slice(0, 6).forEach((color) => {
+        const swatch = document.createElement("button");
+        swatch.type = "button";
+        swatch.className = "rte-color-swatch recent";
+        swatch.style.backgroundColor = color;
+        swatch.title = color;
+        swatch.addEventListener("click", () => onClick(color));
+        container.appendChild(swatch);
+      });
+    };
+    render(this.textColorRecentRow, this.recentTextColors, (color) => this.applyTextColor(color));
+    render(this.highlightColorRecentRow, this.recentHighlightColors, (color) => this.applyHighlightColor(color));
+  }
+
+  private bindInlineToolbar(): void {
+    if (!this.floatingInlineBar) return;
+    this.floatingInlineBar.querySelectorAll<HTMLButtonElement>(".rte-inline-btn").forEach((button) => {
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        const action = button.dataset.inlineAction ?? "";
+        if (action === "bold") this.editor?.chain().focus().toggleBold().run();
+        if (action === "italic") this.editor?.chain().focus().toggleItalic().run();
+        if (action === "underline") this.editor?.chain().focus().toggleUnderline().run();
+        if (action === "link") void this.handleToolbarAction(TOOLBAR_ACTIONS.link);
+      });
+    });
+  }
+
+  private refreshThemeAwarePalettes(): void {
+    const prefersDark =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches;
+    this.textColorPresets = prefersDark ? [...TEXT_COLOR_PRESETS_DARK] : [...TEXT_COLOR_PRESETS_LIGHT];
+    this.highlightPresets = prefersDark ? [...HIGHLIGHT_PRESETS_DARK] : [...HIGHLIGHT_PRESETS_LIGHT];
+  }
+
+  private updateInlineToolbarPosition(): void {
+    if (!this.editor || !this.floatingInlineBar || !this.root) return;
+    const selection = this.editor.state.selection;
+    if (selection.empty || !(selection instanceof TextSelection)) {
+      this.floatingInlineBar.classList.add("hidden");
+      return;
+    }
+    const start = this.editor.view.coordsAtPos(selection.from);
+    const end = this.editor.view.coordsAtPos(selection.to);
+    const rootRect = this.root.getBoundingClientRect();
+    const left = ((start.left + end.right) / 2) - rootRect.left;
+    const top = Math.min(start.top, end.top) - rootRect.top - 44;
+    this.floatingInlineBar.style.left = `${Math.max(8, left - 70)}px`;
+    this.floatingInlineBar.style.top = `${Math.max(8, top)}px`;
+    this.floatingInlineBar.classList.remove("hidden");
+  }
+
+  private updateStatsBar(): void {
+    if (!this.statsBar) return;
+    const stats = this.getStats();
+    this.statsBar.textContent = `${stats.words} words  |  ${stats.characters} chars  |  ${stats.readingTimeMinutes} min read`;
   }
 
   private createFontFamilySelect(): HTMLSelectElement {
@@ -902,6 +1256,9 @@ export class RichTextEditor implements RichTextEditorApi {
       case TOOLBAR_ACTIONS.orderedList:
         chain.toggleOrderedList().run();
         break;
+      case TOOLBAR_ACTIONS.taskList:
+        chain.toggleTaskList().run();
+        break;
       case TOOLBAR_ACTIONS.link: {
         const previous = this.editor.getAttributes("link").href as string | undefined;
         const value = window.prompt("Enter URL", previous ?? "https://");
@@ -921,8 +1278,20 @@ export class RichTextEditor implements RichTextEditorApi {
       case TOOLBAR_ACTIONS.codeBlock:
         chain.toggleCodeBlock().run();
         break;
+      case TOOLBAR_ACTIONS.subscript:
+        chain.toggleSubscript().run();
+        break;
+      case TOOLBAR_ACTIONS.superscript:
+        chain.toggleSuperscript().run();
+        break;
       case TOOLBAR_ACTIONS.divider:
         chain.setHorizontalRule().run();
+        break;
+      case TOOLBAR_ACTIONS.callout:
+        chain.insertContent(`<blockquote><p><strong>Info:</strong> Write your callout...</p></blockquote>`).run();
+        break;
+      case TOOLBAR_ACTIONS.table:
+        chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
         break;
       case TOOLBAR_ACTIONS.image:
         await this.insertImage();
@@ -947,6 +1316,9 @@ export class RichTextEditor implements RichTextEditorApi {
         break;
       case TOOLBAR_ACTIONS.outdent:
         this.handleTabPress(true);
+        break;
+      case TOOLBAR_ACTIONS.clearFormatting:
+        chain.clearNodes().unsetAllMarks().run();
         break;
       case TOOLBAR_ACTIONS.undo:
         this.editor.commands.undo();
@@ -1113,9 +1485,12 @@ export class RichTextEditor implements RichTextEditorApi {
       [TOOLBAR_ACTIONS.h3]: this.editor.isActive("heading", { level: 3 }),
       [TOOLBAR_ACTIONS.bulletList]: this.editor.isActive("bulletList"),
       [TOOLBAR_ACTIONS.orderedList]: this.editor.isActive("orderedList"),
+      [TOOLBAR_ACTIONS.taskList]: this.editor.isActive("taskList"),
       [TOOLBAR_ACTIONS.link]: this.editor.isActive("link"),
       [TOOLBAR_ACTIONS.blockquote]: this.editor.isActive("blockquote"),
       [TOOLBAR_ACTIONS.codeBlock]: this.editor.isActive("codeBlock"),
+      [TOOLBAR_ACTIONS.subscript]: this.editor.isActive("subscript"),
+      [TOOLBAR_ACTIONS.superscript]: this.editor.isActive("superscript"),
       [TOOLBAR_ACTIONS.alignLeft]: this.editor.isActive({ textAlign: "left" }),
       [TOOLBAR_ACTIONS.alignCenter]: this.editor.isActive({ textAlign: "center" }),
       [TOOLBAR_ACTIONS.alignRight]: this.editor.isActive({ textAlign: "right" }),
@@ -1146,18 +1521,27 @@ export class RichTextEditor implements RichTextEditorApi {
       const matched = FONT_OPTIONS.find((opt) => opt.value === current);
       this.fontSelect.value = matched?.value ?? "";
     }
+    if (this.textColorInput) {
+      const color = String(this.editor.getAttributes("textStyle").color ?? "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(color)) this.textColorInput.value = color;
+    }
+    if (this.highlightColorInput) {
+      const color = String(this.editor.getAttributes("highlight").color ?? "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(color)) this.highlightColorInput.value = color;
+    }
   }
 
   private renderSlashMenu = (state: {
     active: boolean;
     items: SlashCommandItem[];
+    query?: string;
     index: number;
     coords: { top: number; left: number } | null;
   }): void => {
     if (!this.slashMenu) {
       return;
     }
-    if (!state.active || !state.coords || !state.items.length) {
+    if (!state.active || !state.coords) {
       this.slashMenu.classList.add("hidden");
       this.slashMenu.innerHTML = "";
       return;
@@ -1166,14 +1550,22 @@ export class RichTextEditor implements RichTextEditorApi {
     this.slashMenu.classList.remove("hidden");
     this.slashMenu.style.top = `${state.coords.top}px`;
     this.slashMenu.style.left = `${state.coords.left}px`;
+    if (!state.items.length) {
+      this.slashMenu.innerHTML = `<div class="rte-slash-empty">No commands for "${state.query ?? ""}"</div>`;
+      return;
+    }
     this.slashMenu.innerHTML = state.items
-      .map(
-        (item, idx) =>
-          `<button class="rte-slash-item ${idx === state.index ? "active" : ""}" data-id="${item.id}">
-            <span class="title">${item.label}</span>
+      .map((item, idx) => {
+        const group = item.group ? `<span class="group">${item.group}</span>` : "";
+        const icon = item.icon ? `<span class="icon"><i data-lucide="${item.icon}" aria-hidden="true"></i></span>` : "";
+        return `<button class="rte-slash-item ${idx === state.index ? "active" : ""}" data-id="${item.id}">
+            <span class="title">${icon}<span class="label">${item.label}</span>${group}</span>
             <span class="desc">${item.description ?? ""}</span>
-          </button>`
-      )
+          </button>`;
+      })
       .join("");
+    createIcons({
+      attrs: { width: "15", height: "15", "stroke-width": "2" },
+    });
   };
 }

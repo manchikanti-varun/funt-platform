@@ -15,6 +15,7 @@ export type {
   RichTextEditorApi,
   RichTextEditorOptions,
   RichTextContent,
+  EditorStats,
   SlashCommandItem,
   ToolbarMode
 } from "./types.js";
