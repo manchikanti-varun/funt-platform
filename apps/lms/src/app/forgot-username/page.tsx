@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_DISPLAY, supportWhatsAppHref } from "@/lib/support";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 function isValidEmailFormat(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());

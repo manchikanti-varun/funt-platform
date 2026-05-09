@@ -6,7 +6,7 @@ import { api, markClientLoggedIn } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safeRedirectPath";
 import { FormPanel } from "@/components/ui/FormPanel";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 function LoginForm() {
   const router = useRouter();

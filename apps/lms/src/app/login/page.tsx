@@ -10,7 +10,7 @@ import { FormPanel } from "@/components/ui/FormPanel";
 
 import { SUPPORT_EMAIL, supportWhatsAppHref } from "@/lib/support";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 function LoginForm() {
   const router = useRouter();
