@@ -71,6 +71,46 @@
   background: #fff;
 }
 
+.rte-color-dropdown {
+  position: relative;
+}
+
+.rte-color-dropdown > summary {
+  list-style: none;
+}
+
+.rte-color-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rte-color-dropdown-trigger {
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--rte-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rte-text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.rte-color-dropdown-trigger:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.rte-color-dropdown-panel {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  z-index: 35;
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.18);
+}
+
 .rte-color-title {
   display: flex;
   align-items: center;

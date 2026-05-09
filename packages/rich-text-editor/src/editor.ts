@@ -356,6 +356,8 @@ export class RichTextEditor implements RichTextEditorApi {
   private fontSelect: HTMLSelectElement | null = null;
   private textColorInput: HTMLInputElement | null = null;
   private highlightColorInput: HTMLInputElement | null = null;
+  private textColorDropdown: HTMLDetailsElement | null = null;
+  private highlightColorDropdown: HTMLDetailsElement | null = null;
   private textColorRecentRow: HTMLDivElement | null = null;
   private highlightColorRecentRow: HTMLDivElement | null = null;
   private textColorPresets = [...TEXT_COLOR_PRESETS_LIGHT];
@@ -678,11 +680,13 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!this.editor || !this.contentArea) return;
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "c") {
       event.preventDefault();
+      if (this.textColorDropdown) this.textColorDropdown.open = true;
       this.textColorInput?.focus();
       return;
     }
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "h") {
       event.preventDefault();
+      if (this.highlightColorDropdown) this.highlightColorDropdown.open = true;
       this.highlightColorInput?.focus();
       return;
     }
@@ -898,6 +902,9 @@ export class RichTextEditor implements RichTextEditorApi {
       onBindRecentRow: (row) => {
         this.textColorRecentRow = row;
       },
+      onBindDropdown: (dropdown) => {
+        this.textColorDropdown = dropdown;
+      },
       getCurrent: () => String(this.editor?.getAttributes("textStyle").color ?? "")
     });
     const highlightControl = this.createColorControl({
@@ -911,6 +918,9 @@ export class RichTextEditor implements RichTextEditorApi {
       },
       onBindRecentRow: (row) => {
         this.highlightColorRecentRow = row;
+      },
+      onBindDropdown: (dropdown) => {
+        this.highlightColorDropdown = dropdown;
       },
       getCurrent: () => String(this.editor?.getAttributes("highlight").color ?? "")
     });
@@ -1010,10 +1020,16 @@ export class RichTextEditor implements RichTextEditorApi {
     onClear: () => void;
     onBindInput: (input: HTMLInputElement) => void;
     onBindRecentRow: (row: HTMLDivElement) => void;
+    onBindDropdown: (dropdown: HTMLDetailsElement) => void;
     getCurrent: () => string;
-  }): HTMLDivElement {
+  }): HTMLDetailsElement {
+    const dropdown = document.createElement("details");
+    dropdown.className = "rte-color-dropdown";
+    const trigger = document.createElement("summary");
+    trigger.className = "rte-color-dropdown-trigger";
+    trigger.innerHTML = `<i data-lucide="${config.icon}" aria-hidden="true"></i><span>${config.label}</span>`;
     const wrapper = document.createElement("div");
-    wrapper.className = "rte-color-control";
+    wrapper.className = "rte-color-control rte-color-dropdown-panel";
     const title = document.createElement("div");
     title.className = "rte-color-title";
     title.innerHTML = `<i data-lucide="${config.icon}" aria-hidden="true"></i><span>${config.label}</span>`;
@@ -1073,9 +1089,11 @@ export class RichTextEditor implements RichTextEditorApi {
     custom.className = "rte-color-custom";
     custom.append(input, clear);
     wrapper.append(title, presets, custom, recentLabel, recentRow);
+    dropdown.append(trigger, wrapper);
     config.onBindInput(input);
     config.onBindRecentRow(recentRow);
-    return wrapper;
+    config.onBindDropdown(dropdown);
+    return dropdown;
   }
 
   private applyTextColor(color: string, options?: { recordRecent?: boolean }): void {
