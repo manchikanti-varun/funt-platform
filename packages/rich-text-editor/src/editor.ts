@@ -522,6 +522,7 @@ export class RichTextEditor implements RichTextEditorApi {
     this.contentArea.addEventListener("mousedown", this.handleContentMouseDown);
     this.contentArea.addEventListener("keydown", this.handleEditorKeyDown, true);
     this.root.ownerDocument.addEventListener("keydown", this.handleDocumentKeyDown, true);
+    this.root.ownerDocument.addEventListener("mousedown", this.handleOutsidePointerDown, true);
     if (typeof window !== "undefined") {
       window.addEventListener("resize", this.updateResizeOverlayPosition);
     }
@@ -598,6 +599,7 @@ export class RichTextEditor implements RichTextEditorApi {
     this.contentArea?.removeEventListener("mousedown", this.handleContentMouseDown);
     this.contentArea?.removeEventListener("keydown", this.handleEditorKeyDown, true);
     this.root?.ownerDocument.removeEventListener("keydown", this.handleDocumentKeyDown, true);
+    this.root?.ownerDocument.removeEventListener("mousedown", this.handleOutsidePointerDown, true);
     if (typeof window !== "undefined") {
       window.removeEventListener("resize", this.updateResizeOverlayPosition);
     }
@@ -703,6 +705,18 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!isInsideEditorTarget && !hasEditorFocus && !hasEditorSelection) return;
     event.preventDefault();
     this.handleTabPress(event.shiftKey);
+  };
+
+  private closeColorDropdowns(): void {
+    if (this.textColorDropdown) this.textColorDropdown.open = false;
+    if (this.highlightColorDropdown) this.highlightColorDropdown.open = false;
+  }
+
+  private handleOutsidePointerDown = (event: MouseEvent): void => {
+    if (!this.root) return;
+    const target = event.target;
+    if (target instanceof globalThis.Node && this.root.contains(target)) return;
+    this.closeColorDropdowns();
   };
 
   private isTabKey(event: KeyboardEvent): boolean {
@@ -1060,6 +1074,7 @@ export class RichTextEditor implements RichTextEditorApi {
       swatch.addEventListener("click", () => {
         previewing = false;
         config.onApply(color);
+        dropdown.open = false;
       });
       presets.appendChild(swatch);
     });
@@ -1072,12 +1087,16 @@ export class RichTextEditor implements RichTextEditorApi {
     input.value = config.presets[0] ?? "#000000";
     input.addEventListener("input", () => {
       config.onApply(input.value);
+      dropdown.open = false;
     });
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "rte-color-clear";
     clear.textContent = "Clear";
-    clear.addEventListener("click", config.onClear);
+    clear.addEventListener("click", () => {
+      config.onClear();
+      dropdown.open = false;
+    });
 
     const recentLabel = document.createElement("span");
     recentLabel.className = "rte-color-recent-label";
@@ -1140,7 +1159,10 @@ export class RichTextEditor implements RichTextEditorApi {
         swatch.className = "rte-color-swatch recent";
         swatch.style.backgroundColor = color;
         swatch.title = color;
-        swatch.addEventListener("click", () => onClick(color));
+        swatch.addEventListener("click", () => {
+          onClick(color);
+          this.closeColorDropdowns();
+        });
         container.appendChild(swatch);
       });
     };
