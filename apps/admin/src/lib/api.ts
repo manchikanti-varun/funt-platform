@@ -9,6 +9,7 @@ function resolveApiUrl(): string {
 }
 
 const API_URL = resolveApiUrl();
+const REQUEST_TIMEOUT_MS = 15000;
 
 const LEGACY_TOKEN_KEY = "funt_admin_token";
 
@@ -113,8 +114,22 @@ export async function api<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { ...options, credentials: "include", headers });
+    const controller = new AbortController();
+    const timeout = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const externalSignal = options.signal;
+    if (externalSignal) {
+      if (externalSignal.aborted) controller.abort();
+      else externalSignal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+    try {
+      res = await fetch(`${API_URL}${path}`, { ...options, credentials: "include", headers, signal: controller.signal });
+    } finally {
+      globalThis.clearTimeout(timeout);
+    }
   } catch (err) {
+    if ((err as Error).name === "AbortError") {
+      return { success: false, message: "Request timed out. Please retry." };
+    }
     return { success: false, message: "Network error. Check that the API URL is correct and CORS allows this origin." };
   }
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;

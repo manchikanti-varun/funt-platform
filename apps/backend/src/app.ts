@@ -49,6 +49,9 @@ app.use("/health", healthRouter);
 
 app.options("/api/auth", (_, res) => res.sendStatus(204));
 app.use("/api/auth", authRateLimiter, authRoutes);
+// Compatibility mount for environments where the reverse proxy strips `/api`.
+app.options("/auth", (_, res) => res.sendStatus(204));
+app.use("/auth", authRateLimiter, authRoutes);
 app.use(apiRateLimiter);
 
 app.use("/api/public", publicRoutes);
