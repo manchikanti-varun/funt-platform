@@ -2,9 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { markClientLoggedIn } from "@/lib/api";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
+import { apiUrl, markClientLoggedIn } from "@/lib/api";
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 
 function validatePassword(password: string): string | null {
@@ -47,7 +45,7 @@ function AdminSignupForm() {
       setLoading(true);
       setPreviewError("");
       try {
-        const res = await fetch(`${API_BASE}/api/auth/google/admin-signup-preview?token=${encodeURIComponent(token)}`);
+        const res = await fetch(apiUrl(`/api/auth/google/admin-signup-preview?token=${encodeURIComponent(token)}`));
         const data = await res.json().catch(() => ({}));
         if (!cancelled && res.ok && data.email) {
           setEmail(data.email);
@@ -100,7 +98,7 @@ function AdminSignupForm() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/auth/google/admin-signup-complete`, {
+      const res = await fetch(apiUrl("/api/auth/google/admin-signup-complete"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

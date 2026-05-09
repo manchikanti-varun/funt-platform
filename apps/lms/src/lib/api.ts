@@ -1,7 +1,7 @@
 
 function resolveApiUrl(): string {
   const raw = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (raw) return raw.replace(/\/$/, "");
+  if (raw) return raw.replace(/\/+$/, "");
   if (process.env.NODE_ENV === "production") {
     throw new Error("NEXT_PUBLIC_API_URL is required in production for LMS app.");
   }
@@ -9,6 +9,11 @@ function resolveApiUrl(): string {
 }
 
 export const API_URL = resolveApiUrl();
+
+export function apiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_URL}${normalizedPath}`;
+}
 
 /**
  * Course payloads use root-relative media URLs (`/api/student/media/play?...`) for `api()`.

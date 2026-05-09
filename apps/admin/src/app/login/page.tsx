@@ -2,11 +2,9 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, markClientLoggedIn } from "@/lib/api";
+import { api, apiUrl, markClientLoggedIn } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safeRedirectPath";
 import { FormPanel } from "@/components/ui/FormPanel";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 function LoginForm() {
   const router = useRouter();
@@ -148,7 +146,7 @@ function LoginForm() {
             </span>
           </div>
           <a
-            href={`${API_BASE}/api/auth/google?app=admin`}
+            href={apiUrl("/api/auth/google?app=admin")}
             className="btn-secondary flex w-full items-center justify-center gap-2.5 bg-white/90 py-2.5 font-semibold hover:bg-indigo-50/80"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden>
@@ -174,7 +172,7 @@ function LoginForm() {
 
           <p className="mt-4 text-center text-xs text-slate-600">
             New to Admin?{" "}
-            <a href={`${API_BASE}/api/auth/google?app=admin`} className="font-semibold text-teal-700 hover:underline">
+            <a href={apiUrl("/api/auth/google?app=admin")} className="font-semibold text-teal-700 hover:underline">
               Request admin access
             </a>
             {" "}— a Super Admin must approve before you can sign in.

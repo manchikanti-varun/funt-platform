@@ -3,14 +3,12 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, markClientLoggedIn, clearToken } from "@/lib/api";
+import { api, apiUrl, markClientLoggedIn, clearToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 import { safeRedirectPath } from "@/lib/safeRedirectPath";
 import { FormPanel } from "@/components/ui/FormPanel";
 
 import { SUPPORT_EMAIL, supportWhatsAppHref } from "@/lib/support";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 function LoginForm() {
   const router = useRouter();
@@ -187,7 +185,7 @@ function LoginForm() {
           </div>
 
           <a
-            href={`${API_BASE}/api/auth/google?app=lms`}
+            href={apiUrl("/api/auth/google?app=lms")}
             className="btn-secondary flex w-full items-center justify-center gap-2.5 border-funt-gold/25 bg-white/90 py-2.5 font-semibold hover:bg-funt-honey/30"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden>
