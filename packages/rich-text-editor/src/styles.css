@@ -273,7 +273,7 @@
 
 .rte-inline-toolbar {
   position: absolute;
-  z-index: 24;
+  z-index: 50;
   display: inline-flex;
   align-items: center;
   gap: 4px;

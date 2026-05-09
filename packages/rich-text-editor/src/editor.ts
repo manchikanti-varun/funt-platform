@@ -1203,10 +1203,15 @@ export class RichTextEditor implements RichTextEditorApi {
     const start = this.editor.view.coordsAtPos(selection.from);
     const end = this.editor.view.coordsAtPos(selection.to);
     const rootRect = this.root.getBoundingClientRect();
+    const toolbarRect = this.toolbar.getBoundingClientRect();
+    const selectionTop = Math.min(start.top, end.top) - rootRect.top;
+    const selectionBottom = Math.max(start.bottom, end.bottom) - rootRect.top;
+    const minTop = Math.max(8, toolbarRect.bottom - rootRect.top + 6);
+    const preferredTop = selectionTop - 44;
+    const top = preferredTop < minTop ? selectionBottom + 8 : preferredTop;
     const left = ((start.left + end.right) / 2) - rootRect.left;
-    const top = Math.min(start.top, end.top) - rootRect.top - 44;
     this.floatingInlineBar.style.left = `${Math.max(8, left - 70)}px`;
-    this.floatingInlineBar.style.top = `${Math.max(8, top)}px`;
+    this.floatingInlineBar.style.top = `${Math.max(minTop, top)}px`;
     this.floatingInlineBar.classList.remove("hidden");
   }
 
