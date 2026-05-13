@@ -236,7 +236,7 @@ export const resetLoginHandler = asyncHandler(async (req: Request, res: Response
   const { newPassword } = req.body as { newPassword?: string };
   if (!username?.trim()) throw new AppError("username is required", 400);
   if (!newPassword?.trim()) throw new AppError("newPassword is required", 400);
-  await resetLoginAttemptsByUsername(username, newPassword);
+  await resetLoginAttemptsByUsername(username, newPassword, req.user?.roles);
   res.status(200).json({
     message: "Login reset. Account lockout cleared and password updated.",
   });
@@ -250,7 +250,7 @@ export const patchUserIdentityHandler = asyncHandler(async (req: Request, res: R
     email?: string;
     mobile?: string;
   };
-  await updateUserIdentityByAdmin(userId, { username, email, mobile });
+  await updateUserIdentityByAdmin(userId, { username, email, mobile }, req.user?.roles);
   res.status(200).json({ message: "User identity updated" });
 });
 

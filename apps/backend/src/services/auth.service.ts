@@ -640,12 +640,45 @@ export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername:
   await UserModel.updateOne({ _id: user._id }, { $set: { username: v } }).exec();
 }
 
+/**
+ * Decide whether a caller with `callerRoles` may perform a password / identity
+ * action on a user with `targetRoles`.
+ *
+ * Rules:
+ *  - SUPER_ADMIN can act on anyone.
+ *  - ADMIN can act on STUDENT or TRAINER only — never on another ADMIN or
+ *    SUPER_ADMIN. (This prevents an admin from resetting a super admin's
+ *    password or hijacking an admin account.)
+ *  - All other callers are rejected.
+ */
+function assertCallerCanManageTarget(
+  callerRoles: readonly string[] | undefined,
+  targetRoles: readonly string[] | undefined,
+  action: "reset login" | "update identity"
+): void {
+  const caller = new Set(callerRoles ?? []);
+  const target = new Set(targetRoles ?? []);
+  if (caller.has(ROLE.SUPER_ADMIN)) return;
+  if (caller.has(ROLE.ADMIN)) {
+    if (target.has(ROLE.SUPER_ADMIN) || target.has(ROLE.ADMIN)) {
+      throw new AppError(
+        `Only a Super Admin can ${action} for another Admin or Super Admin.`,
+        403
+      );
+    }
+    return;
+  }
+  throw new AppError(`You do not have permission to ${action}.`, 403);
+}
+
 export async function updateUserIdentityByAdmin(
   targetUserId: string,
-  input: { username?: string; email?: string; mobile?: string }
+  input: { username?: string; email?: string; mobile?: string },
+  callerRoles?: readonly string[]
 ): Promise<void> {
   const user = await UserModel.findById(targetUserId).exec();
   if (!user) throw new AppError("User not found", 404);
+  assertCallerCanManageTarget(callerRoles, user.roles, "update identity");
 
   const updates: Record<string, string> = {};
   if (input.username != null) {
@@ -723,12 +756,17 @@ export async function setInitialPassword(userId: string, newPassword: string): P
   ).exec();
 }
 
-export async function resetLoginAttemptsByUsername(username: string, newPassword: string): Promise<void> {
+export async function resetLoginAttemptsByUsername(
+  username: string,
+  newPassword: string,
+  callerRoles?: readonly string[]
+): Promise<void> {
   const uname = (username ?? "").trim().toLowerCase();
   if (!uname) throw new AppError("Username is required", 400);
   validateStrongPassword(String(newPassword ?? "").trim());
-  const user = await UserModel.findOne({ username: uname }).select("_id").lean().exec();
+  const user = await UserModel.findOne({ username: uname }).select("_id roles").lean().exec();
   if (!user) throw new AppError("User not found (invalid username)", 404);
+  assertCallerCanManageTarget(callerRoles, user.roles, "reset login");
   const userId = String(user._id);
   const passwordHash = await bcrypt.hash(newPassword.trim(), SALT_ROUNDS);
   await UserModel.updateOne(

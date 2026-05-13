@@ -202,6 +202,7 @@ export default function AdminManagementPage() {
         )}
         {tab === "reset" && (
           <ResetLoginForm
+            isSuperAdmin={isSuperAdmin}
             onSuccess={(m) => setMessageAndClear("success", m)}
             onError={(m) => setMessageAndClear("error", m)}
           />
@@ -1114,7 +1115,15 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
   );
 }
 
-function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+function ResetLoginForm({
+  isSuperAdmin,
+  onSuccess,
+  onError,
+}: {
+  isSuperAdmin: boolean;
+  onSuccess: (m: string) => void;
+  onError: (m: string) => void;
+}) {
   const [username, setUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -1142,7 +1151,9 @@ function ResetLoginForm({ onSuccess, onError }: { onSuccess: (m: string) => void
       <div>
         <h2 className="text-lg font-semibold text-slate-800">Reset Login</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Clear account lockout and set a new password using username only (student, trainer, or admin).
+          {isSuperAdmin
+            ? "Clear account lockout and set a new password by username. Super Admins can reset any account (student, trainer, admin, or super admin)."
+            : "Clear account lockout and set a new password by username. Admins can only reset student and trainer accounts. Resets for another admin or super admin must be done by a Super Admin."}
         </p>
       </div>
       <div className="max-w-md">
