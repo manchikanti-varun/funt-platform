@@ -42,12 +42,12 @@ function nextVersion(current: number): number {
 }
 
 function contentChanged(
-  existing: { title: string; description: string; content: string; youtubeUrl?: string | null; videoUrl?: string | null; resourceLinkUrl?: string | null; linkedAssignmentId?: string | null },
+  existing: { title: string; description: string; content?: string | null; youtubeUrl?: string | null; videoUrl?: string | null; resourceLinkUrl?: string | null; linkedAssignmentId?: string | null },
   input: UpdateModuleInput
 ): boolean {
   if (input.title !== undefined && input.title !== existing.title) return true;
   if (input.description !== undefined && input.description !== existing.description) return true;
-  if (input.content !== undefined && input.content !== existing.content) return true;
+  if (input.content !== undefined && input.content !== (existing.content ?? "")) return true;
   if (input.youtubeUrl !== undefined && (input.youtubeUrl || null) !== (existing.youtubeUrl ?? null)) return true;
   if (input.videoUrl !== undefined && (input.videoUrl || null) !== (existing.videoUrl ?? null)) return true;
   if (input.resourceLinkUrl !== undefined && (input.resourceLinkUrl || null) !== ((existing as { resourceLinkUrl?: string | null }).resourceLinkUrl ?? null)) return true;
@@ -56,16 +56,32 @@ function contentChanged(
 }
 
 export async function createModule(input: CreateModuleInput) {
-  if (!input.title?.trim()) throw new AppError("title is required", 400);
-  if (!input.description?.trim()) throw new AppError("description is required", 400);
-  if (input.content == null) throw new AppError("content is required", 400);
+  if (!input.title?.trim()) throw new AppError("Title is required", 400);
+  if (!input.description?.trim()) throw new AppError("Description is required", 400);
+
+  // A chapter must have at least one piece of substance: body text, a video,
+  // a resource link, or a linked assignment. This mirrors the UI's own check
+  // and gives a clear 400 instead of letting an empty-content document slip
+  // through to the Mongoose schema validator (which would surface as 500).
+  const hasContent = !!input.content?.trim();
+  const hasMedia =
+    !!input.youtubeUrl?.trim() ||
+    !!input.videoUrl?.trim() ||
+    !!input.resourceLinkUrl?.trim();
+  const hasAssignment = !!input.linkedAssignmentId?.trim();
+  if (!hasContent && !hasMedia && !hasAssignment) {
+    throw new AppError(
+      "Add at least one of: content, a YouTube URL, a video URL, a resource link, or a linked assignment.",
+      400
+    );
+  }
 
   const moduleId = await generateModuleId();
   const doc = await GlobalModuleModel.create({
     moduleId,
     title: input.title.trim(),
     description: input.description.trim(),
-    content: input.content,
+    content: input.content ?? "",
     youtubeUrl: input.youtubeUrl?.trim() || undefined,
     videoUrl: input.videoUrl?.trim() || undefined,
     resourceLinkUrl: input.resourceLinkUrl?.trim() || undefined,
@@ -187,7 +203,7 @@ export async function updateModule(
       version: existing.version,
       title: existing.title,
       description: existing.description,
-      content: existing.content,
+      content: existing.content ?? "",
       youtubeUrl: existing.youtubeUrl ?? undefined,
       videoUrl: (existing as { videoUrl?: string }).videoUrl ?? undefined,
       resourceLinkUrl: (existing as { resourceLinkUrl?: string }).resourceLinkUrl ?? undefined,
@@ -200,7 +216,7 @@ export async function updateModule(
 
   existing.title = input.title !== undefined ? input.title.trim() : existing.title;
   existing.description = input.description !== undefined ? input.description.trim() : existing.description;
-  existing.content = input.content !== undefined ? input.content : existing.content;
+  existing.content = input.content !== undefined ? input.content : (existing.content ?? "");
   existing.youtubeUrl = input.youtubeUrl !== undefined ? input.youtubeUrl.trim() || undefined : existing.youtubeUrl;
   (existing as { videoUrl?: string }).videoUrl = input.videoUrl !== undefined ? input.videoUrl.trim() || undefined : (existing as { videoUrl?: string }).videoUrl;
   (existing as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl !== undefined ? input.resourceLinkUrl.trim() || undefined : (existing as { resourceLinkUrl?: string }).resourceLinkUrl;
@@ -233,6 +249,30 @@ export async function updateModule(
   };
 }
 
+/**
+ * Hard-delete a global chapter (module) from the library.
+ *
+ * Safe: courses and batches store immutable per-module *snapshots* (see
+ * `Course.modules[]` / `Batch.courseSnapshots[].modules[]`) — they don't
+ * dereference the live `GlobalModule` document at student-runtime. Deleting
+ * the global template therefore has no effect on courses/batches that have
+ * already adopted it; it only removes it from the global library so it can't
+ * be added to new courses.
+ */
+export async function deleteModule(id: string, performedBy: string) {
+  const existing = await findModuleByParam(id);
+  if (!existing) throw new AppError("Chapter not found", 404);
+  const docId = String(existing._id);
+  const moduleHumanId = (existing as { moduleId?: string }).moduleId;
+  const title = existing.title;
+  await GlobalModuleModel.deleteOne({ _id: existing._id }).exec();
+  await createAuditLog("MODULE_DELETED", performedBy, ENTITY, docId, {
+    moduleId: moduleHumanId,
+    title,
+  });
+  return { id: docId, moduleId: moduleHumanId, title, deleted: true };
+}
+
 export async function archiveModule(id: string, performedBy: string) {
   const existing = await findModuleByParam(id);
   if (!existing) throw new AppError("Module not found", 404);
@@ -243,6 +283,37 @@ export async function archiveModule(id: string, performedBy: string) {
   ).exec();
   if (!doc) throw new AppError("Module not found", 404);
   await createAuditLog("MODULE_ARCHIVED", performedBy, ENTITY, String(doc._id), {
+    moduleId: (doc as { moduleId?: string }).moduleId,
+    title: doc.title,
+    version: doc.version,
+    status: doc.status,
+  });
+  return {
+    id: String(doc._id),
+    moduleId: (doc as { moduleId?: string }).moduleId,
+    title: doc.title,
+    description: doc.description,
+    version: doc.version,
+    status: doc.status,
+    createdBy: doc.createdBy,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  };
+}
+
+export async function unarchiveModule(id: string, performedBy: string) {
+  const existing = await findModuleByParam(id);
+  if (!existing) throw new AppError("Module not found", 404);
+  if (existing.status !== MODULE_STATUS.ARCHIVED) {
+    throw new AppError("Module is not archived", 400);
+  }
+  const doc = await GlobalModuleModel.findByIdAndUpdate(
+    existing._id,
+    { status: MODULE_STATUS.ACTIVE },
+    { new: true }
+  ).exec();
+  if (!doc) throw new AppError("Module not found", 404);
+  await createAuditLog("MODULE_UNARCHIVED", performedBy, ENTITY, String(doc._id), {
     moduleId: (doc as { moduleId?: string }).moduleId,
     title: doc.title,
     version: doc.version,
@@ -276,7 +347,7 @@ export async function restoreVersionCopy(id: string, version: number, performedB
     version: existing.version,
     title: existing.title,
     description: existing.description,
-    content: existing.content,
+    content: existing.content ?? "",
     youtubeUrl: existing.youtubeUrl ?? undefined,
     videoUrl: (existing as { videoUrl?: string }).videoUrl ?? undefined,
     resourceLinkUrl: (existing as { resourceLinkUrl?: string }).resourceLinkUrl ?? undefined,
@@ -287,7 +358,7 @@ export async function restoreVersionCopy(id: string, version: number, performedB
   (existing as { versionSnapshots: VersionSnapshot[] }).versionSnapshots = snapshots.slice(-MAX_VERSION_SNAPSHOTS);
   existing.title = snapshot.title;
   existing.description = snapshot.description;
-  existing.content = snapshot.content;
+  existing.content = snapshot.content ?? "";
   existing.youtubeUrl = snapshot.youtubeUrl ?? undefined;
   (existing as { videoUrl?: string }).videoUrl = snapshot.videoUrl ?? undefined;
   (existing as { resourceLinkUrl?: string }).resourceLinkUrl = snapshot.resourceLinkUrl ?? undefined;

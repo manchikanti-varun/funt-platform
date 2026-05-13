@@ -81,3 +81,19 @@ export const archiveCourse = asyncHandler(async (req: Request, res: Response): P
   const data = await service.archiveCourse(id, performedBy);
   successRes(res, data, "Course archived");
 });
+
+export const unarchiveCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Course ID is required", 400);
+  const data = await service.unarchiveCourse(id, performedBy);
+  successRes(res, data, "Course unarchived");
+});
+
+export const deleteCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Course ID is required", 400);
+  const data = await service.deleteCourse(id, performedBy);
+  successRes(res, data, "Course deleted");
+});

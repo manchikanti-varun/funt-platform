@@ -12,6 +12,8 @@ import {
   updateCourseModule as updateCourseChapter,
   duplicateCourse,
   archiveCourse,
+  unarchiveCourse,
+  deleteCourse,
 } from "../controllers/course.controller.js";
 
 const router = Router();
@@ -26,5 +28,7 @@ router.patch("/:id/reorder-chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN)
 router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourseChapter);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateCourse);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveCourse);
+router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveCourse);
+router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteCourse);
 
 export const courseRoutes = router;

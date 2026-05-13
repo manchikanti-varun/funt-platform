@@ -87,6 +87,22 @@ export const archiveAssignment = asyncHandler(async (req: Request, res: Response
   successRes(res, data, "Assignment archived");
 });
 
+export const unarchiveAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Assignment ID is required", 400);
+  const data = await service.unarchiveAssignment(id, performedBy);
+  successRes(res, data, "Assignment unarchived");
+});
+
+export const deleteAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Assignment ID is required", 400);
+  const data = await service.deleteAssignment(id, performedBy);
+  successRes(res, data, "Assignment deleted");
+});
+
 export const duplicateAssignment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

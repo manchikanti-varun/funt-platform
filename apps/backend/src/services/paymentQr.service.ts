@@ -65,6 +65,7 @@ export async function generatePaymentQrRecord(input: {
     receiverName,
     prefillAmount: input.prefillAmount,
     amountRupees: amountPaise != null ? amountPaise / 100 : null,
+    paymentLink,
     createdAt: doc.createdAt ? new Date(doc.createdAt).toISOString() : new Date().toISOString(),
   };
 }

@@ -9,6 +9,8 @@ import {
   getModule,
   updateModule,
   archiveModule,
+  unarchiveModule,
+  deleteModule,
   duplicateModule,
   restoreVersion,
 } from "../controllers/globalModule.controller.js";
@@ -22,6 +24,8 @@ router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listMo
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getModule);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateModule);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveModule);
+router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveModule);
+router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteModule);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateModule);
 router.post("/:id/versions/restore", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), restoreVersion);
 

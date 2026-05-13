@@ -193,6 +193,13 @@ export default function EditCoursePage() {
     else setError(res.message ?? "Failed to archive.");
   }
 
+  async function unarchive() {
+    if (!confirm("Unarchive this course?")) return;
+    const res = await api<Course>(`/api/courses/${id}/unarchive`, { method: "PATCH" });
+    if (res.success && res.data) setCourse(res.data as Course);
+    else if (!res.success) setError(res.message ?? "Failed to unarchive.");
+  }
+
   if (!course) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -233,13 +240,21 @@ export default function EditCoursePage() {
               >
                 {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
               </span>
-              {course.status !== COURSE_STATUS.ARCHIVED && (
+              {course.status !== COURSE_STATUS.ARCHIVED ? (
                 <button
                   type="button"
                   onClick={archive}
                   className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
                 >
                   Archive
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={unarchive}
+                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+                >
+                  Unarchive
                 </button>
               )}
               <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, clearLegacyJwtStorage, markClientLoggedIn } from "@/lib/api";
+import { API_URL, api, clearLegacyJwtStorage, markClientLoggedIn } from "@/lib/api";
 import { AppPageShell, PageSection } from "@/components/ui";
 
 interface LoginEntry {
@@ -22,11 +22,40 @@ interface UserMe {
   studentXp?: number;
   studentLevel?: number;
   funtCoins?: number;
+  /** Whether this account has a password set. False for Google-only signups. */
+  hasPassword?: boolean;
   lastLogin?: LoginEntry | null;
   loginHistory?: LoginEntry[];
 }
 
 const MAX_LOGIN_HISTORY = 4;
+
+function SetPasswordPrompt() {
+  function handleStart() {
+    // Send the user through Google re-auth. After Google verifies them,
+    // the backend will redirect to /profile/set-password?token=... where
+    // they can choose a new password.
+    window.location.href = `${API_URL}/api/auth/google?app=lms&intent=set_password`;
+  }
+  return (
+    <section className="flex flex-col rounded-2xl border border-slate-200/80 bg-white/95 p-5 shadow-lg shadow-slate-200/50 ring-1 ring-slate-100 lg:col-span-3 lg:p-6">
+      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Security</p>
+      <h2 className="mt-0.5 text-base font-bold tracking-tight text-slate-800">Set a password</h2>
+      <p className="mt-2 max-w-xl text-sm text-slate-600">
+        Your account doesn't have a password yet — you've been signing in with Google. You can
+        optionally set a password so you can also sign in with your username and password.
+        For your security, we'll first verify it's really you by signing in with Google again.
+      </p>
+      <button
+        type="button"
+        onClick={handleStart}
+        className="mt-4 w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-black shadow-sm hover:bg-funt-gold-hover"
+      >
+        Verify with Google to set password
+      </button>
+    </section>
+  );
+}
 
 function ChangePasswordSection() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -175,7 +204,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
-        <ChangePasswordSection />
+        {user.hasPassword === false ? <SetPasswordPrompt /> : <ChangePasswordSection />}
 
         <PageSection className="flex flex-col bg-white/95 lg:p-6">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Session summary</p>

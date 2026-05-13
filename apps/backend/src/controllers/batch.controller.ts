@@ -251,6 +251,22 @@ export const archiveBatch = asyncHandler(async (req: Request, res: Response): Pr
   successRes(res, data, "Batch archived");
 });
 
+export const unarchiveBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Batch ID is required", 400);
+  const data = await service.unarchiveBatch(id, performedBy);
+  successRes(res, data, "Batch unarchived");
+});
+
+export const deleteBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Batch ID is required", 400);
+  const data = await service.deleteBatch(id, performedBy);
+  successRes(res, data, "Batch deleted");
+});
+
 export const getBatchStudents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   if (!id) throw new AppError("Batch ID is required", 400);

@@ -9,6 +9,8 @@ import {
   getAssignment,
   updateAssignment,
   archiveAssignment,
+  unarchiveAssignment,
+  deleteAssignment,
   duplicateAssignment,
   getSubmissionsForAssignment,
   reviewGlobalSubmission,
@@ -35,6 +37,8 @@ router.delete("/:id/access/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMI
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAssignment);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateAssignment);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveAssignment);
+router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveAssignment);
+router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteAssignment);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateAssignment);
 
 export const globalAssignmentRoutes = router;

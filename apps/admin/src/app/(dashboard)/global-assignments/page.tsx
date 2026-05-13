@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { ASSIGNMENT_STATUS } from "@funt-platform/constants";
+import { ASSIGNMENT_STATUS, ROLE } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { Eye } from "lucide-react";
 
@@ -28,11 +29,14 @@ export default function GlobalAssignmentsPage() {
   const [list, setList] = useState<AssignmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
+  const isSuperAdmin = roles?.includes(ROLE.SUPER_ADMIN) ?? false;
   useEffect(() => {
     setReadOnly(isTrainerOnly(roles));
   }, [roles]);
@@ -89,6 +93,34 @@ export default function GlobalAssignmentsPage() {
     }
     const r = await api<AssignmentItem[]>("/api/global-assignments");
     if (r.success && Array.isArray(r.data)) setList(r.data);
+  }
+
+  async function handleDelete(assignmentId: string, title: string) {
+    if (!window.confirm(`Permanently delete assignment "${title}"?\n\nThis cannot be undone. If any submissions or chapters/courses/batches still reference it, the delete will be refused with details.`)) {
+      return;
+    }
+    setDeletingId(assignmentId);
+    const res = await api<{ deleted: boolean }>(`/api/global-assignments/${assignmentId}`, { method: "DELETE" });
+    setDeletingId(null);
+    if (res.success) {
+      setList((prev) => prev.filter((a) => a.id !== assignmentId));
+      return;
+    }
+    window.alert(res.message ?? "Failed to delete assignment.");
+  }
+
+  async function handleUnarchive(assignmentId: string, title: string) {
+    if (!window.confirm(`Unarchive assignment "${title}"? It will become active again.`)) return;
+    setUnarchivingId(assignmentId);
+    const res = await api<AssignmentItem>(`/api/global-assignments/${assignmentId}/unarchive`, { method: "PATCH" });
+    setUnarchivingId(null);
+    if (res.success) {
+      setList((prev) =>
+        prev.map((a) => (a.id === assignmentId ? { ...a, status: ASSIGNMENT_STATUS.ACTIVE } : a))
+      );
+      return;
+    }
+    window.alert(res.message ?? "Failed to unarchive assignment.");
   }
 
   return (
@@ -197,6 +229,20 @@ export default function GlobalAssignmentsPage() {
                               <DuplicateIcon />
                             )}
                           </button>
+                        )}
+                        {!readOnly && a.status === ASSIGNMENT_STATUS.ARCHIVED && (
+                          <UnarchiveIconButton
+                            title="Unarchive assignment"
+                            onClick={() => handleUnarchive(a.id, a.title)}
+                            disabled={unarchivingId !== null}
+                          />
+                        )}
+                        {isSuperAdmin && (
+                          <DeleteIconButton
+                            title="Delete assignment"
+                            onClick={() => handleDelete(a.id, a.title)}
+                            disabled={deletingId !== null}
+                          />
                         )}
                       </div>
                     </td>

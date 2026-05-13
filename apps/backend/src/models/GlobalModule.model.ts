@@ -7,7 +7,7 @@ const versionSnapshotSchema = new Schema(
     version: { type: Number, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    content: { type: String, required: true },
+    content: { type: String, required: false, default: "" },
     youtubeUrl: { type: String, required: false },
     videoUrl: { type: String, required: false },
     resourceLinkUrl: { type: String, required: false },
@@ -23,7 +23,10 @@ const globalModuleSchema = new Schema(
         moduleId: { type: String, required: false, unique: true, sparse: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    content: { type: String, required: true },
+    // Optional: a chapter may have only a YouTube/video URL, a resource link,
+    // or a linked assignment with no body text. The service-level validator
+    // enforces "at least one of content / media / assignment".
+    content: { type: String, required: false, default: "" },
     youtubeUrl: { type: String, required: false },
     videoUrl: { type: String, required: false },
     resourceLinkUrl: { type: String, required: false },

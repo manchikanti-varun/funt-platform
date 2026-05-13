@@ -112,6 +112,16 @@ export default function EditGlobalChapterPage() {
     else setError(res.message ?? "Failed to archive chapter.");
   }
 
+  async function unarchive() {
+    if (!confirm("Unarchive this chapter?")) return;
+    const res = await api<Chapter>(`/api/global-chapters/${id}/unarchive`, { method: "PATCH" });
+    if (res.success && res.data) {
+      applyChapterToForm(res.data);
+    } else if (!res.success) {
+      setError(res.message ?? "Failed to unarchive chapter.");
+    }
+  }
+
   async function restoreVersionCopy(version: number) {
     if (!confirm(`Restore version ${version}? Current content will be saved as a version copy first.`)) return;
     setError("");
@@ -142,8 +152,10 @@ export default function EditGlobalChapterPage() {
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{chapter.version}</span>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${chapter.status === MODULE_STATUS.ARCHIVED ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"}`}>{chapter.status === MODULE_STATUS.ARCHIVED ? "Archived" : "Active"}</span>
-          {chapter.status !== MODULE_STATUS.ARCHIVED && (
+          {chapter.status !== MODULE_STATUS.ARCHIVED ? (
             <button type="button" onClick={archive} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50">Archive</button>
+          ) : (
+            <button type="button" onClick={unarchive} className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50">Unarchive</button>
           )}
         </div>
       </div>

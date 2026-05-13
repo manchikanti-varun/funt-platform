@@ -11,6 +11,7 @@ import { ROLE } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { Eye, SquarePen } from "lucide-react";
@@ -29,11 +30,14 @@ export default function GlobalChaptersPage() {
   const [list, setList] = useState<ChapterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
+  const isSuperAdmin = roles?.includes(ROLE.SUPER_ADMIN) ?? false;
   useEffect(() => {
     setReadOnly(isTrainerOnly(roles));
   }, [roles]);
@@ -86,6 +90,34 @@ export default function GlobalChaptersPage() {
     }
     const r = await api<ChapterItem[]>("/api/global-chapters");
     if (r.success && Array.isArray(r.data)) setList(r.data);
+  }
+
+  async function handleDelete(chapterId: string, title: string) {
+    if (!window.confirm(`Permanently delete chapter "${title}"?\n\nThis cannot be undone. Courses and batches that already include this chapter keep their own snapshot and are not affected.`)) {
+      return;
+    }
+    setDeletingId(chapterId);
+    const res = await api<{ deleted: boolean }>(`/api/global-chapters/${chapterId}`, { method: "DELETE" });
+    setDeletingId(null);
+    if (res.success) {
+      setList((prev) => prev.filter((m) => m.id !== chapterId));
+      return;
+    }
+    window.alert(res.message ?? "Failed to delete chapter.");
+  }
+
+  async function handleUnarchive(chapterId: string, title: string) {
+    if (!window.confirm(`Unarchive chapter "${title}"? It will become active again.`)) return;
+    setUnarchivingId(chapterId);
+    const res = await api<ChapterItem>(`/api/global-chapters/${chapterId}/unarchive`, { method: "PATCH" });
+    setUnarchivingId(null);
+    if (res.success) {
+      setList((prev) =>
+        prev.map((m) => (m.id === chapterId ? { ...m, status: MODULE_STATUS.ACTIVE } : m))
+      );
+      return;
+    }
+    window.alert(res.message ?? "Failed to unarchive chapter.");
   }
 
   return (
@@ -202,6 +234,20 @@ export default function GlobalChaptersPage() {
                               <DuplicateIcon />
                             )}
                           </button>
+                        )}
+                        {!readOnly && m.status === MODULE_STATUS.ARCHIVED && (
+                          <UnarchiveIconButton
+                            title="Unarchive chapter"
+                            onClick={() => handleUnarchive(m.id, m.title)}
+                            disabled={unarchivingId !== null}
+                          />
+                        )}
+                        {isSuperAdmin && (
+                          <DeleteIconButton
+                            title="Delete chapter"
+                            onClick={() => handleDelete(m.id, m.title)}
+                            disabled={deletingId !== null}
+                          />
                         )}
                       </div>
                     </td>

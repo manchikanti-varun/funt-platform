@@ -61,6 +61,22 @@ export const archiveModule = asyncHandler(async (req: Request, res: Response): P
   successRes(res, data, "Chapter archived");
 });
 
+export const unarchiveModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Chapter ID is required", 400);
+  const data = await service.unarchiveModule(id, performedBy);
+  successRes(res, data, "Chapter unarchived");
+});
+
+export const deleteModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Chapter ID is required", 400);
+  const data = await service.deleteModule(id, performedBy);
+  successRes(res, data, "Chapter deleted");
+});
+
 export const duplicateModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

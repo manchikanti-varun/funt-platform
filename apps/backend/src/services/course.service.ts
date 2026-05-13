@@ -390,3 +390,59 @@ export async function archiveCourse(id: string, performedBy: string) {
   await createAuditLog("COURSE_ARCHIVED", performedBy, ENTITY_COURSE, String(doc._id));
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
+
+export async function unarchiveCourse(id: string, performedBy: string) {
+  const existing = await findCourseByParam(id);
+  if (!existing) throw new AppError("Course not found", 404);
+  assertCanArchiveCourse(performedBy, existing);
+  if (existing.status !== COURSE_STATUS.ARCHIVED) {
+    throw new AppError("Course is not archived", 400);
+  }
+  const doc = await CourseModel.findByIdAndUpdate(
+    existing._id,
+    { status: COURSE_STATUS.ACTIVE },
+    { new: true }
+  ).exec();
+  if (!doc) throw new AppError("Course not found", 404);
+  await createAuditLog("COURSE_UNARCHIVED", performedBy, ENTITY_COURSE, String(doc._id));
+  return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
+}
+
+/**
+ * Hard-delete a course from the library.
+ *
+ * Refuses if any batch's `courseSnapshots` / `courseSnapshot` still references
+ * this course — batches embed their own snapshot at creation time, so the
+ * source course can be removed from the library without affecting them; we
+ * still err on the side of safety and require the operator to first remove or
+ * archive batches that derive from it.
+ */
+export async function deleteCourse(id: string, performedBy: string) {
+  const existing = await findCourseByParam(id);
+  if (!existing) throw new AppError("Course not found", 404);
+
+  const mongoId = String(existing._id);
+  const humanId = (existing as { courseId?: string }).courseId;
+  const courseIds = [mongoId, ...(humanId ? [humanId] : [])];
+
+  const dependentBatchCount = await BatchModel.countDocuments({
+    $or: [
+      { "courseSnapshots.courseId": { $in: courseIds } },
+      { "courseSnapshot.courseId": { $in: courseIds } },
+    ],
+  }).exec();
+
+  if (dependentBatchCount > 0) {
+    throw new AppError(
+      `Cannot delete course — ${dependentBatchCount} batch${dependentBatchCount === 1 ? "" : "es"} still derive from it. Archive the course (or delete the batches) instead.`,
+      409
+    );
+  }
+
+  await CourseModel.deleteOne({ _id: existing._id }).exec();
+  await createAuditLog("COURSE_DELETED", performedBy, ENTITY_COURSE, mongoId, {
+    courseId: humanId,
+    title: existing.title,
+  });
+  return { id: mongoId, courseId: humanId, title: existing.title, deleted: true };
+}

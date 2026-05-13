@@ -9,7 +9,8 @@ import { AppError } from "../utils/AppError.js";
 export const getMe = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   if (!req.user) throw new AppError("Unauthorized", 401);
   const includeLoginHistory = req.query.include === "loginHistory";
-  const select = includeLoginHistory ? "+loginHistory" : "-passwordHash -loginHistory";
+  // Always pull passwordHash so we can derive `hasPassword`, but never return it.
+  const select = includeLoginHistory ? "+loginHistory +passwordHash" : "+passwordHash -loginHistory";
   const user = await UserModel.findById(req.user.userId)
     .select(select)
     .lean()
@@ -29,7 +30,9 @@ export const getMe = asyncHandler(async (req: Request, res: Response): Promise<v
     studentXp?: number;
     studentLevel?: number;
     funtCoins?: number;
+    passwordHash?: string;
   };
+  const hasPassword = typeof u.passwordHash === "string" && u.passwordHash.length > 0;
   let spendableCoins = u.funtCoins ?? 0;
   try {
     spendableCoins = await getSpendableBalance(String(user._id));
@@ -55,6 +58,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response): Promise<v
       funtCoins: spendableCoins,
       roles: user.roles,
       status: user.status,
+      hasPassword,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       ...(includeLoginHistory ? { lastLogin, loginHistory: recentLogins } : {}),

@@ -28,7 +28,11 @@ export interface CreateStudentInput {
   name: string;
   email?: string;
   mobile: string;
-  password: string;
+  /**
+   * Optional. Omit to create a passwordless account (e.g. Google-only sign-up).
+   * The user can later set a password via the secure set-password flow.
+   */
+  password?: string;
   age: number;
   address?: string;
   grade?: string;
@@ -167,8 +171,11 @@ export async function createStudent(input: CreateStudentInput): Promise<{ id: st
   if (uErr) throw new AppError(uErr, 400);
   const uname = normalizeStudentUsername(input.username);
   if (input.age < 7) throw new AppError("Minimum age is 7 years", 400);
-  validateStrongPassword(input.password);
-  const passwordHash = await hashPassword(input.password);
+  let passwordHash: string | undefined;
+  if (input.password != null && input.password !== "") {
+    validateStrongPassword(input.password);
+    passwordHash = await hashPassword(input.password);
+  }
   const gradeVal = input.grade?.trim();
   const gradeOther = input.gradeOther?.trim();
   const user = await UserModel.create({
@@ -176,7 +183,7 @@ export async function createStudent(input: CreateStudentInput): Promise<{ id: st
     name: input.name,
     email: input.email,
     mobile: input.mobile,
-    passwordHash,
+    ...(passwordHash != null && { passwordHash }),
     roles: [ROLE.STUDENT],
     status: ACCOUNT_STATUS.ACTIVE,
     age: input.age,
@@ -679,6 +686,33 @@ export async function changePassword(userId: string, currentPassword: string, ne
   if (!hash) throw new AppError("Current password is incorrect", 401);
   const match = await bcrypt.compare(currentPassword.trim(), hash);
   if (!match) throw new AppError("Current password is incorrect", 401);
+  const passwordHash = await bcrypt.hash(newPassword.trim(), SALT_ROUNDS);
+  await UserModel.updateOne(
+    { _id: userId },
+    {
+      $set: { passwordHash, passwordChangedAt: new Date() },
+      $inc: { tokenVersion: 1 },
+    }
+  ).exec();
+}
+
+/**
+ * Set an initial password for a user that currently has no `passwordHash`.
+ * Used by the secure "set password" flow that is gated by a fresh Google re-auth.
+ * Refuses to overwrite an existing password — use `changePassword` for that.
+ */
+export async function setInitialPassword(userId: string, newPassword: string): Promise<void> {
+  if (!newPassword?.trim()) throw new AppError("New password is required", 400);
+  validateStrongPassword(newPassword.trim());
+  const user = await UserModel.findById(userId).select("+passwordHash").lean().exec();
+  if (!user) throw new AppError("User not found", 404);
+  const existingHash = (user as unknown as { passwordHash?: string }).passwordHash;
+  if (existingHash) {
+    throw new AppError(
+      "This account already has a password. Use the change-password flow instead.",
+      400
+    );
+  }
   const passwordHash = await bcrypt.hash(newPassword.trim(), SALT_ROUNDS);
   await UserModel.updateOne(
     { _id: userId },

@@ -290,6 +290,13 @@ export default function EditBatchPage() {
     else setError(res.message ?? "Failed to archive.");
   }
 
+  async function unarchive() {
+    if (!confirm("Unarchive this batch?")) return;
+    const res = await api<Batch>(`/api/batches/${id}/unarchive`, { method: "PATCH" });
+    if (res.success && res.data) setBatch(res.data);
+    else if (!res.success) setError(res.message ?? "Failed to unarchive.");
+  }
+
   if (!batch) {
     return (
       <div className="flex min-h-[320px] flex-col items-center justify-center">
@@ -351,13 +358,22 @@ export default function EditBatchPage() {
           >
             {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
           </span>
-          {!trainerOnly && (
+          {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
             <button
               type="button"
               onClick={archive}
               className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
             >
               Archive batch
+            </button>
+          )}
+          {!trainerOnly && batch.status === BATCH_STATUS.ARCHIVED && (
+            <button
+              type="button"
+              onClick={unarchive}
+              className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+            >
+              Unarchive batch
             </button>
           )}
         </div>

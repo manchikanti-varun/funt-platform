@@ -1,5 +1,10 @@
 
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
+import { GlobalAssignmentSubmissionModel } from "../models/GlobalAssignmentSubmission.model.js";
+import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
+import { GlobalModuleModel } from "../models/GlobalModule.model.js";
+import { CourseModel } from "../models/Course.model.js";
+import { BatchModel } from "../models/Batch.model.js";
 import { UserModel } from "../models/User.model.js";
 import { ASSIGNMENT_STATUS, SUBMISSION_TYPE, isValidSkillTag } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
@@ -231,6 +236,82 @@ export async function archiveAssignment(id: string, performedBy: string) {
   if (!doc) throw new AppError("Assignment not found", 404);
   await createAuditLog("ASSIGNMENT_ARCHIVED", performedBy, ENTITY, String(doc._id));
   return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
+}
+
+export async function unarchiveAssignment(id: string, performedBy: string) {
+  const existing = await findAssignmentByParam(id);
+  if (!existing) throw new AppError("Assignment not found", 404);
+  assertCanEditAssignment(performedBy, existing as { createdBy?: string; moderatorIds?: string[] });
+  if (existing.status !== ASSIGNMENT_STATUS.ARCHIVED) {
+    throw new AppError("Assignment is not archived", 400);
+  }
+  const doc = await GlobalAssignmentModel.findByIdAndUpdate(
+    existing._id,
+    { status: ASSIGNMENT_STATUS.ACTIVE },
+    { new: true }
+  ).exec();
+  if (!doc) throw new AppError("Assignment not found", 404);
+  await createAuditLog("ASSIGNMENT_UNARCHIVED", performedBy, ENTITY, String(doc._id));
+  return toAssignmentResponse(doc as unknown as Parameters<typeof toAssignmentResponse>[0]);
+}
+
+/**
+ * Hard-delete a global assignment from the library.
+ *
+ * Refuses with a clear breakdown if anything still depends on it:
+ *  - any submission (general assignments use `GlobalAssignmentSubmission`,
+ *    chapter assignments use `AssignmentSubmission` keyed by `assignmentId`),
+ *  - any global chapter that links to it via `linkedAssignmentId`,
+ *  - any course / batch chapter snapshot that links to it.
+ *
+ * The caller should archive the assignment instead in that case.
+ */
+export async function deleteAssignment(id: string, performedBy: string) {
+  const existing = await findAssignmentByParam(id);
+  if (!existing) throw new AppError("Assignment not found", 404);
+
+  const docId = String(existing._id);
+  const assignmentHumanId = (existing as { assignmentId?: string }).assignmentId ?? "";
+
+  // Submissions can reference assignments by either the Mongo ObjectId or
+  // the human-readable assignmentId (depending on which entity created the
+  // record), so we match both.
+  const idsToMatch = [docId, assignmentHumanId].filter(Boolean);
+
+  const [
+    globalSubmissions,
+    chapterSubmissions,
+    chapterRefs,
+    courseSnapshotRefs,
+    batchSnapshotRefs,
+  ] = await Promise.all([
+    GlobalAssignmentSubmissionModel.countDocuments({ assignmentId: { $in: idsToMatch } }).exec(),
+    AssignmentSubmissionModel.countDocuments({ assignmentId: { $in: idsToMatch } }).exec(),
+    GlobalModuleModel.countDocuments({ linkedAssignmentId: { $in: idsToMatch } }).exec(),
+    CourseModel.countDocuments({ "modules.linkedAssignmentId": { $in: idsToMatch } }).exec(),
+    BatchModel.countDocuments({ "courseSnapshots.modules.linkedAssignmentId": { $in: idsToMatch } }).exec(),
+  ]);
+
+  const totalSubmissions = globalSubmissions + chapterSubmissions;
+  const blockers: string[] = [];
+  if (totalSubmissions > 0) blockers.push(`${totalSubmissions} submission${totalSubmissions === 1 ? "" : "s"}`);
+  if (chapterRefs > 0) blockers.push(`${chapterRefs} chapter${chapterRefs === 1 ? "" : "s"} linked to it`);
+  if (courseSnapshotRefs > 0) blockers.push(`${courseSnapshotRefs} course${courseSnapshotRefs === 1 ? "" : "s"} include it`);
+  if (batchSnapshotRefs > 0) blockers.push(`${batchSnapshotRefs} batch${batchSnapshotRefs === 1 ? "" : "es"} include it`);
+
+  if (blockers.length > 0) {
+    throw new AppError(
+      `Cannot delete assignment — still in use by ${blockers.join(", ")}. Archive it instead.`,
+      409
+    );
+  }
+
+  await GlobalAssignmentModel.deleteOne({ _id: existing._id }).exec();
+  await createAuditLog("ASSIGNMENT_DELETED", performedBy, ENTITY, docId, {
+    assignmentId: assignmentHumanId,
+    title: existing.title,
+  });
+  return { id: docId, assignmentId: assignmentHumanId, title: existing.title, deleted: true };
 }
 
 export async function duplicateAssignment(id: string, performedBy: string) {

@@ -4,9 +4,11 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 
 interface ChapterOption {
   id: string;
@@ -16,16 +18,39 @@ interface ChapterOption {
 
 import { BackLink } from "@/components/ui/BackLink";
 
+interface CourseDraft {
+  title: string;
+  description: string;
+  durationText: string;
+  selectedIds: string[];
+}
+
+const INITIAL_DRAFT: CourseDraft = {
+  title: "",
+  description: "",
+  durationText: "",
+  selectedIds: [],
+};
+
 export default function NewCoursePage() {
   const router = useRouter();
   const [chapters, setChapters] = useState<ChapterOption[]>([]);
   const [chapterSearch, setChapterSearch] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [durationText, setDurationText] = useState("");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const {
+    value: form,
+    setValue: setForm,
+    hasRestoredDraft,
+    draftSavedAt,
+    discardDraft,
+    clearDraft,
+  } = useAutoSavedForm<CourseDraft>("courses:new", INITIAL_DRAFT);
+  const { title, description, durationText, selectedIds } = form;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function update<K extends keyof CourseDraft>(field: K, value: CourseDraft[K]) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
 
   useEffect(() => {
     api<ChapterOption[]>("/api/global-chapters")
@@ -41,24 +66,29 @@ export default function NewCoursePage() {
   }, [chapters, chapterSearch]);
 
   function toggle(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setForm((prev) => ({
+      ...prev,
+      selectedIds: prev.selectedIds.includes(id)
+        ? prev.selectedIds.filter((x) => x !== id)
+        : [...prev.selectedIds, id],
+    }));
   }
 
   function moveUp(i: number) {
     if (i <= 0) return;
-    setSelectedIds((prev) => {
-      const next = [...prev];
+    setForm((prev) => {
+      const next = [...prev.selectedIds];
       [next[i - 1], next[i]] = [next[i], next[i - 1]];
-      return next;
+      return { ...prev, selectedIds: next };
     });
   }
 
   function moveDown(i: number) {
-    if (i >= selectedIds.length - 1) return;
-    setSelectedIds((prev) => {
-      const next = [...prev];
+    setForm((prev) => {
+      if (i >= prev.selectedIds.length - 1) return prev;
+      const next = [...prev.selectedIds];
       [next[i], next[i + 1]] = [next[i + 1], next[i]];
-      return next;
+      return { ...prev, selectedIds: next };
     });
   }
 
@@ -76,6 +106,7 @@ export default function NewCoursePage() {
     });
     setLoading(false);
     if (res.success && res.data?.id) {
+      clearDraft();
       router.push("/courses");
       return;
     }
@@ -98,27 +129,30 @@ export default function NewCoursePage() {
         </div>
 
         <form onSubmit={submit} className="p-6 space-y-6">
+          {hasRestoredDraft && draftSavedAt !== null && (
+            <DraftRestoredBanner savedAt={draftSavedAt} onDiscard={discardDraft} />
+          )}
           <div className="grid gap-6 sm:grid-cols-1">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>
               <input
                 required
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => update("title", e.target.value)}
                 className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 placeholder="Course title"
               />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-              <RichTextEditor value={description} onChange={setDescription} minHeight={200} />
+              <RichTextEditor value={description} onChange={(v) => update("description", v)} minHeight={200} />
               <p className="mt-1 text-xs text-slate-500">Use the toolbar for headers, bold, italic, lists, links, and more.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Duration</label>
               <input
                 value={durationText}
-                onChange={(e) => setDurationText(e.target.value)}
+                onChange={(e) => update("durationText", e.target.value)}
                 className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 placeholder="e.g. 45 days, 3 months, 12 weeks"
               />

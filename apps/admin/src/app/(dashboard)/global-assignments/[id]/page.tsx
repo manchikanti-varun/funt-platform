@@ -87,6 +87,13 @@ export default function EditGlobalAssignmentPage() {
     else setError(res.message ?? "Failed to archive.");
   }
 
+  async function unarchive() {
+    if (!confirm("Unarchive this assignment?")) return;
+    const res = await api<Assignment>(`/api/global-assignments/${id}/unarchive`, { method: "PATCH" });
+    if (res.success && res.data) setAssignment(res.data);
+    else if (!res.success) setError(res.message ?? "Failed to unarchive.");
+  }
+
   async function duplicate() {
     setError("");
     setDuplicating(true);
@@ -159,6 +166,15 @@ export default function EditGlobalAssignmentPage() {
                 Archive
               </button>
             </>
+          )}
+          {assignment.status === ASSIGNMENT_STATUS.ARCHIVED && (
+            <button
+              type="button"
+              onClick={unarchive}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+            >
+              Unarchive
+            </button>
           )}
         </div>
       </div>

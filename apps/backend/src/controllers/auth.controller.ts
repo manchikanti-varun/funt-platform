@@ -10,6 +10,7 @@ import {
   createStudent,
   createSuperAdmin,
   changePassword as changePasswordService,
+  setInitialPassword as setInitialPasswordService,
   lookupStudentUsernameByEmail,
   validateStrongPassword,
 } from "../services/auth.service.js";
@@ -20,6 +21,8 @@ import {
   loginWithGoogleEmail,
   createGoogleSignupToken,
   verifyGoogleSignupToken,
+  createSetPasswordToken,
+  verifySetPasswordToken,
   type GoogleState,
 } from "../services/auth.google.service.js";
 import { UserModel } from "../models/User.model.js";
@@ -156,6 +159,65 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
   setIdleCookie(res, portal, maxAgeMs);
   clearLegacyAuthCookie(res);
   res.status(200).json({ message: "Password updated", data: { sessionRotated: true } });
+});
+
+/**
+ * Set an initial password using a fresh Google re-auth.
+ *
+ * Required auth: caller must be signed in (their session JWT identifies them).
+ * Body: { setPasswordToken: string, newPassword: string }
+ *
+ * The set-password token is issued only by the Google callback when the
+ * caller successfully re-authenticates with the same email that's already on
+ * the account. We additionally verify here that the token's userId matches
+ * the authenticated user and that the account does NOT already have a
+ * password set (passwordless Google-only accounts).
+ */
+export const setPasswordWithGoogle = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as { user?: { userId?: string } }).user?.userId;
+  if (!userId) throw new AppError("Unauthorized", 401);
+  const { setPasswordToken, newPassword } = req.body as {
+    setPasswordToken?: string;
+    newPassword?: string;
+  };
+  if (!setPasswordToken?.trim()) throw new AppError("setPasswordToken is required", 400);
+  if (!newPassword?.trim()) throw new AppError("New password is required", 400);
+
+  const { jwtSecret } = getEnv();
+  let payload: { userId: string; email: string };
+  try {
+    payload = verifySetPasswordToken(setPasswordToken.trim(), jwtSecret);
+  } catch {
+    throw new AppError(
+      "Set-password link is invalid or has expired. Please verify with Google again.",
+      400
+    );
+  }
+  if (payload.userId !== userId) {
+    throw new AppError("Set-password token does not belong to the signed-in user.", 403);
+  }
+
+  await setInitialPasswordService(userId, newPassword.trim());
+
+  const user = await UserModel.findById(userId).select("username roles tokenVersion").lean().exec();
+  if (!user) throw new AppError("User not found", 404);
+  const userRoles = (user as { roles: ROLE[] }).roles;
+  const portal: AuthPortal = portalFromRequestOrigin(req) ?? inferPortalFromRoles(userRoles);
+  const { expiresIn, maxAgeMs } = authExpiryForPortal(portal);
+  const token = signToken(
+    {
+      userId,
+      username: (user as { username?: string }).username?.trim() ?? "",
+      roles: userRoles,
+      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
+    },
+    jwtSecret,
+    expiresIn
+  );
+  setAuthCookie(res, token, maxAgeMs, portal);
+  setIdleCookie(res, portal, maxAgeMs);
+  clearLegacyAuthCookie(res);
+  res.status(200).json({ message: "Password set", data: { sessionRotated: true } });
 });
 
 /** One-time: exchange a Bearer JWT (e.g. from OAuth redirect URL) for an httpOnly session cookie. */
@@ -433,10 +495,13 @@ export const googleRedirect = asyncHandler(async (req: Request, res: Response): 
   }
   const app = (req.query.app as string) === "lms" ? "lms" : "admin";
   const redirect = (req.query.redirect as string) || undefined;
+  const intent: GoogleState["intent"] =
+    (req.query.intent as string) === "set_password" ? "set_password" : "login";
   const nonce = crypto.randomBytes(24).toString("base64url");
   const stateObj: GoogleState & { purpose: "google_oauth_state"; nonce: string } = {
     app,
     redirect,
+    intent,
     purpose: "google_oauth_state",
     nonce,
   };
@@ -503,6 +568,32 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
   const redirectUri = `${baseUrl.replace(/\/$/, "")}/api/auth/google/callback`;
   const { access_token } = await exchangeCodeForTokens(code, redirectUri, googleClientId, googleClientSecret);
   const profile = await getGoogleProfile(access_token);
+
+  // "Set password" re-auth flow: do NOT log the user in or rotate tokenVersion.
+  // Verify that the Google email matches an existing user, then redirect to the
+  // /profile/set-password page with a short-lived set-password token.
+  if (state.intent === "set_password") {
+    const normalizedEmail = profile.email.toLowerCase();
+    const user = await UserModel.findOne({ email: normalizedEmail })
+      .select("_id email")
+      .lean()
+      .exec();
+    const frontBaseSp = (state.app === "lms" ? frontendLmsUrl : frontendAdminUrl).replace(/\/$/, "");
+    if (!user) {
+      res.redirect(
+        302,
+        `${frontBaseSp}/profile?error=${encodeURIComponent("No account found for that Google email.")}`
+      );
+      return;
+    }
+    const setPasswordToken = createSetPasswordToken(String(user._id), normalizedEmail, jwtSecret);
+    res.redirect(
+      302,
+      `${frontBaseSp}/profile/set-password?token=${encodeURIComponent(setPasswordToken)}`
+    );
+    return;
+  }
+
   const userAgent = req.headers["user-agent"];
   const ip = (req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress;
   let result;
@@ -615,8 +706,11 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
   }
   if (!address?.trim()) throw new AppError("Address is required", 400);
   if (!schoolName?.trim()) throw new AppError("School / college name is required", 400);
-  if (!password) throw new AppError("Password is required", 400);
-  validateSignupPassword(password);
+  // Password is optional for Google sign-up: users may sign in via Google only
+  // and set a password later through the secure set-password flow.
+  if (password != null && password !== "") {
+    validateSignupPassword(password);
+  }
 
   const validGrades = ["6", "7", "8", "9", "10", "11", "12", "other"];
   const gradeVal = grade?.trim();
@@ -640,7 +734,7 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
       name: name.trim(),
       email: email.trim().toLowerCase(),
       mobile: mobile.trim(),
-      password,
+      ...(password != null && password !== "" && { password }),
       age: Number(age),
       address: address.trim(),
       grade: gradeVal && gradeVal !== "other" ? gradeVal : gradeVal === "other" ? "other" : undefined,

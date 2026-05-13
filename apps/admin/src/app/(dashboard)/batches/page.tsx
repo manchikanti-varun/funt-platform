@@ -5,9 +5,10 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { BATCH_STATUS } from "@funt-platform/constants";
+import { BATCH_STATUS, ROLE } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { Eye, SquarePen } from "lucide-react";
@@ -30,15 +31,46 @@ export default function BatchesPage() {
   const { roles } = useAdminUser();
   const [list, setList] = useState<BatchItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [visibilityFilter, setVisibilityFilter] = useState<"ALL" | "PUBLIC" | "PRIVATE">("ALL");
   const [trainerOnly, setTrainerOnly] = useState(false);
+  const isSuperAdmin = roles?.includes(ROLE.SUPER_ADMIN) ?? false;
   useEffect(() => {
     setTrainerOnly(isTrainerOnly(roles));
   }, [roles]);
+
+  async function handleDelete(batchMongoId: string, name: string) {
+    if (!window.confirm(`Permanently delete batch "${name}"?\n\nThis cannot be undone. If any enrolment, submission, attendance or certificate references this batch, the delete will be refused with details.`)) {
+      return;
+    }
+    setDeletingId(batchMongoId);
+    const res = await api<{ deleted: boolean }>(`/api/batches/${batchMongoId}`, { method: "DELETE" });
+    setDeletingId(null);
+    if (res.success) {
+      setList((prev) => prev.filter((b) => b.id !== batchMongoId));
+      return;
+    }
+    window.alert(res.message ?? "Failed to delete batch.");
+  }
+
+  async function handleUnarchive(batchMongoId: string, name: string) {
+    if (!window.confirm(`Unarchive batch "${name}"? It will become active again.`)) return;
+    setUnarchivingId(batchMongoId);
+    const res = await api<BatchItem>(`/api/batches/${batchMongoId}/unarchive`, { method: "PATCH" });
+    setUnarchivingId(null);
+    if (res.success) {
+      setList((prev) =>
+        prev.map((b) => (b.id === batchMongoId ? { ...b, status: BATCH_STATUS.ACTIVE } : b))
+      );
+      return;
+    }
+    window.alert(res.message ?? "Failed to unarchive batch.");
+  }
 
   const filteredList = useMemo(() => {
     if (visibilityFilter === "ALL") return list;
@@ -247,6 +279,20 @@ export default function BatchesPage() {
                           >
                             <DuplicateIcon />
                           </Link>
+                        )}
+                        {!trainerOnly && b.status === BATCH_STATUS.ARCHIVED && (
+                          <UnarchiveIconButton
+                            title="Unarchive batch"
+                            onClick={() => handleUnarchive(b.id, b.name)}
+                            disabled={unarchivingId !== null}
+                          />
+                        )}
+                        {isSuperAdmin && (
+                          <DeleteIconButton
+                            title="Delete batch"
+                            onClick={() => handleDelete(b.id, b.name)}
+                            disabled={deletingId !== null}
+                          />
                         )}
                       </div>
                     </td>

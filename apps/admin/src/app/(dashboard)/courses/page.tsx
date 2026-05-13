@@ -5,10 +5,11 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { COURSE_STATUS } from "@funt-platform/constants";
+import { COURSE_STATUS, ROLE } from "@funt-platform/constants";
 import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { Eye } from "lucide-react";
 
@@ -25,14 +26,45 @@ export default function CoursesPage() {
   const { roles } = useAdminUser();
   const [list, setList] = useState<CourseItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
+  const isSuperAdmin = roles?.includes(ROLE.SUPER_ADMIN) ?? false;
   useEffect(() => {
     setReadOnly(isTrainerOnly(roles));
   }, [roles]);
+
+  async function handleDelete(courseId: string, title: string) {
+    if (!window.confirm(`Permanently delete course "${title}"?\n\nThis cannot be undone. If any batch still derives from this course, the delete will be refused with details.`)) {
+      return;
+    }
+    setDeletingId(courseId);
+    const res = await api<{ deleted: boolean }>(`/api/courses/${courseId}`, { method: "DELETE" });
+    setDeletingId(null);
+    if (res.success) {
+      setList((prev) => prev.filter((c) => c.id !== courseId));
+      return;
+    }
+    window.alert(res.message ?? "Failed to delete course.");
+  }
+
+  async function handleUnarchive(courseId: string, title: string) {
+    if (!window.confirm(`Unarchive course "${title}"? It will become active again.`)) return;
+    setUnarchivingId(courseId);
+    const res = await api<CourseItem>(`/api/courses/${courseId}/unarchive`, { method: "PATCH" });
+    setUnarchivingId(null);
+    if (res.success) {
+      setList((prev) =>
+        prev.map((c) => (c.id === courseId ? { ...c, status: COURSE_STATUS.ACTIVE } : c))
+      );
+      return;
+    }
+    window.alert(res.message ?? "Failed to unarchive course.");
+  }
 
   const sortedList = useMemo(() => {
     if (!sortKey) return list;
@@ -184,6 +216,20 @@ export default function CoursesPage() {
                           >
                             <DuplicateIcon />
                           </Link>
+                        )}
+                        {!readOnly && c.status === COURSE_STATUS.ARCHIVED && (
+                          <UnarchiveIconButton
+                            title="Unarchive course"
+                            onClick={() => handleUnarchive(c.id, c.title)}
+                            disabled={unarchivingId !== null}
+                          />
+                        )}
+                        {isSuperAdmin && (
+                          <DeleteIconButton
+                            title="Delete course"
+                            onClick={() => handleDelete(c.id, c.title)}
+                            disabled={deletingId !== null}
+                          />
                         )}
                       </div>
                     </td>

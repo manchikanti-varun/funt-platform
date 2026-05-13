@@ -1,42 +1,56 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 import { SUBMISSION_TYPE } from "@funt-platform/constants";
-
-const STORAGE_KEY = "new_global_assignment_type";
-
-function getStoredType(): "general" | "chapter" {
-  if (typeof window === "undefined") return "chapter";
-  const v = window.sessionStorage.getItem(STORAGE_KEY);
-  return v === "general" ? "general" : "chapter";
-}
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { SkillTagsField } from "@/components/admin/SkillTagsField";
 import { ModeratorCheckboxes } from "@/components/admin/StaffPickerFields";
 
 const SUBMISSION_TYPES = [SUBMISSION_TYPE.FILE, SUBMISSION_TYPE.TEXT, SUBMISSION_TYPE.LINK];
 
+interface AssignmentDraft {
+  title: string;
+  instructions: string;
+  submissionType: SUBMISSION_TYPE;
+  skillTags: string[];
+  type: "general" | "chapter";
+  moderatorIds: string[];
+}
+
+const INITIAL_DRAFT: AssignmentDraft = {
+  title: "",
+  instructions: "",
+  submissionType: SUBMISSION_TYPE.TEXT,
+  skillTags: [],
+  type: "chapter",
+  moderatorIds: [],
+};
+
 export default function NewGlobalAssignmentPage() {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [instructions, setInstructions] = useState("");
-  const [submissionType, setSubmissionType] = useState(SUBMISSION_TYPE.TEXT);
-  const [skillTags, setSkillTags] = useState<string[]>([]);
-  const [type, setTypeState] = useState<"general" | "chapter">(getStoredType);
-  const [moderatorIds, setModeratorIds] = useState<string[]>([]);
+  const {
+    value: form,
+    setValue: setForm,
+    hasRestoredDraft,
+    draftSavedAt,
+    discardDraft,
+    clearDraft,
+  } = useAutoSavedForm<AssignmentDraft>("global-assignments:new", INITIAL_DRAFT);
+  const { title, instructions, submissionType, skillTags, type, moderatorIds } = form;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const setType = useCallback((value: "general" | "chapter") => {
-    setTypeState(value);
-    if (typeof window !== "undefined") window.sessionStorage.setItem(STORAGE_KEY, value);
-  }, []);
+  function update<K extends keyof AssignmentDraft>(field: K, value: AssignmentDraft[K]) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
 
   const typeRef = useRef<"general" | "chapter">(type);
   useEffect(() => {
@@ -63,7 +77,7 @@ export default function NewGlobalAssignmentPage() {
     });
     setLoading(false);
     if (res.success && res.data?.id) {
-      if (typeof window !== "undefined") window.sessionStorage.removeItem(STORAGE_KEY);
+      clearDraft();
       router.push("/global-assignments");
       return;
     }
@@ -74,9 +88,7 @@ export default function NewGlobalAssignmentPage() {
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
       <div className="shrink-0 pb-4">
-        <BackLink href="/global-assignments" onClick={() => typeof window !== "undefined" && window.sessionStorage.removeItem(STORAGE_KEY)}>
-          Back to Assignments
-        </BackLink>
+        <BackLink href="/global-assignments">Back to Assignments</BackLink>
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
@@ -87,15 +99,18 @@ export default function NewGlobalAssignmentPage() {
 
         <form onSubmit={submit} className="p-6 sm:p-8">
           <div className="w-full space-y-6">
+            {hasRestoredDraft && draftSavedAt !== null && (
+              <DraftRestoredBanner savedAt={draftSavedAt} onDiscard={discardDraft} />
+            )}
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
               <div className="flex gap-6">
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="type" checked={type === "chapter"} onChange={() => setType("chapter")} className="text-teal-600" />
+                  <input type="radio" name="type" checked={type === "chapter"} onChange={() => update("type", "chapter")} className="text-teal-600" />
                   <span className="text-sm text-slate-700">Chapter</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="type" checked={type === "general"} onChange={() => setType("general")} className="text-teal-600" />
+                  <input type="radio" name="type" checked={type === "general"} onChange={() => update("type", "general")} className="text-teal-600" />
                   <span className="text-sm text-slate-700">General</span>
                 </label>
               </div>
@@ -106,21 +121,21 @@ export default function NewGlobalAssignmentPage() {
               <input
                 required
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => update("title", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 placeholder="Assignment title"
               />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Instructions</label>
-              <RichTextEditor value={instructions} onChange={setInstructions} minHeight={240} />
+              <RichTextEditor value={instructions} onChange={(v) => update("instructions", v)} minHeight={240} />
               <p className="mt-1 text-xs text-slate-500">Use the toolbar for headers, bold, italic, lists, links, and more.</p>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Submission Type</label>
               <select
                 value={submissionType}
-                onChange={(e) => setSubmissionType(e.target.value as typeof submissionType)}
+                onChange={(e) => update("submissionType", e.target.value as SUBMISSION_TYPE)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
                 {SUBMISSION_TYPES.map((t) => (
@@ -130,14 +145,14 @@ export default function NewGlobalAssignmentPage() {
             </div>
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">Skill tags</label>
-              <SkillTagsField value={skillTags} onChange={setSkillTags} />
+              <SkillTagsField value={skillTags} onChange={(v) => update("skillTags", v)} />
             </div>
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">Moderators</label>
               <p className="mb-2 text-xs text-slate-500">
                 Other admins or super admins who can edit this assignment (your account is excluded).
               </p>
-              <ModeratorCheckboxes selectedIds={moderatorIds} onChange={setModeratorIds} />
+              <ModeratorCheckboxes selectedIds={moderatorIds} onChange={(v) => update("moderatorIds", v)} />
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <div className="flex flex-wrap gap-3 pt-2">
@@ -151,7 +166,6 @@ export default function NewGlobalAssignmentPage() {
               <Link
                 href="/global-assignments"
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-                onClick={() => typeof window !== "undefined" && window.sessionStorage.removeItem(STORAGE_KEY)}
               >
                 Cancel
               </Link>

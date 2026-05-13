@@ -3,6 +3,12 @@ import { BatchModel } from "../models/Batch.model.js";
 import { CourseModel } from "../models/Course.model.js";
 import { UserModel } from "../models/User.model.js";
 import { BadgeTypeDefinitionModel } from "../models/BadgeTypeDefinition.model.js";
+import { EnrollmentModel } from "../models/Enrollment.model.js";
+import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
+import { CertificateModel } from "../models/Certificate.model.js";
+import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
+import { AttendanceModel } from "../models/Attendance.model.js";
+import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { BATCH_STATUS, COURSE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
@@ -667,4 +673,78 @@ export async function archiveBatch(id: string, performedBy: string) {
   await createAuditLog("BATCH_ARCHIVED", performedBy, ENTITY_BATCH, String(doc._id));
   const staff = await staffDisplayByMongoIds([String((doc as BatchDoc).trainerId ?? "")]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
+}
+
+export async function unarchiveBatch(id: string, performedBy: string) {
+  const existing = await findBatchByParam(id);
+  if (!existing) throw new AppError("Batch not found", 404);
+  assertCanArchiveBatch(performedBy, existing as { createdBy?: string });
+  if ((existing as { status?: string }).status !== BATCH_STATUS.ARCHIVED) {
+    throw new AppError("Batch is not archived", 400);
+  }
+  const doc = await BatchModel.findByIdAndUpdate(
+    existing._id,
+    { status: BATCH_STATUS.ACTIVE },
+    { new: true }
+  ).exec();
+  if (!doc) throw new AppError("Batch not found", 404);
+  await createAuditLog("BATCH_UNARCHIVED", performedBy, ENTITY_BATCH, String(doc._id));
+  const staff = await staffDisplayByMongoIds([String((doc as BatchDoc).trainerId ?? "")]);
+  return toBatchResponse(doc as unknown as BatchDoc, false, staff);
+}
+
+/**
+ * Hard-delete a batch.
+ *
+ * Refuses if any student-facing data still references it, with a clear
+ * breakdown of what's blocking — enrollments, submissions, attendance,
+ * certificates, progress, or pending enrollment requests. The operator
+ * should archive the batch instead in that case so historical records stay
+ * coherent. Restricted to SUPER_ADMIN at the route layer.
+ */
+export async function deleteBatch(id: string, performedBy: string) {
+  const existing = await findBatchByParam(id);
+  if (!existing) throw new AppError("Batch not found", 404);
+
+  const mongoId = String(existing._id);
+  const humanId = (existing as { batchId?: string }).batchId;
+  const idsToMatch = [mongoId, ...(humanId ? [humanId] : [])];
+
+  const [
+    enrollmentCount,
+    enrollmentRequestCount,
+    submissionCount,
+    attendanceCount,
+    certificateCount,
+    moduleProgressCount,
+  ] = await Promise.all([
+    EnrollmentModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+    EnrollmentRequestModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+    AssignmentSubmissionModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+    AttendanceModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+    CertificateModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+    ModuleProgressModel.countDocuments({ batchId: { $in: idsToMatch } }).exec(),
+  ]);
+
+  const blockers: string[] = [];
+  if (enrollmentCount > 0) blockers.push(`${enrollmentCount} enrolment${enrollmentCount === 1 ? "" : "s"}`);
+  if (enrollmentRequestCount > 0) blockers.push(`${enrollmentRequestCount} pending enrolment request${enrollmentRequestCount === 1 ? "" : "s"}`);
+  if (submissionCount > 0) blockers.push(`${submissionCount} submission${submissionCount === 1 ? "" : "s"}`);
+  if (attendanceCount > 0) blockers.push(`${attendanceCount} attendance record${attendanceCount === 1 ? "" : "s"}`);
+  if (certificateCount > 0) blockers.push(`${certificateCount} certificate${certificateCount === 1 ? "" : "s"}`);
+  if (moduleProgressCount > 0) blockers.push(`${moduleProgressCount} chapter-progress record${moduleProgressCount === 1 ? "" : "s"}`);
+
+  if (blockers.length > 0) {
+    throw new AppError(
+      `Cannot delete batch — still in use by ${blockers.join(", ")}. Archive it instead.`,
+      409
+    );
+  }
+
+  await BatchModel.deleteOne({ _id: existing._id }).exec();
+  await createAuditLog("BATCH_DELETED", performedBy, ENTITY_BATCH, mongoId, {
+    batchId: humanId,
+    name: (existing as { name?: string }).name,
+  });
+  return { id: mongoId, batchId: humanId, name: (existing as { name?: string }).name, deleted: true };
 }

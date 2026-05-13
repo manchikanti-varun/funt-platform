@@ -5,6 +5,7 @@ import {
   login,
   parentLogin,
   changePassword,
+  setPasswordWithGoogle,
   establishSession,
   logout,
   googleRedirect,
@@ -32,6 +33,7 @@ router.post("/signup", signupStudent);
 router.get("/username-availability", checkUsernameAvailability);
 router.post("/forgot-username", forgotStudentUsername);
 router.post("/change-password", authMiddleware, changePassword);
+router.post("/set-password-google", authMiddleware, setPasswordWithGoogle);
 router.post("/parent-login", parentLogin);
 router.post("/parent-linked-students", parentMobileLookupRateLimiter, parentLinkedStudents);
 router.post("/parent-delegate-session", parentDelegateIssueRateLimiter, establishParentDelegateSession);

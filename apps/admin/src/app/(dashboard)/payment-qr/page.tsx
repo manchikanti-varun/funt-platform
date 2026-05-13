@@ -148,16 +148,26 @@ export default function PaymentQrPage() {
       }),
     });
     setLoading(false);
-    if (!res.success || !res.data?.paymentLink) {
+    if (!res.success) {
       setError(res.message ?? "Failed to generate QR");
       return;
     }
+    if (!res.data?.paymentLink) {
+      setError("Server did not return a payment link. Please report this — the backend response is missing the paymentLink field.");
+      return;
+    }
     const link = res.data.paymentLink;
-    const url = await QRCode.toDataURL(link, {
-      width: 320,
-      margin: 2,
-      color: { dark: "#0f172a", light: "#ffffff" },
-    });
+    let url: string;
+    try {
+      url = await QRCode.toDataURL(link, {
+        width: 320,
+        margin: 2,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+    } catch (err) {
+      setError(`Could not render QR image: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
     setPaymentLink(link);
     setQrDataUrl(url);
     setMessage("Payment QR generated.");

@@ -10,6 +10,8 @@ import {
   updateBatch,
   duplicateBatch,
   archiveBatch,
+  unarchiveBatch,
+  deleteBatch,
   getBatchStudents,
   addBatchStudent,
   bulkAddBatchStudents,
@@ -30,5 +32,7 @@ router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), get
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), updateBatch);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateBatch);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveBatch);
+router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveBatch);
+router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteBatch);
 
 export const batchRoutes = router;

@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
+import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 import { ROLE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 
 interface AssignmentOption {
@@ -16,17 +18,42 @@ interface AssignmentOption {
   title: string;
 }
 
+interface ChapterDraft {
+  title: string;
+  content: string;
+  youtubeUrl: string;
+  videoUrl: string;
+  resourceLinkUrl: string;
+  linkedAssignmentId: string;
+}
+
+const INITIAL_DRAFT: ChapterDraft = {
+  title: "",
+  content: "",
+  youtubeUrl: "",
+  videoUrl: "",
+  resourceLinkUrl: "",
+  linkedAssignmentId: "",
+};
+
 export default function NewGlobalChapterPage() {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [resourceLinkUrl, setResourceLinkUrl] = useState("");
-  const [linkedAssignmentId, setLinkedAssignmentId] = useState("");
+  const {
+    value: form,
+    setValue: setForm,
+    hasRestoredDraft,
+    draftSavedAt,
+    discardDraft,
+    clearDraft,
+  } = useAutoSavedForm<ChapterDraft>("global-modules:new", INITIAL_DRAFT);
+  const { title, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId } = form;
   const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function update<K extends keyof ChapterDraft>(field: K, value: ChapterDraft[K]) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
 
   useEffect(() => {
     api<{ id: string; title: string }[]>("/api/global-assignments").then((r) => {
@@ -42,7 +69,6 @@ export default function NewGlobalChapterPage() {
       return;
     }
     setLoading(true);
-    // Keep rich formatting in the short "Description" preview.
     const preview = truncateRichTextHtml(content, 160);
     const autoDescription = preview.trim() ? preview : title.trim();
     const res = await api<{ id: string }>("/api/global-chapters", {
@@ -59,6 +85,7 @@ export default function NewGlobalChapterPage() {
     });
     setLoading(false);
     if (res.success && res.data?.id) {
+      clearDraft();
       router.push("/global-modules");
       return;
     }
@@ -80,6 +107,9 @@ export default function NewGlobalChapterPage() {
 
         <form onSubmit={submit} className="p-6 sm:p-8">
           <div className="w-full space-y-4">
+            {hasRestoredDraft && draftSavedAt !== null && (
+              <DraftRestoredBanner savedAt={draftSavedAt} onDiscard={discardDraft} />
+            )}
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Title
@@ -87,7 +117,7 @@ export default function NewGlobalChapterPage() {
           <input
             required
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => update("title", e.target.value)}
             className="input"
             placeholder="Chapter title"
           />
@@ -96,7 +126,7 @@ export default function NewGlobalChapterPage() {
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Content
           </label>
-          <RichTextEditor value={content} onChange={setContent} minHeight={320} />
+          <RichTextEditor value={content} onChange={(v) => update("content", v)} minHeight={320} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -105,7 +135,7 @@ export default function NewGlobalChapterPage() {
             </label>
             <input
               value={youtubeUrl}
-              onChange={(e) => setYoutubeUrl(e.target.value)}
+              onChange={(e) => update("youtubeUrl", e.target.value)}
               className="input"
               placeholder="https://..."
             />
@@ -116,7 +146,7 @@ export default function NewGlobalChapterPage() {
             </label>
             <input
               value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
+              onChange={(e) => update("videoUrl", e.target.value)}
               className="input"
               placeholder="https://..."
             />
@@ -127,7 +157,7 @@ export default function NewGlobalChapterPage() {
             </label>
             <input
               value={resourceLinkUrl}
-              onChange={(e) => setResourceLinkUrl(e.target.value)}
+              onChange={(e) => update("resourceLinkUrl", e.target.value)}
               className="input"
               placeholder="e.g. Google Drive, slides, docs, or any other URL"
             />
@@ -139,7 +169,7 @@ export default function NewGlobalChapterPage() {
             </label>
             <select
               value={linkedAssignmentId}
-              onChange={(e) => setLinkedAssignmentId(e.target.value)}
+              onChange={(e) => update("linkedAssignmentId", e.target.value)}
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
             >
               <option value="">None — no assignment linked</option>

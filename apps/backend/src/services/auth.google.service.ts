@@ -7,6 +7,7 @@ import { AppError } from "../utils/AppError.js";
 import type { LoginResult } from "./auth.service.js";
 
 const GOOGLE_SIGNUP_TOKEN_EXPIRY = "15m";
+const SET_PASSWORD_TOKEN_EXPIRY = "10m";
 
 export interface GoogleSignupTokenPayload {
   purpose: "google_signup";
@@ -37,6 +38,39 @@ export function verifyGoogleSignupToken(
   return decoded;
 }
 
+export interface SetPasswordTokenPayload {
+  purpose: "set_password";
+  userId: string;
+  email: string;
+}
+
+/**
+ * Short-lived token issued after a successful Google re-auth, granting the
+ * holder permission to set an initial password on their own account.
+ */
+export function createSetPasswordToken(
+  userId: string,
+  email: string,
+  jwtSecret: string
+): string {
+  return jwt.sign(
+    { purpose: "set_password", userId, email } as SetPasswordTokenPayload,
+    jwtSecret,
+    { expiresIn: SET_PASSWORD_TOKEN_EXPIRY }
+  );
+}
+
+export function verifySetPasswordToken(
+  token: string,
+  jwtSecret: string
+): SetPasswordTokenPayload {
+  const decoded = jwt.verify(token, jwtSecret) as SetPasswordTokenPayload;
+  if (decoded.purpose !== "set_password" || !decoded.userId || !decoded.email) {
+    throw new AppError("Invalid or expired set-password token", 400);
+  }
+  return decoded;
+}
+
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
@@ -45,6 +79,14 @@ const SCOPES = ["openid", "email", "profile"].join(" ");
 export interface GoogleState {
   app: "admin" | "lms";
   redirect?: string;
+  /**
+   * What the caller intends to do once Google verifies the user.
+   * - `login` (default): existing behavior — log in or fall through to signup.
+   * - `set_password`: don't log in; redirect to /profile/set-password with a
+   *   short-lived set-password token after verifying the email matches the
+   *   currently-authenticated user.
+   */
+  intent?: "login" | "set_password";
 }
 
 export function getGoogleAuthUrl(redirectUri: string, state: string, clientId: string): string {

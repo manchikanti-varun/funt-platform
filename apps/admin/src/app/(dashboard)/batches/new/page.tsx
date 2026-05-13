@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 
 interface CourseOption {
   id: string;
@@ -20,8 +21,44 @@ interface BadgeOption {
 }
 
 import { BackLink } from "@/components/ui/BackLink";
+import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { TrainerSelect } from "@/components/admin/StaffPickerFields";
+
+/**
+ * Auto-saved subset of the new-batch form. We deliberately exclude image
+ * data URLs (header image, fallback QR) because they can be up to ~1.5 MB
+ * each and can easily push the whole draft past the localStorage quota.
+ * Images are quick to re-attach; the painful loss is text + per-course
+ * pricing/payment config, which is what we persist here.
+ */
+interface BatchDraft {
+  name: string;
+  trainerId: string;
+  startDate: string;
+  endDate: string;
+  zoomLink: string;
+  visibility: "PUBLIC" | "PRIVATE";
+  selectedCourseIds: string[];
+  enrollmentInrByCourseId: Record<string, string>;
+  paymentByCourseId: Record<string, { upiManual: boolean; razorpay: boolean }>;
+  completionCoinsByCourseId: Record<string, string>;
+  completionBadgesByCourseId: Record<string, string[]>;
+}
+
+const INITIAL_DRAFT: BatchDraft = {
+  name: "",
+  trainerId: "",
+  startDate: "",
+  endDate: "",
+  zoomLink: "",
+  visibility: "PUBLIC",
+  selectedCourseIds: [],
+  enrollmentInrByCourseId: {},
+  paymentByCourseId: {},
+  completionCoinsByCourseId: {},
+  completionBadgesByCourseId: {},
+};
 import {
   mapPaymentUpiApiToSummary,
   PlatformUpiCheckoutSummary,
@@ -56,21 +93,70 @@ export default function NewBatchPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [courseSearch, setCourseSearch] = useState("");
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [name, setName] = useState("");
-  const [trainerId, setTrainerId] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [zoomLink, setZoomLink] = useState("");
-  const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE">("PUBLIC");
-  const [enrollmentInrByCourseId, setEnrollmentInrByCourseId] = useState<Record<string, string>>({});
-  const [paymentByCourseId, setPaymentByCourseId] = useState<Record<string, { upiManual: boolean; razorpay: boolean }>>({});
+  const {
+    value: form,
+    setValue: setForm,
+    hasRestoredDraft,
+    draftSavedAt,
+    discardDraft,
+    clearDraft,
+  } = useAutoSavedForm<BatchDraft>("batches:new", INITIAL_DRAFT);
+  const {
+    name,
+    trainerId,
+    startDate,
+    endDate,
+    zoomLink,
+    visibility,
+    selectedCourseIds,
+    enrollmentInrByCourseId,
+    paymentByCourseId,
+    completionCoinsByCourseId,
+    completionBadgesByCourseId,
+  } = form;
+
+  function update<K extends keyof BatchDraft>(field: K, value: BatchDraft[K]) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+  function updateEnrollmentInr(id: string, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      enrollmentInrByCourseId: { ...prev.enrollmentInrByCourseId, [id]: value },
+    }));
+  }
+  function updatePayment(id: string, patch: Partial<{ upiManual: boolean; razorpay: boolean }>) {
+    setForm((prev) => ({
+      ...prev,
+      paymentByCourseId: {
+        ...prev.paymentByCourseId,
+        [id]: {
+          ...(prev.paymentByCourseId[id] ?? { upiManual: true, razorpay: true }),
+          ...patch,
+        },
+      },
+    }));
+  }
+  function updateCompletionCoins(id: string, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      completionCoinsByCourseId: { ...prev.completionCoinsByCourseId, [id]: value },
+    }));
+  }
+  function updateCompletionBadges(id: string, updater: (prev: string[]) => string[]) {
+    setForm((prev) => ({
+      ...prev,
+      completionBadgesByCourseId: {
+        ...prev.completionBadgesByCourseId,
+        [id]: updater(prev.completionBadgesByCourseId[id] ?? []),
+      },
+    }));
+  }
+
+  // Image data URLs and names are intentionally NOT auto-saved (see BatchDraft comment).
   const [manualUpiQrDataUrl, setManualUpiQrDataUrl] = useState("");
   const [manualUpiQrName, setManualUpiQrName] = useState("");
   const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
   const [headerImageName, setHeaderImageName] = useState("");
-  const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
-  const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
   const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -134,35 +220,45 @@ export default function NewBatchPage() {
   }, [courses, courseSearch]);
 
   function toggleCourse(id: string) {
-    setSelectedCourseIds((prev) => {
-      if (prev.includes(id)) {
-        setEnrollmentInrByCourseId((m) => {
-          const next = { ...m };
-          delete next[id];
-          return next;
-        });
-        setPaymentByCourseId((m) => {
-          const next = { ...m };
-          delete next[id];
-          return next;
-        });
-        setCompletionCoinsByCourseId((m) => {
-          const next = { ...m };
-          delete next[id];
-          return next;
-        });
-        setCompletionBadgesByCourseId((m) => {
-          const next = { ...m };
-          delete next[id];
-          return next;
-        });
-        return prev.filter((x) => x !== id);
+    setForm((prev) => {
+      if (prev.selectedCourseIds.includes(id)) {
+        const enrollment = { ...prev.enrollmentInrByCourseId };
+        delete enrollment[id];
+        const payment = { ...prev.paymentByCourseId };
+        delete payment[id];
+        const coins = { ...prev.completionCoinsByCourseId };
+        delete coins[id];
+        const badges = { ...prev.completionBadgesByCourseId };
+        delete badges[id];
+        return {
+          ...prev,
+          selectedCourseIds: prev.selectedCourseIds.filter((x) => x !== id),
+          enrollmentInrByCourseId: enrollment,
+          paymentByCourseId: payment,
+          completionCoinsByCourseId: coins,
+          completionBadgesByCourseId: badges,
+        };
       }
-      setEnrollmentInrByCourseId((m) => ({ ...m, [id]: m[id] ?? "" }));
-      setPaymentByCourseId((m) => ({ ...m, [id]: m[id] ?? { upiManual: true, razorpay: true } }));
-      setCompletionCoinsByCourseId((m) => ({ ...m, [id]: m[id] ?? "0" }));
-      setCompletionBadgesByCourseId((m) => ({ ...m, [id]: m[id] ?? [] }));
-      return [...prev, id];
+      return {
+        ...prev,
+        selectedCourseIds: [...prev.selectedCourseIds, id],
+        enrollmentInrByCourseId: {
+          ...prev.enrollmentInrByCourseId,
+          [id]: prev.enrollmentInrByCourseId[id] ?? "",
+        },
+        paymentByCourseId: {
+          ...prev.paymentByCourseId,
+          [id]: prev.paymentByCourseId[id] ?? { upiManual: true, razorpay: true },
+        },
+        completionCoinsByCourseId: {
+          ...prev.completionCoinsByCourseId,
+          [id]: prev.completionCoinsByCourseId[id] ?? "0",
+        },
+        completionBadgesByCourseId: {
+          ...prev.completionBadgesByCourseId,
+          [id]: prev.completionBadgesByCourseId[id] ?? [],
+        },
+      };
     });
   }
 
@@ -223,6 +319,7 @@ export default function NewBatchPage() {
         setLoading(false);
         return;
       }
+      clearDraft();
       router.push("/batches");
     } catch {
       setError("Failed to create batch.");
@@ -247,6 +344,9 @@ export default function NewBatchPage() {
         </div>
 
         <form onSubmit={submit} className="p-6 space-y-8">
+          {hasRestoredDraft && draftSavedAt !== null && (
+            <DraftRestoredBanner savedAt={draftSavedAt} onDiscard={discardDraft} />
+          )}
           <section>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Basic info</h3>
             <div className="mt-3 grid gap-6 sm:grid-cols-1 w-full">
@@ -255,14 +355,14 @@ export default function NewBatchPage() {
               <input
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => update("name", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 placeholder="e.g. Robotics Jan 2025"
               />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Trainer / batch lead</label>
-              <TrainerSelect value={trainerId} onChange={setTrainerId} />
+              <TrainerSelect value={trainerId} onChange={(v) => update("trainerId", v)} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -271,7 +371,7 @@ export default function NewBatchPage() {
                   required
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => update("startDate", e.target.value)}
                   className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
@@ -280,7 +380,7 @@ export default function NewBatchPage() {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => update("endDate", e.target.value)}
                   className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 />
               </div>
@@ -289,7 +389,7 @@ export default function NewBatchPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Zoom Link</label>
               <input
                 value={zoomLink}
-                onChange={(e) => setZoomLink(e.target.value)}
+                onChange={(e) => update("zoomLink", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                 placeholder="https://..."
               />
@@ -298,7 +398,7 @@ export default function NewBatchPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Visibility in student explore</label>
               <select
                 value={visibility}
-                onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "PRIVATE")}
+                onChange={(e) => update("visibility", e.target.value as "PUBLIC" | "PRIVATE")}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
               >
                 <option value="PUBLIC">Public (visible in Explore courses)</option>
@@ -491,12 +591,7 @@ export default function NewBatchPage() {
                                       step="0.01"
                                       placeholder="Optional"
                                       value={enrollmentInrByCourseId[c.id] ?? ""}
-                                      onChange={(e) =>
-                                        setEnrollmentInrByCourseId((m) => ({
-                                          ...m,
-                                          [c.id]: e.target.value,
-                                        }))
-                                      }
+                                      onChange={(e) => updateEnrollmentInr(c.id, e.target.value)}
                                       className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
                                     />
                                     <span className="normal-case tracking-normal font-normal text-slate-400">
@@ -511,12 +606,7 @@ export default function NewBatchPage() {
                                       step={1}
                                       placeholder="0"
                                       value={completionCoinsByCourseId[c.id] ?? "0"}
-                                      onChange={(e) =>
-                                        setCompletionCoinsByCourseId((m) => ({
-                                          ...m,
-                                          [c.id]: e.target.value,
-                                        }))
-                                      }
+                                      onChange={(e) => updateCompletionCoins(c.id, e.target.value)}
                                       className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
                                     />
                                     <span className="normal-case font-normal text-slate-400">
@@ -542,13 +632,11 @@ export default function NewBatchPage() {
                                               type="checkbox"
                                               checked={selected}
                                               onChange={(e) =>
-                                                setCompletionBadgesByCourseId((m) => {
-                                                  const prev = m[c.id] ?? [];
-                                                  const next = e.target.checked
+                                                updateCompletionBadges(c.id, (prev) =>
+                                                  e.target.checked
                                                     ? [...new Set([...prev, b.badgeType])]
-                                                    : prev.filter((x) => x !== b.badgeType);
-                                                  return { ...m, [c.id]: next };
-                                                })
+                                                    : prev.filter((x) => x !== b.badgeType)
+                                                )
                                               }
                                               className="rounded border-slate-300 text-teal-600"
                                             />
@@ -572,15 +660,7 @@ export default function NewBatchPage() {
                                         <input
                                           type="checkbox"
                                           checked={pm.upiManual}
-                                          onChange={(e) =>
-                                            setPaymentByCourseId((m) => ({
-                                              ...m,
-                                              [c.id]: {
-                                                ...(m[c.id] ?? pm),
-                                                upiManual: e.target.checked,
-                                              },
-                                            }))
-                                          }
+                                          onChange={(e) => updatePayment(c.id, { upiManual: e.target.checked })}
                                           className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                                         />
                                         QR scan + manual payment proof (UTR)
@@ -589,15 +669,7 @@ export default function NewBatchPage() {
                                         <input
                                           type="checkbox"
                                           checked={pm.razorpay}
-                                          onChange={(e) =>
-                                            setPaymentByCourseId((m) => ({
-                                              ...m,
-                                              [c.id]: {
-                                                ...(m[c.id] ?? pm),
-                                                razorpay: e.target.checked,
-                                              },
-                                            }))
-                                          }
+                                          onChange={(e) => updatePayment(c.id, { razorpay: e.target.checked })}
                                           className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                                         />
                                         Hosted online checkout
