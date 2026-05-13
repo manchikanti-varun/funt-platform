@@ -9,6 +9,8 @@ const registrationRequestSchema = new Schema(
     email: { type: String, required: true },
     mobile: { type: String, required: true },
     city: { type: String, required: false },
+    /** Bcrypt hash if the requester set a password at signup; otherwise approval uses a temporary password. */
+    passwordHash: { type: String, required: false, select: false },
     status: {
       type: String,
       required: true,

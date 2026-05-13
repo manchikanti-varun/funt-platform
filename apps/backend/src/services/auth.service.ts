@@ -139,7 +139,7 @@ async function uniqueParentUsername(name: string): Promise<string> {
   throw new AppError("Could not allocate parent username", 500);
 }
 
-async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
@@ -242,6 +242,28 @@ export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ 
     passwordHash,
     roles: [ROLE.SUPER_ADMIN],
     status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
+/** Create Admin using a bcrypt hash (e.g. password chosen at signup, stored on registration request). */
+export async function createAdminWithHashedPassword(input: {
+  name: string;
+  email: string;
+  mobile: string;
+  city?: string;
+  passwordHash: string;
+}): Promise<{ id: string; username: string }> {
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email,
+    mobile: input.mobile,
+    passwordHash: input.passwordHash,
+    roles: [ROLE.ADMIN],
+    status: ACCOUNT_STATUS.ACTIVE,
+    ...(input.city != null && input.city !== "" && { city: input.city }),
   });
   return { id: String(user._id), username: user.username! };
 }

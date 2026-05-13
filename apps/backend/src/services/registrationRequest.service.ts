@@ -1,7 +1,13 @@
 
 import { RegistrationRequestModel } from "../models/RegistrationRequest.model.js";
 import { UserModel } from "../models/User.model.js";
-import { createAdminWithTemporaryPassword, createSuperAdminWithTemporaryPassword } from "./auth.service.js";
+import {
+  createAdminWithHashedPassword,
+  createAdminWithTemporaryPassword,
+  createSuperAdminWithTemporaryPassword,
+  hashPassword,
+  validateStrongPassword,
+} from "./auth.service.js";
 import { AppError } from "../utils/AppError.js";
 
 export type RegistrationRequestRoleType = "ADMIN" | "SUPER_ADMIN";
@@ -12,6 +18,8 @@ export interface SubmitAdminRequestInput {
   email: string;
   mobile: string;
   city?: string;
+  /** Required for self-service Google admin signup; optional when a Super Admin files a request on behalf. */
+  password?: string;
   requestedBy?: string;
 }
 
@@ -87,6 +95,12 @@ export async function submitAdminRequest(input: SubmitAdminRequestInput): Promis
   if (existingPending) {
     throw new AppError("A pending Admin request for this email already exists.", 400);
   }
+  let passwordHash: string | undefined;
+  if (input.password != null && String(input.password).length > 0) {
+    validateStrongPassword(input.password);
+    passwordHash = await hashPassword(input.password);
+  }
+
   const doc = await RegistrationRequestModel.create({
     roleType: "ADMIN",
     name: input.name.trim(),
@@ -95,6 +109,7 @@ export async function submitAdminRequest(input: SubmitAdminRequestInput): Promis
     city: input.city?.trim() || undefined,
     status: "PENDING",
     requestedBy: input.requestedBy || undefined,
+    ...(passwordHash != null && { passwordHash }),
   });
   return toDto(doc.toObject());
 }
@@ -148,13 +163,37 @@ export async function listRegistrationRequests(
 export async function approveRequest(
   requestId: string,
   approvedByUserId: string
-): Promise<{ username: string; temporaryPassword: string; message: string }> {
-  const req = await RegistrationRequestModel.findById(requestId).exec();
+): Promise<{ username: string; temporaryPassword?: string; message: string }> {
+  const req = await RegistrationRequestModel.findById(requestId).select("+passwordHash").exec();
   if (!req) throw new AppError("Request not found", 404);
   if (req.status !== "PENDING") {
     throw new AppError(`Request is already ${req.status}`, 400);
   }
   if (req.roleType === "ADMIN") {
+    const storedHash = typeof (req as { passwordHash?: string }).passwordHash === "string"
+      ? (req as { passwordHash: string }).passwordHash
+      : undefined;
+
+    if (storedHash) {
+      const { id, username } = await createAdminWithHashedPassword({
+        name: req.name,
+        email: req.email,
+        mobile: req.mobile,
+        city: req.city ?? undefined,
+        passwordHash: storedHash,
+      });
+      req.status = "APPROVED";
+      req.approvedBy = approvedByUserId;
+      req.approvedAt = new Date();
+      req.createdUserId = id;
+      await req.save();
+      await RegistrationRequestModel.updateOne({ _id: req._id }, { $unset: { passwordHash: 1 } }).exec();
+      return {
+        username,
+        message: `Admin account created. Username: ${username}. They can sign in with the password they set during signup.`,
+      };
+    }
+
     const { id, username, temporaryPassword } = await createAdminWithTemporaryPassword({
       name: req.name,
       email: req.email,

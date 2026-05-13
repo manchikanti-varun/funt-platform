@@ -85,7 +85,7 @@ function AdminSignupForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
-    if (roleType === "SUPER_ADMIN") {
+    if (roleType === "SUPER_ADMIN" || roleType === "ADMIN") {
       const err = validatePassword(password);
       if (err) {
         setSubmitError(err);
@@ -109,7 +109,7 @@ function AdminSignupForm() {
           email: email.trim(),
           mobile: `${countryCode}${mobileNumber.trim()}`,
           city: city.trim() || undefined,
-          password: roleType === "SUPER_ADMIN" ? password : undefined,
+          password: roleType === "SUPER_ADMIN" || roleType === "ADMIN" ? password : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -190,14 +190,14 @@ function AdminSignupForm() {
           </span>
         </div>
         <h1 className="text-center text-lg font-semibold text-slate-800">
-          {step === 1 ? "Complete your profile" : roleType === "SUPER_ADMIN" ? "Set your password" : "Review & submit"}
+          {step === 1 ? "Complete your profile" : "Set your password"}
         </h1>
         <p className="mt-1 text-center text-sm text-slate-500">
           {step === 1
             ? "Fill in your details to submit your profile."
             : roleType === "SUPER_ADMIN"
               ? "First Super Admin can be created directly. Otherwise this remains pending approval."
-              : "Admin profile goes to pending approval. Super Admin approval is required before access."}
+              : "You will use this password to sign in after a Super Admin approves your request."}
         </p>
 
         {step === 1 ? (
@@ -278,12 +278,12 @@ function AdminSignupForm() {
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>
             )}
             <button type="submit" className="btn-primary w-full">
-              {roleType === "SUPER_ADMIN" ? "Next: Set Password" : "Next: Review & Submit"}
+              Next: Set password
             </button>
           </form>
         ) : (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {roleType === "SUPER_ADMIN" ? (
+            {roleType === "SUPER_ADMIN" || roleType === "ADMIN" ? (
               <>
                 <div>
                   <label className="mb-1.5 block text-sm font-semibold text-slate-700">Password</label>
@@ -341,12 +341,13 @@ function AdminSignupForm() {
                     className="input w-full"
                   />
                 </div>
+                {roleType === "ADMIN" ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Your profile stays pending until a Super Admin approves it. You can sign in with this password after approval.
+                  </div>
+                ) : null}
               </>
-            ) : (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                This profile will stay pending until a Super Admin approves it.
-              </div>
-            )}
+            ) : null}
             {submitError && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{submitError}</p>
             )}

@@ -869,11 +869,15 @@ export const googleAdminSignupComplete = asyncHandler(async (req: Request, res: 
     return;
   }
 
+  if (!password) throw new AppError("Password is required to complete Admin signup", 400);
+  validateSignupPassword(password);
+
   await submitAdminRequest({
     name: nameNorm,
     email: emailNorm,
     mobile: mobileNorm,
     city: cityNorm,
+    password,
   });
 
   res.status(201).json({
