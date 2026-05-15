@@ -102,7 +102,7 @@ export function getEnv() {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
     jwtExpiresInAdmin,
     jwtExpiresInLms,
-    idleTimeoutMinutesAdmin: parsePositiveInt(process.env.IDLE_TIMEOUT_MINUTES_ADMIN, 20),
+    idleTimeoutMinutesAdmin: parsePositiveInt(process.env.IDLE_TIMEOUT_MINUTES_ADMIN, 180),
     idleTimeoutMinutesLms: parsePositiveInt(process.env.IDLE_TIMEOUT_MINUTES_LMS, 45),
     googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",

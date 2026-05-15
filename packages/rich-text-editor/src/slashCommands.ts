@@ -50,6 +50,33 @@ const getSlashCommands = (editor: Editor): SlashCommandItem[] => [
     run: () => editor.chain().focus().toggleHeading({ level: 3 }).run()
   },
   {
+    id: "h4",
+    label: "Heading 4",
+    description: "Minor section heading",
+    group: "Text",
+    keywords: ["h4"],
+    icon: "heading-4",
+    run: () => editor.chain().focus().toggleHeading({ level: 4 }).run()
+  },
+  {
+    id: "h5",
+    label: "Heading 5",
+    description: "Subsection heading",
+    group: "Text",
+    keywords: ["h5"],
+    icon: "heading-5",
+    run: () => editor.chain().focus().toggleHeading({ level: 5 }).run()
+  },
+  {
+    id: "h6",
+    label: "Heading 6",
+    description: "Smallest heading",
+    group: "Text",
+    keywords: ["h6"],
+    icon: "heading-6",
+    run: () => editor.chain().focus().toggleHeading({ level: 6 }).run()
+  },
+  {
     id: "bullet-list",
     label: "Bullet list",
     description: "Create unordered list",
@@ -90,6 +117,29 @@ const getSlashCommands = (editor: Editor): SlashCommandItem[] => [
     group: "Insert",
     icon: "minus",
     run: () => editor.chain().focus().setHorizontalRule().run()
+  },
+  {
+    id: "image",
+    label: "Image",
+    description: "Insert from an https image URL",
+    group: "Insert",
+    keywords: ["photo", "picture", "img", "url"],
+    icon: "image-plus",
+    run: () => {
+      const value = window.prompt("Enter image URL (https://…)");
+      if (value === null) return;
+      const src = value.trim();
+      if (!src) return;
+      if (!/^https?:\/\//i.test(src) && !/^data:image\//i.test(src)) {
+        window.alert("Please enter a valid image URL (https://…).");
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: "image", attrs: { src, alt: "", widthPct: 80, align: "center" } })
+        .run();
+    },
   },
   {
     id: "task-list",

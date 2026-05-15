@@ -52,7 +52,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: "512kb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "10mb" }));
 
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));
 app.use("/health", healthRouter);

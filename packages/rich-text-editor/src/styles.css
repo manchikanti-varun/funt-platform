@@ -405,7 +405,10 @@
 
 .rte-prosemirror h1,
 .rte-prosemirror h2,
-.rte-prosemirror h3 {
+.rte-prosemirror h3,
+.rte-prosemirror h4,
+.rte-prosemirror h5,
+.rte-prosemirror h6 {
   margin: 1.2em 0 0.6em;
   line-height: 1.25;
 }
@@ -420,6 +423,22 @@
 
 .rte-prosemirror h3 {
   font-size: 1.2rem;
+}
+
+.rte-prosemirror h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.rte-prosemirror h5 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.rte-prosemirror h6 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
 }
 
 .rte-prosemirror ul,

@@ -28,6 +28,9 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   List,
   ListOrdered,
   Link2,
@@ -66,6 +69,9 @@ const TOOLBAR_ACTIONS = {
   h1: "h1",
   h2: "h2",
   h3: "h3",
+  h4: "h4",
+  h5: "h5",
+  h6: "h6",
   bulletList: "bulletList",
   orderedList: "orderedList",
   taskList: "taskList",
@@ -93,6 +99,14 @@ const TOOLBAR_ACTIONS = {
 } as const;
 
 const EMPTY_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
+
+/** Allow https images and embedded uploads (data:image) through DOMPurify. */
+const RTE_PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ["script", "style"],
+  FORBID_ATTR: ["onerror", "onload", "onclick"],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+};
 const ICONS = {
   bold: "bold",
   italic: "italic",
@@ -101,6 +115,9 @@ const ICONS = {
   h1: "heading-1",
   h2: "heading-2",
   h3: "heading-3",
+  h4: "heading-4",
+  h5: "heading-5",
+  h6: "heading-6",
   bulletList: "list",
   orderedList: "list-ordered",
   taskList: "list-checks",
@@ -470,7 +487,7 @@ export class RichTextEditor implements RichTextEditorApi {
       extensions: [
         TabBehaviorExtension,
         StarterKit.configure({
-          heading: { levels: [1, 2, 3] }
+          heading: { levels: [1, 2, 3, 4, 5, 6] }
         }),
         TextStyle,
         FontFamily.configure({ types: ["textStyle"] }),
@@ -533,11 +550,7 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!this.options.sanitizeOnGet) {
       return html;
     }
-    const sanitized = DOMPurify.sanitize(html, {
-      USE_PROFILES: { html: true },
-      FORBID_TAGS: ["script", "style"],
-      FORBID_ATTR: ["onerror", "onload", "onclick"]
-    });
+    const sanitized = DOMPurify.sanitize(html, RTE_PURIFY_CONFIG);
     return this.filterUnsafeEmbeds(sanitized);
   }
 
@@ -951,6 +964,9 @@ export class RichTextEditor implements RichTextEditorApi {
       this.button(this.iconMarkup(ICONS.h1), "Heading 1", TOOLBAR_ACTIONS.h1),
       this.button(this.iconMarkup(ICONS.h2), "Heading 2", TOOLBAR_ACTIONS.h2),
       this.button(this.iconMarkup(ICONS.h3), "Heading 3", TOOLBAR_ACTIONS.h3),
+      this.button(this.iconMarkup(ICONS.h4), "Heading 4", TOOLBAR_ACTIONS.h4),
+      this.button(this.iconMarkup(ICONS.h5), "Heading 5", TOOLBAR_ACTIONS.h5),
+      this.button(this.iconMarkup(ICONS.h6), "Heading 6", TOOLBAR_ACTIONS.h6),
       this.separator(),
       this.button(this.iconMarkup(ICONS.bulletList), "Bullet list", TOOLBAR_ACTIONS.bulletList),
       this.button(this.iconMarkup(ICONS.orderedList), "Numbered list", TOOLBAR_ACTIONS.orderedList),
@@ -963,7 +979,7 @@ export class RichTextEditor implements RichTextEditorApi {
       this.button(this.iconMarkup(ICONS.divider), "Divider", TOOLBAR_ACTIONS.divider),
       this.button(this.iconMarkup(ICONS.callout), "Callout block", TOOLBAR_ACTIONS.callout),
       this.button(this.iconMarkup(ICONS.table), "Insert table", TOOLBAR_ACTIONS.table),
-      this.button(this.iconMarkup(ICONS.image), "Image", TOOLBAR_ACTIONS.image),
+      this.button(this.iconMarkup(ICONS.image), "Image (URL or upload)", TOOLBAR_ACTIONS.image),
       this.button(this.iconMarkup(ICONS.video), "Video URL", TOOLBAR_ACTIONS.video),
       this.separator(),
       this.button(this.iconMarkup(ICONS.alignLeft), "Align left", TOOLBAR_ACTIONS.alignLeft),
@@ -996,6 +1012,9 @@ export class RichTextEditor implements RichTextEditorApi {
         Heading1,
         Heading2,
         Heading3,
+        Heading4,
+        Heading5,
+        Heading6,
         List,
         ListOrdered,
         ListChecks,
@@ -1295,6 +1314,15 @@ export class RichTextEditor implements RichTextEditorApi {
       case TOOLBAR_ACTIONS.h3:
         chain.toggleHeading({ level: 3 }).run();
         break;
+      case TOOLBAR_ACTIONS.h4:
+        chain.toggleHeading({ level: 4 }).run();
+        break;
+      case TOOLBAR_ACTIONS.h5:
+        chain.toggleHeading({ level: 5 }).run();
+        break;
+      case TOOLBAR_ACTIONS.h6:
+        chain.toggleHeading({ level: 6 }).run();
+        break;
       case TOOLBAR_ACTIONS.bulletList:
         chain.toggleBulletList().run();
         break;
@@ -1455,7 +1483,81 @@ export class RichTextEditor implements RichTextEditorApi {
     this.updateResizeOverlayPosition();
   }
 
+  private insertImageFromUrl(src: string): void {
+    if (!this.editor) {
+      return;
+    }
+    const normalized = src.trim();
+    if (!/^https?:\/\//i.test(normalized) && !/^data:image\//i.test(normalized)) {
+      window.alert("Please enter a valid image URL (https://…).");
+      return;
+    }
+    this.editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "image",
+        attrs: { src: normalized, alt: "", widthPct: 80, align: "center" },
+      })
+      .run();
+  }
+
+  private async compressImageForEmbed(file: File): Promise<File> {
+    if (file.type === "image/gif" || file.type === "image/svg+xml") {
+      return file;
+    }
+    if (!file.type.startsWith("image/") || typeof createImageBitmap !== "function") {
+      return file;
+    }
+    try {
+      const bitmap = await createImageBitmap(file);
+      const maxWidth = 1600;
+      const scale = Math.min(1, maxWidth / bitmap.width);
+      if (scale >= 1 && file.size < 400_000) {
+        bitmap.close();
+        return file;
+      }
+      const w = Math.max(1, Math.round(bitmap.width * scale));
+      const h = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        bitmap.close();
+        return file;
+      }
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.82)
+      );
+      if (!blob) {
+        return file;
+      }
+      const name = `${file.name.replace(/\.[^.]+$/, "") || "image"}.jpg`;
+      return new File([blob], name, { type: "image/jpeg" });
+    } catch {
+      return file;
+    }
+  }
+
   private async insertImage(): Promise<void> {
+    const urlInput = window.prompt(
+      "Image URL (https://…)\n\nLeave blank and press OK to upload from your computer."
+    );
+    if (urlInput === null) {
+      return;
+    }
+    const url = urlInput.trim();
+    if (url) {
+      this.insertImageFromUrl(url);
+      return;
+    }
+    await this.insertImageFromFile();
+  }
+
+  private async insertImageFromFile(): Promise<void> {
     if (!this.editor) {
       return;
     }
@@ -1466,11 +1568,12 @@ export class RichTextEditor implements RichTextEditorApi {
 
     await new Promise<void>((resolve) => {
       input.onchange = async () => {
-        const file = input.files?.[0];
-        if (!file) {
+        const picked = input.files?.[0];
+        if (!picked) {
           resolve();
           return;
         }
+        const file = await this.compressImageForEmbed(picked);
         const dataUrl = await this.fileToDataUrl(file);
         const { from } = this.editor!.state.selection;
         this.editor!
@@ -1528,6 +1631,9 @@ export class RichTextEditor implements RichTextEditorApi {
       [TOOLBAR_ACTIONS.h1]: this.editor.isActive("heading", { level: 1 }),
       [TOOLBAR_ACTIONS.h2]: this.editor.isActive("heading", { level: 2 }),
       [TOOLBAR_ACTIONS.h3]: this.editor.isActive("heading", { level: 3 }),
+      [TOOLBAR_ACTIONS.h4]: this.editor.isActive("heading", { level: 4 }),
+      [TOOLBAR_ACTIONS.h5]: this.editor.isActive("heading", { level: 5 }),
+      [TOOLBAR_ACTIONS.h6]: this.editor.isActive("heading", { level: 6 }),
       [TOOLBAR_ACTIONS.bulletList]: this.editor.isActive("bulletList"),
       [TOOLBAR_ACTIONS.orderedList]: this.editor.isActive("orderedList"),
       [TOOLBAR_ACTIONS.taskList]: this.editor.isActive("taskList"),
