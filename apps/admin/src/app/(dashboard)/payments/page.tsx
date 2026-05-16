@@ -37,19 +37,18 @@ export default function AdminPaymentsPage() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState<"ALL" | "COURSE" | "SHOP">("ALL");
-  const [riskOnly, setRiskOnly] = useState(false);
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [query, setQuery] = useState("");
-  const [queueMode, setQueueMode] = useState<"all" | "risk">("all");
 
   const load = useCallback(() => {
     setLoading(true);
-    api<PendingRow[]>(`/api/admin/payments/pending${queueMode === "risk" ? "?queue=risk" : ""}`)
+    api<PendingRow[]>(`/api/admin/payments/pending${flaggedOnly ? "?queue=risk" : ""}`)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setRows(r.data);
         else setRows([]);
       })
       .finally(() => setLoading(false));
-  }, [queueMode]);
+  }, [flaggedOnly]);
 
   useEffect(() => {
     load();
@@ -104,7 +103,6 @@ export default function AdminPaymentsPage() {
   const q = query.trim().toLowerCase();
   const filteredRows = rows.filter((r) => {
     if (kindFilter !== "ALL" && r.kind !== kindFilter) return false;
-    if (riskOnly && (!Array.isArray(r.riskFlags) || r.riskFlags.length === 0)) return false;
     if (!q) return true;
     const hay = [
       r.studentName,
@@ -132,54 +130,47 @@ export default function AdminPaymentsPage() {
         </div>
       ) : null}
       <PageSection>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setQueueMode("all")}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${queueMode === "all" ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-700"}`}
-          >
-            All queue
-          </button>
-          <button
-            type="button"
-            onClick={() => setQueueMode("risk")}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${queueMode === "risk" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
-          >
-            Risk escalation queue
-          </button>
-          <button
-            type="button"
-            onClick={() => setKindFilter("ALL")}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "ALL" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            onClick={() => setKindFilter("COURSE")}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "COURSE" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
-          >
-            Course
-          </button>
-          <button
-            type="button"
-            onClick={() => setKindFilter("SHOP")}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${kindFilter === "SHOP" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-700"}`}
-          >
-            Shop
-          </button>
-          <button
-            type="button"
-            onClick={() => setRiskOnly((v) => !v)}
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${riskOnly ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700"}`}
-          >
-            Suspicious only
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter payments">
+            {(
+              [
+                { id: "ALL" as const, label: "All" },
+                { id: "COURSE" as const, label: "Course" },
+                { id: "SHOP" as const, label: "Shop" },
+              ] as const
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setKindFilter(id)}
+                className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
+                  kindFilter === id
+                    ? "bg-teal-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <span className="mx-0.5 hidden h-6 w-px bg-slate-200 sm:inline" aria-hidden />
+            <button
+              type="button"
+              onClick={() => setFlaggedOnly((v) => !v)}
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
+                flaggedOnly
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
+              }`}
+            >
+              Flagged
+            </button>
+          </div>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search student, batch, course, transaction"
-            className="ml-auto w-full max-w-sm rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Search student or transaction"
+            className="input w-full sm:max-w-xs"
+            aria-label="Search payments"
           />
         </div>
       </PageSection>

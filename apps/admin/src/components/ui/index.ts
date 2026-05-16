@@ -19,5 +19,6 @@ export { DataPanel } from "./DataPanel";
 export { EmptyState } from "./EmptyState";
 export { FormPanel } from "./FormPanel";
 export { PageHeader } from "./PageHeader";
+export { PageSizeSelect, PAGE_SIZE_OPTIONS } from "./PageSizeSelect";
 export { PageSection } from "./PageSection";
 export { SortableTh, type SortDir } from "./SortableTh";

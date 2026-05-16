@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SortableTh } from "@/components/ui/SortableTh";
+import { PageSizeSelect } from "@/components/ui/PageSizeSelect";
+import { useClientTableSort } from "@/lib/useClientTableSort";
 
 interface AuditRow {
   id: string;
@@ -42,7 +45,7 @@ export default function CouponAuditPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 25;
+  const [limit, setLimit] = useState(25);
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
   useEffect(() => {
@@ -62,7 +65,30 @@ export default function CouponAuditPage() {
       })
       .catch(() => setError("Failed to load"))
       .finally(() => setLoading(false));
-  }, [isSuperAdmin, page]);
+  }, [isSuperAdmin, page, limit]);
+
+  const getCouponCellValue = useCallback((row: AuditRow, key: string) => {
+    switch (key) {
+      case "code":
+        return row.couponCode;
+      case "kind":
+        return row.couponKind;
+      case "student":
+        return row.studentName;
+      case "context":
+        return row.context;
+      case "createdAt":
+        return row.createdAt;
+      default:
+        return "";
+    }
+  }, []);
+
+  const { sortedRows, sortKey, sortDir, handleSort } = useClientTableSort(
+    data?.rows ?? [],
+    getCouponCellValue,
+    { defaultSortKey: "createdAt", defaultSortDir: "desc" }
+  );
 
   if (!isSuperAdmin) {
     return (
@@ -105,15 +131,15 @@ export default function CouponAuditPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Code</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Kind</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Student</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Context</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">When</th>
+                  <SortableTh label="Code" columnKey="code" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />
+                  <SortableTh label="Kind" columnKey="kind" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />
+                  <SortableTh label="Student" columnKey="student" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />
+                  <SortableTh label="Context" columnKey="context" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />
+                  <SortableTh label="When" columnKey="createdAt" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.rows.map((row) => (
+                {sortedRows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/80">
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-slate-900">{row.couponCode}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-700">{row.couponKind}</td>
@@ -137,7 +163,14 @@ export default function CouponAuditPage() {
 
           {data.total > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
-              <span>
+              <PageSizeSelect
+                value={limit}
+                onChange={(next) => {
+                  setLimit(next);
+                  setPage(1);
+                }}
+              />
+              <span className="text-slate-600">
                 Page {data.page} of {totalPages} ({data.total} total)
               </span>
               <div className="flex gap-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
@@ -8,6 +8,9 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SortableTh } from "@/components/ui/SortableTh";
+import { PageSizeSelect } from "@/components/ui/PageSizeSelect";
+import { useClientTableSort } from "@/lib/useClientTableSort";
 
 interface AuditEntry {
   id: string;
@@ -44,7 +47,7 @@ export default function AuditLogPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const [limit, setLimit] = useState(20);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
@@ -78,7 +81,30 @@ export default function AuditLogPage() {
       })
       .catch(() => setError("Failed to load"))
       .finally(() => setLoading(false));
-  }, [isSuperAdmin, page, action, performedBy, fromDate, toDate]);
+  }, [isSuperAdmin, page, limit, action, performedBy, fromDate, toDate]);
+
+  const getAuditCellValue = useCallback((log: AuditEntry, key: string) => {
+    switch (key) {
+      case "timestamp":
+        return log.timestamp;
+      case "action":
+        return log.action;
+      case "performedBy":
+        return log.performedByDisplay;
+      case "targetEntity":
+        return entityLabel(log.targetEntity);
+      case "target":
+        return log.targetIdDisplay;
+      default:
+        return "";
+    }
+  }, []);
+
+  const { sortedRows, sortKey, sortDir, handleSort } = useClientTableSort(
+    data?.logs ?? [],
+    getAuditCellValue,
+    { defaultSortKey: "timestamp", defaultSortDir: "desc" }
+  );
 
   if (!isSuperAdmin) {
     return (
@@ -163,20 +189,56 @@ export default function AuditLogPage() {
           <p className="text-sm text-slate-600">
             <span className="font-medium text-slate-800">{data.total}</span> entries · page{" "}
             <span className="font-medium text-slate-800">{data.page}</span> of {totalPages}
+            <span className="text-slate-400"> · click column headers to sort this page</span>
           </p>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100/80">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Time</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Action</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Performed by</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Entity</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Target</th>
+                  <SortableTh
+                    label="Time"
+                    columnKey="timestamp"
+                    currentSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="px-4 py-3"
+                  />
+                  <SortableTh
+                    label="Action"
+                    columnKey="action"
+                    currentSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="px-4 py-3"
+                  />
+                  <SortableTh
+                    label="Performed by"
+                    columnKey="performedBy"
+                    currentSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="px-4 py-3"
+                  />
+                  <SortableTh
+                    label="Entity"
+                    columnKey="targetEntity"
+                    currentSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="px-4 py-3"
+                  />
+                  <SortableTh
+                    label="Target"
+                    columnKey="target"
+                    currentSortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    className="px-4 py-3"
+                  />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {data.logs.map((log) => (
+                {sortedRows.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/80">
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">{new Date(log.timestamp).toLocaleString()}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{log.action}</td>
@@ -188,7 +250,15 @@ export default function AuditLogPage() {
               </tbody>
             </table>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <PageSizeSelect
+              value={limit}
+              onChange={(next) => {
+                setLimit(next);
+                setPage(1);
+              }}
+            />
+            <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary text-sm">
               Previous
             </button>
@@ -240,6 +310,7 @@ export default function AuditLogPage() {
             >
               Next
             </button>
+            </div>
           </div>
         </>
       ) : null}
