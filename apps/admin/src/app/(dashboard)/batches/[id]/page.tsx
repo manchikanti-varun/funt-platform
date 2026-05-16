@@ -7,8 +7,7 @@ import { api } from "@/lib/api";
 import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { BATCH_STATUS } from "@funt-platform/constants";
-import { BackLink } from "@/components/ui/BackLink";
-import { useAppDialog } from "@/components/ui";
+import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { TrainerSelect } from "@/components/admin/StaffPickerFields";
 import {
@@ -310,97 +309,82 @@ export default function EditBatchPage() {
   }
 
   if (!batch) {
-    return (
-      <div className="flex min-h-[320px] flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-        <p className="mt-4 text-sm text-slate-500">Loading batch…</p>
-      </div>
-    );
+    return <EntityDetailLoadingScreen label="Loading batch…" />;
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <>
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/batches" />
-      <div className="shrink-0 pb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BackLink href="/batches">Back to Batches</BackLink>
-          <Link
+      <EntityDetailShell
+        backHref="/batches"
+        backLabel="Back to Batches"
+        title={name}
+        description="Update courses, course fees, payment modes, schedule, and batch-level manual UPI QR."
+        mode="edit"
+        viewHref={`/batches/${id}/view`}
+        editHref={`/batches/${id}`}
+        badges={
+          <>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                batch.status === BATCH_STATUS.ARCHIVED ? "bg-slate-100 text-slate-600" : "bg-teal-100 text-teal-700"
+              }`}
+            >
+              {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
+            </span>
+            <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              Snapshot context
+            </span>
+          </>
+        }
+        topBar={<>          <Link
             href={`/batches/${id}/submissions`}
             className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
             Assignment submissions
           </Link>
           <Link
             href={`/batches/${id}/attendance`}
             className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm transition hover:bg-emerald-100"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
             Attendance
           </Link>
           <Link
             href={`/batches/${id}/certificates`}
             className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 shadow-sm transition hover:bg-violet-100"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
             Certificates
           </Link>
           <Link
             href={`/batches/${id}/settings`}
             className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 shadow-sm transition hover:bg-amber-100"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
             Settings
-          </Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              batch.status === BATCH_STATUS.ARCHIVED ? "bg-slate-100 text-slate-600" : "bg-teal-100 text-teal-700"
-            }`}
-          >
-            {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
-          </span>
-          {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
-            <button
-              type="button"
-              onClick={archive}
-              className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
-            >
-              Archive batch
-            </button>
-          )}
-          {!trainerOnly && batch.status === BATCH_STATUS.ARCHIVED && (
-            <button
-              type="button"
-              onClick={unarchive}
-              className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
-            >
-              Unarchive batch
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">Edit batch</h1>
-          <p className="mt-1 text-sm text-slate-600">Update courses, course fees, payment modes, schedule, and batch-level manual UPI QR.</p>
-          <div className="mt-2 inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-            Snapshot context
-          </div>
-        </div>
-
-        <form onSubmit={submit} className="p-6 space-y-8">
+          </Link></>}
+        headerAside={
+          <>
+            {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
+              <button
+                type="button"
+                onClick={archive}
+                className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
+              >
+                Archive batch
+              </button>
+            )}
+            {!trainerOnly && batch.status === BATCH_STATUS.ARCHIVED && (
+              <button
+                type="button"
+                onClick={unarchive}
+                className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
+              >
+                Unarchive batch
+              </button>
+            )}
+          </>
+        }
+      >
+        <form onSubmit={submit} className="space-y-8">
           {error && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
               {error}
@@ -820,7 +804,7 @@ export default function EditBatchPage() {
             </Link>
           </div>
         </form>
-      </div>
-    </div>
+      </EntityDetailShell>
+    </>
   );
 }

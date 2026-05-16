@@ -7,8 +7,7 @@ import { api } from "@/lib/api";
 import { ASSIGNMENT_STATUS, SUBMISSION_TYPE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { BackLink } from "@/components/ui/BackLink";
-import { useAppDialog } from "@/components/ui";
+import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { SkillTagsField } from "@/components/admin/SkillTagsField";
@@ -119,38 +118,42 @@ export default function EditGlobalAssignmentPage() {
   }
 
   if (!assignment) {
-    return (
-      <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-        <p className="mt-4 text-sm text-slate-500">Loading…</p>
-      </div>
-    );
+    return <EntityDetailLoadingScreen label="Loading assignment…" />;
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <>
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/global-assignments" />
-      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4">
-        <BackLink href="/global-assignments">Back to Assignments</BackLink>
-        <div className="flex items-center gap-2">
-          <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              assignment.status === ASSIGNMENT_STATUS.ARCHIVED ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"
-            }`}
-          >
-            {assignment.status === ASSIGNMENT_STATUS.ARCHIVED ? "Archived" : "Active"}
-          </span>
-          {assignment.status !== ASSIGNMENT_STATUS.ARCHIVED && (
+      <EntityDetailShell
+        backHref="/global-assignments"
+        backLabel="Back to Assignments"
+        title={title}
+        description="Update title, instructions, type, and skill tags."
+        mode="edit"
+        viewHref={`/global-assignments/${id}/view`}
+        editHref={`/global-assignments/${id}`}
+        badges={
+          <>
+            <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
+              Global source
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                assignment.status === ASSIGNMENT_STATUS.ARCHIVED ? "bg-slate-100 text-slate-700" : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {assignment.status === ASSIGNMENT_STATUS.ARCHIVED ? "Archived" : "Active"}
+            </span>
+          </>
+        }
+        topBar={
+          assignment.status !== ASSIGNMENT_STATUS.ARCHIVED ? (
             <>
               {assignment.type === "general" && (
                 <Link
                   href={`/global-assignments/${id}/settings`}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 shadow-sm transition hover:bg-amber-100"
                 >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
                   Settings
                 </Link>
               )}
@@ -162,45 +165,43 @@ export default function EditGlobalAssignmentPage() {
                   Submissions
                 </Link>
               )}
-              <button type="button" onClick={duplicate} disabled={duplicating} className="btn-duplicate">
-                {duplicating ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-700" />
-                ) : (
-                  <DuplicateIcon />
-                )}
-                Duplicate
-              </button>
+            </>
+          ) : undefined
+        }
+        headerAside={
+          <>
+            {assignment.status !== ASSIGNMENT_STATUS.ARCHIVED && (
+              <>
+                <button type="button" onClick={duplicate} disabled={duplicating} className="btn-duplicate">
+                  {duplicating ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-700" />
+                  ) : (
+                    <DuplicateIcon />
+                  )}
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  onClick={archive}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
+                >
+                  Archive
+                </button>
+              </>
+            )}
+            {assignment.status === ASSIGNMENT_STATUS.ARCHIVED && (
               <button
                 type="button"
-                onClick={archive}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
+                onClick={unarchive}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
               >
-                Archive
+                Unarchive
               </button>
-            </>
-          )}
-          {assignment.status === ASSIGNMENT_STATUS.ARCHIVED && (
-            <button
-              type="button"
-              onClick={unarchive}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
-            >
-              Unarchive
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Assignment</h1>
-          <p className="mt-1 text-sm text-slate-600">Update title, instructions, type, and skill tags.</p>
-          <div className="mt-2 inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-800">
-            Global source
-          </div>
-        </div>
-
-        <form onSubmit={submit} className="p-6 sm:p-8">
+            )}
+          </>
+        }
+      >
+        <form onSubmit={submit} className="space-y-6">
           <div className="w-full space-y-6">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
@@ -274,7 +275,7 @@ export default function EditGlobalAssignmentPage() {
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </EntityDetailShell>
+    </>
   );
 }

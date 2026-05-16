@@ -8,7 +8,7 @@ import { COURSE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/consta
 import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { useAppDialog } from "@/components/ui";
+import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 
 interface CourseModule {
   originalGlobalModuleId: string;
@@ -39,7 +39,6 @@ interface Course {
   status: string;
 }
 
-import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
@@ -214,70 +213,68 @@ export default function EditCoursePage() {
 
   if (!course) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
+      <>
         {roleGuard}
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-        <p className="mt-4 text-sm text-slate-500">Loading course…</p>
-      </div>
+        <EntityDetailLoadingScreen label="Loading course…" />
+      </>
     );
   }
 
   const sortedModules = [...(course.modules ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
+    <>
       {roleGuard}
-      <div className="shrink-0 pb-6">
-        <BackLink href="/courses">Back to Courses</BackLink>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-900">Edit Course</h2>
-              <p className="mt-1 text-sm text-slate-600">Update title, description, reorder chapters, or edit a chapter copy (content, video, etc.) for this course only.</p>
-              <div className="mt-2 inline-flex items-center rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
-                Snapshot context
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{course.version}</span>
-              <span
-                className={
-                  course.status === COURSE_STATUS.ARCHIVED
-                    ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                    : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
-                }
+      <EntityDetailShell
+        backHref="/courses"
+        backLabel="Back to Courses"
+        title={title}
+        description="Update title, description, reorder chapters, or edit a chapter copy for this course only."
+        mode="edit"
+        viewHref={`/courses/${id}/view`}
+        editHref={`/courses/${id}`}
+        badges={
+          <>
+            <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{course.version}</span>
+            <span
+              className={
+                course.status === COURSE_STATUS.ARCHIVED
+                  ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                  : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              }
+            >
+              {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
+            </span>
+            <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">Snapshot context</span>
+          </>
+        }
+        headerAside={
+          <>
+            {course.status !== COURSE_STATUS.ARCHIVED ? (
+              <button
+                type="button"
+                onClick={archive}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
               >
-                {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
-              </span>
-              {course.status !== COURSE_STATUS.ARCHIVED ? (
-                <button
-                  type="button"
-                  onClick={archive}
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                >
-                  Archive
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={unarchive}
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  Unarchive
-                </button>
-              )}
-              <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
-                <DuplicateIcon />
-                Duplicate
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={submit} className="p-6 space-y-6">
+                Archive
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={unarchive}
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                Unarchive
+              </button>
+            )}
+            <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
+              <DuplicateIcon />
+              Duplicate
+            </Link>
+          </>
+        }
+      >
+        <form onSubmit={submit} className="space-y-6">
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Title</label>
             <input
@@ -554,7 +551,7 @@ export default function EditCoursePage() {
             </Link>
           </div>
         </form>
-      </div>
-    </div>
+      </EntityDetailShell>
+    </>
   );
 }

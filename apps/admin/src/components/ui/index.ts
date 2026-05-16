@@ -1,4 +1,15 @@
 export { Alert } from "./Alert";
+export {
+  EntityActionsPanel,
+  EntityDetailLoadingScreen,
+  EntityDetailSection,
+  EntityDetailShell,
+  EntityModeToggle,
+  ENTITY_DETAIL_BODY,
+  ENTITY_DETAIL_CARD,
+  ENTITY_DETAIL_HEADER,
+  ENTITY_SECTION_TITLE,
+} from "./EntityDetailShell";
 export { AppDialogProvider, useAppDialog } from "./AppDialogProvider";
 export type { AlertDialogOptions, ConfirmDialogOptions, PromptDialogOptions } from "./AppDialogProvider";
 export { AppPageShell } from "./AppPageShell";

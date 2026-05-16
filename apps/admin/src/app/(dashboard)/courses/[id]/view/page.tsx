@@ -7,6 +7,12 @@ import { api } from "@/lib/api";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { COURSE_STATUS } from "@funt-platform/constants";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import {
+  EntityActionsPanel,
+  EntityDetailLoadingScreen,
+  EntityDetailSection,
+  EntityDetailShell,
+} from "@/components/ui";
 
 interface CourseModule {
   title: string;
@@ -26,8 +32,6 @@ interface Course {
   status: string;
 }
 
-import { BackLink } from "@/components/ui/BackLink";
-
 export default function ViewCoursePage() {
   const params = useParams();
   const id = params.id as string;
@@ -41,99 +45,75 @@ export default function ViewCoursePage() {
   }, [id]);
 
   if (!course) {
-    return (
-      <div className="flex min-h-[320px] flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-        <p className="mt-4 text-sm text-slate-500">Loading…</p>
-      </div>
-    );
+    return <EntityDetailLoadingScreen label="Loading course…" />;
   }
 
   const sortedModules = [...(course.modules ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const sanitizedDescription = sanitizeHtml(course.description ?? "");
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="shrink-0 pb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BackLink href="/courses">Back to Courses</BackLink>
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">View only</span>
-        </div>
-      </div>
+    <EntityDetailShell
+      backHref="/courses"
+      backLabel="Back to Courses"
+      title={course.title}
+      description="View only. License keys and cohort access are managed from each batch."
+      mode="view"
+      viewHref={`/courses/${id}/view`}
+      editHref={`/courses/${id}`}
+      badges={
+        <>
+          <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+            v{course.version}
+          </span>
+          <span
+            className={
+              course.status === COURSE_STATUS.ARCHIVED
+                ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+            }
+          >
+            {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
+          </span>
+        </>
+      }
+    >
+      <EntityActionsPanel>
+        <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
+          <DuplicateIcon />
+          Duplicate
+        </Link>
+      </EntityActionsPanel>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-6">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">{course.title}</h1>
-          <p className="mt-1 text-sm text-slate-500">View only. License keys and cohort access are managed from each batch.</p>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700">v{course.version}</span>
-            <span
-              className={
-                course.status === COURSE_STATUS.ARCHIVED
-                  ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                  : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
-              }
-            >
-              {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
-            </span>
-          </div>
-        </div>
-        <div className="p-6 space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Actions</h2>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/courses/${id}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit course
-              </Link>
-              <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
-                <DuplicateIcon />
-                Duplicate
-              </Link>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Description</h2>
-            <div className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
-          </section>
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Duration</h2>
-            <p className="text-sm font-medium text-slate-800">{(course.durationText ?? "").trim() || "Not set"}</p>
-          </section>
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Chapters ({sortedModules.length})</h2>
-            <ul className="rounded-xl border border-slate-200 bg-slate-50/50 divide-y divide-slate-200">
-              {sortedModules.map((m, i) => (
-                <li key={i}>
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-800">
-                    <span className="font-medium text-slate-500 w-6">{i + 1}.</span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{m.title}</span>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
-                      {Math.max(0, Math.floor(Number(m.xpReward ?? 40)))} XP
-                    </span>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                      Snapshot
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2 text-xs text-slate-500">
-              These are course snapshots. Edit them from{" "}
-              <Link href={`/courses/${id}`} className="font-medium text-teal-700 hover:underline">
-                Edit course
-              </Link>
-              , not Global Chapters.
-            </p>
-          </section>
-        </div>
-      </div>
-    </div>
+      <EntityDetailSection title="Description">
+        <div
+          className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`}
+          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+        />
+      </EntityDetailSection>
+      <EntityDetailSection title="Duration">
+        <p className="text-sm font-medium text-slate-800">{(course.durationText ?? "").trim() || "Not set"}</p>
+      </EntityDetailSection>
+      <EntityDetailSection title={`Chapters (${sortedModules.length})`}>
+        <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
+          {sortedModules.map((m, i) => (
+            <li key={i}>
+              <div className="flex items-center gap-2 px-4 py-3 text-sm text-slate-800">
+                <span className="w-6 font-medium text-slate-500">{i + 1}.</span>
+                <span className="min-w-0 flex-1 truncate font-medium">{m.title}</span>
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+                  {Math.max(0, Math.floor(Number(m.xpReward ?? 40)))} XP
+                </span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                  Snapshot
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-xs text-slate-500">
+          These are course snapshots. Switch to Edit to change chapter copies for this course, not Global Chapters.
+        </p>
+      </EntityDetailSection>
+    </EntityDetailShell>
   );
 }

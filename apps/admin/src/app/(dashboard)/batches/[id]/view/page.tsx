@@ -5,9 +5,14 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { BATCH_STATUS } from "@funt-platform/constants";
-import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { Check, Copy } from "lucide-react";
+import {
+  EntityActionsPanel,
+  EntityDetailLoadingScreen,
+  EntityDetailSection,
+  EntityDetailShell,
+} from "@/components/ui";
 
 interface Batch {
   id: string;
@@ -57,258 +62,240 @@ export default function ViewBatchPage() {
   }, [id]);
 
   if (!batch) {
-    return (
-      <div className="flex min-h-[320px] flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
-        <p className="mt-4 text-sm text-slate-500">Loading…</p>
-      </div>
-    );
+    return <EntityDetailLoadingScreen label="Loading batch…" />;
   }
 
-  const courses = Array.isArray(batch.courseSnapshots) && batch.courseSnapshots.length > 0
-    ? batch.courseSnapshots
-    : batch.courseSnapshot
-      ? [batch.courseSnapshot]
-      : [];
+  const courses =
+    Array.isArray(batch.courseSnapshots) && batch.courseSnapshots.length > 0
+      ? batch.courseSnapshots
+      : batch.courseSnapshot
+        ? [batch.courseSnapshot]
+        : [];
   const startDateStr = typeof batch.startDate === "string" ? batch.startDate.slice(0, 10) : "";
   const endDateStr = batch.endDate && typeof batch.endDate === "string" ? batch.endDate.slice(0, 10) : "";
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="shrink-0 pb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <BackLink href="/batches">Back to Batches</BackLink>
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">View only</span>
+    <EntityDetailShell
+      backHref="/batches"
+      backLabel="Back to Batches"
+      title={batch.name}
+      description="View only. Batch access is managed here; course access is managed by payment/license per course."
+      mode="view"
+      viewHref={`/batches/${id}/view`}
+      editHref={`/batches/${id}`}
+      badges={
+        <>
+          {batch.batchId && (
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+              {batch.batchId}
+            </span>
+          )}
+          <span
+            className={
+              batch.status === BATCH_STATUS.ARCHIVED
+                ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+            }
+          >
+            {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
+          </span>
+          <span
+            className={
+              batch.visibility === "PRIVATE"
+                ? "rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800"
+                : "rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800"
+            }
+          >
+            {batch.visibility === "PRIVATE" ? "Private" : "Public"}
+          </span>
+        </>
+      }
+    >
+      {batch.headerImageUrl ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <img src={batch.headerImageUrl} alt={`${batch.name} header`} className="h-40 w-full object-cover" />
         </div>
-      </div>
+      ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">{batch.name}</h1>
-          <p className="mt-1 text-sm text-slate-500">View only. Batch access is managed here; course access is managed by payment/license per course.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            {batch.batchId && (
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{batch.batchId}</span>
-            )}
-            <span
-              className={
-                batch.status === BATCH_STATUS.ARCHIVED
-                  ? "rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
-                  : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
-              }
-            >
-              {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
-            </span>
-            <span
-              className={
-                batch.visibility === "PRIVATE"
-                  ? "rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800"
-                  : "rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-medium text-sky-800"
-              }
-            >
-              {batch.visibility === "PRIVATE" ? "Private" : "Public"}
-            </span>
+      <EntityActionsPanel>
+        <Link href={`/batches/${id}/duplicate`} className="btn-duplicate">
+          <DuplicateIcon />
+          Duplicate
+        </Link>
+        <Link
+          href={`/batches/${id}/student-access`}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          Batch access
+        </Link>
+        <Link
+          href={`/batches/${id}/moderators`}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          Moderators
+        </Link>
+        <Link
+          href={`/batches/${id}/submissions`}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          Assignment submissions
+        </Link>
+        <Link
+          href={`/batches/${id}/attendance`}
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm transition hover:bg-emerald-100"
+        >
+          Attendance
+        </Link>
+        <Link
+          href={`/batches/${id}/certificates`}
+          className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 shadow-sm transition hover:bg-violet-100"
+        >
+          Certificates
+        </Link>
+      </EntityActionsPanel>
+
+      <EntityDetailSection title="Basic info">
+        <dl className="grid gap-2 text-sm">
+          <div>
+            <dt className="text-slate-500">Trainer</dt>
+            <dd className="font-medium text-slate-800">
+              {batch.trainerName ? (
+                <>
+                  {batch.trainerName}
+                  {batch.trainerUsername ? (
+                    <span className="font-normal text-slate-600"> · @{batch.trainerUsername}</span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="break-all font-mono text-sm text-slate-700" title="User id">
+                  {batch.trainerId}
+                </span>
+              )}
+            </dd>
           </div>
+          <div>
+            <dt className="text-slate-500">Start date</dt>
+            <dd className="font-medium text-slate-800">{startDateStr || "—"}</dd>
+          </div>
+          {endDateStr && (
+            <div>
+              <dt className="text-slate-500">End date</dt>
+              <dd className="font-medium text-slate-800">{endDateStr}</dd>
+            </div>
+          )}
+          {batch.zoomLink && (
+            <div>
+              <dt className="text-slate-500">Zoom / meeting link</dt>
+              <dd>
+                <a
+                  href={batch.zoomLink.startsWith("http") ? batch.zoomLink : `https://${batch.zoomLink}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline"
+                >
+                  {batch.zoomLink}
+                </a>
+              </dd>
+            </div>
+          )}
           {batch.headerImageUrl ? (
-            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
-              <img src={batch.headerImageUrl} alt={`${batch.name} header`} className="h-40 w-full object-cover" />
+            <div>
+              <dt className="text-slate-500">Header image</dt>
+              <dd>
+                <a
+                  href={batch.headerImageUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline"
+                >
+                  Open image
+                </a>
+              </dd>
             </div>
           ) : null}
-        </div>
-        <div className="p-6 space-y-6">
-          <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Actions</h2>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/batches/${id}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit batch
-              </Link>
-              <Link href={`/batches/${id}/duplicate`} className="btn-duplicate">
-                <DuplicateIcon />
-                Duplicate
-              </Link>
-              <Link
-                href={`/batches/${id}/student-access`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Batch access
-              </Link>
-              <Link
-                href={`/batches/${id}/moderators`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Moderators
-              </Link>
-              <Link
-                href={`/batches/${id}/submissions`}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Assignment submissions
-              </Link>
-              <Link
-                href={`/batches/${id}/attendance`}
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 shadow-sm transition hover:bg-emerald-100"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-                Attendance
-              </Link>
-              <Link
-                href={`/batches/${id}/certificates`}
-                className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 shadow-sm transition hover:bg-violet-100"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-                Certificates
-              </Link>
-            </div>
-          </section>
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Basic info</h2>
-            <dl className="grid gap-2 text-sm">
-              <div>
-                <dt className="text-slate-500">Trainer</dt>
-                <dd className="font-medium text-slate-800">
-                  {batch.trainerName ? (
-                    <>
-                      {batch.trainerName}
-                      {batch.trainerUsername ? (
-                        <span className="font-normal text-slate-600"> · @{batch.trainerUsername}</span>
-                      ) : null}
-                    </>
-                  ) : (
-                    <span className="font-mono text-sm break-all text-slate-700" title="User id — re-save batch or refresh API if name should appear">
-                      {batch.trainerId}
-                    </span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-500">Start date</dt>
-                <dd className="font-medium text-slate-800">{startDateStr || "—"}</dd>
-              </div>
-              {endDateStr && (
-                <div>
-                  <dt className="text-slate-500">End date</dt>
-                  <dd className="font-medium text-slate-800">{endDateStr}</dd>
-                </div>
-              )}
-              {batch.zoomLink && (
-                <div>
-                  <dt className="text-slate-500">Zoom / meeting link</dt>
-                  <dd>
-                    <a href={batch.zoomLink.startsWith("http") ? batch.zoomLink : `https://${batch.zoomLink}`} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">{batch.zoomLink}</a>
-                  </dd>
-                </div>
-              )}
-              {batch.headerImageUrl ? (
-                <div>
-                  <dt className="text-slate-500">Header image</dt>
-                  <dd>
-                    <a href={batch.headerImageUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">
-                      Open image
-                    </a>
-                  </dd>
-                </div>
-              ) : null}
-            </dl>
-          </section>
-          <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-2">Courses</h2>
-            <p className="mb-3 text-sm text-slate-600">
-              <Link
-                href={`/batches/${id}/student-access`}
-                className="font-medium text-teal-700 underline decoration-teal-200 underline-offset-2 hover:text-teal-800"
-              >
-                Batch access
-              </Link>
-              <span className="text-slate-400"> · </span>
-              <span className="text-slate-500">Batch access is a master switch. Individual course access is controlled by payment/license for each course in this batch.</span>
-            </p>
-            <p className="mb-3 text-xs text-slate-500">
-              Course rows below open the course context used by this batch (snapshot flow), not Global Modules.
-            </p>
-            {courses.length === 0 ? (
-              <p className="text-sm text-slate-500">No courses in this batch.</p>
-            ) : (
-              <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
-                {courses.map((c, i) => {
-                  const keyQs = new URLSearchParams({ batchId: id });
-                  if (c.courseId?.trim()) keyQs.set("courseId", c.courseId.trim());
-                  return (
-                    <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        {c.courseId ? (
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/courses/${c.courseId}/view`}
-                              className="text-sm font-medium text-slate-800 transition hover:text-teal-600"
-                            >
-                              {c.title ?? "Course"}
-                            </Link>
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                              Snapshot
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-800">{c.title ?? "Course"}</span>
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                              Snapshot
-                            </span>
-                          </div>
-                        )}
-                      </div>
+        </dl>
+      </EntityDetailSection>
+
+      <EntityDetailSection title="Courses">
+        <p className="mb-3 text-sm text-slate-600">
+          <Link
+            href={`/batches/${id}/student-access`}
+            className="font-medium text-teal-700 underline decoration-teal-200 underline-offset-2 hover:text-teal-800"
+          >
+            Batch access
+          </Link>
+          <span className="text-slate-400"> · </span>
+          <span className="text-slate-500">
+            Batch access is a master switch. Individual course access is controlled by payment/license for each course
+            in this batch.
+          </span>
+        </p>
+        <p className="mb-3 text-xs text-slate-500">
+          Course rows below open the course context used by this batch (snapshot flow), not Global Modules.
+        </p>
+        {courses.length === 0 ? (
+          <p className="text-sm text-slate-500">No courses in this batch.</p>
+        ) : (
+          <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
+            {courses.map((c, i) => {
+              const keyQs = new URLSearchParams({ batchId: id });
+              if (c.courseId?.trim()) keyQs.set("courseId", c.courseId.trim());
+              return (
+                <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    {c.courseId ? (
                       <div className="flex items-center gap-2">
-                        {c.courseId ? (
-                          <button
-                            type="button"
-                            onClick={() => void copyCourseLink(c.courseId!)}
-                            title={copiedCourseId === c.courseId ? "Copied" : "Copy course link"}
-                            className={`inline-flex items-center justify-center rounded-lg border p-1.5 transition ${
-                              copiedCourseId === c.courseId
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                : "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100"
-                            }`}
-                          >
-                            {copiedCourseId === c.courseId ? (
-                              <Check className="h-4 w-4" aria-hidden />
-                            ) : (
-                              <Copy className="h-4 w-4" aria-hidden />
-                            )}
-                          </button>
-                        ) : null}
                         <Link
-                          href={`/license-keys?${keyQs.toString()}`}
-                          className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-900 transition hover:bg-violet-100"
+                          href={`/courses/${c.courseId}/view`}
+                          className="text-sm font-medium text-slate-800 transition hover:text-teal-600"
                         >
-                          License keys
+                          {c.title ?? "Course"}
                         </Link>
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                          Snapshot
+                        </span>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        </div>
-      </div>
-    </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-800">{c.title ?? "Course"}</span>
+                        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                          Snapshot
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {c.courseId ? (
+                      <button
+                        type="button"
+                        onClick={() => void copyCourseLink(c.courseId!)}
+                        title={copiedCourseId === c.courseId ? "Copied" : "Copy course link"}
+                        className={`inline-flex items-center justify-center rounded-lg border p-1.5 transition ${
+                          copiedCourseId === c.courseId
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100"
+                        }`}
+                      >
+                        {copiedCourseId === c.courseId ? (
+                          <Check className="h-4 w-4" aria-hidden />
+                        ) : (
+                          <Copy className="h-4 w-4" aria-hidden />
+                        )}
+                      </button>
+                    ) : null}
+                    <Link
+                      href={`/license-keys?${keyQs.toString()}`}
+                      className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-xs font-semibold text-violet-900 transition hover:bg-violet-100"
+                    >
+                      License keys
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </EntityDetailSection>
+    </EntityDetailShell>
   );
 }
