@@ -10,7 +10,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { Eye, SquarePen } from "lucide-react";
 
 interface BatchItem {
@@ -28,6 +28,7 @@ interface BatchItem {
 }
 
 export default function BatchesPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const [list, setList] = useState<BatchItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,9 +46,13 @@ export default function BatchesPage() {
   }, [roles]);
 
   async function handleDelete(batchMongoId: string, name: string) {
-    if (!window.confirm(`Permanently delete batch "${name}"?\n\nThis cannot be undone. If any enrolment, submission, attendance or certificate references this batch, the delete will be refused with details.`)) {
-      return;
-    }
+    const ok = await dialog.confirm({
+      title: "Delete batch",
+      message: `Permanently delete batch "${name}"?\n\nThis cannot be undone. If any enrolment, submission, attendance or certificate references this batch, the delete will be refused with details.`,
+      confirmLabel: "Delete permanently",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingId(batchMongoId);
     const res = await api<{ deleted: boolean }>(`/api/batches/${batchMongoId}`, { method: "DELETE" });
     setDeletingId(null);
@@ -55,11 +60,16 @@ export default function BatchesPage() {
       setList((prev) => prev.filter((b) => b.id !== batchMongoId));
       return;
     }
-    window.alert(res.message ?? "Failed to delete batch.");
+    await dialog.alert({ title: "Delete failed", message: res.message ?? "Failed to delete batch." });
   }
 
   async function handleUnarchive(batchMongoId: string, name: string) {
-    if (!window.confirm(`Unarchive batch "${name}"? It will become active again.`)) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive batch",
+      message: `Unarchive batch "${name}"? It will become active again.`,
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     setUnarchivingId(batchMongoId);
     const res = await api<BatchItem>(`/api/batches/${batchMongoId}/unarchive`, { method: "PATCH" });
     setUnarchivingId(null);
@@ -69,7 +79,7 @@ export default function BatchesPage() {
       );
       return;
     }
-    window.alert(res.message ?? "Failed to unarchive batch.");
+    await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive batch." });
   }
 
   const filteredList = useMemo(() => {

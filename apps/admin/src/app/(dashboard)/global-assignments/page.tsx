@@ -11,7 +11,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { Eye } from "lucide-react";
 
 interface AssignmentItem {
@@ -24,6 +24,7 @@ interface AssignmentItem {
 }
 
 export default function GlobalAssignmentsPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const router = useRouter();
   const [list, setList] = useState<AssignmentItem[]>([]);
@@ -96,9 +97,13 @@ export default function GlobalAssignmentsPage() {
   }
 
   async function handleDelete(assignmentId: string, title: string) {
-    if (!window.confirm(`Permanently delete assignment "${title}"?\n\nThis cannot be undone. If any submissions or chapters/courses/batches still reference it, the delete will be refused with details.`)) {
-      return;
-    }
+    const ok = await dialog.confirm({
+      title: "Delete assignment",
+      message: `Permanently delete assignment "${title}"?\n\nThis cannot be undone. If any submissions or chapters/courses/batches still reference it, the delete will be refused with details.`,
+      confirmLabel: "Delete permanently",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingId(assignmentId);
     const res = await api<{ deleted: boolean }>(`/api/global-assignments/${assignmentId}`, { method: "DELETE" });
     setDeletingId(null);
@@ -106,11 +111,16 @@ export default function GlobalAssignmentsPage() {
       setList((prev) => prev.filter((a) => a.id !== assignmentId));
       return;
     }
-    window.alert(res.message ?? "Failed to delete assignment.");
+    await dialog.alert({ title: "Delete failed", message: res.message ?? "Failed to delete assignment." });
   }
 
   async function handleUnarchive(assignmentId: string, title: string) {
-    if (!window.confirm(`Unarchive assignment "${title}"? It will become active again.`)) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive assignment",
+      message: `Unarchive assignment "${title}"? It will become active again.`,
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     setUnarchivingId(assignmentId);
     const res = await api<AssignmentItem>(`/api/global-assignments/${assignmentId}/unarchive`, { method: "PATCH" });
     setUnarchivingId(null);
@@ -120,7 +130,7 @@ export default function GlobalAssignmentsPage() {
       );
       return;
     }
-    window.alert(res.message ?? "Failed to unarchive assignment.");
+    await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive assignment." });
   }
 
   return (

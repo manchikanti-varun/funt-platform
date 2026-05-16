@@ -1,4 +1,6 @@
 export { Alert } from "./Alert";
+export { AppDialogProvider, useAppDialog } from "./AppDialogProvider";
+export type { AlertDialogOptions, ConfirmDialogOptions, PromptDialogOptions } from "./AppDialogProvider";
 export { AppPageShell } from "./AppPageShell";
 export { BackLink, BACK_LINK_CLASS } from "./BackLink";
 export { Button, IconButton } from "./Button";

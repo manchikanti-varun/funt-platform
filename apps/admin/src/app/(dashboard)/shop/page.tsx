@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { DeleteIconButton } from "@/components/ui/actionIconButtons";
-import { AppPageShell, DataPanel, FormPanel, PageSection } from "@/components/ui";
+import { AppPageShell, DataPanel, FormPanel, PageSection, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 interface ProductRow {
@@ -58,6 +58,7 @@ interface ShopStockInsights {
 }
 
 export default function AdminShopPage() {
+  const dialog = useAppDialog();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [orders, setOrders] = useState<ShopOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +157,13 @@ export default function AdminShopPage() {
   };
 
   const remove = async (p: ProductRow) => {
-    if (!confirm(`Delete “${p.name}”?`)) return;
+    const ok = await dialog.confirm({
+      title: "Delete product",
+      message: `Delete “${p.name}”?`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     const res = await api(`/api/admin/shop/products/${encodeURIComponent(p.id)}`, { method: "DELETE" });
     if (res.success) {
       setMessage({ type: "ok", text: "Deleted." });

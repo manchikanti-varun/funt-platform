@@ -8,6 +8,7 @@ import { MODULE_STATUS, ROLE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { useAppDialog } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
 
@@ -40,6 +41,7 @@ interface AssignmentOption {
 }
 
 export default function EditGlobalChapterPage() {
+  const dialog = useAppDialog();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -106,14 +108,24 @@ export default function EditGlobalChapterPage() {
   }
 
   async function archive() {
-    if (!confirm("Archive this chapter?")) return;
+    const ok = await dialog.confirm({
+      title: "Archive chapter",
+      message: "Archive this chapter?",
+      confirmLabel: "Archive",
+    });
+    if (!ok) return;
     const res = await api(`/api/global-chapters/${id}/archive`, { method: "PATCH" });
     if (res.success) router.push("/global-modules");
     else setError(res.message ?? "Failed to archive chapter.");
   }
 
   async function unarchive() {
-    if (!confirm("Unarchive this chapter?")) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive chapter",
+      message: "Unarchive this chapter?",
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     const res = await api<Chapter>(`/api/global-chapters/${id}/unarchive`, { method: "PATCH" });
     if (res.success && res.data) {
       applyChapterToForm(res.data);
@@ -123,7 +135,12 @@ export default function EditGlobalChapterPage() {
   }
 
   async function restoreVersionCopy(version: number) {
-    if (!confirm(`Restore version ${version}? Current content will be saved as a version copy first.`)) return;
+    const ok = await dialog.confirm({
+      title: "Restore version",
+      message: `Restore version ${version}? Current content will be saved as a version copy first.`,
+      confirmLabel: "Restore",
+    });
+    if (!ok) return;
     setError("");
     setRestoringVersion(version);
     const res = await api<Chapter>(`/api/global-chapters/${id}/versions/restore`, {

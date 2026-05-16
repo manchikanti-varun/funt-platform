@@ -8,6 +8,7 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useSearchParams } from "next/navigation";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { useAppDialog } from "@/components/ui";
 import type { PaymentUpiConfigApiResponse } from "@/components/admin/PlatformUpiCheckoutSummary";
 
 interface GenerateResponse {
@@ -61,6 +62,7 @@ function fmtDate(iso: string): string {
 }
 
 export default function PaymentQrPage() {
+  const dialog = useAppDialog();
   const searchParams = useSearchParams();
   const { roles } = useAdminUser();
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
@@ -215,10 +217,16 @@ export default function PaymentQrPage() {
     } else setError(res.message ?? "Could not approve request");
   }
   async function rejectRequest(id: string): Promise<void> {
-    const reason = typeof window !== "undefined" ? window.prompt("Reason for rejection (optional)") : "";
+    const reason = await dialog.prompt({
+      title: "Reject UPI change request",
+      label: "Reason for rejection",
+      optional: true,
+      confirmLabel: "Reject",
+    });
+    if (reason === null) return;
     const res = await api(`/api/admin/payment-upi/change-requests/${encodeURIComponent(id)}/reject`, {
       method: "POST",
-      body: JSON.stringify({ reason: reason?.trim() || undefined }),
+      body: JSON.stringify({ reason: reason.trim() || undefined }),
     });
     if (res.success) {
       setMessage("Request rejected.");

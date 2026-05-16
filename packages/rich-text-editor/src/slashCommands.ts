@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import type { Editor } from "@tiptap/core";
 import type { SlashCommandItem } from "./types.js";
+import { getRteActionsStorage } from "./editorActions.js";
 
 export const slashCommandPluginKey = new PluginKey("slash-commands");
 
@@ -121,24 +122,15 @@ const getSlashCommands = (editor: Editor): SlashCommandItem[] => [
   {
     id: "image",
     label: "Image",
-    description: "Insert from an https image URL",
+    description: "Insert from URL or upload from your computer",
     group: "Insert",
-    keywords: ["photo", "picture", "img", "url"],
+    keywords: ["photo", "picture", "img", "url", "upload"],
     icon: "image-plus",
     run: () => {
-      const value = window.prompt("Enter image URL (https://…)");
-      if (value === null) return;
-      const src = value.trim();
-      if (!src) return;
-      if (!/^https?:\/\//i.test(src) && !/^data:image\//i.test(src)) {
-        window.alert("Please enter a valid image URL (https://…).");
-        return;
+      const insertImage = getRteActionsStorage(editor)?.insertImage;
+      if (insertImage) {
+        void insertImage();
       }
-      editor
-        .chain()
-        .focus()
-        .insertContent({ type: "image", attrs: { src, alt: "", widthPct: 80, align: "center" } })
-        .run();
     },
   },
   {

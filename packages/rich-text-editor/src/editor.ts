@@ -59,6 +59,8 @@ import {
   Redo2
 } from "lucide";
 import { SlashCommandsExtension } from "./slashCommands.js";
+import { RteActionsExtension } from "./editorActions.js";
+import { dismissRteDialogs, showRteAlert, showRteImageDialog, showRtePrompt } from "./ui/dialogs.js";
 import type { EditorStats, RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
 
 const TOOLBAR_ACTIONS = {
@@ -506,6 +508,7 @@ export class RichTextEditor implements RichTextEditorApi {
         Link.configure({ openOnClick: false, autolink: true }),
         CustomImage.configure({ allowBase64: true }),
         VideoNode,
+        RteActionsExtension,
         ...(this.options.enableSlashCommands
           ? [SlashCommandsExtension.configure({ onStateChange: this.renderSlashMenu })]
           : [])
@@ -533,6 +536,12 @@ export class RichTextEditor implements RichTextEditorApi {
     });
 
     this.toolbar.classList.toggle("floating", this.options.toolbarMode === "floating");
+    const rteActions = this.editor.storage.rteActions as {
+      insertImage: (() => Promise<void>) | null;
+      showAlert: ((message: string) => Promise<void>) | null;
+    };
+    rteActions.insertImage = () => this.insertImage();
+    rteActions.showAlert = (message) => this.showEditorAlert(message);
     this.updateToolbarState();
     this.updateStatsBar();
     this.contentArea.addEventListener("scroll", this.updateResizeOverlayPosition, { passive: true });
@@ -605,6 +614,7 @@ export class RichTextEditor implements RichTextEditorApi {
   }
 
   destroy(): void {
+    dismissRteDialogs();
     this.editor?.destroy();
     this.editor = null;
     this.changeCallbacks.clear();
@@ -1333,16 +1343,7 @@ export class RichTextEditor implements RichTextEditorApi {
         chain.toggleTaskList().run();
         break;
       case TOOLBAR_ACTIONS.link: {
-        const previous = this.editor.getAttributes("link").href as string | undefined;
-        const value = window.prompt("Enter URL", previous ?? "https://");
-        if (value === null) {
-          return;
-        }
-        if (!value.trim()) {
-          chain.unsetLink().run();
-          break;
-        }
-        chain.extendMarkRange("link").setLink({ href: value, target: "_blank", rel: "noopener noreferrer" }).run();
+        void this.editLink();
         break;
       }
       case TOOLBAR_ACTIONS.blockquote:
@@ -1370,7 +1371,7 @@ export class RichTextEditor implements RichTextEditorApi {
         await this.insertImage();
         break;
       case TOOLBAR_ACTIONS.video:
-        this.insertVideoFromUrl();
+        void this.insertVideoFromUrl();
         break;
       case TOOLBAR_ACTIONS.alignLeft:
         chain.setTextAlign("left").run();
@@ -1405,11 +1406,16 @@ export class RichTextEditor implements RichTextEditorApi {
     this.updateToolbarState();
   }
 
-  private insertVideoFromUrl(): void {
-    if (!this.editor) return;
-    const value = window.prompt("Enter video URL (mp4/webm/ogg)");
-    if (value === null) return;
-    const src = value.trim();
+  private async insertVideoFromUrl(): Promise<void> {
+    if (!this.editor || !this.root) return;
+    const result = await showRtePrompt(this.root, {
+      title: "Insert video",
+      label: "Video URL",
+      placeholder: "https://example.com/video.mp4",
+      hint: "Supported formats: mp4, webm, ogg, or embeddable links.",
+    });
+    if (result.cancelled) return;
+    const src = result.value.trim();
     if (!src) return;
     const renderKind = inferRenderKind(src);
     this.editor
@@ -1417,6 +1423,36 @@ export class RichTextEditor implements RichTextEditorApi {
       .focus()
       .insertContent({ type: "video", attrs: { src, controls: true, renderKind, widthPct: 80, align: "center" } })
       .run();
+  }
+
+  private async editLink(): Promise<void> {
+    if (!this.editor || !this.root) return;
+    const previous = (this.editor.getAttributes("link").href as string | undefined) ?? "";
+    const result = await showRtePrompt(this.root, {
+      title: "Link",
+      label: "URL",
+      placeholder: "https://example.com",
+      defaultValue: previous || "https://",
+      allowEmpty: true,
+      hint: "Leave empty to remove the link.",
+    });
+    if (result.cancelled) return;
+    const value = result.value.trim();
+    if (!value) {
+      this.editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+    this.editor
+      .chain()
+      .focus()
+      .extendMarkRange("link")
+      .setLink({ href: value, target: "_blank", rel: "noopener noreferrer" })
+      .run();
+  }
+
+  private showEditorAlert(message: string): Promise<void> {
+    if (!this.root) return Promise.resolve();
+    return showRteAlert(this.root, message);
   }
 
   private getSelectedMediaNode():
@@ -1464,7 +1500,7 @@ export class RichTextEditor implements RichTextEditorApi {
     const selected = this.getSelectedMediaNode();
     if (!selected) {
       if (!options?.silentWhenNoSelection) {
-        window.alert("Select an image or video first, then change width/alignment.");
+        void this.showEditorAlert("Select an image or video first, then change width/alignment.");
       }
       return;
     }
@@ -1489,7 +1525,7 @@ export class RichTextEditor implements RichTextEditorApi {
     }
     const normalized = src.trim();
     if (!/^https?:\/\//i.test(normalized) && !/^data:image\//i.test(normalized)) {
-      window.alert("Please enter a valid image URL (https://…).");
+      void this.showEditorAlert("Please enter a valid image URL (https://…).");
       return;
     }
     this.editor
@@ -1543,71 +1579,52 @@ export class RichTextEditor implements RichTextEditorApi {
   }
 
   private async insertImage(): Promise<void> {
-    const urlInput = window.prompt(
-      "Image URL (https://…)\n\nLeave blank and press OK to upload from your computer."
-    );
-    if (urlInput === null) {
+    if (!this.root) return;
+    const result = await showRteImageDialog(this.root);
+    if (result.action === "cancel") return;
+    if (result.action === "url") {
+      this.insertImageFromUrl(result.url);
       return;
     }
-    const url = urlInput.trim();
-    if (url) {
-      this.insertImageFromUrl(url);
-      return;
-    }
-    await this.insertImageFromFile();
+    await this.insertImageFromFile(result.file);
   }
 
-  private async insertImageFromFile(): Promise<void> {
+  private async insertImageFromFile(file: File): Promise<void> {
     if (!this.editor) {
       return;
     }
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.click();
+    const compressed = await this.compressImageForEmbed(file);
+    const dataUrl = await this.fileToDataUrl(compressed);
+    const { from } = this.editor.state.selection;
+    this.editor
+      .chain()
+      .focus()
+      .insertContent({ type: "image", attrs: { src: dataUrl, alt: compressed.name, widthPct: 80, align: "center" } })
+      .run();
 
-    await new Promise<void>((resolve) => {
-      input.onchange = async () => {
-        const picked = input.files?.[0];
-        if (!picked) {
-          resolve();
-          return;
-        }
-        const file = await this.compressImageForEmbed(picked);
-        const dataUrl = await this.fileToDataUrl(file);
-        const { from } = this.editor!.state.selection;
-        this.editor!
-          .chain()
-          .focus()
-          .insertContent({ type: "image", attrs: { src: dataUrl, alt: file.name, widthPct: 80, align: "center" } })
-          .run();
-
-        if (this.options.uploadImage) {
-          try {
-            const uploaded = await this.options.uploadImage(file);
-            const doc = this.editor!.state.doc;
-            doc.descendants((node, pos) => {
-              if (node.type.name === "image" && node.attrs.src === dataUrl) {
-                this.editor!.commands.command(({ tr }) => {
-                  tr.setNodeMarkup(pos, undefined, {
-                    ...node.attrs,
-                    src: uploaded.url,
-                    alt: uploaded.alt ?? file.name
-                  });
-                  return true;
-                });
-                return false;
-              }
+    if (this.options.uploadImage) {
+      try {
+        const uploaded = await this.options.uploadImage(compressed);
+        const doc = this.editor.state.doc;
+        doc.descendants((node, pos) => {
+          if (node.type.name === "image" && node.attrs.src === dataUrl) {
+            this.editor!.commands.command(({ tr }) => {
+              tr.setNodeMarkup(pos, undefined, {
+                ...node.attrs,
+                src: uploaded.url,
+                alt: uploaded.alt ?? compressed.name,
+              });
               return true;
             });
-          } catch (err) {
-            console.error("Image upload failed", err);
-            this.editor!.commands.setTextSelection(from);
+            return false;
           }
-        }
-        resolve();
-      };
-    });
+          return true;
+        });
+      } catch (err) {
+        console.error("Image upload failed", err);
+        this.editor.commands.setTextSelection(from);
+      }
+    }
   }
 
   private async fileToDataUrl(file: File): Promise<string> {

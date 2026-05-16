@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
+import { AppPageShell, FormPanel, PageSection, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 type Tab = "requests" | "student" | "trainer" | "admin" | "superAdmin" | "reset";
@@ -213,6 +213,7 @@ export default function AdminManagementPage() {
 }
 
 function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | "error", text: string) => void }) {
+  const dialog = useAppDialog();
   const [requests, setRequests] = useState<RegistrationRequestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -258,9 +259,18 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
   }
 
   async function reject(requestId: string) {
-    const reason = window.prompt("Rejection reason (optional):");
+    const reason = await dialog.prompt({
+      title: "Reject registration",
+      label: "Rejection reason",
+      optional: true,
+      confirmLabel: "Reject",
+    });
+    if (reason === null) return;
     setActingId(requestId);
-    const res = await api(`/api/admin/requests/${requestId}/reject`, { method: "POST", body: JSON.stringify({ reason: reason ?? undefined }) });
+    const res = await api(`/api/admin/requests/${requestId}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ reason: reason.trim() || undefined }),
+    });
     setActingId(null);
     if (res.success) {
       onMessage("success", "Request rejected.");

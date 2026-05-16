@@ -8,6 +8,7 @@ import { ASSIGNMENT_STATUS, SUBMISSION_TYPE } from "@funt-platform/constants";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
+import { useAppDialog } from "@/components/ui";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { SkillTagsField } from "@/components/admin/SkillTagsField";
@@ -25,6 +26,7 @@ interface Assignment {
 }
 
 export default function EditGlobalAssignmentPage() {
+  const dialog = useAppDialog();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -81,14 +83,24 @@ export default function EditGlobalAssignmentPage() {
   }
 
   async function archive() {
-    if (!confirm("Archive this assignment?")) return;
+    const ok = await dialog.confirm({
+      title: "Archive assignment",
+      message: "Archive this assignment?",
+      confirmLabel: "Archive",
+    });
+    if (!ok) return;
     const res = await api(`/api/global-assignments/${id}/archive`, { method: "PATCH" });
     if (res.success) router.push("/global-assignments");
     else setError(res.message ?? "Failed to archive.");
   }
 
   async function unarchive() {
-    if (!confirm("Unarchive this assignment?")) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive assignment",
+      message: "Unarchive this assignment?",
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     const res = await api<Assignment>(`/api/global-assignments/${id}/unarchive`, { method: "PATCH" });
     if (res.success && res.data) setAssignment(res.data);
     else if (!res.success) setError(res.message ?? "Failed to unarchive.");

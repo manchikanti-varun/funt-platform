@@ -7,6 +7,7 @@ import { AdminUserProvider, type AdminUser } from "@/contexts/AdminUserContext";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { StateScreen } from "@/components/ui/StateScreen";
+import { AppDialogProvider } from "@/components/ui/AppDialogProvider";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -45,6 +46,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminUserProvider user={user}>
+    <AppDialogProvider>
     <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50">
       <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
       {sidebarOpen && (
@@ -60,6 +62,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     </div>
+    </AppDialogProvider>
     </AdminUserProvider>
   );
 }

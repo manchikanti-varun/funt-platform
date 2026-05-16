@@ -10,7 +10,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { Eye } from "lucide-react";
 
 interface CourseItem {
@@ -23,6 +23,7 @@ interface CourseItem {
 }
 
 export default function CoursesPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const [list, setList] = useState<CourseItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,9 +40,13 @@ export default function CoursesPage() {
   }, [roles]);
 
   async function handleDelete(courseId: string, title: string) {
-    if (!window.confirm(`Permanently delete course "${title}"?\n\nThis cannot be undone. If any batch still derives from this course, the delete will be refused with details.`)) {
-      return;
-    }
+    const ok = await dialog.confirm({
+      title: "Delete course",
+      message: `Permanently delete course "${title}"?\n\nThis cannot be undone. If any batch still derives from this course, the delete will be refused with details.`,
+      confirmLabel: "Delete permanently",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingId(courseId);
     const res = await api<{ deleted: boolean }>(`/api/courses/${courseId}`, { method: "DELETE" });
     setDeletingId(null);
@@ -49,11 +54,16 @@ export default function CoursesPage() {
       setList((prev) => prev.filter((c) => c.id !== courseId));
       return;
     }
-    window.alert(res.message ?? "Failed to delete course.");
+    await dialog.alert({ title: "Delete failed", message: res.message ?? "Failed to delete course." });
   }
 
   async function handleUnarchive(courseId: string, title: string) {
-    if (!window.confirm(`Unarchive course "${title}"? It will become active again.`)) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive course",
+      message: `Unarchive course "${title}"? It will become active again.`,
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     setUnarchivingId(courseId);
     const res = await api<CourseItem>(`/api/courses/${courseId}/unarchive`, { method: "PATCH" });
     setUnarchivingId(null);
@@ -63,7 +73,7 @@ export default function CoursesPage() {
       );
       return;
     }
-    window.alert(res.message ?? "Failed to unarchive course.");
+    await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive course." });
   }
 
   const sortedList = useMemo(() => {

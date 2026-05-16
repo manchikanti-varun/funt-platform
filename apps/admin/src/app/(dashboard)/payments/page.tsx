@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
-import { AppPageShell, DataPanel, PageSection } from "@/components/ui";
+import { AppPageShell, DataPanel, PageSection, useAppDialog } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
@@ -31,6 +31,7 @@ interface PendingRow {
 }
 
 export default function AdminPaymentsPage() {
+  const dialog = useAppDialog();
   const [rows, setRows] = useState<PendingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -71,7 +72,13 @@ export default function AdminPaymentsPage() {
   }
 
   async function reject(id: string) {
-    const reason = typeof window !== "undefined" ? window.prompt("Optional note for the student (reason for rejection):") : null;
+    const reason = await dialog.prompt({
+      title: "Reject payment",
+      label: "Optional note for the student",
+      placeholder: "Reason for rejection",
+      optional: true,
+      confirmLabel: "Reject",
+    });
     if (reason === null) return;
     setActingId(id);
     setMsg(null);

@@ -8,6 +8,7 @@ import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { BATCH_STATUS } from "@funt-platform/constants";
 import { BackLink } from "@/components/ui/BackLink";
+import { useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { TrainerSelect } from "@/components/admin/StaffPickerFields";
 import {
@@ -82,6 +83,7 @@ function readImageFileAsDataUrl(file: File): Promise<string> {
 }
 
 export default function EditBatchPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const params = useParams();
   const router = useRouter();
@@ -284,14 +286,24 @@ export default function EditBatchPage() {
   }
 
   async function archive() {
-    if (!confirm("Archive this batch? Students will no longer see it in Explore.")) return;
+    const ok = await dialog.confirm({
+      title: "Archive batch",
+      message: "Archive this batch? Students will no longer see it in Explore.",
+      confirmLabel: "Archive",
+    });
+    if (!ok) return;
     const res = await api(`/api/batches/${id}/archive`, { method: "PATCH" });
     if (res.success) router.push("/batches");
     else setError(res.message ?? "Failed to archive.");
   }
 
   async function unarchive() {
-    if (!confirm("Unarchive this batch?")) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive batch",
+      message: "Unarchive this batch?",
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     const res = await api<Batch>(`/api/batches/${id}/unarchive`, { method: "PATCH" });
     if (res.success && res.data) setBatch(res.data);
     else if (!res.success) setError(res.message ?? "Failed to unarchive.");

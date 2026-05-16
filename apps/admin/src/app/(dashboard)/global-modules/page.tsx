@@ -12,7 +12,7 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { Eye, SquarePen } from "lucide-react";
 
@@ -25,6 +25,7 @@ interface ChapterItem {
 }
 
 export default function GlobalChaptersPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const router = useRouter();
   const [list, setList] = useState<ChapterItem[]>([]);
@@ -93,9 +94,13 @@ export default function GlobalChaptersPage() {
   }
 
   async function handleDelete(chapterId: string, title: string) {
-    if (!window.confirm(`Permanently delete chapter "${title}"?\n\nThis cannot be undone. Courses and batches that already include this chapter keep their own snapshot and are not affected.`)) {
-      return;
-    }
+    const ok = await dialog.confirm({
+      title: "Delete chapter",
+      message: `Permanently delete chapter "${title}"?\n\nThis cannot be undone. Courses and batches that already include this chapter keep their own snapshot and are not affected.`,
+      confirmLabel: "Delete permanently",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeletingId(chapterId);
     const res = await api<{ deleted: boolean }>(`/api/global-chapters/${chapterId}`, { method: "DELETE" });
     setDeletingId(null);
@@ -103,11 +108,16 @@ export default function GlobalChaptersPage() {
       setList((prev) => prev.filter((m) => m.id !== chapterId));
       return;
     }
-    window.alert(res.message ?? "Failed to delete chapter.");
+    await dialog.alert({ title: "Delete failed", message: res.message ?? "Failed to delete chapter." });
   }
 
   async function handleUnarchive(chapterId: string, title: string) {
-    if (!window.confirm(`Unarchive chapter "${title}"? It will become active again.`)) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive chapter",
+      message: `Unarchive chapter "${title}"? It will become active again.`,
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     setUnarchivingId(chapterId);
     const res = await api<ChapterItem>(`/api/global-chapters/${chapterId}/unarchive`, { method: "PATCH" });
     setUnarchivingId(null);
@@ -117,7 +127,7 @@ export default function GlobalChaptersPage() {
       );
       return;
     }
-    window.alert(res.message ?? "Failed to unarchive chapter.");
+    await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive chapter." });
   }
 
   return (

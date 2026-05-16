@@ -8,6 +8,7 @@ import { COURSE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/consta
 import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
+import { useAppDialog } from "@/components/ui";
 
 interface CourseModule {
   originalGlobalModuleId: string;
@@ -43,6 +44,7 @@ import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 export default function EditCoursePage() {
+  const dialog = useAppDialog();
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -187,14 +189,24 @@ export default function EditCoursePage() {
   }
 
   async function archive() {
-    if (!confirm("Archive this course? It will no longer be available for new batches.")) return;
+    const ok = await dialog.confirm({
+      title: "Archive course",
+      message: "Archive this course? It will no longer be available for new batches.",
+      confirmLabel: "Archive",
+    });
+    if (!ok) return;
     const res = await api(`/api/courses/${id}/archive`, { method: "PATCH" });
     if (res.success) router.push("/courses");
     else setError(res.message ?? "Failed to archive.");
   }
 
   async function unarchive() {
-    if (!confirm("Unarchive this course?")) return;
+    const ok = await dialog.confirm({
+      title: "Unarchive course",
+      message: "Unarchive this course?",
+      confirmLabel: "Unarchive",
+    });
+    if (!ok) return;
     const res = await api<Course>(`/api/courses/${id}/unarchive`, { method: "PATCH" });
     if (res.success && res.data) setCourse(res.data as Course);
     else if (!res.success) setError(res.message ?? "Failed to unarchive.");
