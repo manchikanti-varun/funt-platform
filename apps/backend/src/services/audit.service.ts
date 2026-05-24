@@ -64,7 +64,9 @@ export type AuditAction =
   | "PAYMENT_UPI_CHANGE_APPROVED"
   | "PAYMENT_UPI_CHANGE_REJECTED"
   | "PAYMENT_VERIFIED"
-  | "PAYMENT_REJECTED";
+  | "PAYMENT_REJECTED"
+  | "INVOICE_ISSUED"
+  | "INVOICE_MANUAL_ISSUED";
 
 export async function createAuditLog(
   action: AuditAction,

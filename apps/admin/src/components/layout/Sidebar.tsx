@@ -108,6 +108,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
               Payment approvals
             </SidebarNavLink>
+            <SidebarNavLink href="/invoices" isActive={pathname.startsWith("/invoices")}>
+              Invoices
+            </SidebarNavLink>
             <SidebarNavLink href="/finance" isActive={pathname.startsWith("/finance")}>
               Finance dashboard
             </SidebarNavLink>

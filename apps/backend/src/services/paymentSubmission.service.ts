@@ -18,6 +18,7 @@ import { AppError } from "../utils/AppError.js";
 import { PAYMENT_VERIFIED_BY_RAZORPAY_AUTO } from "../constants/payment.js";
 import { normalizeAllowedPaymentMethods, type CoursePaymentMethodCode } from "../utils/coursePaymentMethods.js";
 import { createAuditLog } from "./audit.service.js";
+import { issueInvoiceForPayment } from "./invoice.service.js";
 import { RazorpayOrderContextModel } from "../models/RazorpayOrderContext.model.js";
 import { ShopProductModel } from "../models/ShopProduct.model.js";
 
@@ -685,11 +686,13 @@ export async function verifyPaymentAndEnroll(
           .lean()
           .exec();
         const enrollmentCreated = !activeEnrollment;
+        let enrollmentId = activeEnrollment ? String(activeEnrollment._id) : undefined;
         if (enrollmentCreated) {
-          await EnrollmentModel.create(
+          const [createdEnrollment] = await EnrollmentModel.create(
             [{ studentId: doc.studentId, batchId, status: ENROLLMENT_STATUS.ACTIVE }],
             { session }
           );
+          enrollmentId = String(createdEnrollment._id);
         }
         const history = (
           ((doc as { statusHistory?: Array<{ status: string; note?: string; actorId?: string; at: Date }> }).statusHistory ?? []) as Array<{
@@ -736,6 +739,35 @@ export async function verifyPaymentAndEnroll(
         if (couponIdForRedeem) {
           await recordCouponRedemption(couponIdForRedeem, doc.studentId, `enrollment_payment:${String(doc._id)}`, session);
         }
+        const listPaise = Math.max(
+          0,
+          Math.floor(
+            Number(
+              (doc as { enrollmentListPaise?: number }).enrollmentListPaise ??
+                (doc as { amountPaise?: number }).amountPaise ??
+                0
+            )
+          )
+        );
+        const discountPaise = Math.max(
+          0,
+          Math.floor(Number((doc as { enrollmentDiscountPaise?: number }).enrollmentDiscountPaise ?? 0))
+        );
+        const paidPaise = Math.max(
+          0,
+          Math.floor(Number((doc as { amountPaise?: number }).amountPaise ?? listPaise - discountPaise))
+        );
+        await issueInvoiceForPayment({
+          paymentSubmissionId: String(doc._id),
+          studentId: doc.studentId,
+          batchId,
+          courseId,
+          enrollmentId,
+          amountInPaise: listPaise > 0 ? listPaise : paidPaise,
+          discountInPaise: discountPaise,
+          createdBy: adminId,
+          session,
+        });
         result = {
           message: enrollmentCreated
             ? "Access enabled and license key recorded. Student can start the course (or use the key if needed)."

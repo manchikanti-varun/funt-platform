@@ -148,3 +148,6 @@ export enum BADGE_TYPE {
 
 /** Student rolling UPI QR refresh interval (seconds); must match backend rolling QR generation. */
 export const ROLLING_UPI_QR_REFRESH_AFTER_SECONDS = 30;
+
+export { INVOICE_SOURCE, INVOICE_STATUS } from "./invoice";
+export type { InvoiceSource, InvoiceStatus } from "./invoice";

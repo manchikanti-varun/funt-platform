@@ -30,28 +30,43 @@ export default function EnrollmentsPage() {
       body: JSON.stringify({ studentId, batchId }),
     });
     setLoading(false);
-    if (res.success) setMessage({ type: "success", text: "Enrollment created." });
-    else setMessage({ type: "error", text: res.message ?? "Failed." });
+    if (res.success) setMessage({ type: "success", text: "Enrolled." });
+    else setMessage({ type: "error", text: res.message ?? "Could not enroll." });
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-800">Enrollments</h1>
-      <p className="text-slate-500 text-sm">Enroll a student into a batch. Only Admin and Super Admin can create enrollments.</p>
       <form onSubmit={submit} className="card max-w-md space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">Student username or user ID</label>
-          <input required value={studentId} onChange={(e) => setStudentId(e.target.value)} className="input font-mono" placeholder="e.g. srikar.ch or MongoDB id" />
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Student</label>
+          <input
+            required
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            className="input"
+            placeholder="Username or ID"
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Batch</label>
           <select required value={batchId} onChange={(e) => setBatchId(e.target.value)} className="input">
             <option value="">Select batch</option>
-            {batches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            {batches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
           </select>
         </div>
-        {message && <p className={message.type === "success" ? "text-emerald-400 text-sm" : "text-red-400 text-sm"}>{message.text}</p>}
-        <button type="submit" disabled={loading} className="btn-primary">Create Enrollment</button>
+        {message ? (
+          <p className={message.type === "success" ? "text-sm text-emerald-600" : "text-sm text-red-600"}>
+            {message.text}
+          </p>
+        ) : null}
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading ? "Saving…" : "Enroll"}
+        </button>
       </form>
     </div>
   );

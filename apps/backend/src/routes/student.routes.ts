@@ -29,6 +29,11 @@ import {
   postStudentRazorpayConfirm,
 } from "../controllers/studentAccess.controller.js";
 import { getMyCertificates, postGenerateMyCertificate } from "../controllers/certificate.controller.js";
+import {
+  getMyInvoices,
+  getMyInvoiceById,
+  downloadStudentInvoicePdf,
+} from "../controllers/invoice.controller.js";
 
 const router = Router();
 
@@ -50,6 +55,9 @@ router.post("/payments/razorpay/confirm", postStudentRazorpayConfirm);
 router.post("/payments", postSubmitPayment);
 router.get("/payments/pending", getStudentPaymentPending);
 router.get("/payments/timeline", getStudentPaymentTimelineView);
+router.get("/invoices", getMyInvoices);
+router.get("/invoices/:id/pdf", downloadStudentInvoicePdf);
+router.get("/invoices/:id", getMyInvoiceById);
 router.get("/coin-grants", getMyCoinGrants);
 router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);

@@ -77,6 +77,7 @@ const NAV_SECTIONS: Array<{
   {
     title: "Account",
     items: [
+      { href: "/invoices", label: "Invoices", Icon: IconCertificates },
       { href: "/account", label: "Profile details", Icon: IconUser },
       { href: "/faq", label: "FAQ & Help", Icon: IconFaq },
     ],

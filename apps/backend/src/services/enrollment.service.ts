@@ -5,12 +5,16 @@ import { UserModel } from "../models/User.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { issueInvoiceForEnrollment } from "./invoice.service.js";
 import { AppError } from "../utils/AppError.js";
 
 export interface CreateEnrollmentInput {
   studentId: string;
   batchId: string;
+  courseId?: string;
   createdBy: string;
+  /** Skip auto-invoice (e.g. when payment flow will issue its own). */
+  skipAutoInvoice?: boolean;
 }
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -56,6 +60,23 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
   });
 
   await createAuditLog("ENROLLMENT_CREATED", input.createdBy, "Enrollment", String(doc._id));
+
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const courseId =
+    String(input.courseId ?? "").trim() ||
+    String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() ||
+    undefined;
+
+  if (!input.skipAutoInvoice) {
+    await issueInvoiceForEnrollment({
+      enrollmentId: String(doc._id),
+      studentId: doc.studentId,
+      batchId: doc.batchId,
+      courseId,
+      createdBy: input.createdBy,
+    });
+  }
+
   return {
     id: String(doc._id),
     studentId: doc.studentId,
@@ -202,14 +223,24 @@ export async function bulkEnroll(
     }
   }
 
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const defaultCourseId = String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() || undefined;
+
   for (const studentId of toCreate) {
     try {
-      await EnrollmentModel.create({
+      const doc = await EnrollmentModel.create({
         studentId,
         batchId: batchMongoId,
         status: ENROLLMENT_STATUS.ACTIVE,
       });
       await createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId);
+      await issueInvoiceForEnrollment({
+        enrollmentId: String(doc._id),
+        studentId,
+        batchId: batchMongoId,
+        courseId: defaultCourseId,
+        createdBy,
+      });
       result.enrolled += 1;
     } catch (err) {
       result.errors.push({

@@ -60,6 +60,14 @@ import {
   postAwardBadgeByAdmin,
   postCreateBadgeDefinition,
 } from "../controllers/achievement.controller.js";
+import {
+  getAdminInvoices,
+  getAdminInvoiceById,
+  postManualInvoice,
+  getAdminInvoiceSettings,
+  patchAdminInvoiceSettings,
+  downloadAdminInvoicePdf,
+} from "../controllers/invoice.controller.js";
 
 const router = Router();
 
@@ -86,6 +94,12 @@ router.get("/license-keys/audit", requireRoles(ROLE.SUPER_ADMIN), getLicenseKeyA
 router.post("/license-keys", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postGenerateLicense);
 router.get("/payments/pending", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getPendingPayments);
 router.get("/payments/finance", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminPaymentsFinance);
+router.get("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceSettings);
+router.patch("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchAdminInvoiceSettings);
+router.get("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoices);
+router.get("/invoices/:id/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadAdminInvoicePdf);
+router.get("/invoices/:id", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceById);
+router.post("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postManualInvoice);
 router.post("/payments/:id/verify", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postVerifyPayment);
 router.post("/payments/:id/reject", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postRejectPayment);
 router.patch("/enrollments/:id/access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchEnrollmentAccess);
