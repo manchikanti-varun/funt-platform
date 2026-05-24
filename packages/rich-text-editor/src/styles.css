@@ -32,6 +32,23 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.05);
 }
 
+.rte-font-select-narrow {
+  min-width: 64px;
+}
+
+.rte-font-select-spacing {
+  min-width: 72px;
+}
+
+.rte-dialog-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+
 .rte-font-select {
   height: 34px;
   min-width: 118px;
@@ -403,6 +420,101 @@
   margin: 0.8em 0;
 }
 
+/* Block indent (Google Docs–style) — editor + LMS/admin read views */
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="1"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-1 {
+  padding-left: 36px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="2"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-2 {
+  padding-left: 72px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="3"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-3 {
+  padding-left: 108px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="4"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-4 {
+  padding-left: 144px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="5"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-5 {
+  padding-left: 180px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="6"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-6 {
+  padding-left: 216px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="7"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-7 {
+  padding-left: 252px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[data-indent="8"],
+:is(.rte-prosemirror, .rich-text-view) .rte-indent-8 {
+  padding-left: 288px;
+}
+
+/* Legacy Quill indent classes (older saved content) */
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-1 {
+  padding-left: 36px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-2 {
+  padding-left: 72px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-3 {
+  padding-left: 108px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-4 {
+  padding-left: 144px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-5 {
+  padding-left: 180px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-6 {
+  padding-left: 216px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-7 {
+  padding-left: 252px;
+}
+
+:is(.rte-prosemirror, .rich-text-view) .ql-indent-8 {
+  padding-left: 288px;
+}
+
+/* Paragraph alignment (TipTap text-align + legacy Quill) */
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[style*="text-align: center"],
+:is(.rte-prosemirror, .rich-text-view) .ql-align-center {
+  text-align: center;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[style*="text-align: right"],
+:is(.rte-prosemirror, .rich-text-view) .ql-align-right {
+  text-align: right;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[style*="text-align: justify"],
+:is(.rte-prosemirror, .rich-text-view) .ql-align-justify {
+  text-align: justify;
+}
+
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6, blockquote)[style*="text-align: left"],
+:is(.rte-prosemirror, .rich-text-view) .ql-align-left {
+  text-align: left;
+}
+
 .rte-prosemirror h1,
 .rte-prosemirror h2,
 .rte-prosemirror h3,
@@ -441,26 +553,85 @@
   color: #475569;
 }
 
-.rte-prosemirror ul,
-.rte-prosemirror ol {
-  margin: 0.8em 0;
-  padding-left: 1.6em;
+:is(.rte-prosemirror, .rich-text-view) ul,
+:is(.rte-prosemirror, .rich-text-view) ol {
+  margin: 0.5em 0;
+  padding-left: 1.75em;
   list-style-position: outside;
 }
 
-.rte-prosemirror ul[data-type="taskList"] {
-  list-style: none;
-  padding-left: 0.5rem;
+/* Nested bullet / numbered lists (Google Docs–style depth) */
+:is(.rte-prosemirror, .rich-text-view) ul {
+  list-style-type: disc;
 }
 
-.rte-prosemirror ul[data-type="taskList"] li {
+:is(.rte-prosemirror, .rich-text-view) ul ul {
+  list-style-type: circle;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ul ul ul {
+  list-style-type: square;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ol {
+  list-style-type: decimal;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ol ol {
+  list-style-type: lower-alpha;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ol ol ol {
+  list-style-type: lower-roman;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ul ol,
+:is(.rte-prosemirror, .rich-text-view) ol ul {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+:is(.rte-prosemirror, .rich-text-view) li {
+  display: list-item;
+  margin: 0.15em 0;
+}
+
+:is(.rte-prosemirror, .rich-text-view) li > p {
+  margin: 0.15em 0;
+}
+
+:is(.rte-prosemirror, .rich-text-view) li > ul,
+:is(.rte-prosemirror, .rich-text-view) li > ol {
+  margin: 0.2em 0 0.35em;
+}
+
+/* Task / checklist lists */
+:is(.rte-prosemirror, .rich-text-view) ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
   gap: 0.45rem;
+  list-style: none;
 }
 
-.rte-prosemirror ul[data-type="taskList"] li > label {
+:is(.rte-prosemirror, .rich-text-view) ul[data-type="taskList"] li > label {
   margin-top: 0.18rem;
+  flex-shrink: 0;
+}
+
+:is(.rte-prosemirror, .rich-text-view) ul[data-type="taskList"] ul[data-type="taskList"] {
+  padding-left: 1.75rem;
+  margin-top: 0.25em;
+}
+
+/* Indented paragraph followed by nested list */
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6)[data-indent] + ul,
+:is(.rte-prosemirror, .rich-text-view) :is(p, h1, h2, h3, h4, h5, h6)[data-indent] + ol {
+  margin-top: 0.35em;
 }
 
 .rte-prosemirror table {
@@ -481,19 +652,7 @@
   font-weight: 700;
 }
 
-.rte-prosemirror ul {
-  list-style-type: disc;
-}
-
-.rte-prosemirror ol {
-  list-style-type: decimal;
-}
-
-.rte-prosemirror li {
-  display: list-item;
-}
-
-.rte-prosemirror li::marker {
+:is(.rte-prosemirror, .rich-text-view) li::marker {
   color: currentColor;
 }
 

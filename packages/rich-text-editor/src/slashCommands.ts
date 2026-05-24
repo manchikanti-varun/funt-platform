@@ -24,6 +24,15 @@ const getDefaultState = (): SlashMenuState => ({
 
 const getSlashCommands = (editor: Editor): SlashCommandItem[] => [
   {
+    id: "normal-text",
+    label: "Normal text",
+    description: "Body paragraph style",
+    group: "Text",
+    keywords: ["paragraph", "body", "p"],
+    icon: "type",
+    run: () => editor.chain().focus().setParagraph().unsetAllMarks().run()
+  },
+  {
     id: "h1",
     label: "Heading 1",
     description: "Large section heading",
@@ -150,6 +159,36 @@ const getSlashCommands = (editor: Editor): SlashCommandItem[] => [
     keywords: ["grid"],
     icon: "table-2",
     run: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  },
+  {
+    id: "date",
+    label: "Date & time",
+    description: "Insert today's date and time",
+    group: "Insert",
+    keywords: ["today", "timestamp", "calendar"],
+    icon: "calendar",
+    run: () => {
+      const now = new Date();
+      const text = `${now.toLocaleDateString(undefined, {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })} ${now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+      editor.chain().focus().insertContent(text).run();
+    },
+  },
+  {
+    id: "find",
+    label: "Find in document",
+    description: "Search and replace text",
+    group: "Tools",
+    keywords: ["search", "replace", "find"],
+    icon: "search",
+    run: () => {
+      const openFind = getRteActionsStorage(editor)?.openFindReplace;
+      if (openFind) void openFind();
+    },
   }
 ];
 

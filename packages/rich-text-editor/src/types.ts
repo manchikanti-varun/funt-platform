@@ -18,6 +18,7 @@ export interface EditorStats {
   words: number;
   characters: number;
   readingTimeMinutes: number;
+  selectedWords: number;
 }
 
 export interface RichTextEditorOptions {

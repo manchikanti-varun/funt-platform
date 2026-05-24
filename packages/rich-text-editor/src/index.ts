@@ -1,4 +1,5 @@
 export { RichTextEditor } from "./editor.js";
+export { BlockIndent, BLOCK_INDENT_MAX, BLOCK_INDENT_PX } from "./blockIndent.js";
 export { createEnterpriseEditorConfig } from "./editorBuilder.js";
 export { GoogleDriveProvider } from "./media/googleDrive.js";
 export {

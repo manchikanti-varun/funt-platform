@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 
 export type RteActionsStorage = {
   insertImage: (() => Promise<void>) | null;
+  openFindReplace: (() => Promise<void>) | null;
   showAlert: ((message: string) => Promise<void>) | null;
 };
 
@@ -10,6 +11,7 @@ export const RteActionsExtension = Extension.create({
   addStorage() {
     return {
       insertImage: null,
+      openFindReplace: null,
       showAlert: null,
     } as RteActionsStorage;
   },

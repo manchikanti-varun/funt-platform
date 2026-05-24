@@ -6,6 +6,10 @@ import Image from "@tiptap/extension-image";
 import TextStyle from "@tiptap/extension-text-style";
 import FontFamily from "@tiptap/extension-font-family";
 import TextAlign from "@tiptap/extension-text-align";
+import { BlockIndent } from "./blockIndent.js";
+import { DocsKeyboardShortcuts } from "./docsKeyboardShortcuts.js";
+import { FontSize } from "./fontSize.js";
+import { LineSpacing } from "./lineSpacing.js";
 import type { MediaProviderRegistry } from "./media/provider.js";
 import type { EventBus, FeatureFlags } from "./platform/contracts.js";
 import { InMemoryEventBus } from "./platform/eventBus.js";
@@ -48,7 +52,11 @@ export function createEnterpriseEditorConfig(options: EnterpriseEditorConfigOpti
     StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5, 6] } }),
     TextStyle,
     FontFamily.configure({ types: ["textStyle"] }),
-    TextAlign.configure({ types: ["heading", "paragraph"] }),
+    BlockIndent,
+    FontSize,
+    LineSpacing,
+    DocsKeyboardShortcuts,
+    TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
     Underline,
     Link.configure({ openOnClick: false, autolink: true }),
     Image.configure({ allowBase64: true }),

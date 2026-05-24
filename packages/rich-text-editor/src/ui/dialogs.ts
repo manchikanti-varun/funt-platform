@@ -281,3 +281,86 @@ export function showRteImageDialog(host: HTMLElement): Promise<ImageInsertResult
     input.addEventListener("input", () => input.classList.remove("rte-dialog-input-error"));
   });
 }
+
+export interface FindReplaceResult {
+  action: "cancel" | "findNext" | "replace" | "replaceAll";
+  find: string;
+  replace: string;
+  caseSensitive: boolean;
+}
+
+export function showFindReplaceDialog(
+  host: HTMLElement,
+  defaults?: Partial<Pick<FindReplaceResult, "find" | "replace" | "caseSensitive">>
+): Promise<FindReplaceResult> {
+  return new Promise((resolve) => {
+    const body = document.createElement("div");
+    body.className = "rte-dialog-body-stack";
+
+    const findLabel = document.createElement("label");
+    findLabel.className = "rte-dialog-label";
+    findLabel.textContent = "Find";
+    const findInput = document.createElement("input");
+    findInput.type = "text";
+    findInput.className = "rte-dialog-input";
+    findInput.value = defaults?.find ?? "";
+    findInput.autocomplete = "off";
+    findLabel.append(findInput);
+
+    const replaceLabel = document.createElement("label");
+    replaceLabel.className = "rte-dialog-label";
+    replaceLabel.textContent = "Replace with";
+    const replaceInput = document.createElement("input");
+    replaceInput.type = "text";
+    replaceInput.className = "rte-dialog-input";
+    replaceInput.value = defaults?.replace ?? "";
+    replaceInput.autocomplete = "off";
+    replaceLabel.append(replaceInput);
+
+    const caseRow = document.createElement("label");
+    caseRow.className = "rte-dialog-checkbox-row";
+    const caseCheck = document.createElement("input");
+    caseCheck.type = "checkbox";
+    caseCheck.checked = defaults?.caseSensitive ?? false;
+    caseRow.append(caseCheck, document.createTextNode(" Match case"));
+
+    body.append(findLabel, replaceLabel, caseRow);
+
+    const cancel = createButton("Close", "ghost");
+    const findNext = createButton("Find next", "secondary");
+    const replace = createButton("Replace", "secondary");
+    const replaceAll = createButton("Replace all", "primary");
+
+    const actions = document.createElement("div");
+    actions.className = "rte-dialog-actions rte-dialog-actions-split";
+    actions.append(cancel, findNext, replace, replaceAll);
+
+    const pack = (): Omit<FindReplaceResult, "action"> => ({
+      find: findInput.value,
+      replace: replaceInput.value,
+      caseSensitive: caseCheck.checked,
+    });
+
+    const finish = (action: FindReplaceResult["action"]) => {
+      close(false);
+      resolve({ ...pack(), action });
+    };
+
+    const { close } = openDialog(host, "Find and replace", body, actions, () => finish("cancel"));
+
+    cancel.addEventListener("click", () => finish("cancel"));
+    findNext.addEventListener("click", () => finish("findNext"));
+    replace.addEventListener("click", () => finish("replace"));
+    replaceAll.addEventListener("click", () => finish("replaceAll"));
+
+    findInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        finish("findNext");
+      }
+    });
+
+    findInput.focus();
+    findInput.select();
+  });
+}

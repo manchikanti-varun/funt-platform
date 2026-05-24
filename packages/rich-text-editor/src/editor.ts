@@ -18,7 +18,6 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import DOMPurify from "dompurify";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { sinkListItem, liftListItem } from "@tiptap/pm/schema-list";
 import {
   createIcons,
   Bold,
@@ -56,11 +55,33 @@ import {
   ChevronsRight,
   ChevronsLeft,
   Undo2,
-  Redo2
+  Redo2,
+  Type,
+  ALargeSmall,
+  Calendar,
+  Unlink,
+  Search
 } from "lucide";
 import { SlashCommandsExtension } from "./slashCommands.js";
 import { RteActionsExtension } from "./editorActions.js";
-import { dismissRteDialogs, showRteAlert, showRteImageDialog, showRtePrompt } from "./ui/dialogs.js";
+import {
+  dismissRteDialogs,
+  showFindReplaceDialog,
+  showRteAlert,
+  showRteImageDialog,
+  showRtePrompt,
+} from "./ui/dialogs.js";
+import { BlockIndent } from "./blockIndent.js";
+import { DocsKeyboardShortcuts } from "./docsKeyboardShortcuts.js";
+import { findTextMatch, replaceAllText, replaceMatch } from "./documentSearch.js";
+import { FONT_SIZE_OPTIONS, FontSize } from "./fontSize.js";
+import { LINE_SPACING_OPTIONS, LineSpacing } from "./lineSpacing.js";
+import {
+  adjustListItemsIndent,
+  adjustMixedNestedIndent,
+  analyzeMixedIndentSelection,
+  isInAnyList,
+} from "./listIndent.js";
 import { resolveImageEmbedUrl } from "./media/googleDriveUtils.js";
 import type { EditorStats, RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
 
@@ -97,6 +118,12 @@ const TOOLBAR_ACTIONS = {
   alignJustify: "alignJustify",
   indent: "indent",
   outdent: "outdent",
+  normalText: "normalText",
+  fontSizeUp: "fontSizeUp",
+  fontSizeDown: "fontSizeDown",
+  insertDate: "insertDate",
+  removeLink: "removeLink",
+  findReplace: "findReplace",
   undo: "undo",
   redo: "redo"
 } as const;
@@ -108,6 +135,17 @@ const RTE_PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   USE_PROFILES: { html: true },
   FORBID_TAGS: ["script", "style"],
   FORBID_ATTR: ["onerror", "onload", "onclick"],
+  ADD_ATTR: [
+    "style",
+    "data-indent",
+    "data-line-height",
+    "data-font-size",
+    "data-width",
+    "data-align",
+    "data-rte-video",
+    "data-render-kind",
+    "class",
+  ],
   ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
 };
 const ICONS = {
@@ -143,6 +181,12 @@ const ICONS = {
   alignJustify: "align-justify",
   indent: "chevrons-right",
   outdent: "chevrons-left",
+  normalText: "type",
+  fontSizeUp: "a-large-small",
+  fontSizeDown: "minus",
+  insertDate: "calendar",
+  removeLink: "unlink",
+  findReplace: "search",
   undo: "undo-2",
   redo: "redo-2"
 } as const;
@@ -389,6 +433,10 @@ export class RichTextEditor implements RichTextEditorApi {
   private resizeOverlay: HTMLDivElement | null = null;
   private mediaEditBar: HTMLDivElement | null = null;
   private fontSelect: HTMLSelectElement | null = null;
+  private fontSizeSelect: HTMLSelectElement | null = null;
+  private lineSpacingSelect: HTMLSelectElement | null = null;
+  private lastFindQuery = "";
+  private pastePlainTextNext = false;
   private textColorInput: HTMLInputElement | null = null;
   private highlightColorInput: HTMLInputElement | null = null;
   private textColorDropdown: HTMLDetailsElement | null = null;
@@ -511,7 +559,11 @@ export class RichTextEditor implements RichTextEditorApi {
         FontFamily.configure({ types: ["textStyle"] }),
         Color.configure({ types: ["textStyle"] }),
         Highlight.configure({ multicolor: true }),
-        TextAlign.configure({ types: ["heading", "paragraph"] }),
+        BlockIndent,
+        FontSize,
+        LineSpacing,
+        DocsKeyboardShortcuts,
+        TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
         TaskList,
         TaskItem.configure({ nested: true }),
         Table.configure({ resizable: true }),
@@ -534,6 +586,16 @@ export class RichTextEditor implements RichTextEditorApi {
           class: "rte-prosemirror",
           "data-placeholder": this.options.placeholder
         },
+        handlePaste: (view, event) => {
+          if (!this.pastePlainTextNext || !event.clipboardData) return false;
+          this.pastePlainTextNext = false;
+          const text = event.clipboardData.getData("text/plain");
+          if (!text) return false;
+          event.preventDefault();
+          const { from, to } = view.state.selection;
+          view.dispatch(view.state.tr.insertText(text, from, to));
+          return true;
+        },
       },
       onUpdate: ({ editor }) => {
         this.updateToolbarState();
@@ -554,9 +616,11 @@ export class RichTextEditor implements RichTextEditorApi {
     this.toolbar.classList.toggle("floating", this.options.toolbarMode === "floating");
     const rteActions = this.editor.storage.rteActions as {
       insertImage: (() => Promise<void>) | null;
+      openFindReplace: (() => Promise<void>) | null;
       showAlert: ((message: string) => Promise<void>) | null;
     };
     rteActions.insertImage = () => this.insertImage();
+    rteActions.openFindReplace = () => this.openFindReplace();
     rteActions.showAlert = (message) => this.showEditorAlert(message);
     this.updateToolbarState();
     this.updateStatsBar();
@@ -610,14 +674,21 @@ export class RichTextEditor implements RichTextEditorApi {
 
   getStats(): EditorStats {
     if (!this.editor) {
-      return { words: 0, characters: 0, readingTimeMinutes: 0 };
+      return { words: 0, characters: 0, readingTimeMinutes: 0, selectedWords: 0 };
     }
     const plain = this.editor.getText().trim();
-    if (!plain) return { words: 0, characters: 0, readingTimeMinutes: 0 };
-    const words = plain.split(/\s+/).filter(Boolean).length;
+    const words = plain ? plain.split(/\s+/).filter(Boolean).length : 0;
     const characters = plain.length;
-    const readingTimeMinutes = Math.max(1, Math.ceil(words / 220));
-    return { words, characters, readingTimeMinutes };
+    const readingTimeMinutes = words > 0 ? Math.max(1, Math.ceil(words / 220)) : 0;
+
+    const { from, to, empty } = this.editor.state.selection;
+    let selectedWords = 0;
+    if (!empty) {
+      const selected = this.editor.state.doc.textBetween(from, to, " ").trim();
+      selectedWords = selected ? selected.split(/\s+/).filter(Boolean).length : 0;
+    }
+
+    return { words, characters, readingTimeMinutes, selectedWords };
   }
 
   setContent(content: RichTextContent): void {
@@ -719,6 +790,26 @@ export class RichTextEditor implements RichTextEditorApi {
 
   private handleDocumentKeyDown = (event: KeyboardEvent): void => {
     if (!this.editor || !this.contentArea) return;
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "v") {
+      const target = event.target;
+      const inside =
+        target instanceof globalThis.Node &&
+        (this.contentArea.contains(target) || this.root?.contains(target));
+      if (inside) {
+        this.pastePlainTextNext = true;
+      }
+    }
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f") {
+      const target = event.target;
+      const inside =
+        target instanceof globalThis.Node &&
+        (this.contentArea.contains(target) || this.root?.contains(target));
+      if (inside) {
+        event.preventDefault();
+        void this.openFindReplace();
+        return;
+      }
+    }
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "c") {
       event.preventDefault();
       if (this.textColorDropdown) this.textColorDropdown.open = true;
@@ -775,96 +866,42 @@ export class RichTextEditor implements RichTextEditorApi {
 
   private handleTabPress(shiftKey: boolean): boolean {
     if (!this.editor) return false;
-    const { from, to } = this.editor.state.selection;
-    const hasRangeSelection = from !== to;
-    const hasListItemsInSelection = this.selectionContainsListItems();
 
-    if (this.editor.isActive("bulletList") || this.editor.isActive("orderedList") || hasListItemsInSelection) {
-      this.adjustSelectedListItemsIndent(shiftKey ? "outdent" : "indent");
-      return true;
+    if (this.editor.isActive("table")) {
+      return shiftKey
+        ? this.editor.commands.goToPreviousCell()
+        : this.editor.commands.goToNextCell();
     }
 
-    if (hasRangeSelection) {
-      if (!shiftKey) this.indentSelectedTextBlocks();
-      return true;
-    }
-
-    if (!shiftKey) {
-      this.editor.chain().focus().insertContent("\u00A0\u00A0\u00A0\u00A0").run();
-    }
-    return true;
-  }
-
-  private indentSelectedTextBlocks(): void {
-    if (!this.editor) return;
-    const { state, view } = this.editor;
-    const { from, to } = state.selection;
-    if (from === to) return;
-
-    const blockStarts: number[] = [];
-    state.doc.nodesBetween(from, to, (node, pos) => {
-      if (node.isTextblock) {
-        blockStarts.push(pos + 1);
+    if (this.editor.isActive("codeBlock")) {
+      if (!shiftKey) {
+        this.editor.chain().focus().insertContent("\t").run();
       }
       return true;
-    });
-    if (blockStarts.length === 0) return;
-
-    const tr = state.tr;
-    const indent = "\u00A0\u00A0\u00A0\u00A0";
-    for (let i = blockStarts.length - 1; i >= 0; i -= 1) {
-      const start = blockStarts[i];
-      tr.insertText(indent, start, start);
     }
-    view.dispatch(tr);
-  }
 
-  private adjustSelectedListItemsIndent(mode: "indent" | "outdent"): void {
-    if (!this.editor) return;
-    const { view } = this.editor;
-    const listItemType = view.state.schema.nodes.listItem;
-    if (!listItemType) return;
-
-    // Let ProseMirror handle the current range selection natively.
-    if (mode === "outdent") {
-      liftListItem(listItemType)(view.state, view.dispatch);
-      return;
-    }
-    const didIndentSelection = sinkListItem(listItemType)(view.state, view.dispatch);
-    if (didIndentSelection) return;
-
-    // Fallback for range selections:
-    // indent selected siblings top-to-bottom and attempt every selected item.
-    const { from, to } = view.state.selection;
-    const positionsSet = new Set<number>();
-    view.state.doc.nodesBetween(from, to, (node, pos) => {
-      if (node.type.name === "listItem") positionsSet.add(pos);
-      return true;
-    });
-    const positions = Array.from(positionsSet).sort((a, b) => a - b);
-    if (positions.length === 0) return;
-
-    for (const pos of positions) {
-      const mappedPos = view.state.tr.mapping.map(pos, -1);
-      const safePos = Math.max(1, Math.min(mappedPos + 1, view.state.doc.content.size - 1));
-      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(safePos), 1));
-      view.dispatch(tr);
-      sinkListItem(listItemType)(view.state, view.dispatch);
-    }
-  }
-
-  private selectionContainsListItems(): boolean {
-    if (!this.editor) return false;
+    const mode = shiftKey ? "outdent" : "indent";
+    const snapshot = analyzeMixedIndentSelection(this.editor);
+    const hasLists = snapshot.listPositions.length > 0 || snapshot.taskPositions.length > 0;
+    const hasBlocks = snapshot.blockPositions.length > 0;
     const { from, to } = this.editor.state.selection;
-    let hasList = false;
-    this.editor.state.doc.nodesBetween(from, to, (node) => {
-      if (node.type.name === "listItem") {
-        hasList = true;
-        return false;
+
+    if (hasLists || isInAnyList(this.editor)) {
+      const mixedListTypes =
+        snapshot.taskPositions.length > 0 && snapshot.listPositions.length > 0;
+      if ((from !== to && hasLists && hasBlocks) || mixedListTypes) {
+        adjustMixedNestedIndent(this.editor, mode);
+        return true;
       }
+      adjustListItemsIndent(this.editor, mode);
       return true;
-    });
-    return hasList;
+    }
+
+    if (hasBlocks) {
+      return mode === "indent" ? this.editor.commands.indentBlock() : this.editor.commands.outdentBlock();
+    }
+
+    return mode === "indent" ? this.editor.commands.indentBlock() : this.editor.commands.outdentBlock();
   }
 
   private startResizeDrag(startX: number, startY: number, dir: string): void {
@@ -943,6 +980,8 @@ export class RichTextEditor implements RichTextEditorApi {
     const toolbar = document.createElement("div");
     toolbar.className = "rte-toolbar";
     this.fontSelect = this.createFontFamilySelect();
+    this.fontSizeSelect = this.createFontSizeSelect();
+    this.lineSpacingSelect = this.createLineSpacingSelect();
     const textColorControl = this.createColorControl({
       label: "Text",
       icon: "palette",
@@ -979,9 +1018,14 @@ export class RichTextEditor implements RichTextEditorApi {
     });
     toolbar.append(
       this.fontSelect,
+      this.fontSizeSelect,
+      this.button(this.iconMarkup(ICONS.fontSizeDown), "Decrease font size", TOOLBAR_ACTIONS.fontSizeDown),
+      this.button(this.iconMarkup(ICONS.fontSizeUp), "Increase font size", TOOLBAR_ACTIONS.fontSizeUp),
+      this.lineSpacingSelect,
       textColorControl,
       highlightControl,
       this.separator(),
+      this.button(this.iconMarkup(ICONS.normalText), "Normal text", TOOLBAR_ACTIONS.normalText),
       this.button(this.iconMarkup(ICONS.bold), "Bold", TOOLBAR_ACTIONS.bold),
       this.button(this.iconMarkup(ICONS.italic), "Italic", TOOLBAR_ACTIONS.italic),
       this.button(this.iconMarkup(ICONS.underline), "Underline", TOOLBAR_ACTIONS.underline),
@@ -1012,9 +1056,12 @@ export class RichTextEditor implements RichTextEditorApi {
       this.button(this.iconMarkup(ICONS.alignCenter), "Align center", TOOLBAR_ACTIONS.alignCenter),
       this.button(this.iconMarkup(ICONS.alignRight), "Align right", TOOLBAR_ACTIONS.alignRight),
       this.button(this.iconMarkup(ICONS.alignJustify), "Align justify", TOOLBAR_ACTIONS.alignJustify),
-      this.button(this.iconMarkup(ICONS.indent), "Indent", TOOLBAR_ACTIONS.indent),
-      this.button(this.iconMarkup(ICONS.outdent), "Outdent", TOOLBAR_ACTIONS.outdent),
+      this.button(this.iconMarkup(ICONS.indent), "Increase indent (Tab)", TOOLBAR_ACTIONS.indent),
+      this.button(this.iconMarkup(ICONS.outdent), "Decrease indent (Shift+Tab)", TOOLBAR_ACTIONS.outdent),
       this.button(this.iconMarkup(ICONS.clearFormatting), "Clear formatting", TOOLBAR_ACTIONS.clearFormatting),
+      this.button(this.iconMarkup(ICONS.insertDate), "Insert date & time", TOOLBAR_ACTIONS.insertDate),
+      this.button(this.iconMarkup(ICONS.removeLink), "Remove link", TOOLBAR_ACTIONS.removeLink),
+      this.button(this.iconMarkup(ICONS.findReplace), "Find & replace (Ctrl+F)", TOOLBAR_ACTIONS.findReplace),
       this.separator(),
       this.button(this.iconMarkup(ICONS.undo), "Undo", TOOLBAR_ACTIONS.undo),
       this.button(this.iconMarkup(ICONS.redo), "Redo", TOOLBAR_ACTIONS.redo)
@@ -1065,6 +1112,11 @@ export class RichTextEditor implements RichTextEditorApi {
         AlignJustify,
         ChevronsRight,
         ChevronsLeft,
+        Type,
+        ALargeSmall,
+        Calendar,
+        Unlink,
+        Search,
         Undo2,
         Redo2
       }
@@ -1263,7 +1315,65 @@ export class RichTextEditor implements RichTextEditorApi {
   private updateStatsBar(): void {
     if (!this.statsBar) return;
     const stats = this.getStats();
-    this.statsBar.textContent = `${stats.words} words  |  ${stats.characters} chars  |  ${stats.readingTimeMinutes} min read`;
+    const selected =
+      stats.selectedWords > 0
+        ? `  |  ${stats.selectedWords} words selected`
+        : "";
+    this.statsBar.textContent = `${stats.words} words  |  ${stats.characters} chars  |  ~${stats.readingTimeMinutes} min read${selected}`;
+  }
+
+  private createFontSizeSelect(): HTMLSelectElement {
+    const select = document.createElement("select");
+    select.className = "rte-font-select rte-font-select-narrow";
+    select.setAttribute("aria-label", "Font size");
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "Size";
+    select.append(defaultOpt);
+    FONT_SIZE_OPTIONS.forEach((size) => {
+      const item = document.createElement("option");
+      item.value = `${size}px`;
+      item.textContent = String(size);
+      select.append(item);
+    });
+    select.addEventListener("mousedown", (event) => event.preventDefault());
+    select.addEventListener("change", () => {
+      if (!this.editor) return;
+      const value = select.value;
+      if (!value) {
+        this.editor.chain().focus().unsetFontSize().run();
+        return;
+      }
+      this.editor.chain().focus().setFontSize(value).run();
+    });
+    return select;
+  }
+
+  private createLineSpacingSelect(): HTMLSelectElement {
+    const select = document.createElement("select");
+    select.className = "rte-font-select rte-font-select-spacing";
+    select.setAttribute("aria-label", "Line spacing");
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "Line";
+    select.append(defaultOpt);
+    LINE_SPACING_OPTIONS.forEach((option) => {
+      const item = document.createElement("option");
+      item.value = option.value;
+      item.textContent = option.label;
+      select.append(item);
+    });
+    select.addEventListener("mousedown", (event) => event.preventDefault());
+    select.addEventListener("change", () => {
+      if (!this.editor) return;
+      const value = select.value;
+      if (!value) {
+        this.editor.chain().focus().unsetLineSpacing().run();
+        return;
+      }
+      this.editor.chain().focus().setLineSpacing(value).run();
+    });
+    return select;
   }
 
   private createFontFamilySelect(): HTMLSelectElement {
@@ -1408,7 +1518,25 @@ export class RichTextEditor implements RichTextEditorApi {
         this.handleTabPress(true);
         break;
       case TOOLBAR_ACTIONS.clearFormatting:
-        chain.clearNodes().unsetAllMarks().run();
+        chain.clearNodes().unsetAllMarks().resetBlockIndent().unsetLineSpacing().run();
+        break;
+      case TOOLBAR_ACTIONS.normalText:
+        chain.setParagraph().unsetAllMarks().run();
+        break;
+      case TOOLBAR_ACTIONS.fontSizeUp:
+        this.editor.commands.increaseFontSize();
+        break;
+      case TOOLBAR_ACTIONS.fontSizeDown:
+        this.editor.commands.decreaseFontSize();
+        break;
+      case TOOLBAR_ACTIONS.insertDate:
+        this.insertDateTime();
+        break;
+      case TOOLBAR_ACTIONS.removeLink:
+        chain.unsetLink().run();
+        break;
+      case TOOLBAR_ACTIONS.findReplace:
+        await this.openFindReplace();
         break;
       case TOOLBAR_ACTIONS.undo:
         this.editor.commands.undo();
@@ -1469,6 +1597,67 @@ export class RichTextEditor implements RichTextEditorApi {
   private showEditorAlert(message: string): Promise<void> {
     if (!this.root) return Promise.resolve();
     return showRteAlert(this.root, message);
+  }
+
+  private insertDateTime(): void {
+    if (!this.editor) return;
+    const now = new Date();
+    const text = `${now.toLocaleDateString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })} ${now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+    this.editor.chain().focus().insertContent(text).run();
+  }
+
+  private async openFindReplace(): Promise<void> {
+    if (!this.editor || !this.root) return;
+    const result = await showFindReplaceDialog(this.root, { find: this.lastFindQuery });
+    if (result.action === "cancel") return;
+
+    this.lastFindQuery = result.find;
+    const opts = { caseSensitive: result.caseSensitive };
+
+    if (result.action === "findNext") {
+      const match = findTextMatch(this.editor, result.find, opts);
+      if (!match) {
+        await this.showEditorAlert(`No matches for "${result.find}".`);
+        return;
+      }
+      this.editor.chain().focus().setTextSelection(match).run();
+      return;
+    }
+
+    if (result.action === "replace") {
+      const { from, to, empty } = this.editor.state.selection;
+      if (!empty && result.find) {
+        const selected = this.editor.state.doc.textBetween(from, to);
+        const matches =
+          result.caseSensitive
+            ? selected === result.find
+            : selected.toLowerCase() === result.find.toLowerCase();
+        if (matches) {
+          replaceMatch(this.editor, { from, to }, result.replace);
+          return;
+        }
+      }
+      const match = findTextMatch(this.editor, result.find, opts);
+      if (!match) {
+        await this.showEditorAlert(`No matches for "${result.find}".`);
+        return;
+      }
+      replaceMatch(this.editor, match, result.replace);
+      this.editor.chain().focus().setTextSelection(match).run();
+      return;
+    }
+
+    if (result.action === "replaceAll") {
+      const count = replaceAllText(this.editor, result.find, result.replace, opts);
+      await this.showEditorAlert(
+        count > 0 ? `Replaced ${count} occurrence${count === 1 ? "" : "s"}.` : `No matches for "${result.find}".`
+      );
+    }
   }
 
   private getSelectedMediaNode():
@@ -1670,7 +1859,6 @@ export class RichTextEditor implements RichTextEditorApi {
       [TOOLBAR_ACTIONS.bulletList]: this.editor.isActive("bulletList"),
       [TOOLBAR_ACTIONS.orderedList]: this.editor.isActive("orderedList"),
       [TOOLBAR_ACTIONS.taskList]: this.editor.isActive("taskList"),
-      [TOOLBAR_ACTIONS.link]: this.editor.isActive("link"),
       [TOOLBAR_ACTIONS.blockquote]: this.editor.isActive("blockquote"),
       [TOOLBAR_ACTIONS.codeBlock]: this.editor.isActive("codeBlock"),
       [TOOLBAR_ACTIONS.subscript]: this.editor.isActive("subscript"),
@@ -1678,7 +1866,12 @@ export class RichTextEditor implements RichTextEditorApi {
       [TOOLBAR_ACTIONS.alignLeft]: this.editor.isActive({ textAlign: "left" }),
       [TOOLBAR_ACTIONS.alignCenter]: this.editor.isActive({ textAlign: "center" }),
       [TOOLBAR_ACTIONS.alignRight]: this.editor.isActive({ textAlign: "right" }),
-      [TOOLBAR_ACTIONS.alignJustify]: this.editor.isActive({ textAlign: "justify" })
+      [TOOLBAR_ACTIONS.alignJustify]: this.editor.isActive({ textAlign: "justify" }),
+      [TOOLBAR_ACTIONS.normalText]:
+        this.editor.isActive("paragraph") &&
+        !this.editor.isActive("heading") &&
+        !this.editor.isActive("blockquote"),
+      [TOOLBAR_ACTIONS.link]: this.editor.isActive("link"),
     };
 
     const selectedMedia = this.getSelectedMediaNode();
@@ -1698,12 +1891,31 @@ export class RichTextEditor implements RichTextEditorApi {
       if (action === TOOLBAR_ACTIONS.redo) {
         btn.disabled = !this.editor!.can().redo();
       }
+      if (action === TOOLBAR_ACTIONS.removeLink) {
+        btn.disabled = !this.editor!.isActive("link");
+      }
     });
 
     if (this.fontSelect) {
       const current = String(this.editor.getAttributes("textStyle").fontFamily ?? "").trim();
       const matched = FONT_OPTIONS.find((opt) => opt.value === current);
       this.fontSelect.value = matched?.value ?? "";
+    }
+    if (this.fontSizeSelect) {
+      const size = String(this.editor.getAttributes("textStyle").fontSize ?? "").trim();
+      this.fontSizeSelect.value = size || "";
+    }
+    if (this.lineSpacingSelect) {
+      const { $from } = this.editor.state.selection;
+      let lh = "";
+      for (let depth = $from.depth; depth > 0; depth -= 1) {
+        const node = $from.node(depth);
+        if (node.type.name === "paragraph" || node.type.name === "heading" || node.type.name === "blockquote") {
+          lh = String(node.attrs.lineHeight ?? "");
+          break;
+        }
+      }
+      this.lineSpacingSelect.value = lh || "";
     }
     if (this.textColorInput) {
       const color = String(this.editor.getAttributes("textStyle").color ?? "").trim();
