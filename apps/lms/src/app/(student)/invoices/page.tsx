@@ -62,7 +62,7 @@ export default function StudentInvoicesPage() {
   return (
     <AppPageShell className="w-full">
       <h1 className="text-2xl font-bold text-funt-ink">My invoices</h1>
-      <p className="mt-1 text-sm text-black/60">Download tax invoices for your course enrollments.</p>
+      <p className="mt-1 text-sm text-black/60">Download invoices for your course enrollments.</p>
 
       {error ? (
         <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

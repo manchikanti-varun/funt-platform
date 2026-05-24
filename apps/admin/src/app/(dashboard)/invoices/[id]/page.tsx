@@ -12,7 +12,8 @@ import {
   InvoiceSubNav,
   PaymentsCommerceNav,
 } from "@/components/invoices/InvoiceAdminUi";
-import { InvoiceDocument, type InvoiceDocumentData } from "@/components/invoices/InvoiceDocument";
+import type { InvoiceDocumentData } from "@/components/invoices/InvoiceDocument";
+import { InvoicePdfPreview } from "@/components/invoices/InvoicePdfPreview";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
@@ -103,22 +104,22 @@ export default function InvoiceDetailPage() {
               >
                 {downloading ? "Downloading…" : "Download PDF"}
               </button>
-              <button type="button" onClick={() => window.print()} className="btn-secondary">
-                Print
-              </button>
             </>
           }
         />
         <PaymentsCommerceNav />
         <InvoiceSubNav />
       </div>
-      <div className="mt-2 print:mt-0">
+      <div className="mt-2">
+        <p className="mb-3 text-center text-xs text-slate-500 print:hidden">
+          Preview matches the PDF students download (same server generator).
+        </p>
         <InvoicePreviewFrame>
-          <InvoiceDocument invoice={invoice} />
+          <InvoicePdfPreview
+            pdfPath={`/api/admin/invoices/${encodeURIComponent(id)}/pdf`}
+            title={`Invoice ${invoice.invoiceNumber}`}
+          />
         </InvoicePreviewFrame>
-        <div className="hidden print:block">
-          <InvoiceDocument invoice={invoice} />
-        </div>
       </div>
     </AppPageShell>
   );

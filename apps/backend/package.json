@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "dev:watch": "tsx watch --exclude node_modules --exclude '**/packages/**' src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copyAssets.mjs",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
     "seed:super-admin": "tsx src/scripts/seedSuperAdmin.ts",

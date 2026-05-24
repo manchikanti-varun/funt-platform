@@ -12,7 +12,7 @@ import {
   type InvoiceSignablePayload,
 } from "../utils/invoiceSigning.js";
 import { generateInvoicePdf } from "../utils/pdfInvoice.js";
-import { buildInvoiceView, type InvoiceViewDto } from "./invoiceView.js";
+import { buildInvoiceView, type InvoiceBaseDto, type InvoiceViewDto } from "./invoiceView.js";
 import { getInvoiceSettings } from "./invoiceSettings.service.js";
 
 export interface CreateInvoiceInput {
@@ -437,6 +437,36 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceViewDto>
 
 export async function generateInvoicePdfBuffer(invoiceId: string): Promise<Buffer> {
   const view = await getInvoiceById(invoiceId);
+  return generateInvoicePdf(view);
+}
+
+/** Sample invoice for admin template preview — same PDF pipeline as real invoices. */
+const SAMPLE_INVOICE_BASE: InvoiceBaseDto = {
+  id: "000000000000000000000000",
+  invoiceNumber: "FUNT-INV-SAMPLE",
+  studentId: "sample",
+  studentName: "Srikar Ch",
+  studentEmail: "srikar@example.com",
+  studentPhone: "+91 98765 43210",
+  studentAddress: "Hyderabad, Telangana",
+  studentUsername: "srikar",
+  batchName: "Batch 2025 — Morning",
+  courseTitle: "Robotics Fundamentals",
+  lineDescription: "Robotics Fundamentals — Batch 2025 Morning",
+  lineItemType: "SERVICE",
+  lineSacCode: "999293",
+  amountInPaise: 499_900,
+  discountInPaise: 0,
+  totalInPaise: 499_900,
+  amountFormatted: "₹4,999.00",
+  currency: "INR",
+  notes: "",
+  issuedAt: new Date(),
+};
+
+export async function generateInvoiceSamplePdfBuffer(): Promise<Buffer> {
+  const settings = await getInvoiceSettings();
+  const view = buildInvoiceView(SAMPLE_INVOICE_BASE, settings);
   return generateInvoicePdf(view);
 }
 

@@ -12,10 +12,17 @@ const MARGIN = 36;
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 const W = PAGE_W - MARGIN * 2;
-const BOTTOM_Y = PAGE_H - MARGIN;
-const TABLE_HEADER_H = 18;
-const MIN_DATA_ROW_H = 22;
-const CONTINUATION_HEADER_H = 36;
+const BOTTOM_Y = PAGE_H - MARGIN - 20;
+const TABLE_HEADER_H = 22;
+const MIN_DATA_ROW_H = 24;
+const CONTINUATION_HEADER_H = 40;
+
+const TEAL = "#0d9488";
+const SLATE_100 = "#f1f5f9";
+const SLATE_200 = "#e2e8f0";
+const SLATE_500 = "#64748b";
+const SLATE_700 = "#334155";
+const SLATE_900 = "#0f172a";
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
 type ColDef = { label: string; w: number; align: "left" | "right" | "center" };
@@ -29,21 +36,33 @@ interface PdfLayoutState {
   descColWidth: number;
 }
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const LOGO_PATHS = [
-  path.resolve(__dirname, "../../../admin/public/funt-logo.png"),
-  path.resolve(__dirname, "../../../lms/public/funt-logo.png"),
-];
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function resolveLogoPath(): string | null {
-  for (const p of LOGO_PATHS) {
+  const candidates = [
+    path.join(MODULE_DIR, "../../assets/funt-logo.png"),
+    path.join(MODULE_DIR, "../../../assets/funt-logo.png"),
+    path.resolve(process.cwd(), "assets/funt-logo.png"),
+    path.resolve(process.cwd(), "dist/assets/funt-logo.png"),
+    path.resolve(process.cwd(), "apps/backend/assets/funt-logo.png"),
+    path.resolve(process.cwd(), "apps/backend/dist/assets/funt-logo.png"),
+    path.resolve(process.cwd(), "../admin/public/funt-logo.png"),
+    path.resolve(process.cwd(), "apps/admin/public/funt-logo.png"),
+  ];
+  for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
   return null;
 }
 
 function drawHr(doc: PdfDoc, y: number) {
-  doc.strokeColor("#cccccc").lineWidth(0.5).moveTo(MARGIN, y).lineTo(PAGE_W - MARGIN, y).stroke();
+  doc.strokeColor(SLATE_200).lineWidth(0.75).moveTo(MARGIN, y).lineTo(PAGE_W - MARGIN, y).stroke();
+}
+
+function drawAccentBar(doc: PdfDoc) {
+  doc.save();
+  doc.rect(0, 0, PAGE_W, 4).fill(TEAL);
+  doc.restore();
 }
 
 function buildColumns(s: InvoiceSettingsDto, view: InvoiceViewDto): ColDef[] {
@@ -68,8 +87,8 @@ function drawLogo(doc: PdfDoc, y: number): number {
   const logoPath = resolveLogoPath();
   if (!logoPath) return y;
   try {
-    const logoH = 56;
-    const logoW = 140;
+    const logoH = 64;
+    const logoW = 150;
     doc.image(logoPath, MARGIN, y, { fit: [logoW, logoH], align: "left", valign: "top" });
     return y + logoH;
   } catch {
@@ -79,101 +98,153 @@ function drawLogo(doc: PdfDoc, y: number): number {
 
 function drawInvoiceMeta(doc: PdfDoc, view: InvoiceViewDto, topY: number): number {
   let y = topY;
-  doc.font("Helvetica").fontSize(8).fillColor("#666666").text("ORIGINAL FOR RECIPIENT", MARGIN, y, {
+  doc.font("Helvetica").fontSize(8).fillColor(SLATE_500).text("ORIGINAL FOR RECIPIENT", MARGIN, y, {
     width: W,
     align: "right",
   });
-  y += 12;
-  doc.font("Helvetica-Bold").fontSize(16).fillColor("#000").text("INVOICE", MARGIN, y, { width: W, align: "right" });
-  y += 22;
-  doc.font("Helvetica").fontSize(9).text(`Invoice #: ${view.invoiceNumber}`, MARGIN, y, { width: W, align: "right" });
-  y += 12;
-  doc.text(`Invoice date: ${view.invoiceDate}`, MARGIN, y, { width: W, align: "right" });
+  y += 14;
+  doc.font("Helvetica-Bold").fontSize(20).fillColor(SLATE_900).text("INVOICE", MARGIN, y, {
+    width: W,
+    align: "right",
+  });
+  y += 26;
+  doc.font("Helvetica").fontSize(9).fillColor(SLATE_700).text(`Invoice #: ${view.invoiceNumber}`, MARGIN, y, {
+    width: W,
+    align: "right",
+  });
+  y += 13;
+  doc.fillColor(SLATE_700).text(`Invoice date: ${view.invoiceDate}`, MARGIN, y, { width: W, align: "right" });
   return y + 14;
+}
+
+function measureBlockHeight(
+  doc: PdfDoc,
+  s: InvoiceSettingsDto,
+  view: InvoiceViewDto,
+  half: number
+): number {
+  let h = 28;
+  doc.font("Helvetica").fontSize(8);
+  if (s.showLegalName) h += measureTextHeight(doc, s.legalName, half, 9) + 4;
+  if (s.showAddress && s.address) h += measureTextHeight(doc, s.address, half) + 4;
+  if (s.showGstin && s.gstin) h += 12;
+  if (s.showPan && s.pan) h += 12;
+
+  let rh = 28;
+  if (s.showRecipient) {
+    rh += measureTextHeight(doc, view.studentName || view.studentUsername, half, 9) + 4;
+    if (s.showRecipientEmail && view.studentEmail) rh += 12;
+    if (s.showRecipientAddress && view.studentAddress) rh += measureTextHeight(doc, view.studentAddress, half) + 4;
+    if (s.showRecipientPhone && view.studentPhone) rh += 12;
+  }
+  return Math.max(h, rh) + 8;
 }
 
 function drawFirstPageHeader(doc: PdfDoc, view: InvoiceViewDto): number {
   const s = view.settings;
-  const logoBottom = drawLogo(doc, MARGIN);
-  const metaBottom = drawInvoiceMeta(doc, view, MARGIN);
-  const headerBottom = Math.max(logoBottom, metaBottom) + 8;
+  drawAccentBar(doc);
 
-  let y = headerBottom;
+  const topY = MARGIN;
+  const logoBottom = drawLogo(doc, topY);
+  const metaBottom = drawInvoiceMeta(doc, view, topY);
+  let y = Math.max(logoBottom, metaBottom) + 14;
+
   drawHr(doc, y);
-  y += 12;
+  y += 14;
 
-  const half = W / 2 - 8;
-  doc.font("Helvetica-Bold").fontSize(9).fillColor("#000").text("Company details:", MARGIN, y);
+  const half = W / 2 - 6;
+  const gap = 12;
+  const boxH = measureBlockHeight(doc, s, view, half);
+
+  doc.save();
+  doc.rect(MARGIN, y, half, boxH).fill("#f8fafc");
   if (s.showRecipient) {
-    doc.text("Recipient details:", MARGIN + half + 16, y);
+    doc.rect(MARGIN + half + gap, y, half, boxH).fill("#ffffff");
   }
+  doc.strokeColor(SLATE_200).lineWidth(0.75);
+  doc.rect(MARGIN, y, half, boxH).stroke();
+  if (s.showRecipient) {
+    doc.rect(MARGIN + half + gap, y, half, boxH).stroke();
+  }
+  doc.restore();
 
-  doc.font("Helvetica").fontSize(8);
-  let ly = y + 14;
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(SLATE_500).text("COMPANY DETAILS", MARGIN + 8, y + 8);
+
+  let ly = y + 20;
+  doc.font("Helvetica").fontSize(8).fillColor(SLATE_700);
   if (s.showLegalName) {
-    doc.font("Helvetica-Bold").text(s.legalName, MARGIN, ly, { width: half });
-    ly += 12;
-    doc.font("Helvetica");
+    doc.font("Helvetica-Bold").fontSize(9).text(s.legalName, MARGIN + 8, ly, { width: half - 16 });
+    ly = doc.y + 4;
+    doc.font("Helvetica").fontSize(8);
   }
   if (s.showAddress && s.address) {
-    doc.text(s.address, MARGIN, ly, { width: half });
+    doc.text(s.address, MARGIN + 8, ly, { width: half - 16 });
     ly = doc.y + 4;
   }
   if (s.showGstin && s.gstin) {
-    doc.text(`GSTIN: ${s.gstin}`, MARGIN, ly);
-    ly += 10;
+    doc.text(`GSTIN: ${s.gstin}`, MARGIN + 8, ly);
+    ly += 11;
   }
   if (s.showPan && s.pan) {
-    doc.text(`PAN no.: ${s.pan}`, MARGIN, ly);
-    ly += 10;
+    doc.text(`PAN no.: ${s.pan}`, MARGIN + 8, ly);
+    ly += 11;
   }
 
-  let ry = y + 14;
   if (s.showRecipient) {
+    const rx = MARGIN + half + gap + 8;
+    doc.font("Helvetica-Bold").fontSize(7).fillColor(SLATE_500).text("RECIPIENT DETAILS", rx, y + 8);
+    let ry = y + 20;
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(SLATE_700).text(view.studentName || view.studentUsername, rx, ry, {
+      width: half - 16,
+    });
+    ry = doc.y + 4;
     doc.font("Helvetica").fontSize(8);
-    doc.text(view.studentName || view.studentUsername, MARGIN + half + 16, ry, { width: half });
-    ry += 10;
     if (s.showRecipientEmail && view.studentEmail) {
-      doc.text(view.studentEmail, MARGIN + half + 16, ry, { width: half });
-      ry += 10;
+      doc.text(view.studentEmail, rx, ry, { width: half - 16 });
+      ry += 11;
     }
     if (s.showRecipientAddress && view.studentAddress) {
-      doc.text(view.studentAddress, MARGIN + half + 16, ry, { width: half });
+      doc.text(view.studentAddress, rx, ry, { width: half - 16 });
       ry = doc.y + 4;
     }
     if (s.showRecipientPhone && view.studentPhone) {
-      doc.text(view.studentPhone, MARGIN + half + 16, ry, { width: half });
-      ry += 10;
+      doc.text(view.studentPhone, rx, ry, { width: half - 16 });
     }
   }
 
-  return Math.max(ly, ry, doc.y) + 16;
+  return y + boxH + 16;
 }
 
 function drawContinuationHeader(doc: PdfDoc, view: InvoiceViewDto, page: number): number {
-  doc.font("Helvetica-Bold").fontSize(11).fillColor("#000").text("INVOICE (continued)", MARGIN, MARGIN);
-  doc.font("Helvetica").fontSize(8).fillColor("#666666").text(
+  drawAccentBar(doc);
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(SLATE_900).text("INVOICE (continued)", MARGIN, MARGIN + 6);
+  doc.font("Helvetica").fontSize(8).fillColor(SLATE_500).text(
     `${view.invoiceNumber} · ${view.invoiceDate} · Page ${page}`,
     MARGIN,
-    MARGIN + 14,
+    MARGIN + 20,
     { width: W, align: "right" }
   );
-  drawHr(doc, MARGIN + CONTINUATION_HEADER_H - 6);
+  drawHr(doc, MARGIN + CONTINUATION_HEADER_H - 4);
   return MARGIN + CONTINUATION_HEADER_H;
 }
 
 function drawTableHeaderRow(doc: PdfDoc, state: PdfLayoutState): void {
   const widths = colWidths(state);
   let x = MARGIN;
-  doc.rect(MARGIN, state.y, W, TABLE_HEADER_H).fill("#f0f0f0");
-  doc.fillColor("#333333").font("Helvetica-Bold").fontSize(7);
+  doc.rect(MARGIN, state.y, W, TABLE_HEADER_H).fill(SLATE_100);
+  doc.strokeColor(SLATE_200).lineWidth(0.5).rect(MARGIN, state.y, W, TABLE_HEADER_H).stroke();
+  doc.fillColor(SLATE_700).font("Helvetica-Bold").fontSize(7);
   for (let i = 0; i < state.cols.length; i++) {
     const c = state.cols[i]!;
     const cw = widths[i]!;
-    doc.text(c.label, x + 2, state.y + 4, { width: cw - 4, align: c.align });
+    doc.text(c.label.toUpperCase(), x + 4, state.y + 7, { width: cw - 8, align: c.align });
     x += cw;
   }
   state.y += TABLE_HEADER_H;
+}
+
+function drawTableRowBorder(doc: PdfDoc, y: number, h: number) {
+  doc.strokeColor(SLATE_200).lineWidth(0.5).rect(MARGIN, y, W, h).stroke();
 }
 
 function startNewPage(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState): void {
@@ -183,7 +254,6 @@ function startNewPage(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState):
   drawTableHeaderRow(doc, state);
 }
 
-/** Ensure vertical space; opens a new page with continuation + table header when needed. */
 function ensureSpace(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState, needed: number): void {
   if (state.y + needed <= BOTTOM_Y) return;
   startNewPage(doc, view, state);
@@ -191,7 +261,7 @@ function ensureSpace(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState, n
 
 function measureTextHeight(doc: PdfDoc, text: string, width: number, fontSize = 8): number {
   doc.font("Helvetica").fontSize(fontSize);
-  return doc.heightOfString(text || " ", { width: Math.max(20, width - 4) });
+  return doc.heightOfString(text || " ", { width: Math.max(20, width - 8) });
 }
 
 function drawTableCells(
@@ -204,15 +274,19 @@ function drawTableCells(
 ): void {
   const widths = colWidths(state);
   let x = MARGIN;
-  doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(8).fillColor("#000000");
+  drawTableRowBorder(doc, y, rowH);
+  doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(8).fillColor(SLATE_900);
+  if (bold) {
+    doc.rect(MARGIN, y, W, rowH).fill("#f8fafc");
+  }
   for (let i = 0; i < state.cols.length; i++) {
     const c = state.cols[i]!;
     const cw = widths[i]!;
     const text = values[i] ?? "";
-    doc.text(text, x + 2, y + 4, {
-      width: cw - 4,
+    doc.fillColor(SLATE_900).text(text, x + 4, y + 6, {
+      width: cw - 8,
       align: c.align as CellAlign,
-      height: rowH - 6,
+      height: rowH - 10,
       lineBreak: true,
     });
     x += cw;
@@ -275,7 +349,7 @@ function drawDataRow(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState, v
   let maxOtherH = MIN_DATA_ROW_H;
   for (let i = 1; i < values.length; i++) {
     const h = measureTextHeight(doc, values[i] ?? "", widths[i] ?? 40);
-    maxOtherH = Math.max(maxOtherH, h + 8);
+    maxOtherH = Math.max(maxOtherH, h + 10);
   }
 
   let descRest = values[0] ?? "";
@@ -284,7 +358,7 @@ function drawDataRow(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState, v
   while (descRest || firstSegment) {
     ensureSpace(doc, view, state, MIN_DATA_ROW_H + 4);
     const availableH = BOTTOM_Y - state.y - 4;
-    const maxDescH = Math.max(MIN_DATA_ROW_H, availableH - 8, maxOtherH);
+    const maxDescH = Math.max(MIN_DATA_ROW_H, availableH - 10, maxOtherH);
     const { chunk, rest } = splitTextForHeight(doc, descRest, state.descColWidth, maxDescH);
     descRest = rest;
 
@@ -295,7 +369,7 @@ function drawDataRow(doc: PdfDoc, view: InvoiceViewDto, state: PdfLayoutState, v
     firstSegment = false;
 
     const descH = measureTextHeight(doc, rowValues[0] ?? "", state.descColWidth);
-    const rowH = Math.max(MIN_DATA_ROW_H, descH + 8, isFirstSegment ? maxOtherH : MIN_DATA_ROW_H);
+    const rowH = Math.max(MIN_DATA_ROW_H, descH + 10, isFirstSegment ? maxOtherH : MIN_DATA_ROW_H);
 
     drawTableCells(doc, state, state.y, rowH, rowValues, bold);
     state.y += rowH;
@@ -312,15 +386,20 @@ function drawBlockText(
   opts: { italic?: boolean; centered?: boolean; fontSize?: number }
 ): void {
   const fontSize = opts.fontSize ?? 8;
-  doc.font(opts.italic ? "Helvetica-Oblique" : "Helvetica").fontSize(fontSize).fillColor(opts.centered ? "#555555" : "#000000");
-  const h = measureTextHeight(doc, text, W, fontSize) + 8;
+  doc
+    .font(opts.italic ? "Helvetica-Oblique" : "Helvetica")
+    .fontSize(fontSize)
+    .fillColor(opts.centered ? SLATE_500 : SLATE_700);
+  const h = measureTextHeight(doc, text, W, fontSize) + 10;
   ensureSpace(doc, view, state, h);
+  drawHr(doc, state.y);
+  state.y += 10;
   doc.text(text, MARGIN, state.y, {
     width: W,
     align: opts.centered ? "center" : "left",
     lineBreak: true,
   });
-  state.y = doc.y + 12;
+  state.y = doc.y + 14;
 }
 
 export function generateInvoicePdf(view: InvoiceViewDto): Promise<Buffer> {
@@ -368,10 +447,10 @@ export function generateInvoicePdf(view: InvoiceViewDto): Promise<Buffer> {
     const range = doc.bufferedPageRange();
     for (let i = range.start; i < range.start + range.count; i++) {
       doc.switchToPage(i);
-      doc.font("Helvetica").fontSize(7).fillColor("#999999").text(
+      doc.font("Helvetica").fontSize(7).fillColor(SLATE_500).text(
         `Page ${i - range.start + 1} of ${range.count}`,
         MARGIN,
-        PAGE_H - 24,
+        PAGE_H - 28,
         { width: W, align: "center" }
       );
     }

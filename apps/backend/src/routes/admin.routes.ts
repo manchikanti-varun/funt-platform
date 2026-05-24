@@ -67,6 +67,7 @@ import {
   getAdminInvoiceSettings,
   patchAdminInvoiceSettings,
   downloadAdminInvoicePdf,
+  downloadAdminInvoiceSamplePdf,
 } from "../controllers/invoice.controller.js";
 
 const router = Router();
@@ -97,6 +98,7 @@ router.get("/payments/finance", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getA
 router.get("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceSettings);
 router.patch("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchAdminInvoiceSettings);
 router.get("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoices);
+router.get("/invoices/sample/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadAdminInvoiceSamplePdf);
 router.get("/invoices/:id/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadAdminInvoicePdf);
 router.get("/invoices/:id", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceById);
 router.post("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postManualInvoice);

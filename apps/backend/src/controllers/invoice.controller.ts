@@ -91,6 +91,13 @@ export const patchAdminInvoiceSettings = asyncHandler(async (req: Request, res: 
   successRes(res, data, "Invoice settings saved");
 });
 
+export const downloadAdminInvoiceSamplePdf = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const buffer = await invoiceService.generateInvoiceSamplePdfBuffer();
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", 'inline; filename="invoice-sample.pdf"');
+  res.send(buffer);
+});
+
 export const downloadAdminInvoicePdf = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   if (!id) throw new AppError("Invoice ID is required", 400);
