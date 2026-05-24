@@ -53,6 +53,9 @@ export const postCoupon = asyncHandler(async (req: Request, res: Response): Prom
     code: String(b.code ?? ""),
     kind,
     courseId: b.courseId != null ? String(b.courseId) : undefined,
+    batchId: b.batchId != null ? String(b.batchId) : undefined,
+    audience:
+      b.audience === "BATCH_STUDENTS" ? "BATCH_STUDENTS" : b.audience === "ALL_STUDENTS" ? "ALL_STUDENTS" : undefined,
     shopScope: b.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS",
     discountType: "PERCENT",
     discountValue: Number(b.discountValue),

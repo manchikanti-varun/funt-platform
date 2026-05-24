@@ -75,15 +75,15 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
   const currency = invoice.currencyLabel ?? "INR";
 
   return (
-    <article className="mx-auto max-w-[210mm] overflow-hidden rounded-sm border border-slate-400 bg-white text-slate-900 shadow-sm print:shadow-none">
+    <article className="invoice-document mx-auto max-w-[210mm] rounded-sm border border-slate-400 bg-white text-slate-900 shadow-sm print:border-0 print:shadow-none">
       <div className="h-1 bg-teal-600 print:bg-slate-800" />
-      <div className="flex items-start justify-between gap-4 border-b border-slate-300 px-6 py-5">
-        <img src="/funt-logo.png" alt="FUNT" className="h-11 w-auto" />
+      <div className="flex items-start justify-between gap-4 border-b border-slate-300 px-6 py-5 print:break-inside-avoid">
+        <img src="/funt-logo.png" alt="FUNT" className="h-[4.5rem] w-auto max-w-[220px] object-contain sm:h-20" />
         <div className="text-right">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
             Original for recipient
           </p>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">TAX INVOICE</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">INVOICE</h1>
           <p className="mt-2 text-xs">
             <span className="text-slate-500">Invoice #: </span>
             <span className="font-semibold">{invoice.invoiceNumber}</span>
@@ -120,9 +120,9 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
         ) : null}
       </div>
 
-      <div className="overflow-x-auto p-4">
-        <table className="w-full min-w-[720px] border-collapse">
-          <thead>
+      <div className="overflow-x-auto p-4 print:overflow-visible">
+        <table className="w-full min-w-[720px] border-collapse print:min-w-0">
+          <thead className="print:table-header-group">
             <tr>
               <th className={th}>Description</th>
               {s.showHsn ? <th className={th}>HSN Code</th> : null}
@@ -143,7 +143,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr className="print:break-inside-avoid">
               <td className={td}>{invoice.lineDescription}</td>
               {s.showHsn ? <td className={td}>{invoice.lineHsnDisplay ?? "—"}</td> : null}
               {s.showSac ? <td className={td}>{invoice.lineSacDisplay ?? "—"}</td> : null}
@@ -157,7 +157,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
               {s.showIgst ? <td className={`${td} text-right`}>{invoice.igstFormatted}</td> : null}
               <td className={`${td} text-right font-medium`}>{invoice.lineTotalFormatted}</td>
             </tr>
-            <tr className="bg-slate-50 font-semibold">
+            <tr className="bg-slate-50 font-semibold print:break-inside-avoid">
               <td className={td}>Total</td>
               {s.showHsn ? <td className={td} /> : null}
               {s.showSac ? <td className={td} /> : null}

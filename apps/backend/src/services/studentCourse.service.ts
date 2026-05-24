@@ -314,11 +314,10 @@ export async function getMyCoursesForStudent(studentId: string) {
           ? await getLatestCoursePaymentState(studentId, String(batch._id), courseId)
           : null;
       const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || payState?.status === "VERIFIED");
-      const isAdminBlocked = blocked || courseBlocked;
+      if (!hasCourseAccess) continue;
 
-      const pct = hasCourseAccess
-        ? await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length)
-        : 0;
+      const isAdminBlocked = blocked || courseBlocked;
+      const pct = await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length);
       result.push({
         courseId,
         courseTitle: s?.title ?? "Course",

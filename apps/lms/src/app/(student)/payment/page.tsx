@@ -58,7 +58,6 @@ function PaymentForm() {
   const [checkoutErr, setCheckoutErr] = useState<string | null>(null);
 
   const [payerName, setPayerName] = useState("");
-  const [amountRupees, setAmountRupees] = useState("");
   const [couponDraft, setCouponDraft] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -90,12 +89,7 @@ function PaymentForm() {
     api<CheckoutInfo>(`/api/student/courses/${encodeURIComponent(courseId)}/checkout?${qs.toString()}`)
       .then((r) => {
         if (r.success && r.data) {
-          const d = r.data;
-          setCheckout(d);
-          if (d.enrollmentPriceInPaise > 0) {
-            const due = d.finalPriceRupees ?? d.enrollmentPriceRupees;
-            setAmountRupees(String(Number(due.toFixed(2))));
-          }
+          setCheckout(r.data);
         } else setCheckoutErr(r.message ?? "Could not load checkout");
       })
       .catch(() => setCheckoutErr("Could not load checkout"));
@@ -239,13 +233,12 @@ function PaymentForm() {
       paidAt: parsedPaidAt.toISOString(),
     };
     if (type === "course") {
-      const paise = Math.round(Number(amountRupees) * 100);
-      if (!Number.isFinite(paise) || paise < 0) {
-        setMsg({ type: "err", text: "Enter a valid amount (INR)." });
+      if (amountDuePaise == null || !Number.isFinite(amountDuePaise) || amountDuePaise < 0) {
+        setMsg({ type: "err", text: "Could not determine amount due. Refresh the page and try again." });
         setLoading(false);
         return;
       }
-      body.amountPaise = paise;
+      body.amountPaise = Math.floor(amountDuePaise);
       body.payerName = payerName.trim();
       body.batchId = batchId;
       body.courseId = courseId;
@@ -279,6 +272,13 @@ function PaymentForm() {
       setMsg({ type: "err", text: res.message ?? "Could not submit." });
     }
   }
+
+  const amountDuePaise =
+    checkout != null ? (checkout.finalPriceInPaise ?? checkout.enrollmentPriceInPaise) : null;
+  const amountDueRupees =
+    checkout != null
+      ? Number((checkout.finalPriceRupees ?? checkout.enrollmentPriceRupees).toFixed(2))
+      : null;
 
   const showManualUpi = !!(checkout && checkout.enrollmentPriceInPaise >= 100 && checkout.allowUpiManual);
   const showRazorpay = !!(checkout?.razorpayEnabled);
@@ -608,18 +608,15 @@ function PaymentForm() {
                       placeholder="Full name"
                     />
                   </label>
-                  <label className="block text-sm font-medium text-funt-ink">
-                    Amount paid (INR)
-                    <input
-                      className="input mt-1.5"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={amountRupees}
-                      onChange={(e) => setAmountRupees(e.target.value)}
-                      required
-                    />
-                  </label>
+                  <div className="block text-sm font-medium text-funt-ink">
+                    <span>Amount to pay (INR)</span>
+                    <p className="input mt-1.5 cursor-not-allowed bg-slate-100 font-semibold text-slate-900 tabular-nums">
+                      {amountDueRupees != null ? `₹${amountDueRupees.toFixed(2)}` : "—"}
+                    </p>
+                    <p className="mt-1 text-xs font-normal text-black/55">
+                      Fixed after discount — pay exactly this amount, then submit your UTR below.
+                    </p>
+                  </div>
                   <label className="block text-sm font-medium text-funt-ink">
                     UPI / bank reference (UTR)
                     <input

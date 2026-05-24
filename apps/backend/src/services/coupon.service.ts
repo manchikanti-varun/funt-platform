@@ -2,11 +2,39 @@ import { CouponModel } from "../models/Coupon.model.js";
 import { CouponRedemptionModel } from "../models/CouponRedemption.model.js";
 import { UserModel } from "../models/User.model.js";
 import { ShopOrderModel } from "../models/ShopOrder.model.js";
+import { BatchModel } from "../models/Batch.model.js";
 import { AppError } from "../utils/AppError.js";
+import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import type { ClientSession } from "mongoose";
 
 function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
+}
+
+/** All courses within the coupon's batch. Requires a specific batchId (not all-batches). */
+export const COUPON_ALL_COURSES_ID = "*";
+
+/** Any batch at checkout. */
+export const COUPON_ALL_BATCHES_ID = "*";
+
+function isAllCoursesCoupon(courseId: string | undefined | null): boolean {
+  const id = String(courseId ?? "").trim();
+  return id === COUPON_ALL_COURSES_ID || id.toUpperCase() === "ALL";
+}
+
+function isAllBatchesCoupon(batchId: string | undefined | null): boolean {
+  const id = String(batchId ?? "").trim();
+  return id === COUPON_ALL_BATCHES_ID || id.toUpperCase() === "ALL";
+}
+
+function courseIdsInBatch(batch: unknown): Set<string> {
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const ids = new Set<string>();
+  for (const snap of snaps) {
+    const cid = String((snap as { courseId?: string }).courseId ?? "").trim();
+    if (cid) ids.add(cid);
+  }
+  return ids;
 }
 
 function nowInRange(validFrom?: Date | null, validUntil?: Date | null): boolean {
@@ -42,7 +70,7 @@ function applyDiscountPaise(basePaise: number, discountType: string, discountVal
 
 export async function assertEnrollmentCoupon(
   code: string | undefined,
-  _batchMongoId: string,
+  batchMongoId: string,
   courseId: string,
   studentId: string,
   listPaise: number
@@ -52,7 +80,29 @@ export async function assertEnrollmentCoupon(
   const doc = await CouponModel.findOne({ code: c }).exec();
   if (!doc || !doc.active) throw new AppError("Not valid coupon code", 400);
   if (doc.kind !== "COURSE") throw new AppError("This coupon is not valid for course enrollment", 400);
-  if (String(doc.courseId ?? "") !== String(courseId)) throw new AppError("Coupon does not apply to this course", 400);
+
+  const couponBatchId = String((doc as { batchId?: string }).batchId ?? "").trim();
+  const checkoutCourseId = String(courseId).trim();
+
+  if (couponBatchId && !isAllBatchesCoupon(couponBatchId) && couponBatchId !== batchMongoId) {
+    throw new AppError("Coupon does not apply to this batch", 400);
+  }
+
+  if (!isAllCoursesCoupon(doc.courseId)) {
+    if (String(doc.courseId ?? "") !== checkoutCourseId) {
+      throw new AppError("Coupon does not apply to this course", 400);
+    }
+  } else if (!isAllBatchesCoupon(couponBatchId)) {
+    const batchDoc =
+      couponBatchId === batchMongoId
+        ? await BatchModel.findById(batchMongoId).lean().exec()
+        : await findBatchByParam(couponBatchId);
+    if (!batchDoc) throw new AppError("Coupon batch not found", 400);
+    const allowed = courseIdsInBatch(batchDoc);
+    if (!allowed.has(checkoutCourseId)) {
+      throw new AppError("Coupon does not apply to this course in this batch", 400);
+    }
+  }
   if (!nowInRange(doc.validFrom ?? undefined, doc.validUntil ?? undefined)) throw new AppError("Coupon is not valid at this time", 400);
   if (doc.maxRedemptions != null && doc.redemptionCount >= doc.maxRedemptions) {
     throw new AppError("Coupon has reached its usage limit", 400);
@@ -185,6 +235,8 @@ export async function listCouponsAdmin() {
     code: r.code,
     kind: r.kind,
     courseId: r.courseId ?? "",
+    batchId: (r as { batchId?: string }).batchId ?? "",
+    audience: (r as { audience?: string }).audience ?? "ALL_STUDENTS",
     shopScope: (r as { shopScope?: string }).shopScope ?? "ALL_ORDERS",
     discountType: r.discountType,
     discountValue: r.discountValue,
@@ -204,6 +256,8 @@ export async function createCouponAdmin(input: {
   code: string;
   kind: "SHOP" | "COURSE";
   courseId?: string;
+  batchId?: string;
+  audience?: "ALL_STUDENTS" | "BATCH_STUDENTS";
   shopScope?: "ALL_ORDERS" | "FIRST_ORDER";
   discountType: "PERCENT";
   discountValue: number;
@@ -219,8 +273,23 @@ export async function createCouponAdmin(input: {
   if (input.kind === "SHOP") {
     // no per-product binding; coupon is cart-level.
   } else if (input.kind === "COURSE") {
-    if (!input.courseId?.trim()) {
-      throw new AppError("courseId is required for course coupons", 400);
+    const courseId = input.courseId?.trim() ?? "";
+    const batchId = input.batchId?.trim() ?? "";
+    if (!batchId) {
+      throw new AppError("batchId is required for course coupons (use * for all batches)", 400);
+    }
+    if (!courseId) {
+      throw new AppError("courseId is required for course coupons (use * for all courses in the batch)", 400);
+    }
+    if (isAllCoursesCoupon(courseId) && isAllBatchesCoupon(batchId)) {
+      throw new AppError("All courses in batch requires a specific batch (not all batches)", 400);
+    }
+    if (isAllCoursesCoupon(courseId) && !isAllBatchesCoupon(batchId)) {
+      const batch = await findBatchByParam(batchId);
+      if (!batch) throw new AppError("Batch not found", 400);
+      if (courseIdsInBatch(batch).size === 0) {
+        throw new AppError("Selected batch has no courses", 400);
+      }
     }
   }
   const discountValue = Math.floor(Number(input.discountValue));
@@ -242,6 +311,13 @@ export async function createCouponAdmin(input: {
       code,
       kind: input.kind,
       courseId: input.kind === "COURSE" ? input.courseId!.trim() : undefined,
+      batchId: input.kind === "COURSE" ? input.batchId!.trim() : undefined,
+      audience:
+        input.kind === "COURSE"
+          ? input.audience === "BATCH_STUDENTS"
+            ? "BATCH_STUDENTS"
+            : "ALL_STUDENTS"
+          : undefined,
       shopScope: input.kind === "SHOP" ? (input.shopScope === "FIRST_ORDER" ? "FIRST_ORDER" : "ALL_ORDERS") : undefined,
       discountType: "PERCENT",
       discountValue,

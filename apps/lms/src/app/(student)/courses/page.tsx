@@ -129,7 +129,7 @@ export default function CoursesPage() {
   }, [myCoursesList]);
 
   const [activeTab, setActiveTab] = useState<"my" | "explore">("my");
-  const [layout, setLayout] = useState<"table" | "cards">("table");
+  const [layout, setLayout] = useState<"table" | "cards">("cards");
 
   if (loading) {
     return (
