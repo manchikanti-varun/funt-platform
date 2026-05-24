@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { AppPageShell } from "@/components/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  InvoicePreviewFrame,
+  InvoiceSubNav,
+  PaymentsCommerceNav,
+} from "@/components/invoices/InvoiceAdminUi";
 import { InvoiceDocument, SAMPLE_INVOICE, type InvoiceDocumentData } from "@/components/invoices/InvoiceDocument";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import type { InvoiceSettingsDto } from "@/components/invoices/invoiceSettingsTypes";
@@ -22,19 +28,34 @@ export default function InvoiceSamplePage() {
   return (
     <AppPageShell className="w-full print:p-0">
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
-      <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
-        <button type="button" onClick={() => window.print()} className="btn-primary">
-          Print
-        </button>
-        <Link href="/invoices/settings" className="btn-secondary">
-          Settings
-        </Link>
-        <Link href="/invoices" className="btn-secondary">
-          Back
-        </Link>
+      <div className="print:hidden space-y-4">
+        <PageHeader
+          title="Invoice preview"
+          subtitle="Sample tax invoice using your saved settings. Use Print to check layout on paper."
+          backHref="/invoices"
+          backLabel="All invoices"
+          actions={
+            <>
+              <button type="button" onClick={() => window.print()} className="btn-primary">
+                Print
+              </button>
+              <Link href="/invoices/settings" className="btn-secondary">
+                Edit settings
+              </Link>
+            </>
+          }
+        />
+        <PaymentsCommerceNav />
+        <InvoiceSubNav />
       </div>
-      <p className="mb-4 text-sm text-slate-500 print:hidden">Sample tax invoice (uses your saved settings)</p>
-      <InvoiceDocument invoice={invoice} />
+      <div className="mt-2 print:mt-0">
+        <InvoicePreviewFrame badge="Screen preview — not a real invoice">
+          <InvoiceDocument invoice={invoice} />
+        </InvoicePreviewFrame>
+        <div className="hidden print:block">
+          <InvoiceDocument invoice={invoice} />
+        </div>
+      </div>
     </AppPageShell>
   );
 }

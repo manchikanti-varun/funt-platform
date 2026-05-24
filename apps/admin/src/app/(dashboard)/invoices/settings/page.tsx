@@ -3,27 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { AppPageShell } from "@/components/ui";
+import { Alert, AppPageShell } from "@/components/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import {
+  AdminSpinner,
+  FieldLabel,
+  InvoiceSubNav,
+  PaymentsCommerceNav,
+  SettingsSection,
+  SettingsToggle,
+} from "@/components/invoices/InvoiceAdminUi";
 import type { InvoiceSettingsDto } from "@/components/invoices/invoiceSettingsTypes";
 import { DEFAULT_INVOICE_SETTINGS } from "@/components/invoices/invoiceSettingsTypes";
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="rounded" />
-      {label}
-    </label>
-  );
-}
 
 export default function InvoiceSettingsPage() {
   const [form, setForm] = useState<InvoiceSettingsDto>(DEFAULT_INVOICE_SETTINGS);
@@ -54,85 +46,139 @@ export default function InvoiceSettingsPage() {
     setSaving(false);
     if (res.success && res.data) {
       setForm(res.data);
-      setMsg({ type: "success", text: "Saved." });
+      setMsg({ type: "success", text: "Settings saved successfully." });
     } else {
       setMsg({ type: "error", text: res.message ?? "Could not save." });
     }
   }
 
   if (loading) {
-    return <p className="py-12 text-center text-sm text-slate-500">Loading…</p>;
+    return (
+      <AppPageShell className="w-full">
+        <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+        <AdminSpinner className="py-24" />
+      </AppPageShell>
+    );
   }
 
   return (
-    <AppPageShell className="w-full max-w-3xl">
+    <AppPageShell className="w-full">
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-800">Invoice settings</h1>
-        <Link href="/invoices" className="text-sm font-semibold text-teal-700 hover:underline">
-          Back to invoices
-        </Link>
-      </div>
-      <p className="mb-6 text-sm text-slate-600">
-        Configure company details and tax columns. Enter the enrollment <strong>total amount</strong> (INR);
-        taxable value and CGST/SGST/IGST are calculated automatically from the percentages you enable.
-      </p>
+      <PageHeader
+        title="Invoice settings"
+        subtitle="Company block, GST columns (HSN/SAC, CGST/SGST/IGST), and footer. Tax is reverse-calculated from the enrollment total."
+        backHref="/invoices"
+        backLabel="All invoices"
+        actions={
+          <Link href="/invoices/sample" className="btn-primary text-sm">
+            Preview template
+          </Link>
+        }
+      />
 
-      <form onSubmit={save} className="space-y-8">
-        <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Company details</h2>
-          <Toggle label="Show company name" checked={form.showLegalName} onChange={(v) => set("showLegalName", v)} />
-          <input className="input" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} />
-          <Toggle label="Show address" checked={form.showAddress} onChange={(v) => set("showAddress", v)} />
-          <textarea
-            className="input min-h-[72px]"
-            value={form.address}
-            onChange={(e) => set("address", e.target.value)}
-          />
-          <Toggle label="Show GST number" checked={form.showGstin} onChange={(v) => set("showGstin", v)} />
-          {form.showGstin ? (
-            <input className="input" value={form.gstin} onChange={(e) => set("gstin", e.target.value)} placeholder="GSTIN" />
-          ) : null}
-          <Toggle label="Show PAN number" checked={form.showPan} onChange={(v) => set("showPan", v)} />
-          {form.showPan ? (
-            <input className="input" value={form.pan} onChange={(e) => set("pan", e.target.value)} placeholder="PAN" />
-          ) : null}
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">Recipient state (place of supply)</label>
-            <input className="input" value={form.placeOfSupply} onChange={(e) => set("placeOfSupply", e.target.value)} />
-          </div>
-          <Toggle label="Show recipient details" checked={form.showRecipient} onChange={(v) => set("showRecipient", v)} />
-          {form.showRecipient ? (
-            <div className="ml-4 space-y-2 border-l-2 border-slate-200 pl-4">
-              <Toggle label="Show student email" checked={form.showRecipientEmail} onChange={(v) => set("showRecipientEmail", v)} />
-              <Toggle label="Show student address" checked={form.showRecipientAddress} onChange={(v) => set("showRecipientAddress", v)} />
-              <Toggle label="Show student phone" checked={form.showRecipientPhone} onChange={(v) => set("showRecipientPhone", v)} />
-            </div>
-          ) : null}
-        </section>
+      <PaymentsCommerceNav />
+      <InvoiceSubNav />
 
-        <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Invoice table</h2>
-          <p className="text-sm text-slate-500">
-            Description, Quantity, Unit Price, and Total are always shown. Enable optional columns below.
-          </p>
-          <Toggle label="Show HSN column (kits / goods)" checked={form.showHsn} onChange={(v) => set("showHsn", v)} />
-          {form.showHsn ? (
+      <form onSubmit={save} className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SettingsSection
+            title="Company details"
+            description="Shown in the header block on every tax invoice."
+          >
+            <SettingsToggle
+              label="Company name"
+              checked={form.showLegalName}
+              onChange={(v) => set("showLegalName", v)}
+            >
+              <input className="input" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} />
+            </SettingsToggle>
+            <SettingsToggle
+              label="Address"
+              checked={form.showAddress}
+              onChange={(v) => set("showAddress", v)}
+            >
+              <textarea
+                className="input min-h-[88px]"
+                value={form.address}
+                onChange={(e) => set("address", e.target.value)}
+              />
+            </SettingsToggle>
+            <SettingsToggle label="GSTIN" checked={form.showGstin} onChange={(v) => set("showGstin", v)}>
+              <input
+                className="input font-mono text-sm"
+                value={form.gstin}
+                onChange={(e) => set("gstin", e.target.value)}
+                placeholder="29XXXXX0000X1Z5"
+              />
+            </SettingsToggle>
+            <SettingsToggle label="PAN" checked={form.showPan} onChange={(v) => set("showPan", v)}>
+              <input
+                className="input font-mono text-sm"
+                value={form.pan}
+                onChange={(e) => set("pan", e.target.value)}
+                placeholder="ABCDE1234F"
+              />
+            </SettingsToggle>
             <div>
-              <label className="mb-1 block text-xs text-slate-600">Default HSN (digits only, e.g. 950300)</label>
+              <FieldLabel hint="Place of supply on the invoice">Recipient state</FieldLabel>
+              <input
+                className="input"
+                value={form.placeOfSupply}
+                onChange={(e) => set("placeOfSupply", e.target.value)}
+              />
+            </div>
+            <SettingsToggle
+              label="Recipient block"
+              description="Name, email, address, and phone from the student profile."
+              checked={form.showRecipient}
+              onChange={(v) => set("showRecipient", v)}
+            >
+              <div className="space-y-2">
+                <SettingsToggle
+                  label="Email"
+                  checked={form.showRecipientEmail}
+                  onChange={(v) => set("showRecipientEmail", v)}
+                />
+                <SettingsToggle
+                  label="Address"
+                  checked={form.showRecipientAddress}
+                  onChange={(v) => set("showRecipientAddress", v)}
+                />
+                <SettingsToggle
+                  label="Phone"
+                  checked={form.showRecipientPhone}
+                  onChange={(v) => set("showRecipientPhone", v)}
+                />
+              </div>
+            </SettingsToggle>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Tax table columns"
+            description="Description, quantity, unit price, and total are always shown."
+          >
+            <SettingsToggle
+              label="HSN column"
+              description="Kits and physical goods."
+              checked={form.showHsn}
+              onChange={(v) => set("showHsn", v)}
+            >
+              <FieldLabel hint="Digits only">Default HSN</FieldLabel>
               <input
                 className="input max-w-xs font-mono"
                 inputMode="numeric"
                 value={form.hsnCode}
                 onChange={(e) => set("hsnCode", e.target.value.replace(/\D/g, ""))}
-                placeholder="HSN for kits"
+                placeholder="e.g. 950300"
               />
-            </div>
-          ) : null}
-          <Toggle label="Show SAC column (courses / services)" checked={form.showSac} onChange={(v) => set("showSac", v)} />
-          {form.showSac ? (
-            <div>
-              <label className="mb-1 block text-xs text-slate-600">Default SAC (6 digits, e.g. 999293)</label>
+            </SettingsToggle>
+            <SettingsToggle
+              label="SAC column"
+              description="Courses and services."
+              checked={form.showSac}
+              onChange={(v) => set("showSac", v)}
+            >
+              <FieldLabel hint="6 digits">Default SAC</FieldLabel>
               <input
                 className="input max-w-xs font-mono"
                 inputMode="numeric"
@@ -141,73 +187,83 @@ export default function InvoiceSettingsPage() {
                 onChange={(e) => set("sacCode", e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="999293"
               />
+            </SettingsToggle>
+            <SettingsToggle
+              label="Taxable value"
+              description="Reverse-calculated from inclusive total."
+              checked={form.showTaxableValue}
+              onChange={(v) => set("showTaxableValue", v)}
+            />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SettingsToggle label="CGST" checked={form.showCgst} onChange={(v) => set("showCgst", v)}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="input w-full"
+                  value={form.cgstPercent}
+                  onChange={(e) => set("cgstPercent", Number(e.target.value))}
+                />
+              </SettingsToggle>
+              <SettingsToggle label="SGST / UGST" checked={form.showSgst} onChange={(v) => set("showSgst", v)}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="input w-full"
+                  value={form.sgstPercent}
+                  onChange={(e) => set("sgstPercent", Number(e.target.value))}
+                />
+              </SettingsToggle>
+              <SettingsToggle label="IGST" checked={form.showIgst} onChange={(v) => set("showIgst", v)}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="input w-full"
+                  value={form.igstPercent}
+                  onChange={(e) => set("igstPercent", Number(e.target.value))}
+                />
+              </SettingsToggle>
             </div>
-          ) : null}
-          <p className="text-xs text-slate-500">
-            Course enrollments use SAC; kit sales use HSN. The other column shows — on each line.
-          </p>
-          <Toggle
-            label="Show taxable value (auto from total)"
-            checked={form.showTaxableValue}
-            onChange={(v) => set("showTaxableValue", v)}
-          />
-          <Toggle label="Show CGST column" checked={form.showCgst} onChange={(v) => set("showCgst", v)} />
-          {form.showCgst ? (
-            <input
-              type="number"
-              min={0}
-              max={100}
-              className="input max-w-[100px]"
-              value={form.cgstPercent}
-              onChange={(e) => set("cgstPercent", Number(e.target.value))}
-            />
-          ) : null}
-          <Toggle label="Show SGST/UGST column" checked={form.showSgst} onChange={(v) => set("showSgst", v)} />
-          {form.showSgst ? (
-            <input
-              type="number"
-              min={0}
-              max={100}
-              className="input max-w-[100px]"
-              value={form.sgstPercent}
-              onChange={(e) => set("sgstPercent", Number(e.target.value))}
-            />
-          ) : null}
-          <Toggle label="Show IGST column" checked={form.showIgst} onChange={(v) => set("showIgst", v)} />
-          {form.showIgst ? (
-            <input
-              type="number"
-              min={0}
-              max={100}
-              className="input max-w-[100px]"
-              value={form.igstPercent}
-              onChange={(e) => set("igstPercent", Number(e.target.value))}
-            />
-          ) : null}
-          <p className="text-xs text-slate-500">
-            Formula: Taxable = Total ÷ (1 + CGST% + SGST% + IGST%). Tax amounts = taxable × each rate.
-          </p>
-        </section>
+            <p className="rounded-xl border border-teal-200/80 bg-teal-50 px-3 py-2.5 text-xs text-teal-900">
+              Taxable = Total ÷ (1 + CGST% + SGST% + IGST%). Each tax = taxable × rate.
+            </p>
+          </SettingsSection>
+        </div>
 
-        <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Footer</h2>
-          <Toggle label="Show system footer" checked={form.showSystemFooter} onChange={(v) => set("showSystemFooter", v)} />
-          {form.showSystemFooter ? (
+        <SettingsSection title="Footer" description="Authorization text and amount in words.">
+          <SettingsToggle
+            label="System footer"
+            description="Computer-generated invoice disclaimer."
+            checked={form.showSystemFooter}
+            onChange={(v) => set("showSystemFooter", v)}
+          >
             <textarea
-              className="input min-h-[60px]"
+              className="input min-h-[72px]"
               value={form.systemFooterText}
               onChange={(e) => set("systemFooterText", e.target.value)}
             />
-          ) : null}
-          <Toggle label="Show total in words" checked={form.showTotalInWords} onChange={(v) => set("showTotalInWords", v)} />
-        </section>
+          </SettingsToggle>
+          <SettingsToggle
+            label="Total in words"
+            checked={form.showTotalInWords}
+            onChange={(v) => set("showTotalInWords", v)}
+          />
+        </SettingsSection>
 
-        {msg ? (
-          <p className={msg.type === "success" ? "text-sm text-emerald-600" : "text-sm text-red-600"}>{msg.text}</p>
-        ) : null}
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? "Saving…" : "Save settings"}
-        </button>
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-lg ring-1 ring-slate-100/80 backdrop-blur-sm">
+          {msg ? (
+            <Alert variant={msg.type} className="min-w-[200px] flex-1">
+              {msg.text}
+            </Alert>
+          ) : (
+            <p className="flex-1 text-sm text-slate-500">Changes apply to new PDFs and previews immediately.</p>
+          )}
+          <button type="submit" disabled={saving} className="btn-primary shrink-0 px-8">
+            {saving ? "Saving…" : "Save settings"}
+          </button>
+        </div>
       </form>
     </AppPageShell>
   );

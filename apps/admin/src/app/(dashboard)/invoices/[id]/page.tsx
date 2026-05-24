@@ -4,11 +4,18 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, getToken } from "@/lib/api";
-
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 import { AppPageShell } from "@/components/ui";
+import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  AdminSpinner,
+  InvoicePreviewFrame,
+  InvoiceSubNav,
+  PaymentsCommerceNav,
+} from "@/components/invoices/InvoiceAdminUi";
 import { InvoiceDocument, type InvoiceDocumentData } from "@/components/invoices/InvoiceDocument";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
 
 export default function InvoiceDetailPage() {
   const params = useParams();
@@ -54,15 +61,24 @@ export default function InvoiceDetailPage() {
   }
 
   if (loading) {
-    return <p className="py-12 text-center text-sm text-slate-500">Loading…</p>;
+    return (
+      <AppPageShell className="w-full">
+        <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+        <AdminSpinner className="py-24" />
+      </AppPageShell>
+    );
   }
 
   if (!invoice) {
     return (
       <AppPageShell>
+        <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
         <p className="text-sm text-red-600">{error}</p>
-        <Link href="/invoices" className="mt-3 inline-block text-sm text-teal-700 hover:underline">
-          Back
+        <Link
+          href="/invoices"
+          className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+        >
+          All invoices
         </Link>
       </AppPageShell>
     );
@@ -71,18 +87,39 @@ export default function InvoiceDetailPage() {
   return (
     <AppPageShell className="w-full print:p-0">
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
-      <div className="mb-4 flex flex-wrap gap-2 print:hidden">
-        <button type="button" onClick={() => void downloadPdf()} disabled={downloading} className="btn-primary">
-          {downloading ? "Downloading…" : "Download PDF"}
-        </button>
-        <button type="button" onClick={() => window.print()} className="btn-secondary">
-          Print
-        </button>
-        <Link href="/invoices" className="btn-secondary">
-          Back
-        </Link>
+      <div className="print:hidden space-y-4">
+        <PageHeader
+          title={invoice.invoiceNumber}
+          subtitle={`${invoice.studentName} · ${invoice.courseTitle || invoice.batchName}`}
+          backHref="/invoices"
+          backLabel="All invoices"
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => void downloadPdf()}
+                disabled={downloading}
+                className="btn-primary"
+              >
+                {downloading ? "Downloading…" : "Download PDF"}
+              </button>
+              <button type="button" onClick={() => window.print()} className="btn-secondary">
+                Print
+              </button>
+            </>
+          }
+        />
+        <PaymentsCommerceNav />
+        <InvoiceSubNav />
       </div>
-      <InvoiceDocument invoice={invoice} />
+      <div className="mt-2 print:mt-0">
+        <InvoicePreviewFrame>
+          <InvoiceDocument invoice={invoice} />
+        </InvoicePreviewFrame>
+        <div className="hidden print:block">
+          <InvoiceDocument invoice={invoice} />
+        </div>
+      </div>
     </AppPageShell>
   );
 }

@@ -34,8 +34,9 @@ export interface InvoiceDocumentData {
   isPreview?: boolean;
 }
 
-const th = "border border-slate-300 bg-slate-100 px-2 py-2 text-left text-xs font-semibold text-slate-700";
-const td = "border border-slate-300 px-2 py-2 text-xs text-slate-800";
+const th =
+  "border border-slate-300 bg-slate-100 px-2.5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-600";
+const td = "border border-slate-300 px-2.5 py-2 text-xs text-slate-800";
 
 export const SAMPLE_INVOICE: InvoiceDocumentData = {
   invoiceNumber: "FUNT-INV-20250524-0001",
@@ -74,14 +75,15 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
   const currency = invoice.currencyLabel ?? "INR";
 
   return (
-    <article className="mx-auto max-w-[210mm] border border-slate-400 bg-white text-slate-900">
+    <article className="mx-auto max-w-[210mm] overflow-hidden rounded-sm border border-slate-400 bg-white text-slate-900 shadow-sm print:shadow-none">
+      <div className="h-1 bg-teal-600 print:bg-slate-800" />
       <div className="flex items-start justify-between gap-4 border-b border-slate-300 px-6 py-5">
-        <img src="/funt-logo.png" alt="FUNT" className="h-10 w-auto" />
+        <img src="/funt-logo.png" alt="FUNT" className="h-11 w-auto" />
         <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
             Original for recipient
           </p>
-          <h1 className="text-xl font-bold tracking-tight">TAX INVOICE</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">TAX INVOICE</h1>
           <p className="mt-2 text-xs">
             <span className="text-slate-500">Invoice #: </span>
             <span className="font-semibold">{invoice.invoiceNumber}</span>
@@ -94,8 +96,8 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
       </div>
 
       <div className="grid border-b border-slate-300 sm:grid-cols-2">
-        <div className="border-slate-300 p-4 sm:border-r">
-          <p className="text-xs font-bold text-slate-800">Company details:</p>
+        <div className="border-slate-300 bg-slate-50/60 p-4 sm:border-r">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Company details</p>
           <div className="mt-2 space-y-1 text-xs text-slate-700">
             {s.showLegalName ? <p className="font-semibold">{s.legalName}</p> : null}
             {s.showAddress && s.address ? <p className="whitespace-pre-line">{s.address}</p> : null}
@@ -104,8 +106,8 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
           </div>
         </div>
         {s.showRecipient ? (
-          <div className="p-4">
-            <p className="text-xs font-bold text-slate-800">Recipient details:</p>
+          <div className="bg-white p-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Recipient details</p>
             <div className="mt-2 space-y-1 text-xs text-slate-700">
               <p className="font-semibold">{invoice.studentName || invoice.studentUsername}</p>
               {s.showRecipientEmail && invoice.studentEmail ? <p>{invoice.studentEmail}</p> : null}
