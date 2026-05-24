@@ -13,9 +13,9 @@ export default function InvoiceSamplePage() {
 
   useEffect(() => {
     api<InvoiceSettingsDto>("/api/admin/invoices/settings").then((r) => {
-      if (r.success && r.data) {
-        setInvoice((prev) => ({ ...prev, settings: r.data, displayNotes: r.data.defaultNotes }));
-      }
+      const settings = r.success ? r.data : undefined;
+      if (!settings) return;
+      setInvoice((prev) => ({ ...prev, settings, displayNotes: settings.defaultNotes }));
     });
   }, []);
 
