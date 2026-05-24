@@ -61,6 +61,7 @@ import {
 import { SlashCommandsExtension } from "./slashCommands.js";
 import { RteActionsExtension } from "./editorActions.js";
 import { dismissRteDialogs, showRteAlert, showRteImageDialog, showRtePrompt } from "./ui/dialogs.js";
+import { resolveImageEmbedUrl } from "./media/googleDriveUtils.js";
 import type { EditorStats, RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
 
 const TOOLBAR_ACTIONS = {
@@ -255,9 +256,20 @@ function imageClassName(align: VideoAlign, existingClass?: string): string {
 
 const CustomImage = Image.extend({
   addAttributes() {
-    const parentAttrs = typeof this.parent === "function" ? this.parent() : {};
+    const parentAttrs = (typeof this.parent === "function" ? this.parent() : {}) as Record<
+      string,
+      unknown
+    >;
+    const parentSrc = parentAttrs.src as { parseHTML?: (element: Element) => unknown } | undefined;
     return {
       ...parentAttrs,
+      src: {
+        ...parentSrc,
+        parseHTML: (element: Element) => {
+          const raw = element.getAttribute("src") ?? "";
+          return raw ? resolveImageEmbedUrl(raw) : null;
+        },
+      },
       widthPct: {
         default: 80,
         parseHTML: (element: Element) => normalizeVideoWidthPct(element.getAttribute("data-width")),
@@ -275,11 +287,15 @@ const CustomImage = Image.extend({
       align,
       typeof HTMLAttributes.class === "string" ? HTMLAttributes.class : ""
     );
+    const src =
+      typeof HTMLAttributes.src === "string" && HTMLAttributes.src
+        ? resolveImageEmbedUrl(HTMLAttributes.src)
+        : HTMLAttributes.src;
     return [
       "img",
       mergeAttributes(
         { "data-width": String(widthPct), "data-align": align, class: mergedClass, style: `width:${widthPct}%;` },
-        HTMLAttributes
+        { ...HTMLAttributes, src }
       ),
     ];
   },
@@ -1523,7 +1539,7 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!this.editor) {
       return;
     }
-    const normalized = src.trim();
+    const normalized = resolveImageEmbedUrl(src.trim());
     if (!/^https?:\/\//i.test(normalized) && !/^data:image\//i.test(normalized)) {
       void this.showEditorAlert("Please enter a valid image URL (https://…).");
       return;

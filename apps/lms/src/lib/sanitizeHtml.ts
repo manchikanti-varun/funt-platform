@@ -1,3 +1,4 @@
+import { rewriteGoogleDriveImagesInHtml } from "@funt-platform/rich-text-editor";
 import DOMPurify from "isomorphic-dompurify";
 
 export const RICH_TEXT_VIEW_CLASS =
@@ -207,7 +208,8 @@ export function sanitizeHtml(html: string | undefined | null): string {
       normalizeBreakColonLists(normalizeParagraphColonLists(normalizeQuillLists(source)))
     )
   );
-  const safe = DOMPurify.sanitize(normalized, {
+  const withDriveImages = rewriteGoogleDriveImagesInHtml(normalized);
+  const safe = DOMPurify.sanitize(withDriveImages, {
     USE_PROFILES: { html: true },
     ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ADD_TAGS: ["video", "source", "iframe"],

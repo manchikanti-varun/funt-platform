@@ -42,3 +42,29 @@ export function isGoogleDriveUrl(input: string): boolean {
     return false;
   }
 }
+
+/** Turn share/view links into a URL suitable for `<img src>`. */
+export function resolveImageEmbedUrl(input: string, size: 220 | 400 | 800 = 800): string {
+  const trimmed = input.trim();
+  if (!trimmed || !isGoogleDriveUrl(trimmed)) {
+    return trimmed;
+  }
+  return toGoogleDriveThumbnailUrl(trimmed, size);
+}
+
+/** Rewrite Google Drive image sources in stored HTML (LMS/admin read views). */
+export function rewriteGoogleDriveImagesInHtml(html: string): string {
+  return html.replace(
+    /<img\b([^>]*?)\ssrc=(["'])([^"']+)\2/gi,
+    (match, attrs: string, quote: string, src: string) => {
+      if (!isGoogleDriveUrl(src)) {
+        return match;
+      }
+      const resolved = resolveImageEmbedUrl(src);
+      if (resolved === src) {
+        return match;
+      }
+      return `<img${attrs} src=${quote}${resolved}${quote}`;
+    }
+  );
+}

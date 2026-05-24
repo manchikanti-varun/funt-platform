@@ -4,6 +4,8 @@ export { GoogleDriveProvider } from "./media/googleDrive.js";
 export {
   extractGoogleDriveFileId,
   isGoogleDriveUrl,
+  resolveImageEmbedUrl,
+  rewriteGoogleDriveImagesInHtml,
   toGoogleDrivePreviewUrl,
   toGoogleDriveThumbnailUrl,
 } from "./media/googleDriveUtils.js";

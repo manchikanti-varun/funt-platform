@@ -212,7 +212,8 @@ export function showRteImageDialog(host: HTMLElement): Promise<ImageInsertResult
 
     const hint = document.createElement('p');
     hint.className = "rte-dialog-hint";
-    hint.textContent = "Paste an image URL, or upload a file from your computer.";
+    hint.textContent =
+      "Paste an image URL, or upload a file from your computer. Google Drive links work if the file is shared as “Anyone with the link”.";
 
     const label = document.createElement('label');
     label.className = "rte-dialog-label";
@@ -221,7 +222,7 @@ export function showRteImageDialog(host: HTMLElement): Promise<ImageInsertResult
     const input = document.createElement('input');
     input.type = "url";
     input.className = "rte-dialog-input";
-    input.placeholder = "https://example.com/image.png";
+    input.placeholder = "https://example.com/image.png or Google Drive share link";
     input.autocomplete = "off";
 
     label.append(input);
