@@ -74,93 +74,132 @@ export default function InvoiceSettingsPage() {
         </Link>
       </div>
       <p className="mb-6 text-sm text-slate-600">
-        Choose what appears on tax invoices and PDFs. Students can download invoices after enrollment.
+        Configure company details and tax columns. Enter the enrollment <strong>total amount</strong> (INR);
+        taxable value and CGST/SGST/IGST are calculated automatically from the percentages you enable.
       </p>
 
       <form onSubmit={save} className="space-y-8">
         <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Company (seller)</h2>
-          <Toggle label="Show legal name" checked={form.showLegalName} onChange={(v) => set("showLegalName", v)} />
-          <input
-            className="input"
-            value={form.legalName}
-            onChange={(e) => set("legalName", e.target.value)}
-            placeholder="Legal name"
-          />
+          <h2 className="font-semibold text-slate-800">Company details</h2>
+          <Toggle label="Show company name" checked={form.showLegalName} onChange={(v) => set("showLegalName", v)} />
+          <input className="input" value={form.legalName} onChange={(e) => set("legalName", e.target.value)} />
           <Toggle label="Show address" checked={form.showAddress} onChange={(v) => set("showAddress", v)} />
           <textarea
-            className="input min-h-[80px]"
+            className="input min-h-[72px]"
             value={form.address}
             onChange={(e) => set("address", e.target.value)}
-            placeholder="Address"
           />
-          <Toggle label="Show GSTIN" checked={form.showGstin} onChange={(v) => set("showGstin", v)} />
-          <input className="input" value={form.gstin} onChange={(e) => set("gstin", e.target.value)} placeholder="GSTIN" />
-          <Toggle label="Show PAN" checked={form.showPan} onChange={(v) => set("showPan", v)} />
-          <input className="input" value={form.pan} onChange={(e) => set("pan", e.target.value)} placeholder="PAN" />
-          <Toggle label="Show email" checked={form.showEmail} onChange={(v) => set("showEmail", v)} />
-          <input className="input" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="Email" />
-          <Toggle label="Show phone" checked={form.showPhone} onChange={(v) => set("showPhone", v)} />
-          <input className="input" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="Phone" />
+          <Toggle label="Show GST number" checked={form.showGstin} onChange={(v) => set("showGstin", v)} />
+          {form.showGstin ? (
+            <input className="input" value={form.gstin} onChange={(e) => set("gstin", e.target.value)} placeholder="GSTIN" />
+          ) : null}
+          <Toggle label="Show PAN number" checked={form.showPan} onChange={(v) => set("showPan", v)} />
+          {form.showPan ? (
+            <input className="input" value={form.pan} onChange={(e) => set("pan", e.target.value)} placeholder="PAN" />
+          ) : null}
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-slate-700">Recipient state (place of supply)</label>
+            <input className="input" value={form.placeOfSupply} onChange={(e) => set("placeOfSupply", e.target.value)} />
+          </div>
+          <Toggle label="Show recipient details" checked={form.showRecipient} onChange={(v) => set("showRecipient", v)} />
+          {form.showRecipient ? (
+            <div className="ml-4 space-y-2 border-l-2 border-slate-200 pl-4">
+              <Toggle label="Show student email" checked={form.showRecipientEmail} onChange={(v) => set("showRecipientEmail", v)} />
+              <Toggle label="Show student address" checked={form.showRecipientAddress} onChange={(v) => set("showRecipientAddress", v)} />
+              <Toggle label="Show student phone" checked={form.showRecipientPhone} onChange={(v) => set("showRecipientPhone", v)} />
+            </div>
+          ) : null}
         </section>
 
         <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Invoice details</h2>
-          <Toggle label="Show invoice meta (#, date, terms)" checked={form.showInvoiceMeta} onChange={(v) => set("showInvoiceMeta", v)} />
-          <Toggle label="Show terms" checked={form.showTerms} onChange={(v) => set("showTerms", v)} />
-          <input className="input" value={form.terms} onChange={(e) => set("terms", e.target.value)} placeholder="Terms" />
-          <Toggle label="Show due date" checked={form.showDueDate} onChange={(v) => set("showDueDate", v)} />
-          <Toggle label="Show place of supply" checked={form.showPlaceOfSupply} onChange={(v) => set("showPlaceOfSupply", v)} />
-          <input
-            className="input"
-            value={form.placeOfSupply}
-            onChange={(e) => set("placeOfSupply", e.target.value)}
-            placeholder="Place of supply"
+          <h2 className="font-semibold text-slate-800">Invoice table</h2>
+          <p className="text-sm text-slate-500">
+            Description, Quantity, Unit Price, and Total are always shown. Enable optional columns below.
+          </p>
+          <Toggle label="Show HSN column (kits / goods)" checked={form.showHsn} onChange={(v) => set("showHsn", v)} />
+          {form.showHsn ? (
+            <div>
+              <label className="mb-1 block text-xs text-slate-600">Default HSN (digits only, e.g. 950300)</label>
+              <input
+                className="input max-w-xs font-mono"
+                inputMode="numeric"
+                value={form.hsnCode}
+                onChange={(e) => set("hsnCode", e.target.value.replace(/\D/g, ""))}
+                placeholder="HSN for kits"
+              />
+            </div>
+          ) : null}
+          <Toggle label="Show SAC column (courses / services)" checked={form.showSac} onChange={(v) => set("showSac", v)} />
+          {form.showSac ? (
+            <div>
+              <label className="mb-1 block text-xs text-slate-600">Default SAC (6 digits, e.g. 999293)</label>
+              <input
+                className="input max-w-xs font-mono"
+                inputMode="numeric"
+                maxLength={6}
+                value={form.sacCode}
+                onChange={(e) => set("sacCode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="999293"
+              />
+            </div>
+          ) : null}
+          <p className="text-xs text-slate-500">
+            Course enrollments use SAC; kit sales use HSN. The other column shows — on each line.
+          </p>
+          <Toggle
+            label="Show taxable value (auto from total)"
+            checked={form.showTaxableValue}
+            onChange={(v) => set("showTaxableValue", v)}
           />
-          <Toggle label="Show HSN/SAC column" checked={form.showHsnSac} onChange={(v) => set("showHsnSac", v)} />
-          <input className="input" value={form.hsnSac} onChange={(e) => set("hsnSac", e.target.value)} placeholder="HSN/SAC" />
-          <Toggle label="Show IGST columns" checked={form.showIgst} onChange={(v) => set("showIgst", v)} />
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">IGST %</label>
+          <Toggle label="Show CGST column" checked={form.showCgst} onChange={(v) => set("showCgst", v)} />
+          {form.showCgst ? (
             <input
               type="number"
               min={0}
               max={100}
-              className="input max-w-[120px]"
+              className="input max-w-[100px]"
+              value={form.cgstPercent}
+              onChange={(e) => set("cgstPercent", Number(e.target.value))}
+            />
+          ) : null}
+          <Toggle label="Show SGST/UGST column" checked={form.showSgst} onChange={(v) => set("showSgst", v)} />
+          {form.showSgst ? (
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className="input max-w-[100px]"
+              value={form.sgstPercent}
+              onChange={(e) => set("sgstPercent", Number(e.target.value))}
+            />
+          ) : null}
+          <Toggle label="Show IGST column" checked={form.showIgst} onChange={(v) => set("showIgst", v)} />
+          {form.showIgst ? (
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className="input max-w-[100px]"
               value={form.igstPercent}
               onChange={(e) => set("igstPercent", Number(e.target.value))}
             />
-          </div>
+          ) : null}
+          <p className="text-xs text-slate-500">
+            Formula: Taxable = Total ÷ (1 + CGST% + SGST% + IGST%). Tax amounts = taxable × each rate.
+          </p>
         </section>
 
         <section className="card space-y-4">
-          <h2 className="font-semibold text-slate-800">Customer &amp; footer</h2>
-          <Toggle label="Show Bill To" checked={form.showBillTo} onChange={(v) => set("showBillTo", v)} />
-          <Toggle label="Show Ship To" checked={form.showShipTo} onChange={(v) => set("showShipTo", v)} />
-          <Toggle label="Show total in words" checked={form.showTotalInWords} onChange={(v) => set("showTotalInWords", v)} />
-          <Toggle label="Show notes" checked={form.showNotes} onChange={(v) => set("showNotes", v)} />
-          <input
-            className="input"
-            value={form.defaultNotes}
-            onChange={(e) => set("defaultNotes", e.target.value)}
-            placeholder="Default notes"
-          />
-          <Toggle label="Show balance due" checked={form.showBalanceDue} onChange={(v) => set("showBalanceDue", v)} />
-          <Toggle
-            label="Show digital signature block"
-            checked={form.showDigitalSignature}
-            onChange={(v) => set("showDigitalSignature", v)}
-          />
-          <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">Signed by (name on invoice)</label>
-            <input
-              className="input"
-              value={form.signatoryName}
-              onChange={(e) => set("signatoryName", e.target.value)}
-              placeholder="Funt Robotics"
+          <h2 className="font-semibold text-slate-800">Footer</h2>
+          <Toggle label="Show system footer" checked={form.showSystemFooter} onChange={(v) => set("showSystemFooter", v)} />
+          {form.showSystemFooter ? (
+            <textarea
+              className="input min-h-[60px]"
+              value={form.systemFooterText}
+              onChange={(e) => set("systemFooterText", e.target.value)}
             />
-          </div>
-          <Toggle label="Show verify link on PDF" checked={form.showVerifyLink} onChange={(v) => set("showVerifyLink", v)} />
+          ) : null}
+          <Toggle label="Show total in words" checked={form.showTotalInWords} onChange={(v) => set("showTotalInWords", v)} />
         </section>
 
         {msg ? (

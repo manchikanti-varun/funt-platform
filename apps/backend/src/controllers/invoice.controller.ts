@@ -31,6 +31,8 @@ export const postManualInvoice = asyncHandler(async (req: Request, res: Response
   const courseId = String(req.body?.courseId ?? "").trim() || undefined;
   const notes = String(req.body?.notes ?? "").trim() || undefined;
   const lineDescription = String(req.body?.lineDescription ?? "").trim() || undefined;
+  const lineItemTypeRaw = String(req.body?.lineItemType ?? "SERVICE").trim().toUpperCase();
+  const lineItemType = lineItemTypeRaw === "GOODS" ? "GOODS" : "SERVICE";
 
   if (!studentId) throw new AppError("studentId is required", 400);
   if (!batchId) throw new AppError("batchId is required", 400);
@@ -57,6 +59,7 @@ export const postManualInvoice = asyncHandler(async (req: Request, res: Response
     discountInPaise,
     notes,
     lineDescription,
+    lineItemType,
     createdBy,
   });
   successRes(res, data, "Invoice created", 201);

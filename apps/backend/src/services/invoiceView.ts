@@ -1,5 +1,7 @@
 import { amountInIndianRupeeWords } from "../utils/amountInWords.js";
+import { calculateInvoiceTax } from "../utils/invoiceTax.js";
 import { getPublicInvoiceVerifyUrl } from "../utils/invoiceSigning.js";
+import { resolveLineHsnSac, type InvoiceLineItemType } from "../utils/invoiceCodes.js";
 import type { InvoiceSettingsDto } from "./invoiceSettings.service.js";
 
 export interface InvoiceBaseDto {
@@ -8,10 +10,15 @@ export interface InvoiceBaseDto {
   studentId: string;
   studentName: string;
   studentEmail: string;
+  studentPhone: string;
+  studentAddress: string;
   studentUsername: string;
   batchName: string;
   courseTitle: string;
   lineDescription: string;
+  lineItemType?: InvoiceLineItemType | string;
+  lineHsnCode?: string;
+  lineSacCode?: string;
   amountInPaise: number;
   discountInPaise: number;
   totalInPaise: number;
@@ -28,7 +35,7 @@ function formatRupees(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function formatAmountPlain(paise: number): string {
+function formatInrPlain(paise: number): string {
   return (paise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -36,28 +43,32 @@ function formatDdMmYyyy(d: Date): string {
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
-function formatSignedDateTime(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
-
 export interface InvoiceViewDto extends InvoiceBaseDto {
   settings: InvoiceSettingsDto;
-  subtotalInPaise: number;
+  taxableInPaise: number;
+  taxableFormatted: string;
+  cgstInPaise: number;
+  sgstInPaise: number;
   igstInPaise: number;
-  grandTotalInPaise: number;
-  subtotalFormatted: string;
+  cgstFormatted: string;
+  sgstFormatted: string;
   igstFormatted: string;
-  igstLabel: string;
+  cgstPercent: number;
+  sgstPercent: number;
+  igstPercent: number;
+  unitPriceFormatted: string;
+  lineTotalFormatted: string;
+  quantity: number;
+  grandTotalInPaise: number;
   grandTotalFormatted: string;
-  balanceDueFormatted: string;
   totalInWords: string;
   invoiceDate: string;
-  dueDate: string;
-  shipToName: string;
-  shipToLines: string;
+  recipientState: string;
   displayNotes: string;
-  signedAtFormatted: string;
+  currencyLabel: string;
+  lineItemType: InvoiceLineItemType;
+  lineHsnDisplay: string;
+  lineSacDisplay: string;
 }
 
 export function buildInvoiceView(
@@ -65,41 +76,47 @@ export function buildInvoiceView(
   settings: InvoiceSettingsDto
 ): InvoiceViewDto {
   const issued = invoice.issuedAt instanceof Date ? invoice.issuedAt : new Date(invoice.issuedAt);
-  const signedAtRaw = invoice.electronicallySignedAt ?? invoice.issuedAt;
-  const signedAt = signedAtRaw instanceof Date ? signedAtRaw : new Date(signedAtRaw);
-
-  const discount = Math.max(0, invoice.discountInPaise ?? 0);
-  const subtotalInPaise = Math.max(0, invoice.amountInPaise);
-  const igstRate = settings.showIgst ? settings.igstPercent : 0;
-  const igstInPaise = Math.round((subtotalInPaise * igstRate) / 100);
-  const grandTotalInPaise = Math.max(0, subtotalInPaise + igstInPaise - discount);
-
-  const shipToName = invoice.studentName || invoice.studentUsername || "Student";
-  const shipToLines = [invoice.batchName, settings.placeOfSupply].filter(Boolean).join("\n");
+  const grandTotalInPaise = Math.max(0, invoice.totalInPaise);
+  const tax = calculateInvoiceTax(grandTotalInPaise, settings);
 
   const displayNotes = invoice.notes?.trim() || settings.defaultNotes;
+  const codes = resolveLineHsnSac({
+    lineItemType: invoice.lineItemType ?? "SERVICE",
+    settings,
+    lineHsnCode: invoice.lineHsnCode,
+    lineSacCode: invoice.lineSacCode,
+  });
 
   return {
     ...invoice,
     settings,
-    subtotalInPaise,
-    igstInPaise,
-    grandTotalInPaise,
+    currency: "INR",
+    currencyLabel: "INR",
     totalInPaise: grandTotalInPaise,
     amountFormatted: formatRupees(grandTotalInPaise),
-    subtotalFormatted: formatAmountPlain(subtotalInPaise),
-    igstFormatted: formatAmountPlain(igstInPaise),
-    igstLabel: `IGST${igstRate} (${igstRate}%)`,
+    taxableInPaise: tax.taxableInPaise,
+    taxableFormatted: formatInrPlain(tax.taxableInPaise),
+    cgstInPaise: tax.cgstInPaise,
+    sgstInPaise: tax.sgstInPaise,
+    igstInPaise: tax.igstInPaise,
+    cgstFormatted: formatInrPlain(tax.cgstInPaise),
+    sgstFormatted: formatInrPlain(tax.sgstInPaise),
+    igstFormatted: formatInrPlain(tax.igstInPaise),
+    cgstPercent: tax.cgstPercent,
+    sgstPercent: tax.sgstPercent,
+    igstPercent: tax.igstPercent,
+    unitPriceFormatted: formatInrPlain(tax.unitPriceInPaise),
+    lineTotalFormatted: formatInrPlain(grandTotalInPaise),
+    quantity: tax.quantity,
+    grandTotalInPaise,
     grandTotalFormatted: formatRupees(grandTotalInPaise),
-    balanceDueFormatted: formatRupees(grandTotalInPaise),
     totalInWords: amountInIndianRupeeWords(grandTotalInPaise),
     invoiceDate: formatDdMmYyyy(issued),
-    dueDate: formatDdMmYyyy(issued),
-    electronicallySignedAt: signedAt,
-    verifyUrl: invoice.verifyUrl ?? getPublicInvoiceVerifyUrl(invoice.invoiceNumber),
-    shipToName,
-    shipToLines,
+    recipientState: settings.placeOfSupply,
     displayNotes,
-    signedAtFormatted: formatSignedDateTime(signedAt),
+    verifyUrl: invoice.verifyUrl ?? getPublicInvoiceVerifyUrl(invoice.invoiceNumber),
+    lineItemType: codes.lineItemType,
+    lineHsnDisplay: codes.lineHsnDisplay,
+    lineSacDisplay: codes.lineSacDisplay,
   };
 }

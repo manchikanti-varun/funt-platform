@@ -35,6 +35,7 @@ export default function InvoicesPage() {
   const [batchId, setBatchId] = useState("");
   const [courseId, setCourseId] = useState("");
   const [amountRupees, setAmountRupees] = useState("");
+  const [lineItemType, setLineItemType] = useState<"SERVICE" | "GOODS">("SERVICE");
 
   const courseOptions = useMemo(
     () => batches.find((b) => b.id === batchId)?.courseSnapshots ?? [],
@@ -72,6 +73,7 @@ export default function InvoicesPage() {
     };
     if (courseId) body.courseId = courseId;
     if (amountRupees.trim()) body.amountRupees = Number(amountRupees);
+    body.lineItemType = lineItemType;
 
     const res = await api<{ invoiceNumber: string }>("/api/admin/invoices", {
       method: "POST",
@@ -148,7 +150,18 @@ export default function InvoicesPage() {
           </div>
         ) : null}
         <div>
-          <label className="mb-1 block text-sm font-semibold text-slate-700">Amount (₹)</label>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Line type</label>
+          <select
+            value={lineItemType}
+            onChange={(e) => setLineItemType(e.target.value as "SERVICE" | "GOODS")}
+            className="input"
+          >
+            <option value="SERVICE">Course / service (SAC)</option>
+            <option value="GOODS">Kit / goods (HSN)</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">Total amount (₹)</label>
           <input
             type="number"
             min={0}

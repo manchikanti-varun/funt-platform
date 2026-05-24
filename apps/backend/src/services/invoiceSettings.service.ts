@@ -1,5 +1,6 @@
 import { InvoiceSettingsModel } from "../models/InvoiceSettings.model.js";
 import { AppError } from "../utils/AppError.js";
+import { sanitizeGstCode } from "../utils/invoiceCodes.js";
 
 const CONFIG_KEY = "ACTIVE";
 
@@ -8,34 +9,30 @@ export interface InvoiceSettingsDto {
   address: string;
   gstin: string;
   pan: string;
-  email: string;
-  phone: string;
   placeOfSupply: string;
-  terms: string;
-  hsnSac: string;
+  hsnCode: string;
+  sacCode: string;
+  cgstPercent: number;
+  sgstPercent: number;
   igstPercent: number;
   defaultNotes: string;
-  signatoryName: string;
+  systemFooterText: string;
   showLegalName: boolean;
   showAddress: boolean;
   showGstin: boolean;
   showPan: boolean;
-  showEmail: boolean;
-  showPhone: boolean;
-  showInvoiceMeta: boolean;
-  showTerms: boolean;
-  showDueDate: boolean;
-  showPlaceOfSupply: boolean;
-  showBillTo: boolean;
-  showShipTo: boolean;
-  showHsnSac: boolean;
+  showRecipient: boolean;
+  showRecipientEmail: boolean;
+  showRecipientAddress: boolean;
+  showRecipientPhone: boolean;
+  showHsn: boolean;
+  showSac: boolean;
+  showTaxableValue: boolean;
+  showCgst: boolean;
+  showSgst: boolean;
   showIgst: boolean;
   showTotalInWords: boolean;
-  showNotes: boolean;
-  showBalanceDue: boolean;
-  showDigitalSignature: boolean;
-  showVerifyLink: boolean;
-  showDocumentHash: boolean;
+  showSystemFooter: boolean;
   updatedAt?: Date;
   updatedBy?: string;
 }
@@ -46,71 +43,75 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettingsDto = {
     "1st Floor, 2-20-2/211, Ganesh Nagar, Sai Nagar, Uppal, Hyderabad, Telangana 500039",
   gstin: "",
   pan: "",
-  email: "",
-  phone: "",
   placeOfSupply: "Telangana (36)",
-  terms: "Due on Receipt",
-  hsnSac: "999293",
-  igstPercent: 0,
-  defaultNotes: "Thanks for your business.",
-  signatoryName: "Funt Robotics",
+  hsnCode: "",
+  sacCode: "999293",
+  cgstPercent: 0,
+  sgstPercent: 0,
+  igstPercent: 18,
+  defaultNotes: "",
+  systemFooterText:
+    "This is a system generated invoice and does not require a signature or a digital signature",
   showLegalName: true,
   showAddress: true,
   showGstin: true,
   showPan: false,
-  showEmail: false,
-  showPhone: false,
-  showInvoiceMeta: true,
-  showTerms: true,
-  showDueDate: true,
-  showPlaceOfSupply: true,
-  showBillTo: true,
-  showShipTo: false,
-  showHsnSac: true,
-  showIgst: false,
-  showTotalInWords: true,
-  showNotes: true,
-  showBalanceDue: true,
-  showDigitalSignature: true,
-  showVerifyLink: false,
-  showDocumentHash: false,
+  showRecipient: true,
+  showRecipientEmail: true,
+  showRecipientAddress: true,
+  showRecipientPhone: true,
+  showHsn: true,
+  showSac: true,
+  showTaxableValue: true,
+  showCgst: false,
+  showSgst: false,
+  showIgst: true,
+  showTotalInWords: false,
+  showSystemFooter: true,
 };
+
+function num(v: unknown, fallback: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : fallback;
+}
 
 function toDto(doc: Record<string, unknown> | null): InvoiceSettingsDto {
   if (!doc) return { ...DEFAULT_INVOICE_SETTINGS };
+  const legacySac = String(doc.hsnSac ?? doc.sacCode ?? DEFAULT_INVOICE_SETTINGS.sacCode);
+  const legacyHsn = String(doc.hsnCode ?? "");
+  const legacyShow = doc.showHsnSac !== false;
+
   return {
     legalName: String(doc.legalName ?? DEFAULT_INVOICE_SETTINGS.legalName),
     address: String(doc.address ?? DEFAULT_INVOICE_SETTINGS.address),
     gstin: String(doc.gstin ?? ""),
     pan: String(doc.pan ?? ""),
-    email: String(doc.email ?? ""),
-    phone: String(doc.phone ?? ""),
     placeOfSupply: String(doc.placeOfSupply ?? DEFAULT_INVOICE_SETTINGS.placeOfSupply),
-    terms: String(doc.terms ?? DEFAULT_INVOICE_SETTINGS.terms),
-    hsnSac: String(doc.hsnSac ?? DEFAULT_INVOICE_SETTINGS.hsnSac),
-    igstPercent: Math.min(100, Math.max(0, Number(doc.igstPercent ?? 0))),
-    defaultNotes: String(doc.defaultNotes ?? DEFAULT_INVOICE_SETTINGS.defaultNotes),
-    signatoryName: String(doc.signatoryName ?? DEFAULT_INVOICE_SETTINGS.signatoryName),
+    hsnCode: sanitizeGstCode(legacyHsn, 8),
+    sacCode: sanitizeGstCode(legacySac, 6),
+    cgstPercent: num(doc.cgstPercent, DEFAULT_INVOICE_SETTINGS.cgstPercent),
+    sgstPercent: num(doc.sgstPercent, DEFAULT_INVOICE_SETTINGS.sgstPercent),
+    igstPercent: num(doc.igstPercent, DEFAULT_INVOICE_SETTINGS.igstPercent),
+    defaultNotes: String(doc.defaultNotes ?? ""),
+    systemFooterText: String(
+      doc.systemFooterText ?? DEFAULT_INVOICE_SETTINGS.systemFooterText
+    ),
     showLegalName: doc.showLegalName !== false,
     showAddress: doc.showAddress !== false,
     showGstin: doc.showGstin !== false,
     showPan: doc.showPan === true,
-    showEmail: doc.showEmail === true,
-    showPhone: doc.showPhone === true,
-    showInvoiceMeta: doc.showInvoiceMeta !== false,
-    showTerms: doc.showTerms !== false,
-    showDueDate: doc.showDueDate !== false,
-    showPlaceOfSupply: doc.showPlaceOfSupply !== false,
-    showBillTo: doc.showBillTo !== false,
-    showShipTo: doc.showShipTo === true,
-    showHsnSac: doc.showHsnSac !== false,
-    showIgst: doc.showIgst === true,
-    showTotalInWords: doc.showTotalInWords !== false,
-    showNotes: doc.showNotes !== false,
-    showBalanceDue: doc.showBalanceDue !== false,
-    showDigitalSignature: doc.showDigitalSignature !== false,
-    showVerifyLink: doc.showVerifyLink === true,
-    showDocumentHash: doc.showDocumentHash === true,
+    showRecipient: (doc.showRecipient ?? doc.showBillTo) !== false,
+    showRecipientEmail: doc.showRecipientEmail !== false,
+    showRecipientAddress: doc.showRecipientAddress !== false,
+    showRecipientPhone: doc.showRecipientPhone !== false,
+    showHsn: doc.showHsn !== undefined ? doc.showHsn === true : legacyShow,
+    showSac: doc.showSac !== undefined ? doc.showSac === true : legacyShow,
+    showTaxableValue: doc.showTaxableValue !== false,
+    showCgst: doc.showCgst === true,
+    showSgst: doc.showSgst === true,
+    showIgst: doc.showIgst !== undefined ? doc.showIgst === true : DEFAULT_INVOICE_SETTINGS.showIgst,
+    showTotalInWords: doc.showTotalInWords === true,
+    showSystemFooter: doc.showSystemFooter !== false,
     updatedAt: doc.updatedAt as Date | undefined,
     updatedBy: String(doc.updatedBy ?? ""),
   };
@@ -136,45 +137,40 @@ export async function updateInvoiceSettings(
     "showAddress",
     "showGstin",
     "showPan",
-    "showEmail",
-    "showPhone",
-    "showInvoiceMeta",
-    "showTerms",
-    "showDueDate",
-    "showPlaceOfSupply",
-    "showBillTo",
-    "showShipTo",
-    "showHsnSac",
+    "showRecipient",
+    "showRecipientEmail",
+    "showRecipientAddress",
+    "showRecipientPhone",
+    "showHsn",
+    "showSac",
+    "showTaxableValue",
+    "showCgst",
+    "showSgst",
     "showIgst",
     "showTotalInWords",
-    "showNotes",
-    "showBalanceDue",
-    "showDigitalSignature",
-    "showVerifyLink",
-    "showDocumentHash",
+    "showSystemFooter",
   ] as const;
   const strKeys = [
     "legalName",
     "address",
     "gstin",
     "pan",
-    "email",
-    "phone",
     "placeOfSupply",
-    "terms",
-    "hsnSac",
     "defaultNotes",
-    "signatoryName",
+    "systemFooterText",
   ] as const;
+  const numKeys = ["cgstPercent", "sgstPercent", "igstPercent"] as const;
 
   for (const k of strKeys) {
     if (input[k] !== undefined) patch[k] = String(input[k]).trim();
   }
+  if (input.hsnCode !== undefined) patch.hsnCode = sanitizeGstCode(input.hsnCode, 8);
+  if (input.sacCode !== undefined) patch.sacCode = sanitizeGstCode(input.sacCode, 6);
   for (const k of boolKeys) {
     if (input[k] !== undefined) patch[k] = Boolean(input[k]);
   }
-  if (input.igstPercent !== undefined) {
-    patch.igstPercent = Math.min(100, Math.max(0, Number(input.igstPercent)));
+  for (const k of numKeys) {
+    if (input[k] !== undefined) patch[k] = num(input[k], 0);
   }
 
   const doc = await InvoiceSettingsModel.findOneAndUpdate(

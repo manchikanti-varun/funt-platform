@@ -27,6 +27,9 @@ export interface CreateInvoiceInput {
   notes?: string;
   createdBy: string;
   lineDescription?: string;
+  lineItemType?: "SERVICE" | "GOODS";
+  lineHsnCode?: string;
+  lineSacCode?: string;
   session?: ClientSession;
 }
 
@@ -80,8 +83,13 @@ export function serializeInvoice(doc: {
   totalInPaise: number;
   currency: string;
   lineDescription: string;
+  lineItemType?: string | null;
+  lineHsnCode?: string | null;
+  lineSacCode?: string | null;
   studentName?: string | null;
   studentEmail?: string | null;
+  studentPhone?: string | null;
+  studentAddress?: string | null;
   studentUsername?: string | null;
   batchName?: string | null;
   courseTitle?: string | null;
@@ -112,8 +120,13 @@ export function serializeInvoice(doc: {
     amountFormatted: formatRupees(total),
     currency: doc.currency ?? "INR",
     lineDescription: doc.lineDescription,
+    lineItemType: doc.lineItemType ?? "SERVICE",
+    lineHsnCode: doc.lineHsnCode ?? "",
+    lineSacCode: doc.lineSacCode ?? "",
     studentName: doc.studentName ?? "",
     studentEmail: doc.studentEmail ?? "",
+    studentPhone: doc.studentPhone ?? "",
+    studentAddress: doc.studentAddress ?? "",
     studentUsername: doc.studentUsername ?? "",
     batchName: doc.batchName ?? "",
     courseTitle: doc.courseTitle ?? "",
@@ -185,12 +198,43 @@ async function ensureInvoiceSigned(
   return { ...doc, documentHash, electronicSignature, electronicallySignedAt } as InvoiceLeanDoc;
 }
 
+function formatStudentAddress(user: {
+  address?: string | null;
+  city?: string | null;
+}): string {
+  const parts = [String(user.address ?? "").trim(), String(user.city ?? "").trim()].filter(Boolean);
+  return parts.join(", ");
+}
+
+async function enrichStudentRecipientFields<T extends { studentId: string; studentAddress?: string | null; studentPhone?: string | null }>(
+  doc: T
+): Promise<T> {
+  const hasAddress = Boolean(doc.studentAddress?.trim());
+  const hasPhone = Boolean(doc.studentPhone?.trim());
+  if (hasAddress && hasPhone) return doc;
+
+  const user = await UserModel.findById(doc.studentId)
+    .select("address mobile city")
+    .lean()
+    .exec();
+  if (!user) return doc;
+
+  return {
+    ...doc,
+    studentAddress: hasAddress ? doc.studentAddress : formatStudentAddress(user as { address?: string; city?: string }),
+    studentPhone: hasPhone ? doc.studentPhone : String((user as { mobile?: string }).mobile ?? ""),
+  };
+}
+
 export async function createInvoice(input: CreateInvoiceInput) {
   const batch = await findBatchByParam(input.batchId);
   if (!batch) throw new AppError("Batch not found", 404);
   const batchMongoId = String((batch as { _id: unknown })._id);
 
-  const student = await UserModel.findById(input.studentId).select("_id username name email").lean().exec();
+  const student = await UserModel.findById(input.studentId)
+    .select("_id username name email mobile address city")
+    .lean()
+    .exec();
   if (!student) throw new AppError("Student not found", 404);
 
   const course = resolveCourseSnapshot(batch, input.courseId);
@@ -199,10 +243,8 @@ export async function createInvoice(input: CreateInvoiceInput) {
       ? Math.max(0, Math.floor(Number(input.amountInPaise)))
       : course.enrollmentPriceInPaise;
   const discountInPaise = Math.max(0, Math.floor(Number(input.discountInPaise ?? 0)));
-  const settings = await getInvoiceSettings();
-  const igstRate = settings.showIgst ? settings.igstPercent : 0;
-  const igstInPaise = Math.round((amountInPaise * igstRate) / 100);
-  const totalInPaise = Math.max(0, amountInPaise + igstInPaise - discountInPaise);
+  /** Total amount payable (INR inclusive of tax); tax columns are derived when rendering. */
+  const totalInPaise = Math.max(0, amountInPaise - discountInPaise);
 
   if (input.paymentSubmissionId?.trim()) {
     const existingPayment = await InvoiceModel.findOne({
@@ -245,8 +287,13 @@ export async function createInvoice(input: CreateInvoiceInput) {
     totalInPaise,
     currency: "INR",
     lineDescription,
+    lineItemType: input.lineItemType === "GOODS" ? "GOODS" : "SERVICE",
+    lineHsnCode: String(input.lineHsnCode ?? "").trim(),
+    lineSacCode: String(input.lineSacCode ?? "").trim(),
     studentName: String((student as { name?: string }).name ?? ""),
     studentEmail: String((student as { email?: string }).email ?? ""),
+    studentPhone: String((student as { mobile?: string }).mobile ?? ""),
+    studentAddress: formatStudentAddress(student as { address?: string; city?: string }),
     studentUsername: String((student as { username?: string }).username ?? ""),
     batchName: String((batch as { name?: string }).name ?? ""),
     courseTitle: course.title,
@@ -344,6 +391,7 @@ export async function createManualInvoice(input: {
   discountInPaise?: number;
   notes?: string;
   lineDescription?: string;
+  lineItemType?: "SERVICE" | "GOODS";
   createdBy: string;
 }) {
   return createInvoice({
@@ -382,8 +430,9 @@ export async function getInvoiceById(invoiceId: string): Promise<InvoiceViewDto>
   const doc = await InvoiceModel.findById(invoiceId).lean().exec();
   if (!doc) throw new AppError("Invoice not found", 404);
   const signed = await ensureInvoiceSigned(doc);
+  const enriched = await enrichStudentRecipientFields(signed);
   const settings = await getInvoiceSettings();
-  return buildInvoiceView(serializeInvoice(signed), settings);
+  return buildInvoiceView(serializeInvoice(enriched), settings);
 }
 
 export async function generateInvoicePdfBuffer(invoiceId: string): Promise<Buffer> {
@@ -427,7 +476,7 @@ export async function verifyInvoicePublic(invoiceNumber: string) {
     amountFormatted: view.grandTotalFormatted,
     issuedAt: signed.issuedAt,
     electronicallySignedAt: signed.electronicallySignedAt ?? signed.issuedAt,
-    signedBy: settings.signatoryName,
+    signedBy: settings.legalName,
     documentHash: signed.documentHash,
     verifyUrl: getPublicInvoiceVerifyUrl(signed.invoiceNumber),
   };

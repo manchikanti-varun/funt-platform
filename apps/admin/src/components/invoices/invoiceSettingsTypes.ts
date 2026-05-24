@@ -3,34 +3,30 @@ export interface InvoiceSettingsDto {
   address: string;
   gstin: string;
   pan: string;
-  email: string;
-  phone: string;
   placeOfSupply: string;
-  terms: string;
-  hsnSac: string;
+  hsnCode: string;
+  sacCode: string;
+  cgstPercent: number;
+  sgstPercent: number;
   igstPercent: number;
   defaultNotes: string;
-  signatoryName: string;
+  systemFooterText: string;
   showLegalName: boolean;
   showAddress: boolean;
   showGstin: boolean;
   showPan: boolean;
-  showEmail: boolean;
-  showPhone: boolean;
-  showInvoiceMeta: boolean;
-  showTerms: boolean;
-  showDueDate: boolean;
-  showPlaceOfSupply: boolean;
-  showBillTo: boolean;
-  showShipTo: boolean;
-  showHsnSac: boolean;
+  showRecipient: boolean;
+  showRecipientEmail: boolean;
+  showRecipientAddress: boolean;
+  showRecipientPhone: boolean;
+  showHsn: boolean;
+  showSac: boolean;
+  showTaxableValue: boolean;
+  showCgst: boolean;
+  showSgst: boolean;
   showIgst: boolean;
   showTotalInWords: boolean;
-  showNotes: boolean;
-  showBalanceDue: boolean;
-  showDigitalSignature: boolean;
-  showVerifyLink: boolean;
-  showDocumentHash: boolean;
+  showSystemFooter: boolean;
 }
 
 export const DEFAULT_INVOICE_SETTINGS: InvoiceSettingsDto = {
@@ -39,32 +35,29 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettingsDto = {
     "1st Floor, 2-20-2/211, Ganesh Nagar, Sai Nagar, Uppal, Hyderabad, Telangana 500039",
   gstin: "",
   pan: "",
-  email: "",
-  phone: "",
   placeOfSupply: "Telangana (36)",
-  terms: "Due on Receipt",
-  hsnSac: "999293",
-  igstPercent: 0,
-  defaultNotes: "Thanks for your business.",
-  signatoryName: "Funt Robotics",
+  hsnCode: "",
+  sacCode: "999293",
+  cgstPercent: 0,
+  sgstPercent: 0,
+  igstPercent: 18,
+  defaultNotes: "",
+  systemFooterText:
+    "This is a system generated invoice and does not require a signature or a digital signature",
   showLegalName: true,
   showAddress: true,
   showGstin: true,
   showPan: false,
-  showEmail: false,
-  showPhone: false,
-  showInvoiceMeta: true,
-  showTerms: true,
-  showDueDate: true,
-  showPlaceOfSupply: true,
-  showBillTo: true,
-  showShipTo: false,
-  showHsnSac: true,
-  showIgst: false,
-  showTotalInWords: true,
-  showNotes: true,
-  showBalanceDue: true,
-  showDigitalSignature: true,
-  showVerifyLink: false,
-  showDocumentHash: false,
+  showRecipient: true,
+  showRecipientEmail: true,
+  showRecipientAddress: true,
+  showRecipientPhone: true,
+  showHsn: true,
+  showSac: true,
+  showTaxableValue: true,
+  showCgst: false,
+  showSgst: false,
+  showIgst: true,
+  showTotalInWords: false,
+  showSystemFooter: true,
 };
