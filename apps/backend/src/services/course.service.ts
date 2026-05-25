@@ -8,6 +8,8 @@ import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateCourseId } from "../utils/funtIdGenerator.js";
 import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
+import { assertHeaderImageUrl } from "../utils/headerImageUrl.js";
+import { getBatchCourseSnapshots } from "./batch.service.js";
 
 const ENTITY_COURSE = "Course";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -88,6 +90,7 @@ export interface CreateCourseInput {
   title: string;
   description: string;
   durationText?: string;
+  headerImageUrl?: string;
   globalChapterIds: string[];
   createdBy: string;
 }
@@ -96,6 +99,7 @@ export interface UpdateCourseInput {
   title?: string;
   description?: string;
   durationText?: string;
+  headerImageUrl?: string | null;
   moderatorIds?: string[];
 }
 
@@ -115,13 +119,29 @@ export interface UpdateCourseModuleInput {
   xpReward?: number;
 }
 
-function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: string; description: string; durationText?: string; modules: unknown[]; version: number; status: string; createdBy: string; moderatorIds?: string[] | null; createdAt: Date; updatedAt: Date }) {
+function toCourseResponse(doc: {
+  _id: unknown;
+  courseId?: string | null;
+  title: string;
+  description: string;
+  durationText?: string;
+  headerImageUrl?: string;
+  modules: unknown[];
+  version: number;
+  status: string;
+  createdBy: string;
+  moderatorIds?: string[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const headerImage = String(doc.headerImageUrl ?? "").trim() || undefined;
   return {
     id: String(doc._id),
     courseId: doc.courseId ?? undefined,
     title: doc.title,
     description: doc.description,
     durationText: doc.durationText ?? "",
+    ...(headerImage ? { headerImageUrl: headerImage } : {}),
     modules: doc.modules,
     version: doc.version,
     status: doc.status,
@@ -130,6 +150,40 @@ function toCourseResponse(doc: { _id: unknown; courseId?: string | null; title: 
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+async function syncCourseHeaderImageToBatchSnapshots(courseIds: string[], headerImageUrl: string | undefined) {
+  if (!courseIds.length) return;
+  const idSet = new Set(courseIds);
+  const batches = await BatchModel.find({
+    $or: [
+      { "courseSnapshots.courseId": { $in: courseIds } },
+      { "courseSnapshot.courseId": { $in: courseIds } },
+    ],
+  }).exec();
+  for (const batch of batches) {
+    const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+    let dirty = false;
+    for (const snap of snapshots) {
+      const cid = String((snap as { courseId?: string }).courseId ?? "").trim();
+      if (!cid || !idSet.has(cid)) continue;
+      const next = headerImageUrl ?? "";
+      const prev = String((snap as { headerImageUrl?: string }).headerImageUrl ?? "").trim();
+      if (prev !== next) {
+        (snap as { headerImageUrl?: string }).headerImageUrl = next || undefined;
+        dirty = true;
+      }
+    }
+    if (!dirty) continue;
+    if (snapshots.length === 1) {
+      (batch as { courseSnapshot?: unknown; courseSnapshots?: unknown[] }).courseSnapshot = snapshots[0];
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = undefined;
+    } else {
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = snapshots;
+      (batch as { courseSnapshot?: unknown }).courseSnapshot = undefined;
+    }
+    await batch.save();
+  }
 }
 
 export async function createCourse(input: CreateCourseInput) {
@@ -205,12 +259,17 @@ export async function createCourse(input: CreateCourseInput) {
 
   const normalizedDescription = decodeEncodedRichText(input.description);
   const normalizedDurationText = String(input.durationText ?? "").trim();
+  const headerImageUrl =
+    input.headerImageUrl != null && String(input.headerImageUrl).trim()
+      ? assertHeaderImageUrl(String(input.headerImageUrl))
+      : undefined;
   const courseId = await generateCourseId();
   const doc = await CourseModel.create({
     courseId,
     title: input.title.trim(),
     description: normalizedDescription.trim(),
     durationText: normalizedDurationText,
+    ...(headerImageUrl ? { headerImageUrl } : {}),
     modules: snapshots,
     version: 1,
     status: COURSE_STATUS.ACTIVE,
@@ -248,6 +307,13 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.title !== undefined) doc.title = input.title.trim();
   if (input.description !== undefined) doc.description = decodeEncodedRichText(input.description).trim();
   if (input.durationText !== undefined) (doc as { durationText?: string }).durationText = String(input.durationText).trim();
+  if (input.headerImageUrl !== undefined) {
+    if (input.headerImageUrl === null || input.headerImageUrl === "") {
+      (doc as { headerImageUrl?: string }).headerImageUrl = "";
+    } else {
+      (doc as { headerImageUrl?: string }).headerImageUrl = assertHeaderImageUrl(String(input.headerImageUrl));
+    }
+  }
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0
@@ -256,6 +322,12 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
       : [];
   }
   await doc.save();
+  if (input.headerImageUrl !== undefined) {
+    const humanId = (doc as { courseId?: string }).courseId;
+    const ids = [String(doc._id), ...(humanId ? [humanId] : [])];
+    const syncedUrl = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
+    await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
+  }
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
@@ -364,10 +436,12 @@ export async function duplicateCourse(id: string, performedBy: string) {
   if (!source) throw new AppError("Course not found", 404);
   await assertCanEditCourseAsync(performedBy, source);
   const courseId = await generateCourseId();
+  const dupHeader = String((source as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
   const doc = await CourseModel.create({
     courseId,
     title: `${source.title} (Copy)`,
     description: source.description,
+    ...(dupHeader ? { headerImageUrl: dupHeader } : {}),
     modules: source.modules,
     version: 1,
     status: COURSE_STATUS.ACTIVE,

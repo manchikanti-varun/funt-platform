@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getToken } from "@/lib/api";
+import { invoicePdfFilename } from "@/lib/invoicePdf";
 import { AdminSpinner } from "./InvoiceAdminUi";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
@@ -10,9 +11,15 @@ type InvoicePdfPreviewProps = {
   /** API path including leading slash, e.g. `/api/admin/invoices/abc/pdf` */
   pdfPath: string;
   title?: string;
+  /** Used if you save from the preview; Download PDF button uses the server filename. */
+  invoiceNumber?: string;
 };
 
-export function InvoicePdfPreview({ pdfPath, title = "Invoice PDF" }: InvoicePdfPreviewProps) {
+export function InvoicePdfPreview({
+  pdfPath,
+  title = "Invoice PDF",
+  invoiceNumber,
+}: InvoicePdfPreviewProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
 
@@ -59,11 +66,21 @@ export function InvoicePdfPreview({ pdfPath, title = "Invoice PDF" }: InvoicePdf
 
   if (!url) return <AdminSpinner className="min-h-[480px]" />;
 
+  const saveName = invoiceNumber ? invoicePdfFilename(invoiceNumber) : undefined;
+
   return (
-    <iframe
-      src={url}
-      title={title}
-      className="block w-full min-h-[1056px] border-0 bg-white"
-    />
+    <div>
+      {saveName ? (
+        <p className="mb-2 text-center text-[11px] text-slate-500">
+          Use <strong>Download PDF</strong> above for{" "}
+          <span className="font-mono text-slate-700">{saveName}</span> — saving from the viewer may use a random name.
+        </p>
+      ) : null}
+      <iframe
+        src={url}
+        title={title}
+        className="block w-full min-h-[1056px] border-0 bg-white"
+      />
+    </div>
   );
 }

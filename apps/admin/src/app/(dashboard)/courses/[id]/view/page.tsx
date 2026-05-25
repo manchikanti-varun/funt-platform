@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { COURSE_STATUS } from "@funt-platform/constants";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { courseCardImagePreviewSrc } from "@/lib/courseCardImage";
 import {
   EntityActionsPanel,
   EntityDetailLoadingScreen,
@@ -27,6 +28,7 @@ interface Course {
   title: string;
   description: string;
   durationText?: string;
+  headerImageUrl?: string;
   modules: CourseModule[];
   version: number;
   status: string;
@@ -50,6 +52,7 @@ export default function ViewCoursePage() {
 
   const sortedModules = [...(course.modules ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const sanitizedDescription = sanitizeHtml(course.description ?? "");
+  const cardImageSrc = courseCardImagePreviewSrc(course.headerImageUrl);
 
   return (
     <EntityDetailShell
@@ -84,6 +87,11 @@ export default function ViewCoursePage() {
         </Link>
       </EntityActionsPanel>
 
+      {cardImageSrc ? (
+        <div className="overflow-hidden rounded-2xl border border-slate-200">
+          <img src={cardImageSrc} alt={`${course.title} card`} className="h-40 w-full object-cover" />
+        </div>
+      ) : null}
       <EntityDetailSection title="Description">
         <div
           className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`}

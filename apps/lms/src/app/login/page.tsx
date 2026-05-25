@@ -64,16 +64,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#fffdf7] via-[#fffaf0] to-[#fff7e6] px-4 py-3">
+    <div className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4 py-3">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 opacity-40"
         aria-hidden
         style={{
           background:
-            "radial-gradient(520px 280px at 50% -8%, rgba(212, 175, 55, 0.22), transparent 70%)",
+            "radial-gradient(520px 280px at 50% -8%, rgba(165, 180, 252, 0.35), transparent 70%)",
         }}
       />
-      <FormPanel className="relative w-full max-w-[410px] rounded-3xl border border-funt-gold/20 bg-white/95 px-7 py-6 shadow-xl shadow-funt-gold/10 sm:px-8 sm:py-7">
+      <FormPanel className="relative w-full max-w-[410px] rounded-3xl border border-slate-200 bg-white px-7 py-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/90 sm:px-8 sm:py-7">
         <header className="mb-6 text-center">
           <div className="mx-auto flex flex-col items-center gap-2.5">
             <img

@@ -1,15 +1,26 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { resolveImageEmbedUrl } from "@funt-platform/rich-text-editor";
 import { IconBook } from "@/components/icons/NavIcons";
 
 interface CourseCardProps {
   href: string;
   title: string;
-  batchName: string;
+  batchName?: string;
   chapterCount: number;
   progressPercent?: number;
   locked?: boolean;
+  imageUrl?: string;
+  statusLabel?: string;
+  footerExtra?: ReactNode;
+  actions?: ReactNode;
+}
+
+function randomPlaceholderImage(seed: string): string {
+  const safeSeed = encodeURIComponent(seed || "course");
+  return `https://picsum.photos/seed/${safeSeed}/960/420`;
 }
 
 function RingProgress({ percent }: { percent: number }) {
@@ -17,15 +28,15 @@ function RingProgress({ percent }: { percent: number }) {
   const circumference = 2 * Math.PI * 22;
   const offset = circumference - (p / 100) * circumference;
   return (
-    <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center">
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
       <svg className="absolute inset-0 -rotate-90" viewBox="0 0 56 56" aria-hidden>
-        <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="4" />
+        <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="4" />
         <circle
           cx="28"
           cy="28"
           r="22"
           fill="none"
-          stroke="#f5c400"
+          stroke="#6366f1"
           strokeWidth="4"
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -33,8 +44,8 @@ function RingProgress({ percent }: { percent: number }) {
           className="transition-[stroke-dashoffset] duration-500"
         />
       </svg>
-      <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-black/[0.04] ring-1 ring-black/10">
-        <IconBook className="h-5 w-5 text-funt-ink" />
+      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-black/30 ring-1 ring-white/25">
+        <IconBook className="h-5 w-5 text-white" />
       </div>
     </div>
   );
@@ -47,29 +58,66 @@ export function CourseCard({
   chapterCount,
   progressPercent = 0,
   locked = false,
+  imageUrl,
+  statusLabel,
+  footerExtra,
+  actions,
 }: CourseCardProps) {
+  const raw = imageUrl?.trim() ?? "";
+  const imgSrc = raw
+    ? raw.startsWith("data:image/")
+      ? raw
+      : resolveImageEmbedUrl(raw, 800)
+    : randomPlaceholderImage(title);
+  const pct = locked ? 0 : progressPercent;
+
   return (
-    <Link
-      href={locked ? "#" : href}
-      onClick={(e) => locked && e.preventDefault()}
-      className={`group flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-black/10 bg-white/95 shadow-md shadow-black/5 ring-1 ring-black/5 transition duration-200 ${
-        locked ? "cursor-not-allowed opacity-70" : "hover:-translate-y-1 hover:border-funt-gold/40 hover:shadow-xl"
+    <article
+      className={`group flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 ${
+        locked ? "opacity-80" : "hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
       }`}
     >
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-5">
-        <RingProgress percent={locked ? 0 : progressPercent} />
-        <div className="text-center">
-          <h3 className="line-clamp-2 text-sm font-bold text-funt-ink">{title}</h3>
-          {batchName && <p className="mt-1 line-clamp-1 text-xs text-black/50">{batchName}</p>}
-          {locked && <p className="mt-2 text-xs font-semibold text-red-700">Access disabled</p>}
+      <div className="relative h-32 w-full shrink-0 overflow-hidden bg-slate-100">
+        <img src={imgSrc} alt="" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
+          <div className="min-w-0 flex-1">
+            <h3 className="line-clamp-2 text-sm font-bold text-white drop-shadow-sm">{title}</h3>
+            {batchName ? <p className="mt-0.5 line-clamp-1 text-xs text-white/85">{batchName}</p> : null}
+          </div>
+          <RingProgress percent={pct} />
         </div>
       </div>
-      <div className="flex w-full items-center justify-between border-t border-black/5 bg-gradient-to-r from-black/[0.02] via-funt-honey/20 to-black/[0.02] px-4 py-3">
-        <span className="text-xs font-medium text-black/70">
+
+      <div className="flex flex-1 flex-col gap-2.5 p-3.5">
+        {statusLabel ? (
+          <span className="w-fit rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
+            {statusLabel}
+          </span>
+        ) : null}
+        {locked ? <p className="text-xs font-semibold text-red-700">Access disabled</p> : null}
+        {footerExtra}
+        {actions ?? (
+          <Link
+            href={locked ? "#" : href}
+            onClick={(e) => locked && e.preventDefault()}
+            className={
+              locked
+                ? "inline-flex w-fit rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900"
+                : "inline-flex w-fit rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500"
+            }
+          >
+            {locked ? "View status" : "Open"}
+          </Link>
+        )}
+      </div>
+
+      <div className="flex w-full items-center justify-between border-t border-slate-100 bg-slate-50 px-3.5 py-2.5">
+        <span className="text-xs font-medium text-slate-600">
           {chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}
         </span>
-        <span className="text-xs font-semibold text-funt-ink">{locked ? "—" : `${progressPercent}% complete`}</span>
+        <span className="text-xs font-semibold text-slate-800">{locked ? "—" : `${pct}% complete`}</span>
       </div>
-    </Link>
+    </article>
   );
 }

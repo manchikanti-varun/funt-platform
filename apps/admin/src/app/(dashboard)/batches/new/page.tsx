@@ -27,7 +27,7 @@ import { TrainerSelect } from "@/components/admin/StaffPickerFields";
 
 /**
  * Auto-saved subset of the new-batch form. We deliberately exclude image
- * data URLs (header image, fallback QR) because they can be up to ~1.5 MB
+ * data URLs (fallback QR) because they can be up to ~1.5 MB
  * each and can easily push the whole draft past the localStorage quota.
  * Images are quick to re-attach; the painful loss is text + per-course
  * pricing/payment config, which is what we persist here.
@@ -155,8 +155,6 @@ export default function NewBatchPage() {
   // Image data URLs and names are intentionally NOT auto-saved (see BatchDraft comment).
   const [manualUpiQrDataUrl, setManualUpiQrDataUrl] = useState("");
   const [manualUpiQrName, setManualUpiQrName] = useState("");
-  const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
-  const [headerImageName, setHeaderImageName] = useState("");
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
   const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -309,7 +307,6 @@ export default function NewBatchPage() {
           ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
           ...(Object.keys(coursePaymentMethods).length > 0 ? { coursePaymentMethods } : {}),
           ...(manualUpiQrDataUrl.trim() ? { manualUpiQrUrl: manualUpiQrDataUrl.trim() } : {}),
-          ...(headerImageDataUrl.trim() ? { headerImageUrl: headerImageDataUrl.trim() } : {}),
           ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
           ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
         }),
@@ -404,43 +401,6 @@ export default function NewBatchPage() {
                 <option value="PUBLIC">Public (visible in Explore courses)</option>
                 <option value="PRIVATE">Private (hidden from Explore courses)</option>
               </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Batch header image (optional)</label>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-                className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  void readImageFileAsDataUrl(f)
-                    .then((url) => {
-                      setHeaderImageDataUrl(url);
-                      setHeaderImageName(f.name);
-                    })
-                    .catch((err: unknown) => setError(err instanceof Error ? err.message : "Invalid image"));
-                  e.target.value = "";
-                }}
-              />
-              {headerImageDataUrl ? (
-                <div className="mt-3 flex flex-wrap items-end gap-3">
-                  <img src={headerImageDataUrl} alt="Header image preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
-                  <div className="text-xs text-slate-600">
-                    <p className="font-medium text-slate-800">{headerImageName || "Selected image"}</p>
-                    <button
-                      type="button"
-                      className="mt-1 font-semibold text-rose-700 hover:underline"
-                      onClick={() => {
-                        setHeaderImageDataUrl("");
-                        setHeaderImageName("");
-                      }}
-                    >
-                      Remove image
-                    </button>
-                  </div>
-                </div>
-              ) : null}
             </div>
             </div>
           </section>

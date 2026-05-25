@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, getToken } from "@/lib/api";
+import { filenameFromContentDisposition, invoicePdfFilename } from "@/lib/invoicePdf";
 import { AppPageShell } from "@/components/ui";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:38472").replace(/\/+$/, "");
@@ -49,7 +50,8 @@ export default function StudentInvoicesPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `invoice-${invoiceNumber}.pdf`;
+      const fromHeader = filenameFromContentDisposition(res.headers.get("Content-Disposition"));
+      a.download = fromHeader ?? invoicePdfFilename(invoiceNumber);
       a.click();
       URL.revokeObjectURL(url);
     } catch {

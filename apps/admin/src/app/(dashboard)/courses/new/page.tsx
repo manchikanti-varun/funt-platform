@@ -17,6 +17,7 @@ interface ChapterOption {
 }
 
 import { BackLink } from "@/components/ui/BackLink";
+import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
 
 interface CourseDraft {
   title: string;
@@ -45,6 +46,7 @@ export default function NewCoursePage() {
     clearDraft,
   } = useAutoSavedForm<CourseDraft>("courses:new", INITIAL_DRAFT);
   const { title, description, durationText, selectedIds } = form;
+  const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -102,7 +104,13 @@ export default function NewCoursePage() {
     setLoading(true);
     const res = await api<{ id: string }>("/api/courses", {
       method: "POST",
-      body: JSON.stringify({ title, description, durationText: durationText.trim(), globalChapterIds: selectedIds }),
+      body: JSON.stringify({
+        title,
+        description,
+        durationText: durationText.trim(),
+        globalChapterIds: selectedIds,
+        ...(headerImageDataUrl.trim() ? { headerImageUrl: headerImageDataUrl.trim() } : {}),
+      }),
     });
     setLoading(false);
     if (res.success && res.data?.id) {
@@ -158,6 +166,11 @@ export default function NewCoursePage() {
               />
               <p className="mt-1 text-xs text-slate-500">This value will be used on the student certificate.</p>
             </div>
+            <CourseCardImageField
+              value={headerImageDataUrl}
+              onChange={setHeaderImageDataUrl}
+              onError={setError}
+            />
           </div>
 
           <div className="border-t border-slate-200 pt-6">

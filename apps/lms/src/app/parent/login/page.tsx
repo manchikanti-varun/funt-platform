@@ -4,12 +4,12 @@ import { ParentLinkedStudentsPicker } from "../_components/ParentLinkedStudentsP
 
 export default function ParentLoginPage() {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-[#fffdf7] via-[#fffaf0] to-[#fff7e6] p-4 overflow-y-auto">
+    <div className="relative flex min-h-screen items-center justify-center overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 p-4">
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 opacity-40"
         aria-hidden
         style={{
-          background: "radial-gradient(520px 280px at 50% -8%, rgba(212, 175, 55, 0.22), transparent 70%)",
+          background: "radial-gradient(520px 280px at 50% -8%, rgba(165, 180, 252, 0.35), transparent 70%)",
         }}
       />
       <div className="relative w-full">

@@ -1,5 +1,6 @@
 
 import { BatchModel } from "../models/Batch.model.js";
+import { CourseModel } from "../models/Course.model.js";
 import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { UserModel } from "../models/User.model.js";
@@ -9,10 +10,49 @@ import { normalizeAllowedPaymentMethods, formatPaymentMethodsLabel } from "../ut
 import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
 import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
+import { resolveHeaderImageDisplayUrl } from "../utils/headerImageUrl.js";
 import { ensureFirstModuleCompletedBadge } from "./achievement.service.js";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return (err as { code?: number })?.code === 11000;
+}
+
+const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
+
+async function loadCourseHeaderImageMap(courseIds: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(courseIds.map((id) => id.trim()).filter(Boolean))];
+  const map = new Map<string, string>();
+  if (!unique.length) return map;
+  const byMongo = unique.filter((x) => OBJECT_ID_REGEX.test(x));
+  const byHuman = unique.filter((x) => !OBJECT_ID_REGEX.test(x));
+  const courses = await CourseModel.find({
+    $or: [
+      ...(byMongo.length ? [{ _id: { $in: byMongo } }] : []),
+      ...(byHuman.length ? [{ courseId: { $in: byHuman } }] : []),
+    ],
+  })
+    .select("courseId headerImageUrl")
+    .lean()
+    .exec();
+  for (const c of courses) {
+    const url = String((c as { headerImageUrl?: string }).headerImageUrl ?? "").trim();
+    if (!url) continue;
+    const human = String((c as { courseId?: string }).courseId ?? "").trim();
+    if (human) map.set(human, url);
+    map.set(String(c._id), url);
+  }
+  return map;
+}
+
+function resolveCourseHeaderImageUrl(
+  courseId: string,
+  snapshotUrl: string | undefined,
+  catalog: Map<string, string>
+): string | undefined {
+  const fromCatalog = catalog.get(courseId.trim());
+  const raw = fromCatalog || String(snapshotUrl ?? "").trim();
+  if (!raw) return undefined;
+  return resolveHeaderImageDisplayUrl(raw);
 }
 
 type ModuleSnapshot = {
@@ -174,8 +214,13 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     status: string;
     certificatePriceCoins?: number;
     visibility?: "PUBLIC" | "PRIVATE";
-    headerImageUrl?: string;
   };
+  const catalogHeaders = await loadCourseHeaderImageMap([snapshotCourseId]);
+  const courseHeaderImageUrl = resolveCourseHeaderImageUrl(
+    snapshotCourseId,
+    String((snapshot as { headerImageUrl?: string })?.headerImageUrl ?? "").trim() || undefined,
+    catalogHeaders
+  );
   const tid = String(batchDoc.trainerId ?? "").trim();
   let trainerName: string | undefined;
   let trainerUsername: string | undefined;
@@ -198,7 +243,7 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     courseId: snapshotCourseId,
     certificatePriceCoins: Math.max(0, Math.floor(Number(batchDoc.certificatePriceCoins ?? 0))),
     visibility: batchDoc.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC",
-    headerImageUrl: String(batchDoc.headerImageUrl ?? "").trim() || undefined,
+    headerImageUrl: courseHeaderImageUrl,
     courseSnapshot: {
       courseId: snapshotCourseId,
       title: snapshot?.title ?? "Course",
@@ -331,7 +376,15 @@ export async function getMyCoursesForStudent(studentId: string) {
       });
     }
   }
-  return result;
+  const catalog = await loadCourseHeaderImageMap(result.map((r) => r.courseId));
+  return result.map((r) => ({
+    ...r,
+    courseHeaderImageUrl: resolveCourseHeaderImageUrl(
+      r.courseId,
+      r.courseHeaderImageUrl,
+      catalog
+    ),
+  }));
 }
 
 export async function getCourseForStudentByCourseId(studentId: string, courseId: string, batchId?: string) {
@@ -458,19 +511,22 @@ export async function listCoursesForExplore() {
       });
     }
   }
+  const catalog = await loadCourseHeaderImageMap(
+    Array.from(byBatchCourseKey.entries()).map(([key]) => key.split("::")[1] ?? "")
+  );
   return Array.from(byBatchCourseKey.entries()).map(([key, v]) => {
     const courseId = key.split("::")[1] ?? "";
     return {
-    courseId,
-    courseTitle: v.courseTitle,
-    description: v.description,
-    chapterCount: v.chapterCount,
-    moduleCount: v.moduleCount,
-    batchId: v.batchId,
-    batchName: v.batchName,
-    enrollmentPriceInPaise: v.enrollmentPriceInPaise,
-    paymentOptionsLabel: v.paymentOptionsLabel,
-    courseHeaderImageUrl: v.courseHeaderImageUrl,
+      courseId,
+      courseTitle: v.courseTitle,
+      description: v.description,
+      chapterCount: v.chapterCount,
+      moduleCount: v.moduleCount,
+      batchId: v.batchId,
+      batchName: v.batchName,
+      enrollmentPriceInPaise: v.enrollmentPriceInPaise,
+      paymentOptionsLabel: v.paymentOptionsLabel,
+      courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
     };
   });
 }

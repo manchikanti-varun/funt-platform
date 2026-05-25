@@ -105,9 +105,6 @@ export default function EditBatchPage() {
   const [upiQrNewDataUrl, setUpiQrNewDataUrl] = useState<string | null>(null);
   const [upiQrRemoved, setUpiQrRemoved] = useState(false);
   const [upiQrPickName, setUpiQrPickName] = useState("");
-  const [headerImageNewDataUrl, setHeaderImageNewDataUrl] = useState<string | null>(null);
-  const [headerImageRemoved, setHeaderImageRemoved] = useState(false);
-  const [headerImagePickName, setHeaderImagePickName] = useState("");
   const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
   const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
@@ -154,9 +151,6 @@ export default function EditBatchPage() {
         setUpiQrNewDataUrl(null);
         setUpiQrRemoved(false);
         setUpiQrPickName("");
-        setHeaderImageNewDataUrl(null);
-        setHeaderImageRemoved(false);
-        setHeaderImagePickName("");
         setShowFallbackQrUploader(!!r.data.manualUpiQrUrl);
         setBatch(r.data);
         setName(r.data.name);
@@ -272,9 +266,6 @@ export default function EditBatchPage() {
     };
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
-    if (headerImageRemoved) body.headerImageUrl = null;
-    else if (headerImageNewDataUrl) body.headerImageUrl = headerImageNewDataUrl;
-
     const res = await api(`/api/batches/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
@@ -423,51 +414,6 @@ export default function EditBatchPage() {
                   <option value="PUBLIC">Public (visible in Explore courses)</option>
                   <option value="PRIVATE">Private (hidden from Explore courses)</option>
                 </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Batch header image (optional)</label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-                  className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    void readImageFileAsDataUrl(f)
-                      .then((url) => {
-                        setHeaderImageNewDataUrl(url);
-                        setHeaderImageRemoved(false);
-                        setHeaderImagePickName(f.name);
-                      })
-                      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Invalid image"));
-                    e.target.value = "";
-                  }}
-                />
-                {(() => {
-                  const preview = headerImageRemoved ? null : headerImageNewDataUrl ?? batch?.headerImageUrl ?? null;
-                  if (!preview) {
-                    return <p className="mt-2 text-xs text-slate-500">No header image uploaded.</p>;
-                  }
-                  return (
-                    <div className="mt-3 flex flex-wrap items-end gap-3">
-                      <img src={preview} alt="Batch header image preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
-                      <div className="flex flex-col gap-2 text-xs">
-                        {headerImageNewDataUrl ? <span className="font-medium text-slate-800">{headerImagePickName || "New image"}</span> : null}
-                        <button
-                          type="button"
-                          className="w-fit font-semibold text-rose-700 hover:underline"
-                          onClick={() => {
-                            setHeaderImageRemoved(true);
-                            setHeaderImageNewDataUrl(null);
-                            setHeaderImagePickName("");
-                          }}
-                        >
-                          Remove header image
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
             </div>
           </section>

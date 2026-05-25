@@ -165,11 +165,11 @@ export default function StudentDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-3">
         <PageSection title="Attention" subtitle="Handle first" className="border-[#ece5cf] bg-[#fffefb]">
           <div className="space-y-2">
-            <div className="rounded-xl border border-[#f0dba5] bg-[#fff8e6] px-3 py-2.5">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-black"><CalendarClock className="h-3.5 w-3.5 text-[#9b7a13]" aria-hidden /> Pending reviews</p>
               <p className="mt-1 text-sm text-black">{pendingReviews}</p>
             </div>
-            <div className="rounded-xl border border-[#f0dba5] bg-[#fff8e6] px-3 py-2.5">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-black"><Lock className="h-3.5 w-3.5 text-[#9b7a13]" aria-hidden /> Blocked courses</p>
               <p className="mt-1 text-sm text-black">{blocked.length}</p>
             </div>

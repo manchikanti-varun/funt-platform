@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, getToken } from "@/lib/api";
+import { filenameFromContentDisposition, invoicePdfFilename } from "@/lib/invoicePdf";
 import { AppPageShell } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -53,7 +54,10 @@ export default function InvoiceDetailPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `invoice-${invoice?.invoiceNumber ?? id}.pdf`;
+      const fromHeader = filenameFromContentDisposition(res.headers.get("Content-Disposition"));
+      a.download =
+        fromHeader ??
+        invoicePdfFilename(invoice?.invoiceNumber ?? id);
       a.click();
       URL.revokeObjectURL(url);
     } finally {
@@ -118,6 +122,7 @@ export default function InvoiceDetailPage() {
           <InvoicePdfPreview
             pdfPath={`/api/admin/invoices/${encodeURIComponent(id)}/pdf`}
             title={`Invoice ${invoice.invoiceNumber}`}
+            invoiceNumber={invoice.invoiceNumber}
           />
         </InvoicePreviewFrame>
       </div>

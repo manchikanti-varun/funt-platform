@@ -84,7 +84,7 @@ const batchSchema = new Schema(
     certificatePriceCoins: { type: Number, required: false, default: 0, min: 0 },
     /** Manual UPI QR for this batch: https image URL or data:image/...;base64,... (shown at student checkout when UPI manual is enabled). */
     manualUpiQrUrl: { type: String, required: false },
-    /** Optional batch header/banner image shown on student course cards. */
+    /** Legacy batch-level banner (prefer course.headerImageUrl). */
     headerImageUrl: { type: String, required: false },
     visibility: {
       type: String,

@@ -14,14 +14,14 @@ const config: Config = {
       },
       colors: {
         funt: {
-          paper: "#fffdf7",
-          ink: "#0a0a0a",
-          gold: "#f5c400",
-          "gold-hover": "#e6b800",
-          "gold-deep": "#ca8a04",
-          honey: "#fef3c7",
-          butter: "#fffbeb",
-          muted: "#404040",
+          paper: "#f8fafc",
+          ink: "#0f172a",
+          gold: "#4f46e5",
+          "gold-hover": "#4338ca",
+          "gold-deep": "#3730a3",
+          honey: "#f1f5f9",
+          butter: "#ffffff",
+          muted: "#64748b",
         },
         brand: {
           teal: "#0d9488",

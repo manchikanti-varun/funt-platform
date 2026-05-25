@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { api, clearToken } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { CourseCard } from "@/components/CourseCard";
 import { Compass, CreditCard, ExternalLink, Eye, GraduationCap, LayoutGrid, Search, Table2 } from "lucide-react";
 
 interface MyCourse {
@@ -14,6 +15,7 @@ interface MyCourse {
   moduleCount: number;
   batchId: string;
   accessBlocked?: boolean;
+  progressPercent?: number;
   courseHeaderImageUrl?: string;
 }
 
@@ -27,11 +29,6 @@ interface ExploreCourse {
   enrollmentPriceInPaise?: number;
   paymentOptionsLabel?: string;
   courseHeaderImageUrl?: string;
-}
-
-function randomPlaceholderImage(seed: string): string {
-  const safeSeed = encodeURIComponent(seed || "course");
-  return `https://picsum.photos/seed/${safeSeed}/960/420`;
 }
 
 function filterBySearch<T>(
@@ -256,7 +253,7 @@ export default function CoursesPage() {
                           {c.accessBlocked ? (
                             <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">Blocked by admin</span>
                           ) : (
-                            <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-800">Enrolled</span>
                           )}
                         </td>
                         <td className="px-6 py-3.5 text-right">
@@ -267,7 +264,7 @@ export default function CoursesPage() {
                             className={
                               c.accessBlocked
                                 ? "inline-flex items-center gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-950 shadow-sm transition duration-200 hover:bg-red-100"
-                                : "inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover hover:shadow-xl"
+                                : "inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/15 ring-1 ring-indigo-700/20 transition duration-200 hover:bg-indigo-500 hover:shadow-xl"
                             }
                           >
                             {c.accessBlocked ? "View status" : "Open"}
@@ -281,32 +278,16 @@ export default function CoursesPage() {
             ) : (
               <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
                 {myCourses.map((c) => (
-                  <article key={`${c.courseId}::${c.batchId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <img
-                      src={c.courseHeaderImageUrl || randomPlaceholderImage(`${c.courseId}`)}
-                      alt={c.courseTitle}
-                      className="h-32 w-full object-cover"
-                    />
-                    <div className="space-y-2.5 p-3.5">
-                      <h3 className="text-base font-semibold text-slate-900">{c.courseTitle}</h3>
-                      <p className="text-xs text-slate-500">{c.chapterCount ?? c.moduleCount} chapters</p>
-                      {c.accessBlocked ? (
-                        <span className="rounded-full border border-red-300 bg-red-100 px-3 py-1 text-xs font-bold text-red-900">Blocked by admin</span>
-                      ) : (
-                        <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
-                      )}
-                      <div>
-                        <Link
-                          href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                          title={c.accessBlocked ? "View status" : "Open course"}
-                          aria-label={c.accessBlocked ? "View status" : "Open course"}
-                          className={c.accessBlocked ? "inline-flex rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900" : "inline-flex rounded-xl bg-funt-gold px-3 py-2 text-sm font-semibold text-black"}
-                        >
-                          {c.accessBlocked ? "View status" : "Open"}
-                        </Link>
-                      </div>
-                    </div>
-                  </article>
+                  <CourseCard
+                    key={`${c.courseId}::${c.batchId}`}
+                    href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                    title={c.courseTitle}
+                    chapterCount={c.chapterCount ?? c.moduleCount}
+                    progressPercent={c.progressPercent ?? 0}
+                    locked={!!c.accessBlocked}
+                    imageUrl={c.courseHeaderImageUrl}
+                    statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                  />
                 ))}
               </div>
             )}
@@ -383,7 +364,7 @@ export default function CoursesPage() {
                         </td>
                         <td className="px-6 py-3.5">
                           {enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`) ? (
-                            <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-800">Enrolled</span>
                           ) : (
                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
                           )}
@@ -395,7 +376,7 @@ export default function CoursesPage() {
                                 href={`/courses/${c.courseId}?batchId=${c.batchId}`}
                                 title="Open course"
                                 aria-label="Open course"
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-md transition hover:bg-indigo-500"
                               >
                                 Open
                               </Link>
@@ -413,7 +394,7 @@ export default function CoursesPage() {
                                   href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
                                   title="Pay for course"
                                   aria-label="Pay for course"
-                                  className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                                  className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-md transition hover:bg-indigo-500"
                                 >
                                   Pay
                                 </Link>
@@ -430,47 +411,54 @@ export default function CoursesPage() {
               <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
                 {exploreCourses.map((c) => {
                   const enrolled = enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`);
+                  const feeLabel =
+                    c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
+                      ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+                      : "—";
                   return (
-                    <article key={`${c.courseId}::${c.batchId}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                      <img
-                        src={c.courseHeaderImageUrl || randomPlaceholderImage(`${c.courseId}`)}
-                        alt={c.courseTitle}
-                        className="h-32 w-full object-cover"
-                      />
-                      <div className="space-y-2.5 p-3.5">
-                        <h3 className="text-base font-semibold text-slate-900">{c.courseTitle}</h3>
-                        <p className="text-xs text-slate-500">{c.chapterCount ?? c.moduleCount} chapters</p>
-                        <p className="text-xs text-slate-600">
-                          {c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
-                            ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-                            : "—"}
-                        </p>
-                        {enrolled ? (
-                          <span className="rounded-full border border-black/15 bg-funt-gold/25 px-3 py-1 text-xs font-bold text-black">Enrolled</span>
+                    <CourseCard
+                      key={`${c.courseId}::${c.batchId}`}
+                      href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                      title={c.courseTitle}
+                      chapterCount={c.chapterCount ?? c.moduleCount}
+                      imageUrl={c.courseHeaderImageUrl}
+                      statusLabel={enrolled ? "Enrolled" : "Explore"}
+                      footerExtra={<p className="text-xs text-slate-600">Fee: {feeLabel}</p>}
+                      actions={
+                        enrolled ? (
+                          <Link
+                            href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white"
+                            title="Open course"
+                            aria-label="Open course"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                            Open
+                          </Link>
                         ) : (
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Explore</span>
-                        )}
-                        <div className="flex flex-wrap gap-2">
-                          {enrolled ? (
-                            <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black" title="Open course" aria-label="Open course">
-                              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                              Open
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                              title="Course details"
+                              aria-label="View course details"
+                            >
+                              <Eye className="h-3.5 w-3.5" aria-hidden />
+                              Details
                             </Link>
-                          ) : (
-                            <>
-                              <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" title="Course details" aria-label="View course details">
-                                <Eye className="h-3.5 w-3.5" aria-hidden />
-                                Details
-                              </Link>
-                              <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-funt-gold px-3 py-2 text-xs font-bold text-black" title="Pay" aria-label="Pay for course">
-                                <CreditCard className="h-3.5 w-3.5" aria-hidden />
-                                Pay
-                              </Link>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </article>
+                            <Link
+                              href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white"
+                              title="Pay"
+                              aria-label="Pay for course"
+                            >
+                              <CreditCard className="h-3.5 w-3.5" aria-hidden />
+                              Pay
+                            </Link>
+                          </div>
+                        )
+                      }
+                    />
                   );
                 })}
               </div>

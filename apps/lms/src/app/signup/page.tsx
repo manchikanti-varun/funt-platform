@@ -316,9 +316,9 @@ function SignupForm() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-funt-paper p-4">
-      <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden style={{ background: "radial-gradient(560px 280px at 50% -8%, rgba(212,175,55,0.2), transparent 70%)" }} />
-      <FormPanel className="relative w-full max-w-3xl rounded-3xl p-6 sm:p-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 p-4">
+      <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden style={{ background: "radial-gradient(560px 280px at 50% -8%, rgba(165,180,252,0.35), transparent 70%)" }} />
+      <FormPanel className="relative w-full max-w-3xl rounded-3xl border border-slate-200 p-6 shadow-xl shadow-slate-300/15 ring-1 ring-slate-100/90 sm:p-8">
         <div className="mb-6 flex flex-col items-center justify-center">
           <img src="/funt-logo.png" alt="FUNT LEARN" className="h-14 w-auto max-w-full object-contain" />
           <span className="mt-1 font-brand-learn text-xl tracking-[0.2em] text-black">LEARN</span>

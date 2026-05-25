@@ -34,6 +34,7 @@ interface Course {
   title: string;
   description: string;
   durationText?: string;
+  headerImageUrl?: string;
   modules: CourseModule[];
   version: number;
   status: string;
@@ -41,6 +42,7 @@ interface Course {
 
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
 
 export default function EditCoursePage() {
   const dialog = useAppDialog();
@@ -51,6 +53,8 @@ export default function EditCoursePage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [durationText, setDurationText] = useState("");
+  const [headerImageDraft, setHeaderImageDraft] = useState("");
+  const [headerImageDirty, setHeaderImageDirty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -68,6 +72,8 @@ export default function EditCoursePage() {
         setTitle(r.data.title);
         setDescription(decodeEncodedRichText(r.data.description ?? ""));
         setDurationText((r.data.durationText ?? "").trim());
+        setHeaderImageDraft((r.data.headerImageUrl ?? "").trim());
+        setHeaderImageDirty(false);
       }
     });
   }, [id]);
@@ -102,9 +108,17 @@ export default function EditCoursePage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    const body: Record<string, unknown> = {
+      title,
+      description: decodeEncodedRichText(description),
+      durationText: durationText.trim(),
+    };
+    if (headerImageDirty) {
+      body.headerImageUrl = headerImageDraft.trim() ? headerImageDraft.trim() : null;
+    }
     const res = await api(`/api/courses/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ title, description: decodeEncodedRichText(description), durationText: durationText.trim() }),
+      body: JSON.stringify(body),
     });
     setLoading(false);
     if (res.success) router.push("/courses");
@@ -298,6 +312,14 @@ export default function EditCoursePage() {
             />
             <p className="mt-1 text-xs text-slate-500">Used in certificates for this course.</p>
           </div>
+          <CourseCardImageField
+            value={headerImageDirty ? headerImageDraft : (course?.headerImageUrl ?? "").trim()}
+            onChange={(v) => {
+              setHeaderImageDraft(v);
+              setHeaderImageDirty(true);
+            }}
+            onError={setError}
+          />
           <div className="border-t border-slate-200 pt-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Chapters in this course</h3>
             <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can edit the chapter copy (title, content, video, etc.) here, or reorder with Up/Down.</p>

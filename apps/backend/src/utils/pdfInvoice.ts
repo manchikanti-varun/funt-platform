@@ -12,7 +12,10 @@ const MARGIN = 36;
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 const W = PAGE_W - MARGIN * 2;
-const BOTTOM_Y = PAGE_H - MARGIN - 20;
+/** Space reserved for “Page X of Y” — keeps body text from triggering an extra page. */
+const PAGE_FOOTER_BAND = 28;
+const BOTTOM_Y = PAGE_H - MARGIN - PAGE_FOOTER_BAND;
+const PAGE_NUMBER_Y = PAGE_H - MARGIN - 14;
 const TABLE_HEADER_H = 22;
 const MIN_DATA_ROW_H = 24;
 const CONTINUATION_HEADER_H = 40;
@@ -390,16 +393,38 @@ function drawBlockText(
     .font(opts.italic ? "Helvetica-Oblique" : "Helvetica")
     .fontSize(fontSize)
     .fillColor(opts.centered ? SLATE_500 : SLATE_700);
-  const h = measureTextHeight(doc, text, W, fontSize) + 10;
-  ensureSpace(doc, view, state, h);
+  const textH = measureTextHeight(doc, text, W, fontSize);
+  const blockH = textH + 24;
+  ensureSpace(doc, view, state, blockH);
   drawHr(doc, state.y);
-  state.y += 10;
-  doc.text(text, MARGIN, state.y, {
+  const textY = state.y + 10;
+  doc.text(text, MARGIN, textY, {
     width: W,
     align: opts.centered ? "center" : "left",
     lineBreak: true,
   });
-  state.y = doc.y + 14;
+  state.y = textY + textH + 14;
+}
+
+function drawPageNumbers(doc: PdfDoc): void {
+  const range = doc.bufferedPageRange();
+  const total = range.count;
+  if (total <= 0) return;
+
+  for (let i = 0; i < total; i++) {
+    doc.switchToPage(range.start + i);
+    doc.save();
+    doc.font("Helvetica").fontSize(7).fillColor(SLATE_500);
+    const label = total === 1 ? "" : `Page ${i + 1} of ${total}`;
+    if (label) {
+      doc.text(label, MARGIN, PAGE_NUMBER_Y, {
+        width: W,
+        align: "center",
+        lineBreak: false,
+      });
+    }
+    doc.restore();
+  }
 }
 
 export function generateInvoicePdf(view: InvoiceViewDto): Promise<Buffer> {
@@ -444,16 +469,7 @@ export function generateInvoicePdf(view: InvoiceViewDto): Promise<Buffer> {
       drawBlockText(doc, view, state, s.systemFooterText, { italic: true, centered: true });
     }
 
-    const range = doc.bufferedPageRange();
-    for (let i = range.start; i < range.start + range.count; i++) {
-      doc.switchToPage(i);
-      doc.font("Helvetica").fontSize(7).fillColor(SLATE_500).text(
-        `Page ${i - range.start + 1} of ${range.count}`,
-        MARGIN,
-        PAGE_H - 28,
-        { width: W, align: "center" }
-      );
-    }
+    drawPageNumbers(doc);
 
     doc.end();
   });

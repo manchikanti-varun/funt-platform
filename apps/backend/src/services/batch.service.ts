@@ -15,6 +15,7 @@ import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
 import { resolveStaffUserId, resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 import type { CoursePaymentMethodCode } from "../utils/coursePaymentMethods.js";
+import { assertHeaderImageUrl } from "../utils/headerImageUrl.js";
 
 const ENTITY_BATCH = "Batch";
 
@@ -40,7 +41,6 @@ async function staffDisplayByMongoIds(ids: string[]): Promise<StaffMap> {
 }
 
 const MAX_MANUAL_UPI_QR_URL_LEN = 500_000;
-const MAX_BATCH_HEADER_IMAGE_URL_LEN = 2_500_000;
 
 export function assertManualUpiQrUrl(raw: string): string {
   const t = raw.trim();
@@ -56,18 +56,9 @@ export function assertManualUpiQrUrl(raw: string): string {
   return t;
 }
 
+/** @deprecated Prefer course-level header images; kept for legacy batch API payloads. */
 export function assertBatchHeaderImageUrl(raw: string): string {
-  const t = raw.trim();
-  if (!t) throw new AppError("Batch header image value is empty", 400);
-  if (t.length > MAX_BATCH_HEADER_IMAGE_URL_LEN) {
-    throw new AppError("Batch header image is too large. Use a smaller image or host the file and paste an https URL.", 400);
-  }
-  const dataOk = /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(t);
-  const urlOk = /^https?:\/\//i.test(t);
-  if (!dataOk && !urlOk) {
-    throw new AppError("Batch header image must be an image data URL or an http(s) URL.", 400);
-  }
-  return t;
+  return assertHeaderImageUrl(raw, "Batch");
 }
 
 /** Admin sends INR (rupees); stored on snapshot as paise. */

@@ -34,7 +34,11 @@ export default function InvoiceSamplePage() {
       </div>
       <div className="mt-2 print:mt-0">
         <InvoicePreviewFrame badge="Sample PDF — not a real invoice">
-          <InvoicePdfPreview pdfPath="/api/admin/invoices/sample/pdf" title="Sample invoice" />
+          <InvoicePdfPreview
+            pdfPath="/api/admin/invoices/sample/pdf"
+            title="Sample invoice"
+            invoiceNumber="FUNT-INV-SAMPLE"
+          />
         </InvoicePreviewFrame>
       </div>
     </AppPageShell>

@@ -12,8 +12,15 @@ function getUserId(req: Request): string {
 
 export const createCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { title, description, durationText, globalChapterIds, globalModuleIds } = req.body ?? {};
-  const data = await service.createCourse({ title, description, durationText, globalChapterIds: globalChapterIds ?? globalModuleIds, createdBy });
+  const { title, description, durationText, headerImageUrl, globalChapterIds, globalModuleIds } = req.body ?? {};
+  const data = await service.createCourse({
+    title,
+    description,
+    durationText,
+    headerImageUrl: typeof headerImageUrl === "string" ? headerImageUrl : undefined,
+    globalChapterIds: globalChapterIds ?? globalModuleIds,
+    createdBy,
+  });
   successRes(res, data, "Course created", 201);
 });
 
@@ -35,8 +42,26 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, durationText, moderatorIds } = req.body ?? {};
-  const data = await service.updateCourse(id, { title, description, durationText, moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined }, performedBy);
+  const { title, description, durationText, headerImageUrl, moderatorIds } = req.body ?? {};
+  const headerPatch =
+    "headerImageUrl" in (req.body ?? {})
+      ? headerImageUrl === null
+        ? null
+        : typeof headerImageUrl === "string"
+          ? headerImageUrl
+          : null
+      : undefined;
+  const data = await service.updateCourse(
+    id,
+    {
+      title,
+      description,
+      durationText,
+      headerImageUrl: headerPatch,
+      moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
+    },
+    performedBy
+  );
   successRes(res, data, "Course updated");
 });
 

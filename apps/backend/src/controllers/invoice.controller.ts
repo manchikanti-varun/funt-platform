@@ -4,6 +4,7 @@ import { successRes } from "../utils/response.js";
 import { AppError } from "../utils/AppError.js";
 import * as invoiceService from "../services/invoice.service.js";
 import * as invoiceSettingsService from "../services/invoiceSettings.service.js";
+import { invoicePdfContentDisposition } from "../utils/invoicePdfFilename.js";
 
 function getUserId(req: Request): string {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
@@ -94,7 +95,7 @@ export const patchAdminInvoiceSettings = asyncHandler(async (req: Request, res: 
 export const downloadAdminInvoiceSamplePdf = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const buffer = await invoiceService.generateInvoiceSamplePdfBuffer();
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", 'inline; filename="invoice-sample.pdf"');
+  res.setHeader("Content-Disposition", invoicePdfContentDisposition("FUNT-INV-SAMPLE", true));
   res.send(buffer);
 });
 
@@ -104,10 +105,7 @@ export const downloadAdminInvoicePdf = asyncHandler(async (req: Request, res: Re
   const buffer = await invoiceService.generateInvoicePdfBuffer(id);
   const inv = await invoiceService.getInvoiceById(id);
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="invoice-${inv.invoiceNumber}.pdf"`
-  );
+  res.setHeader("Content-Disposition", invoicePdfContentDisposition(inv.invoiceNumber));
   res.send(buffer);
 });
 
@@ -119,10 +117,7 @@ export const downloadStudentInvoicePdf = asyncHandler(async (req: Request, res: 
   if (inv.studentId !== studentId) throw new AppError("Invoice not found", 404);
   const buffer = await invoiceService.generateInvoicePdfBuffer(id);
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="invoice-${inv.invoiceNumber}.pdf"`
-  );
+  res.setHeader("Content-Disposition", invoicePdfContentDisposition(inv.invoiceNumber));
   res.send(buffer);
 });
 

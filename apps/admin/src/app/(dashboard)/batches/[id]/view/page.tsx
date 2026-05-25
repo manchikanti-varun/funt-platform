@@ -111,12 +111,6 @@ export default function ViewBatchPage() {
         </>
       }
     >
-      {batch.headerImageUrl ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <img src={batch.headerImageUrl} alt={`${batch.name} header`} className="h-40 w-full object-cover" />
-        </div>
-      ) : null}
-
       <EntityActionsPanel>
         <Link href={`/batches/${id}/duplicate`} className="btn-duplicate">
           <DuplicateIcon />
@@ -198,21 +192,6 @@ export default function ViewBatchPage() {
               </dd>
             </div>
           )}
-          {batch.headerImageUrl ? (
-            <div>
-              <dt className="text-slate-500">Header image</dt>
-              <dd>
-                <a
-                  href={batch.headerImageUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-teal-600 hover:underline"
-                >
-                  Open image
-                </a>
-              </dd>
-            </div>
-          ) : null}
         </dl>
       </EntityDetailSection>
 
