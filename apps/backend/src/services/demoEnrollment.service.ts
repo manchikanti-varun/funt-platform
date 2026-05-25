@@ -1,4 +1,5 @@
 import { BatchModel } from "../models/Batch.model.js";
+import { BatchEnrollmentExclusionModel } from "../models/BatchEnrollmentExclusion.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { UserModel } from "../models/User.model.js";
 import { BATCH_STATUS, ENROLLMENT_STATUS, ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
@@ -44,6 +45,50 @@ export async function shouldSkipEnrollmentInvoice(batchMongoId: string, courseId
   return !!(snap as { isDemo?: boolean }).isDemo;
 }
 
+/** Record that admin explicitly removed this student from the batch (blocks demo re-enroll). */
+export async function recordBatchEnrollmentExclusion(
+  studentId: string,
+  batchMongoId: string,
+  excludedBy?: string
+): Promise<void> {
+  const sid = String(studentId ?? "").trim();
+  const bid = String(batchMongoId ?? "").trim();
+  if (!sid || !bid) return;
+  try {
+    await BatchEnrollmentExclusionModel.updateOne(
+      { studentId: sid, batchId: bid },
+      { $set: { studentId: sid, batchId: bid, ...(excludedBy ? { excludedBy } : {}) } },
+      { upsert: true }
+    ).exec();
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
+  }
+}
+
+/** Clear exclusion when admin manually enrolls the student again. */
+export async function clearBatchEnrollmentExclusion(studentId: string, batchMongoId: string): Promise<void> {
+  const sid = String(studentId ?? "").trim();
+  const bid = String(batchMongoId ?? "").trim();
+  if (!sid || !bid) return;
+  await BatchEnrollmentExclusionModel.deleteOne({ studentId: sid, batchId: bid }).exec();
+}
+
+async function excludedBatchIdsForStudent(studentId: string): Promise<Set<string>> {
+  const rows = await BatchEnrollmentExclusionModel.find({ studentId: String(studentId).trim() })
+    .select("batchId")
+    .lean()
+    .exec();
+  return new Set(rows.map((r) => String(r.batchId)));
+}
+
+async function excludedStudentIdsForBatch(batchMongoId: string): Promise<Set<string>> {
+  const rows = await BatchEnrollmentExclusionModel.find({ batchId: String(batchMongoId).trim() })
+    .select("studentId")
+    .lean()
+    .exec();
+  return new Set(rows.map((r) => String(r.studentId)));
+}
+
 /** Active batches that contain a demo course — students are auto-enrolled when added to the batch. */
 export async function listBatchesWithDemoCourses() {
   return BatchModel.find({
@@ -58,10 +103,11 @@ export async function listBatchesWithDemoCourses() {
 export async function ensureDemoEnrollmentsForStudent(studentId: string): Promise<number> {
   const sid = String(studentId ?? "").trim();
   if (!sid) return 0;
-  const batches = await listBatchesWithDemoCourses();
+  const [batches, excludedBatches] = await Promise.all([listBatchesWithDemoCourses(), excludedBatchIdsForStudent(sid)]);
   let created = 0;
   for (const batch of batches) {
     const batchMongoId = String(batch._id);
+    if (excludedBatches.has(batchMongoId)) continue;
     const existing = await EnrollmentModel.findOne({ studentId: sid, batchId: batchMongoId }).exec();
     if (existing) continue;
     try {
@@ -95,10 +141,16 @@ export async function syncAllStudentsToDemoBatch(
     .lean()
     .exec();
 
+  const excludedStudents = await excludedStudentIdsForBatch(batchMongoId);
+
   let enrolled = 0;
   let skipped = 0;
   for (const s of students) {
     const studentId = String(s._id);
+    if (excludedStudents.has(studentId)) {
+      skipped += 1;
+      continue;
+    }
     const existing = await EnrollmentModel.findOne({ studentId, batchId: batchMongoId }).exec();
     if (existing) {
       skipped += 1;

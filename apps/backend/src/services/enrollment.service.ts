@@ -5,7 +5,11 @@ import { UserModel } from "../models/User.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
-import { shouldSkipEnrollmentInvoice } from "./demoEnrollment.service.js";
+import {
+  clearBatchEnrollmentExclusion,
+  recordBatchEnrollmentExclusion,
+  shouldSkipEnrollmentInvoice,
+} from "./demoEnrollment.service.js";
 import { issueInvoiceForEnrollment } from "./invoice.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -60,6 +64,7 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
     status: ENROLLMENT_STATUS.ACTIVE,
   });
 
+  await clearBatchEnrollmentExclusion(studentId, batchMongoId);
   await createAuditLog("ENROLLMENT_CREATED", input.createdBy, "Enrollment", String(doc._id));
 
   const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
@@ -234,6 +239,7 @@ export async function bulkEnroll(
         batchId: batchMongoId,
         status: ENROLLMENT_STATUS.ACTIVE,
       });
+      await clearBatchEnrollmentExclusion(studentId, batchMongoId);
       await createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId);
       if (!(await shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId))) {
         await issueInvoiceForEnrollment({
@@ -319,6 +325,7 @@ export async function removeEnrollment(batchId: string, studentId: string, perfo
   const doc = await EnrollmentModel.findOne({ batchId: batchMongoId, studentId }).exec();
   if (!doc) throw new AppError("Enrollment not found", 404);
   await EnrollmentModel.deleteOne({ _id: doc._id }).exec();
+  await recordBatchEnrollmentExclusion(studentId, batchMongoId, performedBy);
   await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
   return { removed: true };
 }
@@ -356,6 +363,7 @@ export async function bulkRemoveEnrollment(
         continue;
       }
       await EnrollmentModel.deleteOne({ _id: doc._id }).exec();
+      await recordBatchEnrollmentExclusion(studentId, batchMongoId, performedBy);
       await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
       result.removed += 1;
     } catch {

@@ -7,7 +7,6 @@ import * as globalAssignmentService from "../services/globalAssignment.service.j
 import { submitGlobalAssignment, listGeneralSubmissionsByStudentId } from "../services/globalAssignmentSubmission.service.js";
 import { listChapterSubmissionsByStudentId } from "../services/assignmentSubmission.service.js";
 import * as enrollmentRequestService from "../services/enrollmentRequest.service.js";
-import { ensureDemoEnrollmentsForStudent } from "../services/demoEnrollment.service.js";
 import { UserModel } from "../models/User.model.js";
 import { ROLE } from "@funt-platform/constants";
 import { successRes } from "../utils/response.js";
@@ -94,14 +93,12 @@ export const getBatchCourse = asyncHandler(async (req: Request, res: Response): 
 
 export const getMyCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
-  await ensureDemoEnrollmentsForStudent(studentId);
   const data = await getMyCoursesForStudent(studentId);
   successRes(res, data);
 });
 
 export const getCourseByCourseId = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
-  await ensureDemoEnrollmentsForStudent(studentId);
   const courseId = req.params.courseId;
   const batchId = req.query.batchId as string | undefined;
   if (!courseId) throw new AppError("courseId is required", 400);
@@ -187,9 +184,7 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
   res.redirect(302, `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`);
 });
 
-export const getExploreCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const studentId = getUserId(req);
-  await ensureDemoEnrollmentsForStudent(studentId);
+export const getExploreCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const data = await listCoursesForExplore();
   successRes(res, data);
 });
