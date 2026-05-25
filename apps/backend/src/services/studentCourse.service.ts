@@ -334,6 +334,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     progressPercent: number;
     accessBlocked: boolean;
     courseHeaderImageUrl?: string;
+    isDemo?: boolean;
   }> = [];
 
   for (const e of enrollments) {
@@ -373,6 +374,7 @@ export async function getMyCoursesForStudent(studentId: string) {
         progressPercent: pct,
         accessBlocked: isAdminBlocked,
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
+        isDemo: !!(s as { isDemo?: boolean }).isDemo,
       });
     }
   }
@@ -483,6 +485,7 @@ export async function listCoursesForExplore() {
       enrollmentPriceInPaise: number;
       paymentOptionsLabel: string;
       courseHeaderImageUrl?: string;
+      isDemo?: boolean;
     }
   >();
   for (const batch of batches) {
@@ -508,6 +511,7 @@ export async function listCoursesForExplore() {
         enrollmentPriceInPaise,
         paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
+        isDemo: !!(s as { isDemo?: boolean }).isDemo,
       });
     }
   }
@@ -527,6 +531,7 @@ export async function listCoursesForExplore() {
       enrollmentPriceInPaise: v.enrollmentPriceInPaise,
       paymentOptionsLabel: v.paymentOptionsLabel,
       courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
+      isDemo: v.isDemo,
     };
   });
 }

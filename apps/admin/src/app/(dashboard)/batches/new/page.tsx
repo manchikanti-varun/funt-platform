@@ -8,9 +8,11 @@ import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 
 interface CourseOption {
   id: string;
+  courseId?: string;
   title: string;
   description?: string;
   status: string;
+  isDemo?: boolean;
 }
 
 interface BadgeOption {
@@ -160,7 +162,6 @@ export default function NewBatchPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [platformUpiSummary, setPlatformUpiSummary] = useState<PlatformUpiSummaryState>("idle");
-
   const needsPlatformUpiInfo = useMemo(() => {
     return selectedCourseIds.some((sid) => {
       const raw = enrollmentInrByCourseId[sid]?.trim();
@@ -217,6 +218,11 @@ export default function NewBatchPage() {
     );
   }, [courses, courseSearch]);
 
+  function courseIsDemo(id: string) {
+    const c = courses.find((x) => x.id === id || x.courseId === id);
+    return !!c?.isDemo;
+  }
+
   function toggleCourse(id: string) {
     setForm((prev) => {
       if (prev.selectedCourseIds.includes(id)) {
@@ -237,12 +243,13 @@ export default function NewBatchPage() {
           completionBadgesByCourseId: badges,
         };
       }
+      const demo = courseIsDemo(id);
       return {
         ...prev,
         selectedCourseIds: [...prev.selectedCourseIds, id],
         enrollmentInrByCourseId: {
           ...prev.enrollmentInrByCourseId,
-          [id]: prev.enrollmentInrByCourseId[id] ?? "",
+          [id]: demo ? "0" : (prev.enrollmentInrByCourseId[id] ?? ""),
         },
         paymentByCourseId: {
           ...prev.paymentByCourseId,
@@ -274,6 +281,7 @@ export default function NewBatchPage() {
       const courseCompletionRewardCoins: Record<string, number> = {};
       const courseCompletionBadgeTypes: Record<string, string[]> = {};
       for (const sid of selectedCourseIds) {
+        if (courseIsDemo(sid)) continue;
         const raw = enrollmentInrByCourseId[sid]?.trim();
         const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
         if (raw !== undefined && raw !== "" && Number.isFinite(rupees)) {
@@ -512,9 +520,10 @@ export default function NewBatchPage() {
                 ) : (
                   filteredCourses.map((c) => {
                     const checked = selectedCourseIds.includes(c.id);
+                    const demo = !!c.isDemo;
                     const raw = enrollmentInrByCourseId[c.id]?.trim();
-                    const ru = raw === "" || raw === undefined ? NaN : Number(raw);
-                    const payControls = Number.isFinite(ru) && ru >= 1;
+                    const ru = demo ? 0 : raw === "" || raw === undefined ? NaN : Number(raw);
+                    const payControls = !demo && Number.isFinite(ru) && ru >= 1;
                     const pm = paymentByCourseId[c.id] ?? { upiManual: true, razorpay: true };
                     return (
                       <div key={c.id} className="rounded-xl border border-white bg-white shadow-sm shadow-slate-900/5">
@@ -527,7 +536,14 @@ export default function NewBatchPage() {
                           />
                           <div className="flex-1 space-y-3">
                             <div className="flex flex-wrap justify-between gap-3">
-                              <span className="font-semibold text-slate-900">{c.title}</span>
+                              <span className="font-semibold text-slate-900">
+                                {c.title}
+                                {c.isDemo ? (
+                                  <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                                    Demo
+                                  </span>
+                                ) : null}
+                              </span>
                               <button
                                 type="button"
                                 className={`text-xs font-semibold underline-offset-2 hover:underline ${checked ? "text-rose-700" : "pointer-events-none text-transparent"}`}
@@ -549,13 +565,16 @@ export default function NewBatchPage() {
                                       type="number"
                                       min={0}
                                       step="0.01"
-                                      placeholder="Optional"
-                                      value={enrollmentInrByCourseId[c.id] ?? ""}
+                                      placeholder={demo ? "0" : "Optional"}
+                                      value={demo ? "0" : (enrollmentInrByCourseId[c.id] ?? "")}
                                       onChange={(e) => updateEnrollmentInr(c.id, e.target.value)}
-                                      className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                      disabled={demo}
+                                      className="w-36 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
                                     />
                                     <span className="normal-case tracking-normal font-normal text-slate-400">
-                                      Leave blank when access is complimentary.
+                                      {demo
+                                        ? "Demo courses are free (₹0) and auto-enroll all students when added to this batch."
+                                        : "Leave blank when access is complimentary."}
                                     </span>
                                   </label>
                                   <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">

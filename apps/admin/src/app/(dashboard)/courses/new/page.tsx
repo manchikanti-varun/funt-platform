@@ -47,6 +47,7 @@ export default function NewCoursePage() {
   } = useAutoSavedForm<CourseDraft>("courses:new", INITIAL_DRAFT);
   const { title, description, durationText, selectedIds } = form;
   const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
+  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -110,6 +111,7 @@ export default function NewCoursePage() {
         durationText: durationText.trim(),
         globalChapterIds: selectedIds,
         ...(headerImageDataUrl.trim() ? { headerImageUrl: headerImageDataUrl.trim() } : {}),
+        ...(isDemo ? { isDemo: true } : {}),
       }),
     });
     setLoading(false);
@@ -171,6 +173,22 @@ export default function NewCoursePage() {
               onChange={setHeaderImageDataUrl}
               onError={setError}
             />
+            <div>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={isDemo}
+                  onChange={(e) => setIsDemo(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                />
+                <span className="text-sm text-slate-800">
+                  <span className="font-semibold">Demo course</span>
+                  <span className="mt-0.5 block text-xs font-normal text-slate-600">
+                    Free for all students once this course is added to a batch (₹0, auto-enrolled, no invoice). Not visible until it is in a batch.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="border-t border-slate-200 pt-6">

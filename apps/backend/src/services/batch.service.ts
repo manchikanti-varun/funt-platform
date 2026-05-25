@@ -13,6 +13,7 @@ import { BATCH_STATUS, COURSE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
+import { batchHasDemoCourses, syncAllStudentsToDemoBatch } from "./demoEnrollment.service.js";
 import { resolveStaffUserId, resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
 import type { CoursePaymentMethodCode } from "../utils/coursePaymentMethods.js";
 import { assertHeaderImageUrl } from "../utils/headerImageUrl.js";
@@ -218,6 +219,19 @@ type BatchDoc = {
   visibility?: "PUBLIC" | "PRIVATE";
 };
 
+function applyDemoCourseSnapshotPricing<T extends {
+  enrollmentPriceInPaise?: number;
+  allowedPaymentMethods?: unknown;
+  isDemo?: boolean;
+}>(snap: T): T {
+  if (!(snap as { isDemo?: boolean }).isDemo) return snap;
+  return {
+    ...snap,
+    enrollmentPriceInPaise: 0,
+    allowedPaymentMethods: [],
+  };
+}
+
 export function getBatchCourseSnapshots(doc: BatchDoc): unknown[] {
   const snapshots = (doc as { courseSnapshots?: unknown[] }).courseSnapshots;
   if (Array.isArray(snapshots) && snapshots.length > 0) return snapshots;
@@ -278,13 +292,24 @@ function toBatchResponse(doc: BatchDoc, listView = false, staff?: StaffMap) {
   };
 }
 
-function copyCourseToSnapshot(course: { _id: unknown; courseId?: string | null; title: string; description: string; headerImageUrl?: string; durationText?: string; modules: unknown[]; version: number }) {
+function copyCourseToSnapshot(course: {
+  _id: unknown;
+  courseId?: string | null;
+  title: string;
+  description: string;
+  headerImageUrl?: string;
+  durationText?: string;
+  modules: unknown[];
+  version: number;
+  isDemo?: boolean;
+}) {
   return {
     courseId: course.courseId ?? String(course._id),
     title: course.title,
     description: course.description,
     headerImageUrl: String(course.headerImageUrl ?? "").trim() || undefined,
     durationText: course.durationText ?? "",
+    isDemo: !!(course as { isDemo?: boolean }).isDemo,
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
     enrollmentPriceInPaise: 0,
@@ -336,7 +361,8 @@ export async function createBatch(input: CreateBatchInput) {
       const snap = copyCourseToSnapshot(c as Parameters<typeof copyCourseToSnapshot>[0]);
       const mongo = String((c as { _id: unknown })._id);
       const human = (c as { courseId?: string }).courseId ?? "";
-      const rupee = priceMap[mongo] ?? priceMap[human] ?? 0;
+      const isDemoCourse = !!(c as { isDemo?: boolean }).isDemo;
+      const rupee = isDemoCourse ? 0 : (priceMap[mongo] ?? priceMap[human] ?? 0);
       const enrollmentPriceInPaise = rupeesToPaiseFromInput(rupee);
       const allowedPaymentMethods = allowedPaymentMethodsForCourse(
         enrollmentPriceInPaise,
@@ -345,7 +371,13 @@ export async function createBatch(input: CreateBatchInput) {
       );
       const completionRewardCoins = normalizeCompletionRewardCoins(rewardMap[mongo] ?? rewardMap[human] ?? 0);
       const completionBadgeTypes = normalizeCompletionBadgeTypes(badgeMap[mongo] ?? badgeMap[human] ?? []);
-      return { ...snap, enrollmentPriceInPaise, allowedPaymentMethods, completionRewardCoins, completionBadgeTypes };
+      return applyDemoCourseSnapshotPricing({
+        ...snap,
+        enrollmentPriceInPaise,
+        allowedPaymentMethods,
+        completionRewardCoins,
+        completionBadgeTypes,
+      });
     });
 
   const batchId = await generateBatchId();
@@ -383,6 +415,9 @@ export async function createBatch(input: CreateBatchInput) {
   });
 
   await createAuditLog("BATCH_CREATED", input.createdBy, ENTITY_BATCH, String(doc._id));
+  if (batchHasDemoCourses(doc as unknown as BatchDoc)) {
+    await syncAllStudentsToDemoBatch(String(doc._id), input.createdBy);
+  }
   const staff = await staffDisplayByMongoIds([String(doc.trainerId)]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
 }
@@ -571,9 +606,11 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
         const snap = copyCourseToSnapshot(c as Parameters<typeof copyCourseToSnapshot>[0]);
         const mongo = String((c as { _id: unknown })._id);
         const human = (c as { courseId?: string }).courseId ?? "";
-        const rupeeInput = priceMap[mongo] ?? priceMap[human];
-        const paise =
-          rupeeInput !== undefined && rupeeInput !== null && Number.isFinite(Number(rupeeInput))
+        const isDemoCourse = !!(c as { isDemo?: boolean }).isDemo;
+        const rupeeInput = isDemoCourse ? 0 : priceMap[mongo] ?? priceMap[human];
+        const paise = isDemoCourse
+          ? 0
+          : rupeeInput !== undefined && rupeeInput !== null && Number.isFinite(Number(rupeeInput))
             ? rupeesToPaiseFromInput(rupeeInput)
             : oldPaiseByCourseId.get(String(snap.courseId)) ?? 0;
         const prevMethods = oldMethodsByCourseId.get(String(snap.courseId));
@@ -599,14 +636,31 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
           badgeInput !== undefined
             ? normalizeCompletionBadgeTypes(badgeInput)
             : normalizeCompletionBadgeTypes(oldBadgesByCourseId.get(String(snap.courseId)) ?? []);
-        return { ...snap, enrollmentPriceInPaise: paise, allowedPaymentMethods, completionRewardCoins, completionBadgeTypes };
+        return applyDemoCourseSnapshotPricing({
+          ...snap,
+          enrollmentPriceInPaise: paise,
+          allowedPaymentMethods,
+          completionRewardCoins,
+          completionBadgeTypes,
+        });
       });
     (doc as { courseSnapshots?: unknown[] }).courseSnapshots = courseSnapshots;
+  } else {
+    const current = getBatchCourseSnapshots(doc as unknown as BatchDoc);
+    if (current.length > 0) {
+      (doc as { courseSnapshots?: unknown[] }).courseSnapshots = current.map((s) =>
+        applyDemoCourseSnapshotPricing(s as Parameters<typeof applyDemoCourseSnapshotPricing>[0])
+      );
+    }
   }
+
   await doc.save();
   await createAuditLog("BATCH_UPDATED", performedBy, ENTITY_BATCH, String(doc._id));
   if (input.trainerId !== undefined && input.trainerId !== hadTrainer) {
     await createAuditLog("TRAINER_ASSIGNED", performedBy, ENTITY_BATCH, String(doc._id));
+  }
+  if (batchHasDemoCourses(doc as unknown as BatchDoc)) {
+    await syncAllStudentsToDemoBatch(String(doc._id), performedBy);
   }
   const staff = await staffDisplayByMongoIds([String(doc.trainerId)]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
@@ -647,6 +701,9 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
     ...(dupHeaderImage ? { headerImageUrl: dupHeaderImage } : {}),
   });
   await createAuditLog("BATCH_DUPLICATED", input.performedBy, ENTITY_BATCH, String(doc._id));
+  if (batchHasDemoCourses(doc as unknown as BatchDoc)) {
+    await syncAllStudentsToDemoBatch(String(doc._id), input.performedBy);
+  }
   const staff = await staffDisplayByMongoIds([String(doc.trainerId)]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
 }

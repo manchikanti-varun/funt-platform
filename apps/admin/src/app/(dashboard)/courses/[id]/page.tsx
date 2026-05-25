@@ -35,6 +35,7 @@ interface Course {
   description: string;
   durationText?: string;
   headerImageUrl?: string;
+  isDemo?: boolean;
   modules: CourseModule[];
   version: number;
   status: string;
@@ -55,6 +56,7 @@ export default function EditCoursePage() {
   const [durationText, setDurationText] = useState("");
   const [headerImageDraft, setHeaderImageDraft] = useState("");
   const [headerImageDirty, setHeaderImageDirty] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -74,6 +76,7 @@ export default function EditCoursePage() {
         setDurationText((r.data.durationText ?? "").trim());
         setHeaderImageDraft((r.data.headerImageUrl ?? "").trim());
         setHeaderImageDirty(false);
+        setIsDemo(!!r.data.isDemo);
       }
     });
   }, [id]);
@@ -112,6 +115,7 @@ export default function EditCoursePage() {
       title,
       description: decodeEncodedRichText(description),
       durationText: durationText.trim(),
+      isDemo,
     };
     if (headerImageDirty) {
       body.headerImageUrl = headerImageDraft.trim() ? headerImageDraft.trim() : null;
@@ -320,6 +324,22 @@ export default function EditCoursePage() {
             }}
             onError={setError}
           />
+          <div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3">
+              <input
+                type="checkbox"
+                checked={isDemo}
+                onChange={(e) => setIsDemo(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+              />
+              <span className="text-sm text-slate-800">
+                <span className="font-semibold">Demo course</span>
+                <span className="mt-0.5 block text-xs font-normal text-slate-600">
+                  Free for all students once added to a batch (₹0, auto-enrolled, no invoice). Not visible until it is in a batch.
+                </span>
+              </span>
+            </label>
+          </div>
           <div className="border-t border-slate-200 pt-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Chapters in this course</h3>
             <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can edit the chapter copy (title, content, video, etc.) here, or reorder with Up/Down.</p>

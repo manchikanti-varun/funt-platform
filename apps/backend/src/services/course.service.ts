@@ -91,6 +91,7 @@ export interface CreateCourseInput {
   description: string;
   durationText?: string;
   headerImageUrl?: string;
+  isDemo?: boolean;
   globalChapterIds: string[];
   createdBy: string;
 }
@@ -100,6 +101,7 @@ export interface UpdateCourseInput {
   description?: string;
   durationText?: string;
   headerImageUrl?: string | null;
+  isDemo?: boolean;
   moderatorIds?: string[];
 }
 
@@ -126,6 +128,7 @@ function toCourseResponse(doc: {
   description: string;
   durationText?: string;
   headerImageUrl?: string;
+  isDemo?: boolean;
   modules: unknown[];
   version: number;
   status: string;
@@ -142,6 +145,7 @@ function toCourseResponse(doc: {
     description: doc.description,
     durationText: doc.durationText ?? "",
     ...(headerImage ? { headerImageUrl: headerImage } : {}),
+    ...((doc as { isDemo?: boolean }).isDemo ? { isDemo: true } : {}),
     modules: doc.modules,
     version: doc.version,
     status: doc.status,
@@ -150,6 +154,47 @@ function toCourseResponse(doc: {
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+async function syncCourseIsDemoToBatchSnapshots(courseIds: string[], isDemo: boolean, performedBy: string) {
+  if (!courseIds.length) return;
+  const idSet = new Set(courseIds);
+  const batches = await BatchModel.find({
+    $or: [
+      { "courseSnapshots.courseId": { $in: courseIds } },
+      { "courseSnapshot.courseId": { $in: courseIds } },
+    ],
+  }).exec();
+  const { syncAllStudentsToDemoBatch } = await import("./demoEnrollment.service.js");
+  for (const batch of batches) {
+    const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+    let dirty = false;
+    for (const snap of snapshots) {
+      const cid = String((snap as { courseId?: string }).courseId ?? "").trim();
+      if (!cid || !idSet.has(cid)) continue;
+      if (!!(snap as { isDemo?: boolean }).isDemo !== isDemo) {
+        (snap as { isDemo?: boolean }).isDemo = isDemo;
+        dirty = true;
+      }
+      if (isDemo) {
+        (snap as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise = 0;
+        (snap as { allowedPaymentMethods?: unknown }).allowedPaymentMethods = [];
+        dirty = true;
+      }
+    }
+    if (!dirty) continue;
+    if (snapshots.length === 1) {
+      (batch as { courseSnapshot?: unknown; courseSnapshots?: unknown[] }).courseSnapshot = snapshots[0];
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = undefined;
+    } else {
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = snapshots;
+      (batch as { courseSnapshot?: unknown }).courseSnapshot = undefined;
+    }
+    await batch.save();
+    if (isDemo) {
+      await syncAllStudentsToDemoBatch(String(batch._id), performedBy);
+    }
+  }
 }
 
 async function syncCourseHeaderImageToBatchSnapshots(courseIds: string[], headerImageUrl: string | undefined) {
@@ -270,6 +315,7 @@ export async function createCourse(input: CreateCourseInput) {
     description: normalizedDescription.trim(),
     durationText: normalizedDurationText,
     ...(headerImageUrl ? { headerImageUrl } : {}),
+    ...(input.isDemo ? { isDemo: true } : {}),
     modules: snapshots,
     version: 1,
     status: COURSE_STATUS.ACTIVE,
@@ -314,6 +360,9 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
       (doc as { headerImageUrl?: string }).headerImageUrl = assertHeaderImageUrl(String(input.headerImageUrl));
     }
   }
+  if (input.isDemo !== undefined) {
+    (doc as { isDemo?: boolean }).isDemo = !!input.isDemo;
+  }
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0
@@ -322,11 +371,16 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
       : [];
   }
   await doc.save();
-  if (input.headerImageUrl !== undefined) {
+  if (input.headerImageUrl !== undefined || input.isDemo !== undefined) {
     const humanId = (doc as { courseId?: string }).courseId;
     const ids = [String(doc._id), ...(humanId ? [humanId] : [])];
-    const syncedUrl = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
-    await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
+    if (input.headerImageUrl !== undefined) {
+      const syncedUrl = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
+      await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
+    }
+    if (input.isDemo !== undefined) {
+      await syncCourseIsDemoToBatchSnapshots(ids, !!(doc as { isDemo?: boolean }).isDemo, performedBy);
+    }
   }
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
@@ -442,6 +496,7 @@ export async function duplicateCourse(id: string, performedBy: string) {
     title: `${source.title} (Copy)`,
     description: source.description,
     ...(dupHeader ? { headerImageUrl: dupHeader } : {}),
+    ...((source as { isDemo?: boolean }).isDemo ? { isDemo: true } : {}),
     modules: source.modules,
     version: 1,
     status: COURSE_STATUS.ACTIVE,

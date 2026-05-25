@@ -14,6 +14,7 @@ import {
 import { generateInvoicePdf } from "../utils/pdfInvoice.js";
 import { buildInvoiceView, type InvoiceBaseDto, type InvoiceViewDto } from "./invoiceView.js";
 import { getInvoiceSettings } from "./invoiceSettings.service.js";
+import { shouldSkipEnrollmentInvoice } from "./demoEnrollment.service.js";
 
 export interface CreateInvoiceInput {
   studentId: string;
@@ -335,6 +336,7 @@ export async function issueInvoiceForEnrollment(input: {
   paymentSubmissionId?: string;
   source?: InvoiceSource;
 }) {
+  if (await shouldSkipEnrollmentInvoice(input.batchId, input.courseId)) return null;
   try {
     return await createInvoice({
       studentId: input.studentId,

@@ -42,6 +42,8 @@ const courseSnapshotSchema = new Schema(
     completionRewardCoins: { type: Number, required: false, default: 0, min: 0 },
     /** Badge keys auto-awarded when certificate is issued for this course in this batch. */
     completionBadgeTypes: { type: [String], required: false, default: [] },
+    /** Copied from source course: shown as free demo in student UI. */
+    isDemo: { type: Boolean, required: false, default: false },
   },
   { _id: false }
 );
@@ -92,6 +94,8 @@ const batchSchema = new Schema(
       enum: ["PUBLIC", "PRIVATE"],
       default: "PUBLIC",
     },
+    /** When true, every active student is auto-enrolled in this batch (use for free demo courses; set fees to ₹0). */
+    autoEnrollAllStudents: { type: Boolean, required: false, default: false },
   },
   { timestamps: true }
 );

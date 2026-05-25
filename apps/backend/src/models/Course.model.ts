@@ -31,6 +31,8 @@ const courseSchema = new Schema(
     description: { type: String, required: true },
     /** Optional course header/banner image used by student course cards. */
     headerImageUrl: { type: String, required: false },
+    /** Demo courses are free and included in batches with auto-enroll-all-students. */
+    isDemo: { type: Boolean, required: false, default: false },
     durationText: { type: String, required: false, default: "" },
     modules: {
       type: [courseModuleSnapshotSchema],

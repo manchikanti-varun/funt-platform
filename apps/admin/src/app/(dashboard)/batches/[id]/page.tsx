@@ -30,7 +30,6 @@ interface Batch {
   status: string;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
-  headerImageUrl?: string;
   courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
   courseSnapshots?: Array<{
     title?: string;
@@ -44,8 +43,10 @@ interface Batch {
 
 interface CourseOption {
   id: string;
+  courseId?: string;
   title: string;
   status: string;
+  isDemo?: boolean;
 }
 
 interface BadgeOption {
@@ -220,6 +221,11 @@ export default function EditBatchPage() {
       .catch(() => setBadgeOptions([]));
   }, []);
 
+  function courseIsDemo(id: string) {
+    const c = courses.find((x) => x.id === id || x.courseId === id);
+    return !!c?.isDemo;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -228,6 +234,7 @@ export default function EditBatchPage() {
     const coursePaymentMethods: Record<string, { upiManual: boolean; razorpay: boolean }> = {};
     const courseCompletionBadgeTypes: Record<string, string[]> = {};
     for (const sid of selectedCourseIds) {
+      if (courseIsDemo(sid)) continue;
       const raw = enrollmentInrByCourseId[sid]?.trim();
       const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
       if (raw !== undefined && raw !== "" && Number.isFinite(rupees)) {
@@ -472,7 +479,10 @@ export default function EditBatchPage() {
                               });
                               return prev.filter((x) => x !== c.id);
                             }
-                            setEnrollmentInrByCourseId((m) => ({ ...m, [c.id]: m[c.id] ?? "" }));
+                            setEnrollmentInrByCourseId((m) => ({
+                              ...m,
+                              [c.id]: c.isDemo ? "0" : (m[c.id] ?? ""),
+                            }));
                             setPaymentByCourseId((m) => ({ ...m, [c.id]: m[c.id] ?? { upiManual: true, razorpay: true } }));
                             setCompletionCoinsByCourseId((m) => ({ ...m, [c.id]: m[c.id] ?? "0" }));
                             setCompletionBadgesByCourseId((m) => ({ ...m, [c.id]: m[c.id] ?? [] }));
@@ -481,7 +491,14 @@ export default function EditBatchPage() {
                         }}
                         className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                       />
-                      <span className="text-sm font-medium text-slate-800">{c.title}</span>
+                      <span className="text-sm font-medium text-slate-800">
+                        {c.title}
+                        {c.isDemo ? (
+                          <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                            Demo
+                          </span>
+                        ) : null}
+                      </span>
                     </label>
                   ))}
               </div>
@@ -500,13 +517,15 @@ export default function EditBatchPage() {
                 </p>
                 <ul className="space-y-2">
                   {selectedCourseIds.map((sid) => {
+                    const courseMeta = courses.find((c) => c.id === sid || c.courseId === sid);
+                    const demo = !!courseMeta?.isDemo;
                     const title =
-                      courses.find((c) => c.id === sid)?.title ??
+                      courseMeta?.title ??
                       batch?.courseSnapshots?.find((s) => s.courseId === sid)?.title ??
                       sid;
                     const raw = enrollmentInrByCourseId[sid]?.trim();
-                    const ru = raw === "" || raw === undefined ? NaN : Number(raw);
-                    const showPay = Number.isFinite(ru) && ru >= 1;
+                    const ru = demo ? 0 : raw === "" || raw === undefined ? NaN : Number(raw);
+                    const showPay = !demo && Number.isFinite(ru) && ru >= 1;
                     const pm = paymentByCourseId[sid] ?? { upiManual: true, razorpay: true };
                     return (
                       <li key={sid} className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-white/90 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
@@ -517,13 +536,16 @@ export default function EditBatchPage() {
                             min={0}
                             step="0.01"
                             placeholder="0"
-                            value={enrollmentInrByCourseId[sid] ?? ""}
+                            value={demo ? "0" : (enrollmentInrByCourseId[sid] ?? "")}
                             onChange={(e) =>
                               setEnrollmentInrByCourseId((m) => ({ ...m, [sid]: e.target.value }))
                             }
-                            className="w-32 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                            disabled={demo}
+                            className="w-32 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                           />
-                          <span className="text-xs text-slate-500">INR fee</span>
+                          <span className="text-xs text-slate-500">
+                            {demo ? "Demo · ₹0 · auto-enroll" : "INR fee"}
+                          </span>
                           {showPay ? (
                             <div className="flex min-w-0 flex-1 flex-col gap-2">
                               <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-600">

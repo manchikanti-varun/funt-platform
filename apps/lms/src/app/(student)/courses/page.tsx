@@ -17,6 +17,7 @@ interface MyCourse {
   accessBlocked?: boolean;
   progressPercent?: number;
   courseHeaderImageUrl?: string;
+  isDemo?: boolean;
 }
 
 interface ExploreCourse {
@@ -29,6 +30,7 @@ interface ExploreCourse {
   enrollmentPriceInPaise?: number;
   paymentOptionsLabel?: string;
   courseHeaderImageUrl?: string;
+  isDemo?: boolean;
 }
 
 function filterBySearch<T>(
@@ -287,6 +289,7 @@ export default function CoursesPage() {
                     locked={!!c.accessBlocked}
                     imageUrl={c.courseHeaderImageUrl}
                     statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                    isDemo={!!c.isDemo}
                   />
                 ))}
               </div>
@@ -423,7 +426,12 @@ export default function CoursesPage() {
                       chapterCount={c.chapterCount ?? c.moduleCount}
                       imageUrl={c.courseHeaderImageUrl}
                       statusLabel={enrolled ? "Enrolled" : "Explore"}
-                      footerExtra={<p className="text-xs text-slate-600">Fee: {feeLabel}</p>}
+                      isDemo={!!c.isDemo}
+                      footerExtra={
+                        <p className="text-xs text-slate-600">
+                          {c.isDemo ? "Free demo · no payment" : `Fee: ${feeLabel}`}
+                        </p>
+                      }
                       actions={
                         enrolled ? (
                           <Link

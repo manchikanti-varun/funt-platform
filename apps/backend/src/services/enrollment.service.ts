@@ -5,6 +5,7 @@ import { UserModel } from "../models/User.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { shouldSkipEnrollmentInvoice } from "./demoEnrollment.service.js";
 import { issueInvoiceForEnrollment } from "./invoice.service.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -67,7 +68,7 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
     String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() ||
     undefined;
 
-  if (!input.skipAutoInvoice) {
+  if (!input.skipAutoInvoice && !(await shouldSkipEnrollmentInvoice(batchMongoId, courseId))) {
     await issueInvoiceForEnrollment({
       enrollmentId: String(doc._id),
       studentId: doc.studentId,
@@ -234,13 +235,15 @@ export async function bulkEnroll(
         status: ENROLLMENT_STATUS.ACTIVE,
       });
       await createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId);
-      await issueInvoiceForEnrollment({
-        enrollmentId: String(doc._id),
-        studentId,
-        batchId: batchMongoId,
-        courseId: defaultCourseId,
-        createdBy,
-      });
+      if (!(await shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId))) {
+        await issueInvoiceForEnrollment({
+          enrollmentId: String(doc._id),
+          studentId,
+          batchId: batchMongoId,
+          courseId: defaultCourseId,
+          createdBy,
+        });
+      }
       result.enrolled += 1;
     } catch (err) {
       result.errors.push({

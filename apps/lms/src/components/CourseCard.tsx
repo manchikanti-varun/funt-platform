@@ -14,6 +14,7 @@ interface CourseCardProps {
   locked?: boolean;
   imageUrl?: string;
   statusLabel?: string;
+  isDemo?: boolean;
   footerExtra?: ReactNode;
   actions?: ReactNode;
 }
@@ -60,6 +61,7 @@ export function CourseCard({
   locked = false,
   imageUrl,
   statusLabel,
+  isDemo = false,
   footerExtra,
   actions,
 }: CourseCardProps) {
@@ -90,6 +92,11 @@ export function CourseCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 p-3.5">
+        {isDemo ? (
+          <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+            Free demo
+          </span>
+        ) : null}
         {statusLabel ? (
           <span className="w-fit rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
             {statusLabel}

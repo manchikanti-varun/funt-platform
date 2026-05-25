@@ -14,6 +14,7 @@ import {
   lookupStudentUsernameByEmail,
   validateStrongPassword,
 } from "../services/auth.service.js";
+import { ensureDemoEnrollmentsForStudent } from "../services/demoEnrollment.service.js";
 import {
   getGoogleAuthUrl,
   exchangeCodeForTokens,
@@ -330,6 +331,11 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   setAuthCookie(res, result.token, maxAgeMs, cookiePortal);
   setIdleCookie(res, cookiePortal, maxAgeMs);
   clearLegacyAuthCookie(res);
+  if (roles.includes(ROLE.STUDENT)) {
+    void ensureDemoEnrollmentsForStudent(result.user.id).catch((err) =>
+      console.error("[demo] auto-enroll on login:", err instanceof Error ? err.message : err)
+    );
+  }
   res.status(200).json({ data: { user: result.user } });
 });
 
@@ -388,6 +394,7 @@ export const signupStudent = asyncHandler(async (req: Request, res: Response): P
       schoolName,
       city: body.city?.trim() || undefined,
     });
+    await ensureDemoEnrollmentsForStudent(result.id);
     const token = signToken(
       { userId: result.id, username: result.username, roles: [ROLE.STUDENT], tokenVersion: 0 },
       jwtSecret,
@@ -744,6 +751,7 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     });
     id = result.id;
     createdUsername = result.username;
+    await ensureDemoEnrollmentsForStudent(id);
   } catch (err: unknown) {
     const mongoErr = err as { code?: number };
     if (mongoErr?.code === 11000) {
