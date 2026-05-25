@@ -12,9 +12,11 @@ interface CourseCardImageFieldProps {
   value: string;
   onChange: (value: string) => void;
   onError?: (message: string) => void;
+  /** When true (default), image cannot be cleared and label shows required. */
+  required?: boolean;
 }
 
-export function CourseCardImageField({ value, onChange, onError }: CourseCardImageFieldProps) {
+export function CourseCardImageField({ value, onChange, onError, required = true }: CourseCardImageFieldProps) {
   const [linkDraft, setLinkDraft] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
   const [localError, setLocalError] = useState("");
@@ -54,6 +56,10 @@ export function CourseCardImageField({ value, onChange, onError }: CourseCardIma
   }
 
   function removeImage() {
+    if (required) {
+      reportError("Course card image is required.");
+      return;
+    }
     clearError();
     onChange("");
     setLinkDraft("");
@@ -64,9 +70,12 @@ export function CourseCardImageField({ value, onChange, onError }: CourseCardIma
 
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-semibold text-slate-700">Course card image (optional)</label>
+      <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+        Course card image{required ? <span className="text-red-600"> *</span> : null}
+      </label>
       <input
         type="file"
+        required={required && !value.trim()}
         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
         className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700"
         onChange={(e) => {
@@ -112,13 +121,19 @@ export function CourseCardImageField({ value, onChange, onError }: CourseCardIma
           <img src={previewSrc} alt="Course card preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
           <div className="text-xs text-slate-600">
             {sourceLabel ? <p className="font-medium text-slate-800">{sourceLabel}</p> : null}
-            <button type="button" className="mt-1 font-semibold text-rose-700 hover:underline" onClick={removeImage}>
-              Remove image
-            </button>
+            {!required ? (
+              <button type="button" className="mt-1 font-semibold text-rose-700 hover:underline" onClick={removeImage}>
+                Remove image
+              </button>
+            ) : (
+              <p className="mt-1 text-slate-500">Replace using upload or a new link above.</p>
+            )}
           </div>
         </div>
       ) : (
-        <p className="mt-2 text-xs text-slate-500">No course card image set.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          {required ? "Upload an image or paste a link — required for student course cards." : "No course card image set."}
+        </p>
       )}
     </div>
   );

@@ -421,6 +421,48 @@ export async function bulkAddAllowedStudents(
   return result;
 }
 
+/** Bulk remove students from allowed list by username or user id. */
+export async function bulkRemoveAllowedStudents(
+  assignmentId: string,
+  identifiers: string[],
+  performedBy: string
+): Promise<{ removed: number; skipped: number; notFound: string[] }> {
+  const doc = await findAssignmentByParam(assignmentId);
+  if (!doc) throw new AppError("Assignment not found", 404);
+  assertCanEditAssignment(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
+  let allowed = [...((doc as { allowedStudentIds?: string[] }).allowedStudentIds ?? [])];
+  const result = { removed: 0, skipped: 0, notFound: [] as string[] };
+  const seen = new Set<string>();
+
+  for (const raw of identifiers) {
+    const v = (raw && String(raw).trim()) || "";
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+    try {
+      const studentId = await resolveStudentId(v);
+      const user = await UserModel.findById(studentId).select("username").lean().exec();
+      const uname =
+        user && typeof (user as { username?: string }).username === "string"
+          ? (user as { username: string }).username.trim().toLowerCase()
+          : "";
+      const toRemove = uname && uname !== studentId ? [studentId, uname, v] : [studentId, v];
+      const hadAny = toRemove.some((x) => allowed.includes(x));
+      if (!hadAny) {
+        result.skipped += 1;
+        continue;
+      }
+      allowed = allowed.filter((id) => !toRemove.includes(id));
+      result.removed += 1;
+    } catch {
+      result.notFound.push(v);
+    }
+  }
+
+  (doc as { allowedStudentIds: string[] }).allowedStudentIds = allowed;
+  await doc.save();
+  return result;
+}
+
 /** List allowed students (id, username, name) for an assignment.
  * allowedStudentIds may contain MongoDB _id (24-char hex) or username. */
 export async function listAllowedStudents(assignmentId: string) {

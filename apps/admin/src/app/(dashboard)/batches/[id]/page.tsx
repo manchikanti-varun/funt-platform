@@ -47,6 +47,7 @@ interface CourseOption {
   title: string;
   status: string;
   isDemo?: boolean;
+  headerImageUrl?: string;
 }
 
 interface BadgeOption {
@@ -456,6 +457,11 @@ export default function EditBatchPage() {
                         checked={selectedCourseIds.includes(c.id)}
                         onChange={() => {
                           setSelectedCourseIds((prev) => {
+                            if (!prev.includes(c.id) && !String(c.headerImageUrl ?? "").trim()) {
+                              setError("This course has no card image. Add one on the course before adding it to a batch.");
+                              return prev;
+                            }
+                            setError("");
                             if (prev.includes(c.id)) {
                               setEnrollmentInrByCourseId((m) => {
                                 const next = { ...m };
@@ -496,6 +502,11 @@ export default function EditBatchPage() {
                         {c.isDemo ? (
                           <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
                             Demo
+                          </span>
+                        ) : null}
+                        {!String(c.headerImageUrl ?? "").trim() ? (
+                          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                            No image
                           </span>
                         ) : null}
                       </span>

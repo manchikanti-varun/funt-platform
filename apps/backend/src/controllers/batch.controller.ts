@@ -303,3 +303,13 @@ export const removeBatchStudent = asyncHandler(async (req: Request, res: Respons
   const data = await enrollmentService.removeEnrollment(id, studentId, performedBy);
   successRes(res, data, "Student removed from batch");
 });
+
+export const bulkRemoveBatchStudents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Batch ID is required", 400);
+  const identifiers = (req.body?.identifiers ?? req.body?.studentUsernames ?? req.body?.usernames ?? []) as string[];
+  if (!Array.isArray(identifiers)) throw new AppError("identifiers or studentUsernames must be an array", 400);
+  const data = await enrollmentService.bulkRemoveEnrollment(id, identifiers, performedBy);
+  successRes(res, data, "Bulk remove completed");
+});

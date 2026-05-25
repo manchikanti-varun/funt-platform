@@ -222,3 +222,13 @@ export const bulkAddAssignmentAccess = asyncHandler(async (req: Request, res: Re
   const data = await service.bulkAddAllowedStudents(id, identifiers, performedBy);
   successRes(res, data, "Bulk add completed");
 });
+
+export const bulkRemoveAssignmentAccess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Assignment ID is required", 400);
+  const identifiers = (req.body?.identifiers ?? req.body?.usernames ?? []) as string[];
+  if (!Array.isArray(identifiers)) throw new AppError("identifiers must be an array", 400);
+  const data = await service.bulkRemoveAllowedStudents(id, identifiers, performedBy);
+  successRes(res, data, "Bulk remove completed");
+});

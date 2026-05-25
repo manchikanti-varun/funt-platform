@@ -29,7 +29,7 @@ const courseSchema = new Schema(
         courseId: { type: String, required: false, unique: true, sparse: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    /** Optional course header/banner image used by student course cards. */
+    /** Course card banner image (required when creating/updating via API). */
     headerImageUrl: { type: String, required: false },
     /** Demo courses are free and included in batches with auto-enroll-all-students. */
     isDemo: { type: Boolean, required: false, default: false },

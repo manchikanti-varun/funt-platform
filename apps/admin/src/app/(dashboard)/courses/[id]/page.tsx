@@ -109,6 +109,11 @@ export default function EditCoursePage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const imageValue = (headerImageDirty ? headerImageDraft : (course?.headerImageUrl ?? "")).trim();
+    if (!imageValue) {
+      setError("Course card image is required.");
+      return;
+    }
     setError("");
     setLoading(true);
     const body: Record<string, unknown> = {
@@ -116,10 +121,8 @@ export default function EditCoursePage() {
       description: decodeEncodedRichText(description),
       durationText: durationText.trim(),
       isDemo,
+      headerImageUrl: imageValue,
     };
-    if (headerImageDirty) {
-      body.headerImageUrl = headerImageDraft.trim() ? headerImageDraft.trim() : null;
-    }
     const res = await api(`/api/courses/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),

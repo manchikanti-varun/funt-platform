@@ -13,6 +13,7 @@ interface CourseOption {
   description?: string;
   status: string;
   isDemo?: boolean;
+  headerImageUrl?: string;
 }
 
 interface BadgeOption {
@@ -223,7 +224,17 @@ export default function NewBatchPage() {
     return !!c?.isDemo;
   }
 
+  function courseHasCardImage(id: string) {
+    const c = courses.find((x) => x.id === id || x.courseId === id);
+    return !!String(c?.headerImageUrl ?? "").trim();
+  }
+
   function toggleCourse(id: string) {
+    if (!selectedCourseIds.includes(id) && !courseHasCardImage(id)) {
+      setError("This course has no card image. Add one on the course before adding it to a batch.");
+      return;
+    }
+    setError("");
     setForm((prev) => {
       if (prev.selectedCourseIds.includes(id)) {
         const enrollment = { ...prev.enrollmentInrByCourseId };
@@ -541,6 +552,11 @@ export default function NewBatchPage() {
                                 {c.isDemo ? (
                                   <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
                                     Demo
+                                  </span>
+                                ) : null}
+                                {!String(c.headerImageUrl ?? "").trim() ? (
+                                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                                    No image
                                   </span>
                                 ) : null}
                               </span>

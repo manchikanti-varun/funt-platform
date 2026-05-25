@@ -31,9 +31,43 @@ export default function AssignmentStudentAccessPage() {
   const [allowedStudents, setAllowedStudents] = useState<AllowedStudent[]>([]);
   const [accessUsername, setAccessUsername] = useState("");
   const [accessBulkText, setAccessBulkText] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [accessLoading, setAccessLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function parseBulkIdentifiers(raw: string): string[] {
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        if (Array.isArray(parsed)) return parsed.map((x) => String(x).trim()).filter(Boolean);
+      } catch {
+        /* fall through */
+      }
+    }
+    return t.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size >= allowedStudents.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allowedStudents.map((s) => s.id)));
+  }
+
+  function toggleSelected(studentId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  }
+
+  async function reloadAccess() {
+    const r = await api<AllowedStudent[]>(`/api/global-assignments/${id}/access`);
+    if (r.success && Array.isArray(r.data)) setAllowedStudents(r.data);
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -64,15 +98,12 @@ export default function AssignmentStudentAccessPage() {
     setAccessLoading(false);
     if (res.success) {
       setAccessUsername("");
-      const r = await api<AllowedStudent[]>(`/api/global-assignments/${id}/access`);
-      if (r.success && Array.isArray(r.data)) setAllowedStudents(r.data);
+      await reloadAccess();
     } else setError(res.message ?? "Failed to add.");
   }
 
   async function bulkAddAccess() {
-    const raw = accessBulkText.trim();
-    if (!raw) return;
-    const identifiers = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const identifiers = parseBulkIdentifiers(accessBulkText);
     if (identifiers.length === 0) return;
     setAccessLoading(true);
     setError("");
@@ -83,11 +114,40 @@ export default function AssignmentStudentAccessPage() {
     setAccessLoading(false);
     if (res.success && res.data) {
       setAccessBulkText("");
-      if (res.data.notFound?.length)
-        setError(`Added: ${res.data.added}, not found: ${res.data.notFound.join(", ")}`);
-      const r = await api<AllowedStudent[]>(`/api/global-assignments/${id}/access`);
-      if (r.success && Array.isArray(r.data)) setAllowedStudents(r.data);
+      const parts = [`Added: ${res.data.added}`];
+      if (res.data.skipped) parts.push(`skipped: ${res.data.skipped}`);
+      if (res.data.notFound?.length) parts.push(`not found: ${res.data.notFound.join(", ")}`);
+      setError(parts.join(" · "));
+      await reloadAccess();
     } else setError(res.message ?? "Bulk add failed.");
+  }
+
+  async function bulkRemoveAccess(identifiers: string[]) {
+    if (identifiers.length === 0) return;
+    setAccessLoading(true);
+    setError("");
+    const res = await api<{ removed: number; skipped: number; notFound: string[] }>(
+      `/api/global-assignments/${id}/access/bulk-remove`,
+      { method: "POST", body: JSON.stringify({ identifiers }) }
+    );
+    setAccessLoading(false);
+    if (res.success && res.data) {
+      setAccessBulkText("");
+      setSelectedIds(new Set());
+      const parts = [`Removed: ${res.data.removed}`];
+      if (res.data.skipped) parts.push(`skipped: ${res.data.skipped}`);
+      if (res.data.notFound?.length) parts.push(`not found: ${res.data.notFound.join(", ")}`);
+      setError(parts.join(" · "));
+      await reloadAccess();
+    } else setError(res.message ?? "Bulk remove failed.");
+  }
+
+  function bulkRemoveFromText() {
+    void bulkRemoveAccess(parseBulkIdentifiers(accessBulkText));
+  }
+
+  function bulkRemoveSelected() {
+    void bulkRemoveAccess(Array.from(selectedIds));
   }
 
   async function removeAccess(studentId: string) {
@@ -95,8 +155,14 @@ export default function AssignmentStudentAccessPage() {
     setError("");
     const res = await api(`/api/global-assignments/${id}/access/${studentId}`, { method: "DELETE" });
     setAccessLoading(false);
-    if (res.success) setAllowedStudents((prev) => prev.filter((s) => s.id !== studentId));
-    else setError(res.message ?? "Failed to remove.");
+    if (res.success) {
+      setAllowedStudents((prev) => prev.filter((s) => s.id !== studentId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(studentId);
+        return next;
+      });
+    } else setError(res.message ?? "Failed to remove.");
   }
 
   if (loading) {
@@ -146,7 +212,7 @@ export default function AssignmentStudentAccessPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Student access</h1>
           <p className="mt-1 text-sm text-slate-600">{assignment.title}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Only students listed here can see and submit this assignment. Add by username or bulk (one per line or comma-separated).
+            Only students listed here can see and submit this assignment. Add or remove by username, bulk text, or row selection.
           </p>
         </div>
 
@@ -177,15 +243,47 @@ export default function AssignmentStudentAccessPage() {
                 rows={3}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
-              <button
-                type="button"
-                onClick={bulkAddAccess}
-                disabled={accessLoading}
-                className="mt-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Add bulk
-              </button>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={bulkAddAccess}
+                  disabled={accessLoading}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Add bulk
+                </button>
+                <button
+                  type="button"
+                  onClick={bulkRemoveFromText}
+                  disabled={accessLoading}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-800 hover:bg-rose-100 disabled:opacity-50"
+                >
+                  Remove bulk
+                </button>
+              </div>
             </div>
+            {allowedStudents.length > 0 && (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={allowedStudents.length > 0 && selectedIds.size === allowedStudents.length}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  Select all
+                </label>
+                <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
+                <button
+                  type="button"
+                  onClick={bulkRemoveSelected}
+                  disabled={accessLoading || selectedIds.size === 0}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-800 hover:bg-rose-100 disabled:opacity-50"
+                >
+                  Remove selected
+                </button>
+              </div>
+            )}
             <ul className="space-y-2">
               {allowedStudents.map((s) => (
                 <li
@@ -193,10 +291,22 @@ export default function AssignmentStudentAccessPage() {
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm"
                 >
                   <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s.id)}
+                      onChange={() => toggleSelected(s.id)}
+                      className="h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      aria-label={`Select ${s.username || s.id}`}
+                    />
                     <span className="font-mono text-slate-700">{s.username || s.id}</span>
                     <span className="text-slate-600">{s.name}</span>
                   </div>
-                  <DeleteIconButton title="Remove access" aria-label="Remove student access" onClick={() => removeAccess(s.id)} />
+                  <DeleteIconButton
+                    title="Remove access"
+                    aria-label="Remove student access"
+                    disabled={accessLoading}
+                    onClick={() => removeAccess(s.id)}
+                  />
                 </li>
               ))}
             </ul>

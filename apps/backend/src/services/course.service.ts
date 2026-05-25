@@ -304,17 +304,17 @@ export async function createCourse(input: CreateCourseInput) {
 
   const normalizedDescription = decodeEncodedRichText(input.description);
   const normalizedDurationText = String(input.durationText ?? "").trim();
-  const headerImageUrl =
-    input.headerImageUrl != null && String(input.headerImageUrl).trim()
-      ? assertHeaderImageUrl(String(input.headerImageUrl))
-      : undefined;
+  if (!String(input.headerImageUrl ?? "").trim()) {
+    throw new AppError("Course card image is required", 400);
+  }
+  const headerImageUrl = assertHeaderImageUrl(String(input.headerImageUrl));
   const courseId = await generateCourseId();
   const doc = await CourseModel.create({
     courseId,
     title: input.title.trim(),
     description: normalizedDescription.trim(),
     durationText: normalizedDurationText,
-    ...(headerImageUrl ? { headerImageUrl } : {}),
+    headerImageUrl,
     ...(input.isDemo ? { isDemo: true } : {}),
     modules: snapshots,
     version: 1,
@@ -355,10 +355,13 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.durationText !== undefined) (doc as { durationText?: string }).durationText = String(input.durationText).trim();
   if (input.headerImageUrl !== undefined) {
     if (input.headerImageUrl === null || input.headerImageUrl === "") {
-      (doc as { headerImageUrl?: string }).headerImageUrl = "";
-    } else {
-      (doc as { headerImageUrl?: string }).headerImageUrl = assertHeaderImageUrl(String(input.headerImageUrl));
+      throw new AppError("Course card image is required and cannot be removed", 400);
     }
+    (doc as { headerImageUrl?: string }).headerImageUrl = assertHeaderImageUrl(String(input.headerImageUrl));
+  }
+  const headerAfterPatch = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim();
+  if (!headerAfterPatch) {
+    throw new AppError("Course card image is required", 400);
   }
   if (input.isDemo !== undefined) {
     (doc as { isDemo?: boolean }).isDemo = !!input.isDemo;
@@ -490,12 +493,15 @@ export async function duplicateCourse(id: string, performedBy: string) {
   if (!source) throw new AppError("Course not found", 404);
   await assertCanEditCourseAsync(performedBy, source);
   const courseId = await generateCourseId();
-  const dupHeader = String((source as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
+  const dupHeader = String((source as { headerImageUrl?: string }).headerImageUrl ?? "").trim();
+  if (!dupHeader) {
+    throw new AppError("Cannot duplicate a course without a course card image", 400);
+  }
   const doc = await CourseModel.create({
     courseId,
     title: `${source.title} (Copy)`,
     description: source.description,
-    ...(dupHeader ? { headerImageUrl: dupHeader } : {}),
+    headerImageUrl: dupHeader,
     ...((source as { isDemo?: boolean }).isDemo ? { isDemo: true } : {}),
     modules: source.modules,
     version: 1,

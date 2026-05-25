@@ -15,6 +15,7 @@ import {
   getBatchStudents,
   addBatchStudent,
   bulkAddBatchStudents,
+  bulkRemoveBatchStudents,
   removeBatchStudent,
 } from "../controllers/batch.controller.js";
 
@@ -27,6 +28,7 @@ router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listBa
 router.get("/:id/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatchStudents);
 router.post("/:id/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addBatchStudent);
 router.post("/:id/students/bulk", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkAddBatchStudents);
+router.post("/:id/students/bulk-remove", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkRemoveBatchStudents);
 router.delete("/:id/students/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), removeBatchStudent);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatch);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), updateBatch);

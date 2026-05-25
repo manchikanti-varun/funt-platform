@@ -19,11 +19,6 @@ interface CourseCardProps {
   actions?: ReactNode;
 }
 
-function randomPlaceholderImage(seed: string): string {
-  const safeSeed = encodeURIComponent(seed || "course");
-  return `https://picsum.photos/seed/${safeSeed}/960/420`;
-}
-
 function RingProgress({ percent }: { percent: number }) {
   const p = Math.min(100, Math.max(0, percent));
   const circumference = 2 * Math.PI * 22;
@@ -70,7 +65,7 @@ export function CourseCard({
     ? raw.startsWith("data:image/")
       ? raw
       : resolveImageEmbedUrl(raw, 800)
-    : randomPlaceholderImage(title);
+    : "";
   const pct = locked ? 0 : progressPercent;
 
   return (
@@ -79,8 +74,14 @@ export function CourseCard({
         locked ? "opacity-80" : "hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
       }`}
     >
-      <div className="relative h-32 w-full shrink-0 overflow-hidden bg-slate-100">
-        <img src={imgSrc} alt="" className="h-full w-full object-cover" />
+      <div className="relative h-32 w-full shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
+        {imgSrc ? (
+          <img src={imgSrc} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <IconBook className="h-12 w-12 text-slate-400/80" aria-hidden />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
           <div className="min-w-0 flex-1">

@@ -322,3 +322,46 @@ export async function removeEnrollment(batchId: string, studentId: string, perfo
   await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
   return { removed: true };
 }
+
+export type BulkRemovalResult = {
+  removed: number;
+  skipped: number;
+  notFound: string[];
+};
+
+/** Bulk remove students from a batch by username or user id. */
+export async function bulkRemoveEnrollment(
+  batchId: string,
+  studentUsernamesOrIds: string[],
+  performedBy: string
+): Promise<BulkRemovalResult> {
+  if (!batchId?.trim()) throw new AppError("batchId is required", 400);
+  const batch = await findBatchByParam(batchId);
+  if (!batch) throw new AppError("Batch not found", 404);
+  const batchMongoId = String((batch as { _id: unknown })._id);
+
+  const result: BulkRemovalResult = { removed: 0, skipped: 0, notFound: [] };
+  const seen = new Set<string>();
+
+  for (const raw of studentUsernamesOrIds) {
+    const v = (raw && String(raw).trim()) || "";
+    if (!v || seen.has(v)) continue;
+    seen.add(v);
+
+    try {
+      const studentId = await resolveStudentId(v);
+      const doc = await EnrollmentModel.findOne({ studentId, batchId: batchMongoId }).exec();
+      if (!doc) {
+        result.skipped += 1;
+        continue;
+      }
+      await EnrollmentModel.deleteOne({ _id: doc._id }).exec();
+      await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
+      result.removed += 1;
+    } catch {
+      result.notFound.push(v);
+    }
+  }
+
+  return result;
+}

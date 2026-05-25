@@ -33,9 +33,43 @@ export default function BatchStudentAccessPage() {
   const [students, setStudents] = useState<BatchStudent[]>([]);
   const [username, setUsername] = useState("");
   const [bulkText, setBulkText] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
+
+  function parseBulkIdentifiers(raw: string): string[] {
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        if (Array.isArray(parsed)) return parsed.map((x) => String(x).trim()).filter(Boolean);
+      } catch {
+        /* fall through */
+      }
+    }
+    return t.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size >= students.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(students.map((s) => s.studentId)));
+  }
+
+  function toggleSelected(studentId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) next.delete(studentId);
+      else next.add(studentId);
+      return next;
+    });
+  }
+
+  async function reloadStudents() {
+    const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
+    if (r.success && Array.isArray(r.data)) setStudents(r.data);
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -69,15 +103,12 @@ export default function BatchStudentAccessPage() {
     setActionLoading(false);
     if (res.success) {
       setUsername("");
-      const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
-      if (r.success && Array.isArray(r.data)) setStudents(r.data);
+      await reloadStudents();
     } else setError(res.message ?? "Failed to add.");
   }
 
   async function bulkAdd() {
-    const raw = bulkText.trim();
-    if (!raw) return;
-    const identifiers = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const identifiers = parseBulkIdentifiers(bulkText);
     if (identifiers.length === 0) return;
     setActionLoading(true);
     setError("");
@@ -88,10 +119,40 @@ export default function BatchStudentAccessPage() {
     setActionLoading(false);
     if (res.success && res.data) {
       setBulkText("");
-      if (res.data.notFound?.length) setError(`Added: ${res.data.enrolled}, not found: ${res.data.notFound.join(", ")}`);
-      const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
-      if (r.success && Array.isArray(r.data)) setStudents(r.data);
+      const parts = [`Added: ${res.data.enrolled}`];
+      if (res.data.skipped) parts.push(`skipped: ${res.data.skipped}`);
+      if (res.data.notFound?.length) parts.push(`not found: ${res.data.notFound.join(", ")}`);
+      setError(parts.join(" · "));
+      await reloadStudents();
     } else setError(res.message ?? "Bulk add failed.");
+  }
+
+  async function bulkRemove(identifiers: string[]) {
+    if (identifiers.length === 0) return;
+    setActionLoading(true);
+    setError("");
+    const res = await api<{ removed: number; skipped: number; notFound: string[] }>(
+      `/api/batches/${id}/students/bulk-remove`,
+      { method: "POST", body: JSON.stringify({ identifiers }) }
+    );
+    setActionLoading(false);
+    if (res.success && res.data) {
+      setBulkText("");
+      setSelectedIds(new Set());
+      const parts = [`Removed: ${res.data.removed}`];
+      if (res.data.skipped) parts.push(`skipped: ${res.data.skipped}`);
+      if (res.data.notFound?.length) parts.push(`not found: ${res.data.notFound.join(", ")}`);
+      setError(parts.join(" · "));
+      await reloadStudents();
+    } else setError(res.message ?? "Bulk remove failed.");
+  }
+
+  function bulkRemoveFromText() {
+    void bulkRemove(parseBulkIdentifiers(bulkText));
+  }
+
+  function bulkRemoveSelected() {
+    void bulkRemove(Array.from(selectedIds));
   }
 
   async function setAccessBlocked(enrollmentId: string, blocked: boolean) {
@@ -136,8 +197,14 @@ export default function BatchStudentAccessPage() {
     setError("");
     const res = await api(`/api/batches/${id}/students/${studentId}`, { method: "DELETE" });
     setActionLoading(false);
-    if (res.success) setStudents((prev) => prev.filter((s) => s.studentId !== studentId));
-    else setError(res.message ?? "Failed to remove.");
+    if (res.success) {
+      setStudents((prev) => prev.filter((s) => s.studentId !== studentId));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(studentId);
+        return next;
+      });
+    } else setError(res.message ?? "Failed to remove.");
   }
 
   if (loading) {
@@ -205,16 +272,60 @@ export default function BatchStudentAccessPage() {
               rows={3}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <button type="button" onClick={bulkAdd} disabled={actionLoading} className="mt-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              Add bulk
-            </button>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={bulkAdd}
+                disabled={actionLoading}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Add bulk
+              </button>
+              <button
+                type="button"
+                onClick={bulkRemoveFromText}
+                disabled={actionLoading}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-800 hover:bg-rose-100 disabled:opacity-50"
+              >
+                Remove bulk
+              </button>
+            </div>
           </div>
+          {students.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={students.length > 0 && selectedIds.size === students.length}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                Select all
+              </label>
+              <span className="text-sm text-slate-500">{selectedIds.size} selected</span>
+              <button
+                type="button"
+                onClick={bulkRemoveSelected}
+                disabled={actionLoading || selectedIds.size === 0}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-semibold text-rose-800 hover:bg-rose-100 disabled:opacity-50"
+              >
+                Remove selected
+              </button>
+            </div>
+          )}
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
             <ul className="divide-y divide-slate-100">
               {students.map((s) => (
                 <li key={s.studentId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(s.studentId)}
+                        onChange={() => toggleSelected(s.studentId)}
+                        className="h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        aria-label={`Select ${s.username || s.studentId}`}
+                      />
                       <span className="font-mono text-slate-700">{s.username || s.studentId}</span>
                       <span className="min-w-0 truncate text-slate-600">{s.name}</span>
                     </div>

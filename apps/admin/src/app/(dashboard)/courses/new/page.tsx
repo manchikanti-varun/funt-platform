@@ -101,6 +101,10 @@ export default function NewCoursePage() {
       setError("Select at least one chapter.");
       return;
     }
+    if (!headerImageDataUrl.trim()) {
+      setError("Course card image is required.");
+      return;
+    }
     setError("");
     setLoading(true);
     const res = await api<{ id: string }>("/api/courses", {
@@ -110,7 +114,7 @@ export default function NewCoursePage() {
         description,
         durationText: durationText.trim(),
         globalChapterIds: selectedIds,
-        ...(headerImageDataUrl.trim() ? { headerImageUrl: headerImageDataUrl.trim() } : {}),
+        headerImageUrl: headerImageDataUrl.trim(),
         ...(isDemo ? { isDemo: true } : {}),
       }),
     });

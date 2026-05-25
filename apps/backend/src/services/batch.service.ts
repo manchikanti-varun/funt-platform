@@ -345,6 +345,12 @@ export async function createBatch(input: CreateBatchInput) {
     if (!course.modules || course.modules.length === 0) {
       throw new AppError(`Course "${(course as { title?: string }).title ?? course._id}" has no modules`, 400);
     }
+    if (!String((course as { headerImageUrl?: string }).headerImageUrl ?? "").trim()) {
+      throw new AppError(
+        `Course "${(course as { title?: string }).title ?? course._id}" needs a course card image before it can be added to a batch`,
+        400
+      );
+    }
   }
 
   const orderByInput = new Map(input.courseIds.map((id, i) => [id, i]));
@@ -573,6 +579,12 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
     for (const course of courses) {
       if (course.status === COURSE_STATUS.ARCHIVED) throw new AppError("Cannot assign an archived course to a batch", 400);
       if (!course.modules || course.modules.length === 0) throw new AppError("A course has no modules", 400);
+      if (!String((course as { headerImageUrl?: string }).headerImageUrl ?? "").trim()) {
+        throw new AppError(
+          `Course "${(course as { title?: string }).title ?? course._id}" needs a course card image before it can be added to a batch`,
+          400
+        );
+      }
     }
     const orderByInput = new Map(input.courseIds.map((cid, i) => [cid, i]));
     const getOrder = (c: { _id: unknown; courseId?: string }) =>

@@ -19,6 +19,7 @@ import {
   addAssignmentAccess,
   removeAssignmentAccess,
   bulkAddAssignmentAccess,
+  bulkRemoveAssignmentAccess,
 } from "../controllers/globalAssignment.controller.js";
 
 const router = Router();
@@ -33,6 +34,7 @@ router.get("/:id/submissions", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getSu
 router.get("/:id/access", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listAssignmentAccess);
 router.post("/:id/access", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addAssignmentAccess);
 router.post("/:id/access/bulk", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkAddAssignmentAccess);
+router.post("/:id/access/bulk-remove", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkRemoveAssignmentAccess);
 router.delete("/:id/access/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), removeAssignmentAccess);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAssignment);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateAssignment);
