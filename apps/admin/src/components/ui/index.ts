@@ -20,5 +20,11 @@ export { EmptyState } from "./EmptyState";
 export { FormPanel } from "./FormPanel";
 export { PageHeader } from "./PageHeader";
 export { PageSizeSelect, PAGE_SIZE_OPTIONS } from "./PageSizeSelect";
+export {
+  ChapterListActiveFilters,
+  CourseQuickPickBar,
+  SearchableCourseFilter,
+  type CourseFilterOption,
+} from "./SearchableCourseFilter";
 export { PageSection } from "./PageSection";
 export { SortableTh, type SortDir } from "./SortableTh";

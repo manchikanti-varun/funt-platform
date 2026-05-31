@@ -12,9 +12,9 @@ import { SortableTh, type SortDir } from "@/components/ui/SortableTh";
 import { BackLink } from "@/components/ui/BackLink";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { DeleteIconButton, UnarchiveIconButton } from "@/components/ui/actionIconButtons";
-import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog, SearchableCourseFilter, CourseQuickPickBar, ChapterListActiveFilters } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
-import { Eye, SquarePen } from "lucide-react";
+import { Eye, Search, SquarePen } from "lucide-react";
 
 interface ChapterItem {
   id: string;
@@ -27,6 +27,13 @@ interface ChapterItem {
 interface CourseFilterOption {
   id: string;
   title: string;
+  chapterCount?: number;
+}
+
+interface CoursesApiRow {
+  id: string;
+  title: string;
+  modules?: unknown[];
 }
 
 export default function GlobalChaptersPage() {
@@ -72,13 +79,22 @@ export default function GlobalChaptersPage() {
     }
   }
 
+  const selectedCourse = useMemo(
+    () => courses.find((c) => c.id === selectedCourseId) ?? null,
+    [courses, selectedCourseId],
+  );
+
   useEffect(() => {
     setCoursesLoading(true);
-    api<CourseFilterOption[]>("/api/courses")
+    api<CoursesApiRow[]>("/api/courses")
       .then((r) => {
         if (r.success && Array.isArray(r.data)) {
           const sorted = [...r.data]
-            .map((c) => ({ id: c.id, title: c.title }))
+            .map((c) => ({
+              id: c.id,
+              title: c.title,
+              chapterCount: Array.isArray(c.modules) ? c.modules.length : undefined,
+            }))
             .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
           setCourses(sorted);
         }
@@ -183,48 +199,49 @@ export default function GlobalChaptersPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Global Chapters</h2>
           <p className="mt-1 text-sm text-slate-600">Create and manage chapter templates. Add them to courses in order.</p>
-          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-start">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search chapters by title or description…"
-              className="w-full shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:max-w-sm"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Filter by course</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedCourseId("")}
-                  className={
-                    selectedCourseId === ""
-                      ? "rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
-                      : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
-                  }
-                >
-                  All courses
-                </button>
-                {coursesLoading ? (
-                  <span className="self-center text-xs text-slate-500">Loading courses…</span>
-                ) : (
-                  courses.map((course) => (
-                    <button
-                      key={course.id}
-                      type="button"
-                      onClick={() => setSelectedCourseId(course.id)}
-                      className={
-                        selectedCourseId === course.id
-                          ? "rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
-                          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
-                      }
-                    >
-                      {course.title}
-                    </button>
-                  ))
-                )}
+          <div className="mt-5 rounded-xl border border-slate-200/80 bg-white/90 p-4 shadow-sm">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end lg:grid-cols-[minmax(0,1.4fr)_minmax(12rem,16rem)]">
+              <div>
+                <label htmlFor="chapter-search" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+                  <input
+                    id="chapter-search"
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search chapters by title or description…"
+                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                </div>
               </div>
+              <SearchableCourseFilter
+                value={selectedCourseId}
+                onChange={setSelectedCourseId}
+                courses={courses}
+                loading={coursesLoading}
+              />
             </div>
+            <CourseQuickPickBar
+              value={selectedCourseId}
+              onChange={setSelectedCourseId}
+              courses={courses}
+              loading={coursesLoading}
+            />
+            <ChapterListActiveFilters
+              resultCount={list.length}
+              loading={loading}
+              search={search}
+              selectedCourseTitle={selectedCourse?.title}
+              onClearSearch={() => setSearch("")}
+              onClearCourse={() => setSelectedCourseId("")}
+              onClearAll={() => {
+                setSearch("");
+                setSelectedCourseId("");
+              }}
+            />
           </div>
         </div>
         {loading ? (
