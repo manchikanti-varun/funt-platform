@@ -24,17 +24,25 @@ interface ChapterItem {
   status: string;
 }
 
+interface CourseFilterOption {
+  id: string;
+  title: string;
+}
+
 export default function GlobalChaptersPage() {
   const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const router = useRouter();
   const [list, setList] = useState<ChapterItem[]>([]);
+  const [courses, setCourses] = useState<CourseFilterOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [coursesLoading, setCoursesLoading] = useState(true);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedCourseId, setSelectedCourseId] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [readOnly, setReadOnly] = useState(false);
@@ -65,21 +73,37 @@ export default function GlobalChaptersPage() {
   }
 
   useEffect(() => {
+    setCoursesLoading(true);
+    api<CourseFilterOption[]>("/api/courses")
+      .then((r) => {
+        if (r.success && Array.isArray(r.data)) {
+          const sorted = [...r.data]
+            .map((c) => ({ id: c.id, title: c.title }))
+            .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+          setCourses(sorted);
+        }
+      })
+      .finally(() => setCoursesLoading(false));
+  }, []);
+
+  useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(t);
   }, [search]);
 
   useEffect(() => {
     setLoading(true);
-    const url = debouncedSearch.trim()
-      ? `/api/global-chapters?search=${encodeURIComponent(debouncedSearch.trim())}`
-      : "/api/global-chapters";
+    const params = new URLSearchParams();
+    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+    if (selectedCourseId) params.set("courseId", selectedCourseId);
+    const qs = params.toString();
+    const url = qs ? `/api/global-chapters?${qs}` : "/api/global-chapters";
     api<ChapterItem[]>(url)
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setList(r.data);
       })
       .finally(() => setLoading(false));
-  }, [debouncedSearch]);
+  }, [debouncedSearch, selectedCourseId]);
 
   async function handleDuplicate(chapterId: string) {
     setDuplicatingId(chapterId);
@@ -89,7 +113,12 @@ export default function GlobalChaptersPage() {
       router.push(`/global-modules/${res.data.id}`);
       return;
     }
-    const r = await api<ChapterItem[]>("/api/global-chapters");
+    const params = new URLSearchParams();
+    if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
+    if (selectedCourseId) params.set("courseId", selectedCourseId);
+    const qs = params.toString();
+    const refreshUrl = qs ? `/api/global-chapters?${qs}` : "/api/global-chapters";
+    const r = await api<ChapterItem[]>(refreshUrl);
     if (r.success && Array.isArray(r.data)) setList(r.data);
   }
 
@@ -154,14 +183,48 @@ export default function GlobalChaptersPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Global Chapters</h2>
           <p className="mt-1 text-sm text-slate-600">Create and manage chapter templates. Add them to courses in order.</p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-start">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chapters by title or description…"
-              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="w-full shrink-0 rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20 lg:max-w-sm"
             />
+            <div className="min-w-0 flex-1">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Filter by course</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCourseId("")}
+                  className={
+                    selectedCourseId === ""
+                      ? "rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+                      : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
+                  }
+                >
+                  All courses
+                </button>
+                {coursesLoading ? (
+                  <span className="self-center text-xs text-slate-500">Loading courses…</span>
+                ) : (
+                  courses.map((course) => (
+                    <button
+                      key={course.id}
+                      type="button"
+                      onClick={() => setSelectedCourseId(course.id)}
+                      className={
+                        selectedCourseId === course.id
+                          ? "rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+                          : "rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800"
+                      }
+                    >
+                      {course.title}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
         {loading ? (
@@ -176,14 +239,22 @@ export default function GlobalChaptersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <p className="mt-4 text-base font-medium text-slate-700">No chapters yet</p>
-            <p className="mt-1 text-sm text-slate-500">Create your first global chapter to get started.</p>
+            <p className="mt-4 text-base font-medium text-slate-700">
+              {selectedCourseId || debouncedSearch.trim() ? "No chapters match your filters" : "No chapters yet"}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              {selectedCourseId || debouncedSearch.trim()
+                ? "Try another course or clear the search."
+                : "Create your first global chapter to get started."}
+            </p>
+            {!selectedCourseId && !debouncedSearch.trim() && (
             <Link
               href="/global-modules/new"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
             >
               New Chapter
             </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

@@ -2,6 +2,7 @@
 import { GlobalModuleModel } from "../models/GlobalModule.model.js";
 import { MODULE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { findCourseByParam } from "./course.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateModuleId } from "../utils/funtIdGenerator.js";
 
@@ -116,13 +117,37 @@ export async function createModule(input: CreateModuleInput) {
   };
 }
 
-export async function listModules(filters?: { status?: string; search?: string }) {
+export async function listModules(filters?: { status?: string; search?: string; courseId?: string }) {
   const query: Record<string, unknown> = {};
+  const andClauses: Record<string, unknown>[] = [];
+
   if (filters?.status) query.status = filters.status;
+
   if (filters?.search?.trim()) {
     const term = String(filters.search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    query.$or = [{ title: { $regex: term, $options: "i" } }, { description: { $regex: term, $options: "i" } }];
+    andClauses.push({
+      $or: [{ title: { $regex: term, $options: "i" } }, { description: { $regex: term, $options: "i" } }],
+    });
   }
+
+  if (filters?.courseId?.trim()) {
+    const course = await findCourseByParam(filters.courseId.trim());
+    if (!course) throw new AppError("Course not found", 404);
+    const modules = (course.modules ?? []) as Array<{ originalGlobalModuleId?: string }>;
+    const globalIds = [...new Set(modules.map((m) => String(m.originalGlobalModuleId ?? "").trim()).filter(Boolean))];
+    if (globalIds.length === 0) return [];
+
+    const oidMatches = globalIds.filter((id) => OBJECT_ID_REGEX.test(id));
+    const humanMatches = globalIds.filter((id) => !OBJECT_ID_REGEX.test(id));
+    const moduleOr: Record<string, unknown>[] = [];
+    if (humanMatches.length) moduleOr.push({ moduleId: { $in: humanMatches } });
+    if (oidMatches.length) moduleOr.push({ _id: { $in: oidMatches } });
+    andClauses.push({ $or: moduleOr });
+  }
+
+  if (andClauses.length === 1) Object.assign(query, andClauses[0]);
+  else if (andClauses.length > 1) query.$and = andClauses;
+
   const list = await GlobalModuleModel.find(query)
     .sort({ updatedAt: -1 })
     .lean()

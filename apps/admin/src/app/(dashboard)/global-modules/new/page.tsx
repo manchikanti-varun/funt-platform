@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
 import { useAutoSavedForm } from "@/lib/useAutoSavedForm";
 import { ROLE } from "@funt-platform/constants";
 
@@ -69,13 +68,11 @@ export default function NewGlobalChapterPage() {
       return;
     }
     setLoading(true);
-    const preview = truncateRichTextHtml(content, 160);
-    const autoDescription = preview.trim() ? preview : title.trim();
     const res = await api<{ id: string }>("/api/global-chapters", {
       method: "POST",
         body: JSON.stringify({
         title,
-        description: autoDescription,
+        description: title.trim(),
         content,
         youtubeUrl: youtubeUrl || undefined,
         videoUrl: videoUrl || undefined,

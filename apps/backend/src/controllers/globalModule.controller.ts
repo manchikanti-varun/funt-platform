@@ -29,7 +29,12 @@ export const createModule = asyncHandler(async (req: Request, res: Response): Pr
 export const listModules = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const status = req.query.status as string | undefined;
   const search = (req.query.search ?? req.query.q) as string | undefined;
-  const data = await service.listModules({ ...(status && { status }), ...(search && { search }) });
+  const courseId = req.query.courseId as string | undefined;
+  const data = await service.listModules({
+    ...(status && { status }),
+    ...(search && { search }),
+    ...(courseId && { courseId }),
+  });
   successRes(res, data);
 });
 

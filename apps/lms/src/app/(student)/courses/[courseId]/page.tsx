@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api, resolveMediaPlaybackUrl } from "@/lib/api";
 import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
+import { shouldShowChapterDescription } from "@funt-platform/rich-text-editor";
 import { AppPageShell, DataPanel } from "@/components/ui";
 
 interface ChapterItem {
@@ -19,6 +20,8 @@ interface ChapterItem {
   /** Parsed id for LMS embed (avoids iframe → API redirect → YouTube with YT.Player, which triggers Error 153). */
   youtubeVideoId?: string;
   videoPlaybackUrl?: string;
+  /** True for Google Drive / embed-only URLs that must use an iframe player. */
+  videoIsEmbed?: boolean;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
   unlocked: boolean;
@@ -364,7 +367,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
       </div>
     );
   }
@@ -373,7 +376,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     if (shouldRedirectToCourses) {
       return (
         <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
         </div>
       );
     }
@@ -387,11 +390,11 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
     return (
       <AppPageShell className="max-w-6xl pb-8">
         <div className="flex min-h-[60vh] items-center justify-center">
-          <DataPanel className="w-full max-w-3xl overflow-hidden border border-black/10 bg-white/95 shadow-xl shadow-black/10">
-          <div className="border-b border-black/10 bg-gradient-to-r from-funt-honey/35 via-white to-funt-honey/20 px-6 py-5">
+          <DataPanel className="w-full max-w-3xl overflow-hidden border border-slate-200 bg-white/95 shadow-xl">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50/35 via-white to-indigo-50/30 px-6 py-5">
             <p className="label-overline">Course Access</p>
-            <h1 className="mt-1 text-xl font-black tracking-tight text-black">{title}</h1>
-            <p className="mt-1 text-sm text-black/70">
+            <h1 className="mt-1 text-xl font-black tracking-tight text-slate-900">{title}</h1>
+            <p className="mt-1 text-sm text-slate-700">
               {description}
             </p>
           </div>
@@ -426,39 +429,39 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const completedCount = chapters.filter((m) => m.completed).length;
   const totalChapters = chapters.length;
   const progressPercent = totalChapters > 0 ? Math.round((completedCount / totalChapters) * 100) : 0;
-  const hasLessons = !!(selected?.description || selected?.content);
+  const hasLessons = !!(selected?.content?.trim() || selected?.description?.trim());
   const hasHostedVideo = !!selected?.videoPlaybackUrl;
   const hasResourceLink = !!selected?.resourceLinkUrl?.trim?.();
   const hasAssignments = !!selected?.linkedAssignmentId;
 
   return (
     <AppPageShell className="max-w-7xl pb-8">
-      <div className="page-hero flex shrink-0 items-center gap-3 border-black/10 py-5">
-        <Link href="/courses" className="inline-flex items-center gap-2 rounded-lg border-2 border-black/10 bg-white px-3 py-2 text-sm font-semibold text-black/70 shadow-sm transition hover:border-black/20 hover:bg-funt-honey/30 hover:text-black">
+      <div className="page-hero flex shrink-0 items-center gap-3 border-slate-200 py-5">
+        <Link href="/courses" className="inline-flex items-center gap-2 rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50/30 hover:text-slate-900">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           Back to Courses
         </Link>
         {data.zoomLink && (
-          <a href={data.zoomLink} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-2 rounded-lg bg-funt-gold px-4 py-2 text-sm font-semibold text-black shadow-sm transition hover:bg-funt-gold-hover">
+          <a href={data.zoomLink} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500">
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             Join Zoom
           </a>
         )}
       </div>
 
-      <DataPanel className="flex flex-col border border-black/10 bg-white/95 shadow-xl shadow-black/10">
+      <DataPanel className="flex flex-col border border-slate-200 bg-white/95 shadow-xl">
         {!showChapters && (
-          <div className="border-b border-black/10 bg-gradient-to-b from-funt-honey/40 to-white px-6 py-6">
+          <div className="border-b border-slate-200 bg-gradient-to-b from-slate-50/40 to-white px-6 py-6">
             <div className="min-w-0">
-              <h1 className="text-2xl font-black tracking-tight text-black">{courseTitle}</h1>
+              <h1 className="text-2xl font-black tracking-tight text-slate-900">{courseTitle}</h1>
               {courseDescription && (
-                <div className={`mt-5 w-full text-black/70 text-sm ${RICH_TEXT_VIEW_CLASS} [&_.ql-cursor]:hidden`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
+                <div className={`mt-5 w-full text-slate-700 text-sm ${RICH_TEXT_VIEW_CLASS} [&_.ql-cursor]:hidden`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
               )}
             </div>
           </div>
         )}
 
-        <div className="bg-funt-honey/20 px-6 py-6">
+        <div className="bg-slate-50/20 px-6 py-6">
           {blockedByAdmin ? (
             <div className="surface-blocked mx-auto max-w-lg">
               <p className="label-overline text-rose-800/90">Access</p>
@@ -474,38 +477,38 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
             </div>
           ) : !hasAccess ? (
             <div className="card-elevated mx-auto max-w-lg p-10">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-funt-gold/25 text-black ring-1 ring-funt-gold/35 mb-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-600/25 text-slate-900 ring-1 ring-indigo-200 mb-4">
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
               </div>
-              <p className="text-lg font-semibold tracking-tight text-black">Not enrolled</p>
+              <p className="text-lg font-semibold tracking-tight text-slate-900">Not enrolled</p>
               <p className="text-muted mt-2">
                 {data.visibility === "PRIVATE"
                   ? "This is a private batch. Ask management for access, or send an access request."
                   : (
                     <>
-                      Choose <strong className="text-black">Pay</strong> to submit UPI or Razorpay proof, or{" "}
-                      <strong className="text-black">Enter license key</strong> if your school gave you a code.
+                      Choose <strong className="text-slate-900">Pay</strong> to submit UPI or Razorpay proof, or{" "}
+                      <strong className="text-slate-900">Enter license key</strong> if your school gave you a code.
                     </>
                   )}
               </p>
               {data?.hasRejectedCoursePayment ? (
-                <p className="mt-4 rounded-xl border-2 border-black bg-funt-honey px-4 py-3 text-sm font-medium text-black">
+                <p className="mt-4 rounded-xl border-2 border-amber-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900">
                   Your last payment was not approved.
                   {data.coursePaymentRejectReason?.trim() ? (
-                    <span className="mt-1 block font-normal text-black/80">Reason: {data.coursePaymentRejectReason.trim()}</span>
+                    <span className="mt-1 block font-normal text-slate-800">Reason: {data.coursePaymentRejectReason.trim()}</span>
                   ) : null}
-                  <span className="mt-2 block font-normal text-black/80">Submit a new payment below with the correct details.</span>
+                  <span className="mt-2 block font-normal text-slate-800">Submit a new payment below with the correct details.</span>
                 </p>
               ) : null}
               {chapters.length > 0 && (
-                <div className="mt-6 rounded-xl border-2 border-black/10 bg-funt-honey/40 p-4">
-                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-black/45">
+                <div className="mt-6 rounded-xl border-2 border-slate-200 bg-slate-50/40 p-4">
+                  <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Chapters ({chapters.length})
                   </h3>
                   <ul className="space-y-1.5">
                     {chapters.slice().sort((a, b) => a.order - b.order).map((m) => (
-                      <li key={m.order} className="flex items-center gap-2 text-sm text-black/70">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 text-xs font-bold text-black">{(m.order ?? 0) + 1}</span>
+                      <li key={m.order} className="flex items-center gap-2 text-sm text-slate-700">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 text-xs font-bold text-slate-900">{(m.order ?? 0) + 1}</span>
                         {m.title}
                       </li>
                     ))}
@@ -514,7 +517,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
               )}
               <div className="mt-6 space-y-3">
                 {data?.hasPendingCoursePayment || data?.hasPendingRequest ? (
-                  <p className="flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-gold/25 px-4 py-3 text-sm font-semibold text-black">
+                  <p className="flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-indigo-600/25 px-4 py-3 text-sm font-semibold text-slate-900">
                     <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -528,7 +531,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                     type="button"
                     onClick={() => void handleRequestAccess()}
                     disabled={requestingAccess || !!data?.hasPendingRequest}
-                    className="inline-flex items-center justify-center rounded-xl bg-funt-gold px-6 py-3 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover disabled:opacity-60"
+                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500 disabled:opacity-60"
                   >
                     {data?.hasPendingRequest
                       ? "Access request pending"
@@ -540,13 +543,13 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                 {data?.batchId && courseId && !data?.hasPendingCoursePayment && data.visibility !== "PRIVATE" ? (
                   <Link
                     href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}`}
-                    className="inline-flex items-center justify-center rounded-xl bg-funt-gold px-6 py-3 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover"
+                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500"
                   >
                     Pay for access
                   </Link>
                 ) : null}
-                <div className="rounded-xl border border-dashed border-black/15 bg-funt-honey/25 px-4 py-4">
-                  <p className="text-sm font-semibold text-black">Have a license key?</p>
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/25 px-4 py-4">
+                  <p className="text-sm font-semibold text-slate-900">Have a license key?</p>
                   <Link href="/enroll-license" className="btn-secondary mt-3 inline-flex w-full items-center justify-center py-2.5 text-sm font-semibold">
                     Enter license key
                   </Link>
@@ -556,19 +559,19 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
           ) : (
             <>
               {!showChapters ? (
-                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-black/10 bg-white/95 p-10 shadow-lg shadow-black/10 ring-1 ring-black/5">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-funt-honey text-black mb-4">
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white/95 p-10 shadow-lg shadow-md ring-1 ring-indigo-100">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-900 mb-4">
                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                   </div>
-                  <span className="rounded-full bg-funt-gold/30 px-3 py-1 text-sm font-bold text-black">{chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</span>
-                  <p className="mt-4 text-black/65">Open the chapter list and start learning.</p>
-                  <button type="button" onClick={() => router.push(learnRoute)} className="mt-6 rounded-xl bg-funt-gold px-10 py-3.5 text-base font-bold text-black shadow-lg shadow-black/10 transition hover:bg-funt-gold-hover hover:shadow-black/15">
+                  <span className="rounded-full bg-indigo-600/30 px-3 py-1 text-sm font-bold text-slate-900">{chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</span>
+                  <p className="mt-4 text-slate-65">Open the chapter list and start learning.</p>
+                  <button type="button" onClick={() => router.push(learnRoute)} className="mt-6 rounded-xl bg-indigo-600 px-10 py-3.5 text-base font-bold text-white shadow-lg shadow-md transition hover:bg-indigo-500 hover:shadow-lg">
                     {hasProgress ? "Continue" : "Start"}
                   </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-black/10 bg-white/95 p-5 shadow-lg shadow-black/10 ring-1 ring-black/5 lg:w-80">
+                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-lg shadow-md ring-1 ring-indigo-100 lg:w-80">
                     <button
                       type="button"
                       onClick={() => {
@@ -578,38 +581,38 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                         }
                         setShowChapters(false);
                       }}
-                      className="mb-3 flex w-fit items-center gap-1.5 text-sm font-semibold text-black/60 hover:text-black"
+                      className="mb-3 flex w-fit items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                       Back
                     </button>
-                    <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-black">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-funt-gold/35 text-black"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg></span>
+                    <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/35 text-slate-900"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg></span>
                       Chapters
                     </h2>
-                    <div className="mb-4 rounded-xl border-2 border-black/10 bg-funt-honey/40 p-3">
+                    <div className="mb-4 rounded-xl border-2 border-slate-200 bg-slate-50/40 p-3">
                       <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
-                        <div className="h-full rounded-full bg-funt-gold-deep transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                        <div className="h-full rounded-full bg-indigo-600-deep transition-all duration-300" style={{ width: `${progressPercent}%` }} />
                       </div>
-                      <p className="mt-2 text-sm font-semibold text-black">{completedCount} of {totalChapters} completed</p>
-                      <p className="text-xs text-black/50">{totalChapters - completedCount} pending</p>
-                      {markCompleteSuccess && <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-black">Progress saved</p>}
+                      <p className="mt-2 text-sm font-semibold text-slate-900">{completedCount} of {totalChapters} completed</p>
+                      <p className="text-xs text-slate-50">{totalChapters - completedCount} pending</p>
+                      {markCompleteSuccess && <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-900">Progress saved</p>}
                     </div>
                     {totalChapters > 0 && progressPercent === 100 && (
-                      <div className="mb-4 rounded-xl border-2 border-black/10 bg-funt-honey/50 p-3">
+                      <div className="mb-4 rounded-xl border-2 border-slate-200 bg-slate-50/50 p-3">
                         {certSuccess ? (
                           <div className="space-y-2">
-                            <p className="flex items-center gap-1.5 text-sm font-bold text-black">Certificate generated</p>
-                            <Link href="/certificates" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-funt-gold px-3 py-2 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover">View in Certificates</Link>
+                            <p className="flex items-center gap-1.5 text-sm font-bold text-slate-900">Certificate generated</p>
+                            <Link href="/certificates" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">View in Certificates</Link>
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            <p className="text-xs font-bold text-black">Course completed</p>
-                            <p className="text-xs text-black/70">Certificates are free — tap generate when you are eligible.</p>
-                            <button type="button" onClick={handleGenerateCertificate} disabled={generatingCert} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-funt-gold px-3 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">
-                              {generatingCert ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" />Generating…</> : <>Generate certificate</>}
+                            <p className="text-xs font-bold text-slate-900">Course completed</p>
+                            <p className="text-xs text-slate-700">Certificates are free — tap generate when you are eligible.</p>
+                            <button type="button" onClick={handleGenerateCertificate} disabled={generatingCert} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">
+                              {generatingCert ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />Generating…</> : <>Generate certificate</>}
                             </button>
-                            {certError && <p className="text-xs font-semibold text-black">{certError}</p>}
+                            {certError && <p className="text-xs font-semibold text-slate-900">{certError}</p>}
                           </div>
                         )}
                       </div>
@@ -618,10 +621,10 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       <ul className="space-y-1.5">
                         {chapters.map((m) => (
                           <li key={m.order}>
-                            <button type="button" onClick={() => setSelectedOrder(m.order)} disabled={!m.unlocked} className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${selected?.order === m.order ? "bg-funt-gold text-black shadow-md ring-2 ring-black/10" : m.unlocked ? "text-black/80 hover:bg-funt-honey/50 hover:text-black" : "cursor-not-allowed text-black/35"}`}>
+                            <button type="button" onClick={() => setSelectedOrder(m.order)} disabled={!m.unlocked} className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${selected?.order === m.order ? "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-200" : m.unlocked ? "text-slate-800 hover:bg-slate-50/50 hover:text-slate-900" : "cursor-not-allowed text-slate-400"}`}>
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">{m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}</span>
                               <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                              <span className="shrink-0 text-[11px] font-semibold text-black/55">
+                              <span className="shrink-0 text-[11px] font-semibold text-slate-55">
                                 {m.completed ? "Completed" : m.unlocked ? "In Progress" : "Not Started"}
                               </span>
                             </button>
@@ -630,30 +633,30 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       </ul>
                     </div>
                   </aside>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-black/10 bg-white/95 p-6 shadow-lg shadow-black/10 ring-1 ring-black/5">
+                  <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-lg shadow-md ring-1 ring-indigo-100">
                     {selected ? (
                       <div className="space-y-8">
-                        <h2 className="text-xl font-black tracking-tight text-black border-b border-black/10 pb-4">{selected.title}</h2>
+                        <h2 className="text-xl font-black tracking-tight text-slate-900 border-b border-slate-200 pb-4">{selected.title}</h2>
                         {hasLessons && (
-                          <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Content</h3>
-                            {selected.description && (
-                              <div className={`text-black/70 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
+                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Content</h3>
+                            {shouldShowChapterDescription(selected.description, selected.content) && (
+                              <div className={`text-slate-700 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
                             )}
-                            {selected.content && <div className={`text-black/80 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
+                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
                             {selected.hasContent && (
                               <div className="mt-4">
-                                {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
+                                {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
                               </div>
                             )}
                           </section>
                         )}
                         {hasYoutube && (
-                          <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">YouTube Video</h3>
+                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">YouTube Video</h3>
                             {selected.youtubeVideoId ? (
                               <>
-                                <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner ring-1 ring-black/10">
+                                <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner ring-1 ring-indigo-200">
                                   <iframe
                                     ref={youtubeFrameRef}
                                     title={selected.title}
@@ -673,10 +676,10 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                   <span
                                     className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold ${
                                       selected.youtubeCompleted
-                                        ? "border-black/15 bg-funt-honey text-black"
+                                        ? "border-slate-300 bg-slate-50 text-slate-900"
                                         : selected.unlocked
-                                          ? "border-black/10 bg-white text-black/75"
-                                          : "border-black/10 bg-white text-black/55"
+                                          ? "border-slate-200 bg-white text-slate-75"
+                                          : "border-slate-200 bg-white text-slate-55"
                                     }`}
                                   >
                                     {selected.youtubeCompleted
@@ -685,13 +688,13 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                         ? "In Progress"
                                         : "Not Started"}
                                   </span>
-                                  {markCompleteError && <p className="text-sm font-medium text-black">{markCompleteError}</p>}
+                                  {markCompleteError && <p className="text-sm font-medium text-slate-900">{markCompleteError}</p>}
                                 </div>
                               </>
                             ) : (
-                              <div className="rounded-xl border border-black/10 bg-funt-honey/30 p-4 text-sm text-black/80">
-                                <p className="font-medium text-black">Inline player needs a course refresh</p>
-                                <p className="mt-2 text-black/70">
+                              <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-4 text-sm text-slate-800">
+                                <p className="font-medium text-slate-900">Inline player needs a course refresh</p>
+                                <p className="mt-2 text-slate-700">
                                   This chapter has no embed id yet. Ask your admin to re-save the course, or open the video in a new tab (your LMS tab stays here).
                                 </p>
                                 {selected.youtubeEmbedUrl ? (
@@ -699,7 +702,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                     href={resolveMediaPlaybackUrl(selected.youtubeEmbedUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-funt-gold-hover"
+                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500"
                                   >
                                     Open video in new tab
                                   </a>
@@ -709,40 +712,64 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           </section>
                         )}
                         {hasHostedVideo && (
-                          <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Video</h3>
+                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Video</h3>
                             <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
-                              <video
-                                src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
-                                controls
-                                controlsList="nodownload noremoteplayback"
-                                disablePictureInPicture
-                                className="w-full h-full"
-                                onEnded={() => {
-                                  if (!isPartCompleted("video")) void handleMarkPartComplete("video");
-                                }}
-                              />
+                              {selected.videoIsEmbed ? (
+                                <iframe
+                                  title={selected.title}
+                                  src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
+                                  className="h-full w-full min-h-[220px]"
+                                  allow="autoplay; fullscreen"
+                                  allowFullScreen
+                                />
+                              ) : (
+                                <video
+                                  src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
+                                  controls
+                                  controlsList="nodownload noremoteplayback"
+                                  disablePictureInPicture
+                                  className="w-full h-full"
+                                  onEnded={() => {
+                                    if (!isPartCompleted("video")) void handleMarkPartComplete("video");
+                                  }}
+                                />
+                              )}
                             </div>
                             <div className="mt-4">
                               {isPartCompleted("video") ? (
-                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Completed</span>
+                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Completed</span>
+                              ) : selected.videoIsEmbed ? (
+                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+                                  Watch the full video, then mark as completed when you are done.
+                                </span>
                               ) : (
-                                <span className="inline-flex items-center gap-2 rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black/70">
+                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
                                   Auto-completes after full video playback.
                                 </span>
                               )}
-                              {markCompleteError && <p className="mt-2 text-sm font-medium text-black">{markCompleteError}</p>}
+                              {!isPartCompleted("video") && selected.videoIsEmbed && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleMarkPartComplete("video")}
+                                  disabled={markingComplete}
+                                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60"
+                                >
+                                  {markingComplete ? "Marking…" : "Mark as completed"}
+                                </button>
+                              )}
+                              {markCompleteError && <p className="mt-2 text-sm font-medium text-slate-900">{markCompleteError}</p>}
                             </div>
                           </section>
                         )}
                         {hasResourceLink && (
-                          <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Resource</h3>
+                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Resource</h3>
                             <a
                               href={selected.resourceLinkUrl!.startsWith("http") ? selected.resourceLinkUrl! : `https://${selected.resourceLinkUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 rounded-xl border-2 border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black shadow-sm transition hover:border-funt-gold hover:bg-funt-honey/50"
+                              className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-indigo-300 hover:bg-slate-50/50"
                             >
                               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                               Open resource
@@ -750,15 +777,15 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           </section>
                         )}
                         {hasAssignments && (
-                          <section className="rounded-2xl border-2 border-black/10 bg-gradient-to-b from-funt-honey/30 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-black/60 mb-2">Assignment</h3>
-                            <p className="text-black/70 mb-4">Course assignment for this chapter. Submit and wait for admin approval to complete this part.</p>
-                            {selected.assignmentCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-black/15 bg-funt-honey px-4 py-2.5 text-sm font-bold text-black">Approved</span> : <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`} className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-bold text-black shadow-md transition hover:bg-funt-gold-hover">Submit Assignment</Link>}
+                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Assignment</h3>
+                            <p className="text-slate-700 mb-4">Course assignment for this chapter. Submit and wait for admin approval to complete this part.</p>
+                            {selected.assignmentCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Approved</span> : <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500">Submit Assignment</Link>}
                           </section>
                         )}
                       </div>
                     ) : (
-                      <div className="flex min-h-[240px] items-center justify-center rounded-2xl border-2 border-dashed border-black/15 bg-funt-honey/20"><p className="text-black/55">Select a chapter from the list.</p></div>
+                      <div className="flex min-h-[240px] items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/20"><p className="text-slate-55">Select a chapter from the list.</p></div>
                     )}
                   </div>
                 </div>

@@ -9,7 +9,6 @@ import { MODULE_STATUS, ROLE } from "@funt-platform/constants";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
-import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
 
 interface VersionSnapshot {
   version: number;
@@ -83,13 +82,11 @@ export default function EditGlobalChapterPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const preview = truncateRichTextHtml(content, 160);
-    const autoDescription = preview.trim() ? preview : title.trim();
     const res = await api(`/api/global-chapters/${id}`, {
       method: "PUT",
       body: JSON.stringify({
         title,
-        description: autoDescription,
+        description: title.trim(),
         content,
         youtubeUrl: youtubeUrl || undefined,
         videoUrl: videoUrl || undefined,

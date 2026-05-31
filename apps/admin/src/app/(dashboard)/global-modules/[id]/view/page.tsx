@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { isTrainerOnly } from "@/lib/auth";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
+import { shouldShowChapterDescription } from "@funt-platform/rich-text-editor";
 import { MODULE_STATUS, ROLE } from "@funt-platform/constants";
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import {
@@ -16,7 +17,7 @@ import {
   EntityDetailShell,
 } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
-import { truncateRichTextHtml } from "@/lib/truncateRichTextHtml";
+import { ChapterHostedMedia } from "@/components/chapters/ChapterHostedMedia";
 
 interface Chapter {
   id: string;
@@ -59,22 +60,11 @@ export default function ViewGlobalChapterPage() {
     });
   }, [id]);
 
-  const normalizeHtmlText = (value: string | undefined) =>
-    (value ?? "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
   if (!chapter) {
     return <EntityDetailLoadingScreen label="Loading chapter…" />;
   }
 
-  const normalizedDescription = normalizeHtmlText(chapter.description);
-  const normalizedAutoPreview = normalizeHtmlText(truncateRichTextHtml(chapter.content, 160));
-  const shouldShowDescription = Boolean(
-    normalizedDescription && normalizedDescription !== normalizedAutoPreview,
-  );
+  const shouldShowDescription = shouldShowChapterDescription(chapter.description, chapter.content);
 
   return (
     <>
@@ -140,11 +130,14 @@ export default function ViewGlobalChapterPage() {
           </EntityDetailSection>
         )}
         {(chapter.youtubeUrl || chapter.videoUrl || chapter.resourceLinkUrl) && (
-          <EntityDetailSection title="Links">
-            <ul className="space-y-2 text-sm">
+          <EntityDetailSection title="Media & links">
+            {(chapter.youtubeUrl || chapter.videoUrl) && (
+              <ChapterHostedMedia youtubeUrl={chapter.youtubeUrl} videoUrl={chapter.videoUrl} />
+            )}
+            <ul className="mt-4 space-y-2 text-sm">
               {chapter.youtubeUrl && (
                 <li>
-                  <span className="text-slate-500">YouTube:</span>{" "}
+                  <span className="text-slate-500">YouTube URL:</span>{" "}
                   <a
                     href={chapter.youtubeUrl.startsWith("http") ? chapter.youtubeUrl : `https://${chapter.youtubeUrl}`}
                     target="_blank"
@@ -158,14 +151,7 @@ export default function ViewGlobalChapterPage() {
               {chapter.videoUrl && (
                 <li>
                   <span className="text-slate-500">Video URL:</span>{" "}
-                  <a
-                    href={chapter.videoUrl.startsWith("http") ? chapter.videoUrl : `https://${chapter.videoUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-teal-600 hover:underline"
-                  >
-                    {chapter.videoUrl}
-                  </a>
+                  <span className="break-all font-mono text-xs text-slate-700">{chapter.videoUrl.slice(0, 120)}{chapter.videoUrl.length > 120 ? "…" : ""}</span>
                 </li>
               )}
               {chapter.resourceLinkUrl && (

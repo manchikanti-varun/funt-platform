@@ -1,4 +1,4 @@
-import { rewriteGoogleDriveImagesInHtml } from "@funt-platform/rich-text-editor";
+import { dedupeConsecutiveRichTextBlocks, rewriteEmbeddedMediaInHtml } from "@funt-platform/rich-text-editor";
 import DOMPurify from "isomorphic-dompurify";
 
 export const RICH_TEXT_VIEW_CLASS =
@@ -204,14 +204,16 @@ export function sanitizeHtml(html: string | undefined | null): string {
   const hasHtmlTag = /<[a-z][\s\S]*>/i.test(raw);
   const source = hasHtmlTag ? raw : plainTextToRichHtml(raw);
   const normalized = preserveEmptyParagraphs(
-    normalizeStandardLists(
-      normalizeBreakColonLists(normalizeParagraphColonLists(normalizeQuillLists(source)))
+    dedupeConsecutiveRichTextBlocks(
+      normalizeStandardLists(
+        normalizeBreakColonLists(normalizeParagraphColonLists(normalizeQuillLists(source)))
+      )
     )
   );
-  const withDriveImages = rewriteGoogleDriveImagesInHtml(normalized);
+  const withDriveImages = rewriteEmbeddedMediaInHtml(normalized);
   const safe = DOMPurify.sanitize(withDriveImages, {
     USE_PROFILES: { html: true },
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ADD_TAGS: ["video", "source", "iframe"],
     ADD_ATTR: [
       "class",

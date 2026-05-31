@@ -82,7 +82,7 @@ import {
   analyzeMixedIndentSelection,
   isInAnyList,
 } from "./listIndent.js";
-import { resolveImageEmbedUrl } from "./media/googleDriveUtils.js";
+import { extractGoogleDriveFileId, resolveImageEmbedUrl } from "./media/googleDriveUtils.js";
 import type { EditorStats, RichTextContent, RichTextEditorApi, RichTextEditorOptions, SlashCommandItem } from "./types.js";
 
 const TOOLBAR_ACTIONS = {
@@ -146,7 +146,7 @@ const RTE_PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
     "data-render-kind",
     "class",
   ],
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
 };
 const ICONS = {
   bold: "bold",
@@ -238,6 +238,7 @@ function normalizeVideoWidthPct(value: unknown): number {
 function inferRenderKind(src: string): MediaRenderKind {
   const value = src.trim().toLowerCase();
   if (!value) return "video";
+  if (value.startsWith("data:video/")) return "video";
   if (/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/.test(value)) return "video";
   if (value.includes("youtube.com") || value.includes("youtu.be") || value.includes("vimeo.com")) return "embed";
   // Default to embed for non-file URLs to maximize playability.
@@ -274,6 +275,10 @@ function toEmbeddableVideoUrl(input: string): string {
     const id = path.split("/").filter(Boolean).pop();
     if (!id) return raw;
     return `https://player.vimeo.com/video/${encodeURIComponent(id)}`;
+  }
+  if (host.includes("drive.google.com") || host.includes("docs.google.com")) {
+    const id = extractGoogleDriveFileId(raw);
+    if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/preview`;
   }
   return raw;
 }
@@ -375,6 +380,7 @@ const VideoNode = Node.create({
     return [
       { tag: "video[src]" },
       { tag: "iframe[data-rte-video='true'][src]" },
+      { tag: "iframe[src*='drive.google.com/file/d/'][src*='/preview']" },
     ];
   },
   renderHTML({ HTMLAttributes }) {
@@ -1728,7 +1734,17 @@ export class RichTextEditor implements RichTextEditorApi {
     if (!this.editor) {
       return;
     }
-    const normalized = resolveImageEmbedUrl(src.trim());
+    const trimmed = src.trim();
+    if (inferRenderKind(trimmed) === "embed" && !/^data:image\//i.test(trimmed)) {
+      const renderKind = inferRenderKind(trimmed);
+      this.editor
+        .chain()
+        .focus()
+        .insertContent({ type: "video", attrs: { src: trimmed, controls: true, renderKind, widthPct: 80, align: "center" } })
+        .run();
+      return;
+    }
+    const normalized = resolveImageEmbedUrl(trimmed);
     if (!/^https?:\/\//i.test(normalized) && !/^data:image\//i.test(normalized)) {
       void this.showEditorAlert("Please enter a valid image URL (https://…).");
       return;
@@ -1796,6 +1812,18 @@ export class RichTextEditor implements RichTextEditorApi {
 
   private async insertImageFromFile(file: File): Promise<void> {
     if (!this.editor) {
+      return;
+    }
+    if (file.type.startsWith("video/")) {
+      const dataUrl = await this.fileToDataUrl(file);
+      this.editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "video",
+          attrs: { src: dataUrl, controls: true, renderKind: "video", widthPct: 80, align: "center" },
+        })
+        .run();
       return;
     }
     const compressed = await this.compressImageForEmbed(file);

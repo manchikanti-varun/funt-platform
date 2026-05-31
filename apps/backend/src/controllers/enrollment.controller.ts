@@ -15,6 +15,49 @@ import { AppError } from "../utils/AppError.js";
 import { signMediaToken, verifyMediaToken } from "../utils/mediaToken.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "../services/batch.service.js";
 import { parseYoutubeVideoId } from "../utils/youtubeId.js";
+import { isEmbeddableHostedVideoUrl, isGoogleDriveUrl, toGoogleDrivePreviewUrl } from "../utils/googleDriveUrl.js";
+
+function signChapterMedia(
+  studentId: string,
+  batchId: string,
+  courseId: string,
+  chapters: Array<{ order?: number; videoUrl?: string; youtubeUrl?: string; [k: string]: unknown }>
+) {
+  return chapters.map((m, idx) => {
+    const order = Number(m.order ?? idx);
+    const out: Record<string, unknown> = { ...m };
+    if (typeof m.videoUrl === "string" && m.videoUrl.trim()) {
+      const token = signMediaToken({
+        studentId,
+        batchId,
+        courseId,
+        chapterOrder: order,
+        kind: "VIDEO",
+      });
+      out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+      if (isEmbeddableHostedVideoUrl(m.videoUrl)) {
+        out.videoIsEmbed = true;
+      }
+    }
+    if (typeof m.youtubeUrl === "string" && m.youtubeUrl.trim()) {
+      const ytId = parseYoutubeVideoId(m.youtubeUrl);
+      if (ytId) {
+        const token = signMediaToken({
+          studentId,
+          batchId,
+          courseId,
+          chapterOrder: order,
+          kind: "YOUTUBE",
+        });
+        out.youtubeEmbedUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
+        out.youtubeVideoId = ytId;
+      }
+    }
+    delete out.videoUrl;
+    delete out.youtubeUrl;
+    return out;
+  });
+}
 
 function getUserId(req: Request): string {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
@@ -50,37 +93,7 @@ export const getBatchCourse = asyncHandler(async (req: Request, res: Response): 
   const data = await getBatchCourseForStudent(studentId, batchId);
   const chapters =
     (data.courseSnapshot?.modules as Array<{ order?: number; videoUrl?: string; youtubeUrl?: string; [k: string]: unknown }> | undefined) ?? [];
-  const signedChapters = chapters.map((m, idx) => {
-    const order = Number(m.order ?? idx);
-    const out: Record<string, unknown> = { ...m };
-    if (typeof m.videoUrl === "string" && m.videoUrl.trim()) {
-      const token = signMediaToken({
-        studentId,
-        batchId: data.batchId,
-        courseId: data.courseId ?? "",
-          chapterOrder: order,
-        kind: "VIDEO",
-      });
-      out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
-    }
-    if (typeof m.youtubeUrl === "string" && m.youtubeUrl.trim()) {
-      const ytId = parseYoutubeVideoId(m.youtubeUrl);
-      if (ytId) {
-        const token = signMediaToken({
-          studentId,
-          batchId: data.batchId,
-          courseId: data.courseId ?? "",
-          chapterOrder: order,
-          kind: "YOUTUBE",
-        });
-        out.youtubeEmbedUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
-        out.youtubeVideoId = ytId;
-      }
-    }
-    delete out.videoUrl;
-    delete out.youtubeUrl;
-    return out;
-  });
+  const signedChapters = signChapterMedia(studentId, data.batchId, data.courseId ?? "", chapters);
   successRes(res, {
     ...data,
     courseSnapshot: {
@@ -105,37 +118,7 @@ export const getCourseByCourseId = asyncHandler(async (req: Request, res: Respon
   const data = await getCourseForStudentByCourseId(studentId, courseId, batchId);
   const chapters =
     (data.courseSnapshot?.modules as Array<{ order?: number; videoUrl?: string; youtubeUrl?: string; [k: string]: unknown }> | undefined) ?? [];
-  const signedChapters = chapters.map((m, idx) => {
-    const order = Number(m.order ?? idx);
-    const out: Record<string, unknown> = { ...m };
-    if (typeof m.videoUrl === "string" && m.videoUrl.trim()) {
-      const token = signMediaToken({
-        studentId,
-        batchId: data.batchId,
-        courseId: data.courseId ?? courseId,
-          chapterOrder: order,
-        kind: "VIDEO",
-      });
-      out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
-    }
-    if (typeof m.youtubeUrl === "string" && m.youtubeUrl.trim()) {
-      const ytId = parseYoutubeVideoId(m.youtubeUrl);
-      if (ytId) {
-        const token = signMediaToken({
-          studentId,
-          batchId: data.batchId,
-          courseId: data.courseId ?? courseId,
-          chapterOrder: order,
-          kind: "YOUTUBE",
-        });
-        out.youtubeEmbedUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
-        out.youtubeVideoId = ytId;
-      }
-    }
-    delete out.videoUrl;
-    delete out.youtubeUrl;
-    return out;
-  });
+  const signedChapters = signChapterMedia(studentId, data.batchId, data.courseId ?? courseId, chapters);
   const safeData = {
     ...data,
     courseSnapshot: {
@@ -170,7 +153,8 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
   if (decoded.kind === "VIDEO") {
     const src = (mod.videoUrl ?? "").trim();
     if (!src) throw new AppError("Video URL missing", 404);
-    res.redirect(302, src);
+    const target = isGoogleDriveUrl(src) ? toGoogleDrivePreviewUrl(src) : src;
+    res.redirect(302, target);
     return;
   }
   const id = parseYoutubeVideoId(mod.youtubeUrl ?? "");

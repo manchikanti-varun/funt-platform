@@ -7,9 +7,15 @@ export {
   isGoogleDriveUrl,
   resolveImageEmbedUrl,
   rewriteGoogleDriveImagesInHtml,
+  rewriteEmbeddedMediaInHtml,
   toGoogleDrivePreviewUrl,
   toGoogleDriveThumbnailUrl,
 } from "./media/googleDriveUtils.js";
+export {
+  dedupeConsecutiveRichTextBlocks,
+  normalizeRichTextPlainText,
+  shouldShowChapterDescription,
+} from "./richTextDisplay.js";
 export { DefaultMediaProviderRegistry } from "./media/provider.js";
 export { InMemoryEventBus } from "./platform/eventBus.js";
 export { PluginRegistry, ToolbarRegistry } from "./platform/registry.js";
