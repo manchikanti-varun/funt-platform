@@ -44,12 +44,14 @@ const router = Router();
 // where auth cookies are not sent reliably.
 router.get("/media/play", getStudentMediaPlaybackRedirect);
 
+// Public endpoints — no auth required (used by marketing site and explore pages)
+router.get("/courses/explore", getExploreCourses);
+router.get("/batches", getExploreBatches);
+
 router.use(authMiddleware, requireRoles(ROLE.STUDENT));
 
-router.get("/batches", getExploreBatches);
 router.get("/batches/:batchId/course", getBatchCourse);
 router.get("/courses", getMyCourses);
-router.get("/courses/explore", getExploreCourses);
 router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
 router.post("/batches/:batchId/progress", validateBody(markChapterCompleteSchema), postMarkChapterComplete);
