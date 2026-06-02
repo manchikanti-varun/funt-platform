@@ -40,7 +40,7 @@ export function signMediaToken(input: {
   };
   return jwt.sign(payload, mediaSecret(), {
     algorithm: "HS256",
-    expiresIn: input.expiresIn ?? "10m",
+    expiresIn: input.expiresIn ?? "30m",
   } as jwt.SignOptions);
 }
 

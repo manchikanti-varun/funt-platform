@@ -35,6 +35,9 @@ import {
   downloadStudentInvoicePdf,
 } from "../controllers/invoice.controller.js";
 
+import { validateBody } from "../middleware/validate.middleware.js";
+import { markChapterCompleteSchema, submitAssignmentSchema, enrollmentRequestSchema } from "../schemas/index.js";
+
 const router = Router();
 
 // Media playback uses short-lived signed tokens and may be loaded in cross-site iframes/videos
@@ -49,9 +52,9 @@ router.get("/courses", getMyCourses);
 router.get("/courses/explore", getExploreCourses);
 router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
-router.post("/batches/:batchId/progress", postMarkChapterComplete);
-router.post("/batches/:batchId/chapters/progress", postMarkChapterComplete);
-router.post("/enrollment-requests", postEnrollmentRequest);
+router.post("/batches/:batchId/progress", validateBody(markChapterCompleteSchema), postMarkChapterComplete);
+router.post("/batches/:batchId/chapters/progress", validateBody(markChapterCompleteSchema), postMarkChapterComplete);
+router.post("/enrollment-requests", validateBody(enrollmentRequestSchema), postEnrollmentRequest);
 router.post("/enroll/license", postRedeemLicense);
 router.post("/payments/razorpay/order", postStudentRazorpayOrder);
 router.post("/payments/razorpay/confirm", postStudentRazorpayConfirm);
@@ -66,7 +69,7 @@ router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);
 router.get("/assignments/my-chapter-submissions", getMySubmissions);
 router.get("/assignments/:assignmentId", getAssignmentForStudent);
-router.post("/assignments/general/submit", postSubmitGlobalAssignment);
+router.post("/assignments/general/submit", validateBody(submitAssignmentSchema), postSubmitGlobalAssignment);
 router.get("/trainers", getTrainers);
 router.get("/certificates", getMyCertificates);
 router.post("/certificates/generate", postGenerateMyCertificate);

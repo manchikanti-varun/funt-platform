@@ -1,5 +1,61 @@
 const DRIVE_HOSTS = new Set(["drive.google.com", "docs.google.com"]);
 
+/** Returns true when the URL should be embedded via iframe rather than a <video> element. */
+function isEmbeddableVideoUrl(src: string): boolean {
+  const value = src.trim().toLowerCase();
+  if (!value) return false;
+  if (value.startsWith("data:video/")) return false;
+  if (/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    if (host.includes("youtube.com") || host.includes("youtu.be") || host.includes("vimeo.com")) return true;
+    if (DRIVE_HOSTS.has(host)) return true;
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+/** Convert a video URL to its embeddable iframe form (YouTube nocookie, Vimeo player, Drive preview). */
+export function toEmbeddableIframeSrc(input: string): string {
+  const raw = input.trim();
+  if (!raw) return raw;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return raw;
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname;
+
+  if (host.includes("youtu.be")) {
+    const id = path.split("/").filter(Boolean)[0];
+    if (!id) return raw;
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+  }
+  if (host.includes("youtube.com")) {
+    const parts = path.split("/").filter(Boolean);
+    const watchId = url.searchParams.get("v");
+    const embedId = parts[0] === "embed" ? parts[1] : "";
+    const shortsId = parts[0] === "shorts" ? parts[1] : "";
+    const id = watchId || embedId || shortsId;
+    if (!id) return raw;
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}`;
+  }
+  if (host.includes("vimeo.com")) {
+    const id = path.split("/").filter(Boolean).pop();
+    if (!id) return raw;
+    return `https://player.vimeo.com/video/${encodeURIComponent(id)}`;
+  }
+  if (host.includes("drive.google.com") || host.includes("docs.google.com")) {
+    const fileId = extractGoogleDriveFileId(raw);
+    if (fileId) return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`;
+  }
+  return raw;
+}
+
 export function extractGoogleDriveFileId(input: string): string | null {
   let url: URL;
   try {
@@ -54,7 +110,7 @@ export function resolveImageEmbedUrl(input: string, size: 220 | 400 | 800 = 800)
 
 function driveIframeFromAttrs(attrs: string, rest: string, quote: string, preview: string): string {
   const merged = `${attrs}${rest}`.replace(/\scontrols\b/i, "");
-  return `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
+  return `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
 }
 
 /** Rewrite Google Drive image sources in stored HTML (LMS/admin read views). */
@@ -117,23 +173,34 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
   out = out.replace(
     /<iframe\b([^>]*?)\ssrc=(["'])([^"']+)\2/gi,
     (match, attrs: string, quote: string, src: string) => {
-      if (!isGoogleDriveUrl(src) || src.includes("/preview")) {
-        return match;
+      // Convert Google Drive non-preview URLs to preview
+      if (isGoogleDriveUrl(src) && !src.includes("/preview")) {
+        const preview = toGoogleDrivePreviewUrl(src);
+        if (preview === src) return match;
+        return `<iframe${attrs} src=${quote}${preview}${quote}`;
       }
-      const preview = toGoogleDrivePreviewUrl(src);
-      if (preview === src) return match;
-      return `<iframe${attrs} src=${quote}${preview}${quote}`;
+      // Convert YouTube/Vimeo non-embed URLs (e.g. watch?v=) to embeddable form
+      if (isEmbeddableVideoUrl(src)) {
+        const embedSrc = toEmbeddableIframeSrc(src);
+        if (embedSrc === src) return match;
+        return `<iframe${attrs} src=${quote}${embedSrc}${quote}`;
+      }
+      return match;
     }
   );
 
   out = out.replace(
     /<video\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,
     (match, attrs: string, quote: string, src: string, rest: string) => {
-      if (!isGoogleDriveUrl(src)) {
-        return match;
+      if (isGoogleDriveUrl(src)) {
+        const preview = toGoogleDrivePreviewUrl(src);
+        return driveIframeFromAttrs(attrs, rest, quote, preview);
       }
-      const preview = toGoogleDrivePreviewUrl(src);
-      return driveIframeFromAttrs(attrs, rest, quote, preview);
+      if (isEmbeddableVideoUrl(src)) {
+        const embedSrc = toEmbeddableIframeSrc(src);
+        return driveIframeFromAttrs(attrs, rest, quote, embedSrc);
+      }
+      return match;
     }
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { toGoogleDrivePreviewUrl } from "@funt-platform/rich-text-editor";
+import { toGoogleDrivePreviewUrl, toEmbeddableIframeSrc } from "@funt-platform/rich-text-editor";
 
 function parseYoutubeId(url: string): string | null {
   const raw = url.trim();
@@ -31,6 +31,16 @@ function hostedVideoSrc(url: string): string {
   return `https://${t}`;
 }
 
+/** Returns true for URLs that must be rendered as iframes (not <video> elements). */
+function isEmbedOnlyUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host.includes("vimeo.com") || host.includes("drive.google.com") || host.includes("docs.google.com");
+  } catch {
+    return false;
+  }
+}
+
 interface ChapterHostedMediaProps {
   youtubeUrl?: string;
   videoUrl?: string;
@@ -44,6 +54,9 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
     videoSrc && /drive\.google\.com|docs\.google\.com/i.test(videoSrc)
       ? toGoogleDrivePreviewUrl(videoSrc)
       : "";
+  const embedSrc = videoSrc && !drivePreview && isEmbedOnlyUrl(videoSrc)
+    ? toEmbeddableIframeSrc(videoSrc)
+    : "";
 
   if (!yt && !videoSrc) return null;
 
@@ -73,6 +86,16 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
                 src={drivePreview}
                 className="h-full w-full min-h-[220px]"
                 allow="autoplay; fullscreen"
+                allowFullScreen
+              />
+            </div>
+          ) : embedSrc ? (
+            <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
+              <iframe
+                title="Video preview"
+                src={embedSrc}
+                className="h-full w-full min-h-[220px]"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             </div>

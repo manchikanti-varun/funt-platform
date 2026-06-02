@@ -1,13 +1,28 @@
-
-
-import rateLimit from "express-rate-limit";
+import rateLimit, { type Options } from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
 import { getEnv } from "../config/env.js";
+import { getRedisClient } from "../config/redis.js";
 
 function getWindowMs(): number {
   const { isProduction } = getEnv();
-  return isProduction ? 15 * 60 * 1000 : 60 * 60 * 1000; 
+  return isProduction ? 15 * 60 * 1000 : 60 * 60 * 1000;
 }
 
+/**
+ * Returns a Redis-backed store if REDIS_URL is configured and the connection is live.
+ * Falls back to the default in-memory store (fine for single-instance deployments).
+ */
+function getStore(prefix: string): Partial<Options> {
+  const client = getRedisClient();
+  if (!client) return {};
+  return {
+    store: new RedisStore({
+      // Use sendCommand for ioredis compatibility with rate-limit-redis v4
+      sendCommand: (...args: string[]) => client.call(args[0], ...args.slice(1)) as never,
+      prefix: `rl:${prefix}:`,
+    }),
+  };
+}
 
 export const authRateLimiter = rateLimit({
   windowMs: getWindowMs(),
@@ -15,8 +30,8 @@ export const authRateLimiter = rateLimit({
   message: { success: false, message: "Too many attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  ...getStore("auth"),
 });
-
 
 export const apiRateLimiter = rateLimit({
   windowMs: getWindowMs(),
@@ -24,6 +39,7 @@ export const apiRateLimiter = rateLimit({
   message: { success: false, message: "Too many requests. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  ...getStore("api"),
 });
 
 /** Mobile → linked students lookup (pre-auth). Tight in production to reduce enumeration. */
@@ -33,6 +49,7 @@ export const parentMobileLookupRateLimiter = rateLimit({
   message: { success: false, message: "Too many requests. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  ...getStore("parent-lookup"),
 });
 
 /** Issue parent delegate cookie after mobile+student check. */
@@ -42,4 +59,5 @@ export const parentDelegateIssueRateLimiter = rateLimit({
   message: { success: false, message: "Too many attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  ...getStore("parent-delegate"),
 });

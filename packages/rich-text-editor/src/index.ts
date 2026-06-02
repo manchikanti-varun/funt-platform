@@ -8,6 +8,7 @@ export {
   resolveImageEmbedUrl,
   rewriteGoogleDriveImagesInHtml,
   rewriteEmbeddedMediaInHtml,
+  toEmbeddableIframeSrc,
   toGoogleDrivePreviewUrl,
   toGoogleDriveThumbnailUrl,
 } from "./media/googleDriveUtils.js";

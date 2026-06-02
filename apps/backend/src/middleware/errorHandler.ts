@@ -1,6 +1,7 @@
 
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError.js";
+import { getEnv } from "../config/env.js";
 
 /**
  * Centralized error handler.
@@ -145,10 +146,13 @@ export function errorHandler(
   const e = err as Error | undefined;
   console.error("[error]", e?.name ?? "Error", e?.message ?? String(err));
   if (e?.stack) console.error(e.stack);
-  // Surface the underlying error name + message to the client (no stack).
-  // This is significantly more useful than a flat "Internal server error" and
-  // doesn't leak anything that wasn't already visible to whoever is logged in.
-  const name = e?.name && e.name !== "Error" ? `${e.name}: ` : "";
-  const message = e?.message?.trim() ? `${name}${e.message.trim()}` : "Unexpected server error";
+  // In production, never leak internal error details to the client.
+  // In development, surface the error for easier debugging.
+  const { isProduction } = getEnv();
+  const message = isProduction
+    ? "An unexpected error occurred. Please try again later."
+    : e?.message?.trim()
+      ? `${e.name && e.name !== "Error" ? `${e.name}: ` : ""}${e.message.trim()}`
+      : "Unexpected server error";
   res.status(500).json({ success: false, message });
 }

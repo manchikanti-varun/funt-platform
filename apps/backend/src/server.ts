@@ -47,3 +47,17 @@ start().catch((err) => {
   }
   process.exit(1);
 });
+
+// Graceful shutdown on uncaught errors — log and exit so the process manager can restart.
+process.on("uncaughtException", (err) => {
+  console.error("[server] Uncaught exception:", err.message);
+  if (!isProduction && err.stack) console.error(err.stack);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  console.error("[server] Unhandled rejection:", msg);
+  if (!isProduction && reason instanceof Error && reason.stack) console.error(reason.stack);
+  process.exit(1);
+});

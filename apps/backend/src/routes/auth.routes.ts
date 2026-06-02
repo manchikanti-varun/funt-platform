@@ -1,6 +1,8 @@
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
+import { loginSchema, studentSignupSchema, changePasswordSchema, setPasswordSchema } from "../schemas/index.js";
 import {
   login,
   parentLogin,
@@ -28,12 +30,12 @@ const router = Router();
 
 router.post("/logout", logout);
 router.post("/session", establishSession);
-router.post("/login", login);
-router.post("/signup", signupStudent);
+router.post("/login", validateBody(loginSchema), login);
+router.post("/signup", validateBody(studentSignupSchema), signupStudent);
 router.get("/username-availability", checkUsernameAvailability);
 router.post("/forgot-username", forgotStudentUsername);
-router.post("/change-password", authMiddleware, changePassword);
-router.post("/set-password-google", authMiddleware, setPasswordWithGoogle);
+router.post("/change-password", authMiddleware, validateBody(changePasswordSchema), changePassword);
+router.post("/set-password-google", authMiddleware, validateBody(setPasswordSchema), setPasswordWithGoogle);
 router.post("/parent-login", parentLogin);
 router.post("/parent-linked-students", parentMobileLookupRateLimiter, parentLinkedStudents);
 router.post("/parent-delegate-session", parentDelegateIssueRateLimiter, establishParentDelegateSession);

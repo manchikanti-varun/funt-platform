@@ -652,9 +652,11 @@ export class RichTextEditor implements RichTextEditorApi {
   private filterUnsafeEmbeds(html: string): string {
     if (typeof window === "undefined") return html;
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const allowedHosts = ["youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "player.vimeo.com"];
+    const allowedHosts = ["youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "player.vimeo.com", "drive.google.com", "docs.google.com"];
     doc.querySelectorAll("iframe").forEach((frame) => {
       const src = frame.getAttribute("src")?.trim() ?? "";
+      // Always keep iframes marked as RTE video nodes (editor manages these)
+      if (frame.getAttribute("data-rte-video") === "true") return;
       let keep = false;
       try {
         const host = new URL(src).hostname.toLowerCase();
