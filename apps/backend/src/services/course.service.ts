@@ -593,3 +593,51 @@ export async function deleteCourse(id: string, performedBy: string) {
   });
   return { id: mongoId, courseId: humanId, title: existing.title, deleted: true };
 }
+
+/** Public: returns courses with LAUNCHING_SOON status for marketing/explore pages. */
+export async function listUpcomingCourses() {
+  const docs = await CourseModel.find({ status: COURSE_STATUS.LAUNCHING_SOON })
+    .sort({ createdAt: -1 })
+    .lean()
+    .exec();
+
+  return docs.map((doc) => {
+    const d = doc as {
+      _id: unknown;
+      courseId?: string;
+      title?: string;
+      description?: string;
+      headerImageUrl?: string;
+      durationText?: string;
+      ageGroup?: string;
+      certification?: string;
+      paymentNote?: string;
+      learningOutcomes?: string[];
+      overview?: string;
+      pricingTiers?: { label: string; price: string; note?: string }[];
+    };
+    return {
+      courseId: d.courseId ?? String(d._id),
+      courseTitle: d.title ?? "Course",
+      description: d.description ?? null,
+      courseHeaderImageUrl: String(d.headerImageUrl ?? "").trim() || null,
+      durationText: String(d.durationText ?? "").trim() || null,
+      ageGroup: String(d.ageGroup ?? "").trim() || null,
+      certification: String(d.certification ?? "").trim() || null,
+      paymentNote: String(d.paymentNote ?? "").trim() || null,
+      learningOutcomes: Array.isArray(d.learningOutcomes) ? d.learningOutcomes : [],
+      overview: String(d.overview ?? "").trim() || null,
+      pricingTiers: Array.isArray(d.pricingTiers) ? d.pricingTiers : [],
+    };
+  });
+}
+
+export async function setCourseLaunchingSoon(id: string, performedBy: string) {
+  const doc = await findCourseByParam(id);
+  if (!doc) throw new AppError("Course not found", 404);
+  await assertCanEditCourseAsync(performedBy, doc);
+  doc.status = COURSE_STATUS.LAUNCHING_SOON as unknown as typeof doc.status;
+  await doc.save();
+  await createAuditLog("COURSE_STATUS_CHANGED", performedBy, ENTITY_COURSE, String(doc._id), { newStatus: "LAUNCHING_SOON" });
+  return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
+}

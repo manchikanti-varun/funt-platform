@@ -131,3 +131,17 @@ export const deleteCourse = asyncHandler(async (req: Request, res: Response): Pr
   const data = await service.deleteCourse(id, performedBy);
   successRes(res, data, "Course deleted");
 });
+
+/** Public — returns courses with status LAUNCHING_SOON for marketing/explore pages. */
+export const getUpcomingCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const data = await service.listUpcomingCourses();
+  successRes(res, data);
+});
+
+export const setLaunchingSoon = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Course ID is required", 400);
+  const data = await service.setCourseLaunchingSoon(id, performedBy);
+  successRes(res, data, "Course marked as launching soon");
+});

@@ -13,6 +13,7 @@ import {
   duplicateCourse,
   archiveCourse,
   unarchiveCourse,
+  setLaunchingSoon,
   deleteCourse,
 } from "../controllers/course.controller.js";
 
@@ -29,6 +30,7 @@ router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateCourse);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveCourse);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveCourse);
+router.patch("/:id/set-launching-soon", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), setLaunchingSoon);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteCourse);
 
 export const courseRoutes = router;

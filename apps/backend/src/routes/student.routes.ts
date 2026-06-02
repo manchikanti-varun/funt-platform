@@ -37,6 +37,7 @@ import {
 
 import { validateBody } from "../middleware/validate.middleware.js";
 import { markChapterCompleteSchema, submitAssignmentSchema, enrollmentRequestSchema } from "../schemas/index.js";
+import { getUpcomingCourses } from "../controllers/course.controller.js";
 
 const router = Router();
 
@@ -46,6 +47,7 @@ router.get("/media/play", getStudentMediaPlaybackRedirect);
 
 // Public endpoints — no auth required (used by marketing site and explore pages)
 router.get("/courses/explore", getExploreCourses);
+router.get("/courses/upcoming", getUpcomingCourses);
 router.get("/batches", getExploreBatches);
 
 router.use(authMiddleware, requireRoles(ROLE.STUDENT));
