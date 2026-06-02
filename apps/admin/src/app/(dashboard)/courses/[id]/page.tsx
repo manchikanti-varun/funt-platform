@@ -256,6 +256,22 @@ export default function EditCoursePage() {
     else if (!res.success) setError(res.message ?? "Failed to unarchive.");
   }
 
+  async function toggleLaunchingSoon() {
+    const isCurrentlyLaunching = course?.status === COURSE_STATUS.LAUNCHING_SOON;
+    const action = isCurrentlyLaunching ? "unarchive" : "set-launching-soon";
+    const ok = await dialog.confirm({
+      title: isCurrentlyLaunching ? "Make course active" : "Mark as Launching Soon",
+      message: isCurrentlyLaunching
+        ? "Move this course back to Active status?"
+        : "Mark this course as 'Launching Soon'? It will appear on the upcoming courses page but won't be available for enrollment.",
+      confirmLabel: isCurrentlyLaunching ? "Make Active" : "Set Launching Soon",
+    });
+    if (!ok) return;
+    const res = await api<Course>(`/api/courses/${id}/${action}`, { method: "PATCH" });
+    if (res.success && res.data) setCourse(res.data as Course);
+    else if (!res.success) setError(res.message ?? "Failed to update status.");
+  }
+
   if (!course) {
     return (
       <>
@@ -288,13 +304,31 @@ export default function EditCoursePage() {
                   : "rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
               }
             >
-              {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : "Active"}
+              {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : course.status === COURSE_STATUS.LAUNCHING_SOON ? "Launching Soon" : "Active"}
             </span>
             <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">Snapshot context</span>
           </>
         }
         headerAside={
           <>
+            {course.status !== COURSE_STATUS.ARCHIVED && course.status !== COURSE_STATUS.LAUNCHING_SOON && (
+              <button
+                type="button"
+                onClick={toggleLaunchingSoon}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-100"
+              >
+                Mark Launching Soon
+              </button>
+            )}
+            {course.status === COURSE_STATUS.LAUNCHING_SOON && (
+              <button
+                type="button"
+                onClick={toggleLaunchingSoon}
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-100"
+              >
+                Make Active
+              </button>
+            )}
             {course.status !== COURSE_STATUS.ARCHIVED ? (
               <button
                 type="button"
