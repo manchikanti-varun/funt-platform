@@ -1,12 +1,22 @@
 const DRIVE_HOSTS = new Set(["drive.google.com", "docs.google.com"]);
 
-export function extractGoogleDriveFileId(input: string): string | null {
-  let url: URL;
+function parseExternalUrl(input: string): URL | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
   try {
-    url = new URL(input);
+    return new URL(trimmed);
   } catch {
-    return null;
+    try {
+      return new URL(`https://${trimmed}`);
+    } catch {
+      return null;
+    }
   }
+}
+
+export function extractGoogleDriveFileId(input: string): string | null {
+  const url = parseExternalUrl(input);
+  if (!url) return null;
   if (!DRIVE_HOSTS.has(url.hostname.toLowerCase())) {
     return null;
   }
@@ -23,12 +33,8 @@ export function extractGoogleDriveFileId(input: string): string | null {
 }
 
 export function isGoogleDriveUrl(input: string): boolean {
-  try {
-    const url = new URL(input);
-    return DRIVE_HOSTS.has(url.hostname.toLowerCase());
-  } catch {
-    return false;
-  }
+  const url = parseExternalUrl(input);
+  return !!url && DRIVE_HOSTS.has(url.hostname.toLowerCase());
 }
 
 export function toGoogleDrivePreviewUrl(input: string): string {
@@ -42,10 +48,8 @@ export function isEmbeddableHostedVideoUrl(input: string): boolean {
   const trimmed = input.trim();
   if (!trimmed) return false;
   if (isGoogleDriveUrl(trimmed)) return true;
-  const lower = trimmed.toLowerCase();
-  return (
-    lower.includes("youtube.com") ||
-    lower.includes("youtu.be") ||
-    lower.includes("vimeo.com")
-  );
+  const parsed = parseExternalUrl(trimmed);
+  if (!parsed) return false;
+  const host = parsed.hostname.toLowerCase();
+  return host.includes("youtube.com") || host.includes("youtu.be") || host.includes("vimeo.com");
 }

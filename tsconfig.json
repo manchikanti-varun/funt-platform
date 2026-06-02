@@ -15,7 +15,7 @@
     "noUnusedParameters": true,
     "noEmit": true,
     "isolatedModules": true
-    ,"ignoreDeprecations": "6.0"
+    ,"ignoreDeprecations": "5.0"
   },
   "exclude": ["node_modules", "**/node_modules", "**/dist", "**/.next"]
 }

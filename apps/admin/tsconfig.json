@@ -13,7 +13,7 @@
     "jsx": "preserve",
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@/*": ["./src/*"],
       "@funt-platform/types": ["../../packages/types/src"],

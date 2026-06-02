@@ -64,6 +64,13 @@ function getUserId(req: Request): string {
   return req.user.userId;
 }
 
+function ensureAbsoluteExternalUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 export const createEnrollment = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
   const { studentId, batchId } = req.body ?? {};
@@ -131,11 +138,11 @@ export const getCourseByCourseId = asyncHandler(async (req: Request, res: Respon
 });
 
 export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const studentId = getUserId(req);
   const token = typeof req.query.token === "string" ? req.query.token.trim() : "";
   if (!token) throw new AppError("token is required", 400);
   const decoded = verifyMediaToken(token);
-  if (decoded.uid !== studentId) throw new AppError("Invalid media token", 403);
+  const studentId = req.user?.userId?.trim() || decoded.uid;
+  if (!studentId || decoded.uid !== studentId) throw new AppError("Invalid media token", 403);
   const enrollmentData = await getCourseForStudentByCourseId(studentId, decoded.cid, decoded.bid);
   if (!enrollmentData.hasAccess || enrollmentData.accessBlocked) {
     throw new AppError("No access to this media", 403);
@@ -151,7 +158,7 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
     | undefined;
   if (!mod) throw new AppError("Chapter not found", 404);
   if (decoded.kind === "VIDEO") {
-    const src = (mod.videoUrl ?? "").trim();
+    const src = ensureAbsoluteExternalUrl(mod.videoUrl ?? "");
     if (!src) throw new AppError("Video URL missing", 404);
     const target = isGoogleDriveUrl(src) ? toGoogleDrivePreviewUrl(src) : src;
     res.redirect(302, target);

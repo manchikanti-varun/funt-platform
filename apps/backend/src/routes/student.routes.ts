@@ -37,6 +37,10 @@ import {
 
 const router = Router();
 
+// Media playback uses short-lived signed tokens and may be loaded in cross-site iframes/videos
+// where auth cookies are not sent reliably.
+router.get("/media/play", getStudentMediaPlaybackRedirect);
+
 router.use(authMiddleware, requireRoles(ROLE.STUDENT));
 
 router.get("/batches", getExploreBatches);
@@ -45,7 +49,6 @@ router.get("/courses", getMyCourses);
 router.get("/courses/explore", getExploreCourses);
 router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
-router.get("/media/play", getStudentMediaPlaybackRedirect);
 router.post("/batches/:batchId/progress", postMarkChapterComplete);
 router.post("/batches/:batchId/chapters/progress", postMarkChapterComplete);
 router.post("/enrollment-requests", postEnrollmentRequest);
