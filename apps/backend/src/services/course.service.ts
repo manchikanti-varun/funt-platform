@@ -103,6 +103,12 @@ export interface UpdateCourseInput {
   headerImageUrl?: string | null;
   isDemo?: boolean;
   moderatorIds?: string[];
+  ageGroup?: string;
+  certification?: string;
+  paymentNote?: string;
+  learningOutcomes?: string[];
+  overview?: string;
+  pricingTiers?: { label: string; price: string; note?: string }[];
 }
 
 export interface UpdateCourseModuleInput {
@@ -366,6 +372,12 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.isDemo !== undefined) {
     (doc as { isDemo?: boolean }).isDemo = !!input.isDemo;
   }
+  if (input.ageGroup !== undefined) (doc as unknown as Record<string, unknown>).ageGroup = input.ageGroup.trim();
+  if (input.certification !== undefined) (doc as unknown as Record<string, unknown>).certification = input.certification.trim();
+  if (input.paymentNote !== undefined) (doc as unknown as Record<string, unknown>).paymentNote = input.paymentNote.trim();
+  if (input.learningOutcomes !== undefined) (doc as unknown as Record<string, unknown>).learningOutcomes = input.learningOutcomes;
+  if (input.overview !== undefined) (doc as unknown as Record<string, unknown>).overview = input.overview.trim();
+  if (input.pricingTiers !== undefined) (doc as unknown as Record<string, unknown>).pricingTiers = input.pricingTiers;
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0

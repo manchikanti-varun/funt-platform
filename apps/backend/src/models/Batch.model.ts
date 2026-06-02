@@ -32,6 +32,22 @@ const courseSnapshotSchema = new Schema(
     /** Optional course-level header image (copied from source course when batch is created). */
     headerImageUrl: { type: String, required: false },
     durationText: { type: String, required: false, default: "" },
+    /** Marketing/catalog fields */
+    ageGroup: { type: String, required: false, default: "" },
+    certification: { type: String, required: false, default: "" },
+    paymentNote: { type: String, required: false, default: "" },
+    learningOutcomes: { type: [String], required: false, default: [] },
+    overview: { type: String, required: false, default: "" },
+    pricingTiers: {
+      type: [{
+        label: { type: String, required: true },
+        price: { type: String, required: true },
+        note: { type: String, required: false, default: "" },
+        _id: false,
+      }],
+      required: false,
+      default: [],
+    },
     modules: { type: [courseModuleSnapshotSchema], required: true, default: [] },
     version: { type: Number, required: true },
     /** INR enrollment list price for this course in this batch (paise). Shown at checkout; Razorpay order uses this amount. */

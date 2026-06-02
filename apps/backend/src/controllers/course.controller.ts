@@ -43,7 +43,7 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds } = req.body ?? {};
+  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers } = req.body ?? {};
   const body = req.body ?? {};
   const headerPatch =
     "headerImageUrl" in body
@@ -62,6 +62,12 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
       headerImageUrl: headerPatch,
       isDemo: "isDemo" in body ? isDemo === true || isDemo === "true" : undefined,
       moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
+      ageGroup: typeof ageGroup === "string" ? ageGroup : undefined,
+      certification: typeof certification === "string" ? certification : undefined,
+      paymentNote: typeof paymentNote === "string" ? paymentNote : undefined,
+      learningOutcomes: Array.isArray(learningOutcomes) ? learningOutcomes.filter((l: unknown) => typeof l === "string" && l.trim()) : undefined,
+      overview: typeof overview === "string" ? overview : undefined,
+      pricingTiers: Array.isArray(pricingTiers) ? pricingTiers : undefined,
     },
     performedBy
   );

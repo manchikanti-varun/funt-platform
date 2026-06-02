@@ -34,6 +34,25 @@ const courseSchema = new Schema(
     /** Demo courses are free and included in batches with auto-enroll-all-students. */
     isDemo: { type: Boolean, required: false, default: false },
     durationText: { type: String, required: false, default: "" },
+    /** Marketing/catalog fields — shown on explore pages and marketing website */
+    ageGroup: { type: String, required: false, default: "" },
+    certification: { type: String, required: false, default: "Certification upon completion" },
+    paymentNote: { type: String, required: false, default: "" },
+    /** What students learn — array of short bullet points */
+    learningOutcomes: { type: [String], required: false, default: [] },
+    /** Course overview / detailed description (rich text) */
+    overview: { type: String, required: false, default: "" },
+    /** Pricing tiers: [{label, price, note}] shown on explore page */
+    pricingTiers: {
+      type: [{
+        label: { type: String, required: true },
+        price: { type: String, required: true },
+        note: { type: String, required: false, default: "" },
+        _id: false,
+      }],
+      required: false,
+      default: [],
+    },
     modules: {
       type: [courseModuleSnapshotSchema],
       required: true,

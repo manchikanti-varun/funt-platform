@@ -486,6 +486,13 @@ export async function listCoursesForExplore() {
       paymentOptionsLabel: string;
       courseHeaderImageUrl?: string;
       isDemo?: boolean;
+      durationText?: string;
+      ageGroup?: string;
+      certification?: string;
+      paymentNote?: string;
+      learningOutcomes: string[];
+      overview?: string;
+      pricingTiers: unknown[];
     }
   >();
   for (const batch of batches) {
@@ -512,6 +519,13 @@ export async function listCoursesForExplore() {
         paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
         isDemo: !!(s as { isDemo?: boolean }).isDemo,
+        durationText: String((s as { durationText?: string }).durationText ?? "").trim() || undefined,
+        ageGroup: String((s as { ageGroup?: string }).ageGroup ?? "").trim() || undefined,
+        certification: String((s as { certification?: string }).certification ?? "").trim() || undefined,
+        paymentNote: String((s as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
+        learningOutcomes: Array.isArray((s as { learningOutcomes?: string[] }).learningOutcomes) ? (s as { learningOutcomes: string[] }).learningOutcomes : [],
+        overview: String((s as { overview?: string }).overview ?? "").trim() || undefined,
+        pricingTiers: Array.isArray((s as { pricingTiers?: unknown[] }).pricingTiers) ? (s as { pricingTiers: unknown[] }).pricingTiers : [],
       });
     }
   }
@@ -532,6 +546,13 @@ export async function listCoursesForExplore() {
       paymentOptionsLabel: v.paymentOptionsLabel,
       courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
       isDemo: v.isDemo,
+      durationText: v.durationText,
+      ageGroup: v.ageGroup,
+      certification: v.certification,
+      paymentNote: v.paymentNote,
+      learningOutcomes: v.learningOutcomes,
+      overview: v.overview,
+      pricingTiers: v.pricingTiers,
     };
   });
 }

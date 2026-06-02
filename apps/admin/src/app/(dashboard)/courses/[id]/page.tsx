@@ -36,6 +36,12 @@ interface Course {
   durationText?: string;
   headerImageUrl?: string;
   isDemo?: boolean;
+  ageGroup?: string;
+  certification?: string;
+  paymentNote?: string;
+  learningOutcomes?: string[];
+  overview?: string;
+  pricingTiers?: { label: string; price: string; note?: string }[];
   modules: CourseModule[];
   version: number;
   status: string;
@@ -57,6 +63,12 @@ export default function EditCoursePage() {
   const [headerImageDraft, setHeaderImageDraft] = useState("");
   const [headerImageDirty, setHeaderImageDirty] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
+  const [ageGroup, setAgeGroup] = useState("");
+  const [certification, setCertification] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [learningOutcomes, setLearningOutcomes] = useState("");
+  const [overview, setOverview] = useState("");
+  const [pricingTiers, setPricingTiers] = useState<{ label: string; price: string; note: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -77,6 +89,12 @@ export default function EditCoursePage() {
         setHeaderImageDraft((r.data.headerImageUrl ?? "").trim());
         setHeaderImageDirty(false);
         setIsDemo(!!r.data.isDemo);
+        setAgeGroup((r.data.ageGroup ?? "").trim());
+        setCertification((r.data.certification ?? "").trim());
+        setPaymentNote((r.data.paymentNote ?? "").trim());
+        setLearningOutcomes((r.data.learningOutcomes ?? []).join("\n"));
+        setOverview(decodeEncodedRichText(r.data.overview ?? ""));
+        setPricingTiers((r.data.pricingTiers ?? []).map((t) => ({ label: t.label, price: t.price, note: t.note ?? "" })));
       }
     });
   }, [id]);
@@ -122,6 +140,12 @@ export default function EditCoursePage() {
       durationText: durationText.trim(),
       isDemo,
       headerImageUrl: imageValue,
+      ageGroup: ageGroup.trim(),
+      certification: certification.trim(),
+      paymentNote: paymentNote.trim(),
+      learningOutcomes: learningOutcomes.split("\n").map((l) => l.trim()).filter(Boolean),
+      overview: overview.trim(),
+      pricingTiers: pricingTiers.filter((t) => t.label.trim() && t.price.trim()),
     };
     const res = await api(`/api/courses/${id}`, {
       method: "PUT",
@@ -342,6 +366,44 @@ export default function EditCoursePage() {
                 </span>
               </span>
             </label>
+          </div>
+          <div className="border-t border-slate-200 pt-6">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-indigo-700">Marketing & Catalog Details</h3>
+            <p className="mb-4 text-sm text-slate-600">These fields appear on the explore/catalog pages and the marketing website.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Age Group</label>
+                <input value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)} className="input" placeholder="e.g. Age 10+" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Certification</label>
+                <input value={certification} onChange={(e) => setCertification(e.target.value)} className="input" placeholder="e.g. Certification upon completion" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Payment Note</label>
+                <input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} className="input" placeholder="e.g. EMI available" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-semibold text-slate-700">What You Learn (one per line)</label>
+              <textarea value={learningOutcomes} onChange={(e) => setLearningOutcomes(e.target.value)} rows={5} className="input" placeholder={"Strong foundation in Electronics\nUnderstanding Sensors and Actuators\nCircuit Building and Prototyping Skills"} />
+            </div>
+            <div className="mt-4">
+              <label className="mb-1 block text-sm font-semibold text-slate-700">Course Overview (detailed description)</label>
+              <RichTextEditor value={overview} onChange={setOverview} minHeight={160} />
+            </div>
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Pricing Tiers</label>
+              {pricingTiers.map((tier, idx) => (
+                <div key={idx} className="mb-2 flex items-start gap-2">
+                  <input value={tier.label} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], label: e.target.value }; setPricingTiers(t); }} className="input flex-1" placeholder="Tier name (e.g. Get kit + 32 hours)" />
+                  <input value={tier.price} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], price: e.target.value }; setPricingTiers(t); }} className="input w-32" placeholder="INR 7,000" />
+                  <input value={tier.note} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], note: e.target.value }; setPricingTiers(t); }} className="input flex-1" placeholder="Note (optional)" />
+                  <button type="button" onClick={() => setPricingTiers(pricingTiers.filter((_, i) => i !== idx))} className="mt-2 text-sm text-red-600 hover:text-red-800">Remove</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-teal-700 hover:text-teal-900">+ Add pricing tier</button>
+            </div>
           </div>
           <div className="border-t border-slate-200 pt-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Chapters in this course</h3>
