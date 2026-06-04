@@ -214,7 +214,7 @@ export function sanitizeHtml(html: string | undefined | null): string {
   const safe = DOMPurify.sanitize(withDriveImages, {
     USE_PROFILES: { html: true },
     ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    ADD_TAGS: ["video", "source", "iframe"],
+    ADD_TAGS: ["video", "source", "iframe", "div"],
     ADD_ATTR: [
       "class",
       "href",
@@ -243,6 +243,7 @@ export function sanitizeHtml(html: string | undefined | null): string {
       "frameborder",
       "loading",
       "referrerpolicy",
+      "sandbox",
       "title",
     ],
   });

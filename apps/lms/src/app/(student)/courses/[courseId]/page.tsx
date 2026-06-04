@@ -714,15 +714,19 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                         {hasHostedVideo && (
                           <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Video</h3>
-                            <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
                               {selected.videoIsEmbed ? (
+                                <>
                                 <iframe
                                   title={selected.title}
                                   src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
                                   className="h-full w-full min-h-[220px]"
+                                  sandbox="allow-scripts allow-same-origin"
                                   allow="autoplay; fullscreen"
                                   allowFullScreen
                                 />
+                                <div className="absolute top-0 right-0 w-[60px] h-[60px] z-10" />
+                                </>
                               ) : (
                                 <video
                                   src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}

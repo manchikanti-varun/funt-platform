@@ -209,6 +209,17 @@
   .rich-text-view video + * {
     margin-top: 1rem !important;
   }
+  /* Google Drive iframe protection — hide popout/share button area */
+  .rich-text-view .rte-drive-video-wrap {
+    display: block;
+    margin: 1rem auto;
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  .rich-text-view .rte-drive-overlay {
+    cursor: default;
+    background: transparent;
+  }
   .app-page-shell {
     @apply mx-auto w-full max-w-6xl space-y-6;
   }

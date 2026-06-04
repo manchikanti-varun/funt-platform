@@ -80,14 +80,16 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Hosted video</p>
           {drivePreview ? (
-            <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
+            <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
               <iframe
                 title="Video preview"
                 src={drivePreview}
                 className="h-full w-full min-h-[220px]"
+                sandbox="allow-scripts allow-same-origin"
                 allow="autoplay; fullscreen"
                 allowFullScreen
               />
+              <div className="absolute top-0 right-0 w-[60px] h-[60px] z-10" />
             </div>
           ) : embedSrc ? (
             <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
@@ -101,7 +103,7 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
             </div>
           ) : (
             <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm">
-              <video src={videoSrc} controls playsInline preload="metadata" className="h-full w-full" />
+              <video src={videoSrc} controls controlsList="nodownload noremoteplayback" disablePictureInPicture playsInline preload="metadata" className="h-full w-full" />
             </div>
           )}
         </div>
