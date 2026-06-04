@@ -89,7 +89,7 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
                 allow="autoplay; fullscreen"
                 allowFullScreen
               />
-              <div className="absolute top-0 right-0 w-[60px] h-[60px] z-10" />
+              <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-[#1a1a1a] pointer-events-auto" />
             </div>
           ) : embedSrc ? (
             <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">

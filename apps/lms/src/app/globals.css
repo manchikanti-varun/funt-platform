@@ -218,7 +218,8 @@
   }
   .rich-text-view .rte-drive-overlay {
     cursor: default;
-    background: transparent;
+    pointer-events: all;
+    background: #1a1a1a;
   }
   .app-page-shell {
     @apply mx-auto w-full max-w-6xl space-y-6;

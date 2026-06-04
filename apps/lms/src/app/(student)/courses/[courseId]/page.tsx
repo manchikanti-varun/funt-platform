@@ -725,7 +725,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                   allow="autoplay; fullscreen"
                                   allowFullScreen
                                 />
-                                <div className="absolute top-0 right-0 w-[60px] h-[60px] z-10" />
+                                <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-[#1a1a1a] pointer-events-auto" />
                                 </>
                               ) : (
                                 <video

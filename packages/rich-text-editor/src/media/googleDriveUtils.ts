@@ -114,7 +114,7 @@ function driveIframeFromAttrs(attrs: string, rest: string, quote: string, previe
   const sandboxAttr = isDrive ? ' sandbox="allow-scripts allow-same-origin"' : "";
   const iframe = `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0"${sandboxAttr} style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
   if (isDrive) {
-    return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;">${iframe}<div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:60px;height:60px;z-index:10;"></div></div>`;
+    return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;">${iframe}<div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
   }
   return `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
 }
@@ -177,19 +177,24 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
   out = rewriteGoogleDriveImagesInHtml(out);
 
   out = out.replace(
-    /<iframe\b([^>]*?)\ssrc=(["'])([^"']+)\2/gi,
-    (match, attrs: string, quote: string, src: string) => {
-      // Convert Google Drive non-preview URLs to preview
+    /<iframe\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,
+    (match, attrs: string, quote: string, src: string, rest: string) => {
+      // Convert Google Drive non-preview URLs to preview, apply sandbox + overlay
       if (isGoogleDriveUrl(src) && !src.includes("/preview")) {
         const preview = toGoogleDrivePreviewUrl(src);
         if (preview === src) return match;
-        return `<iframe${attrs} src=${quote}${preview}${quote}`;
+        return driveIframeFromAttrs(attrs, rest, quote, preview);
+      }
+      // Existing Drive /preview iframes → wrap with sandbox + overlay
+      if (isGoogleDriveUrl(src) && src.includes("/preview")) {
+        const previewWithMinimal = src.includes("rm=minimal") ? src : `${src}${src.includes("?") ? "&" : "?"}rm=minimal`;
+        return driveIframeFromAttrs(attrs, rest, quote, previewWithMinimal);
       }
       // Convert YouTube/Vimeo non-embed URLs (e.g. watch?v=) to embeddable form
       if (isEmbeddableVideoUrl(src)) {
         const embedSrc = toEmbeddableIframeSrc(src);
         if (embedSrc === src) return match;
-        return `<iframe${attrs} src=${quote}${embedSrc}${quote}`;
+        return `<iframe${attrs} src=${quote}${embedSrc}${quote}${rest}>`;
       }
       return match;
     }
@@ -220,7 +225,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:60px;height:60px;z-index:10;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
@@ -235,7 +240,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:60px;height:60px;z-index:10;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
