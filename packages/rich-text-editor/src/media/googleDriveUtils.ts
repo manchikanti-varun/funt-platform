@@ -204,5 +204,28 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
     }
   );
 
+  // Anchor links that point to embeddable video URLs (YouTube, Vimeo, Drive)
+  // and are the only meaningful content in a paragraph → convert to iframe embed.
+  out = out.replace(
+    /<p\b[^>]*>\s*<a\b[^>]*\shref=(["'])([^"']+)\1[^>]*>[\s\S]*?<\/a>\s*<\/p>/gi,
+    (match, _quote: string, href: string) => {
+      const trimmedHref = href.trim();
+      if (!isEmbeddableVideoUrl(trimmedHref)) return match;
+      const embedSrc = toEmbeddableIframeSrc(trimmedHref);
+      return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
+    }
+  );
+
+  // Standalone anchor links (not wrapped in <p>) that point to embeddable video URLs.
+  out = out.replace(
+    /<a\b[^>]*\shref=(["'])([^"']+)\1[^>]*>[^<]*<\/a>/gi,
+    (match, _quote: string, href: string) => {
+      const trimmedHref = href.trim();
+      if (!isEmbeddableVideoUrl(trimmedHref)) return match;
+      const embedSrc = toEmbeddableIframeSrc(trimmedHref);
+      return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
+    }
+  );
+
   return out;
 }

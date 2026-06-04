@@ -245,6 +245,25 @@ function inferRenderKind(src: string): MediaRenderKind {
   return "embed";
 }
 
+/** Returns true if the text looks like a single video URL that should be embedded. */
+function isPastedVideoUrl(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.includes("\n") || trimmed.includes(" ")) return false;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  const host = url.hostname.toLowerCase();
+  if (host.includes("youtube.com") || host.includes("youtu.be")) return true;
+  if (host.includes("vimeo.com")) return true;
+  if (host.includes("drive.google.com") || host.includes("docs.google.com")) return true;
+  if (/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url.pathname)) return true;
+  return false;
+}
+
 function toEmbeddableVideoUrl(input: string): string {
   const raw = input.trim();
   if (!raw) return raw;
@@ -593,9 +612,24 @@ export class RichTextEditor implements RichTextEditorApi {
           "data-placeholder": this.options.placeholder
         },
         handlePaste: (view, event) => {
-          if (!this.pastePlainTextNext || !event.clipboardData) return false;
-          this.pastePlainTextNext = false;
+          if (!event.clipboardData) return false;
           const text = event.clipboardData.getData("text/plain");
+
+          // Auto-detect pasted video URLs and insert as video node
+          if (text && isPastedVideoUrl(text) && !this.pastePlainTextNext) {
+            event.preventDefault();
+            const src = text.trim();
+            const renderKind = inferRenderKind(src);
+            this.editor
+              ?.chain()
+              .focus()
+              .insertContent({ type: "video", attrs: { src, controls: true, renderKind, widthPct: 80, align: "center" } })
+              .run();
+            return true;
+          }
+
+          if (!this.pastePlainTextNext) return false;
+          this.pastePlainTextNext = false;
           if (!text) return false;
           event.preventDefault();
           const { from, to } = view.state.selection;
