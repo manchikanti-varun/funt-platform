@@ -248,11 +248,27 @@ Use `/health/ready` for deployment platform readiness probes.
 
 ## 10) Deployment model
 
-Typical setup:
+### Current production setup
 
-- Backend -> Railway (or any Node host)
-- Admin -> Vercel
-- LMS -> Vercel
+| Service | Platform | Domain |
+|---------|----------|--------|
+| Backend | Railway | `api.funt.in` |
+| Admin | Vercel | `admin.funt.in` |
+| LMS | Vercel | `learn.funt.in` |
+
+### Railway backend migration (new account)
+
+When the Railway trial/plan expires and you need to move to a new account:
+
+1. **New Railway account**: Create project → deploy backend (connect same GitHub repo or use Docker image)
+2. **Copy environment variables**: Transfer all env vars from old project to new (DB URI, JWT secret, CORS origins, etc.)
+3. **Add custom domain**: In new project → Settings → Networking → Custom Domain → add `api.funt.in`
+4. **Update DNS**: Go to your DNS provider → update the CNAME record for `api.funt.in` to point to the new Railway target
+5. **Verify**: Wait for DNS propagation (5 min – few hours), then hit `https://api.funt.in/health/ready`
+
+> If using a Railway-hosted database, export data from old project and import to new before switching DNS.
+
+### General deployment
 
 For complete deployment order, variable matrix, rollback and smoke checks, use:
 
