@@ -1,321 +1,301 @@
-# FUNT Platform Monorepo
+# FUNT Platform
 
-FUNT Platform is a production-focused learning and operations platform for robotics education programs.  
-It combines:
+A production LMS and operations platform for robotics education built as a Turborepo monorepo.
 
-- a **staff/admin control center**
-- a **student LMS**
-- a **backend API and business engine**
-
-The system supports learning delivery, performance tracking, rewards/gamification, payment workflows, and operational auditability in one integrated stack.
+**Live domains:**
+- Backend API: `https://api.funt.in`
+- Admin Console: `https://admin.funt.in`
+- Student LMS: `https://learn.funt.in`
 
 ---
 
-## 1) What this project is
+## Tech Stack
 
-FUNT Platform is built for institutes/training teams that need to manage:
-
-- course content and reusable learning assets
-- student batches and enrollment
-- assignment submissions and review
-- attendance and progress
-- certificates, XP, coins, and achievements
-- shop purchases and order fulfillment
-- couponing and payment operations
-
-It is designed around real operations where multiple staff roles collaborate and every important action can be traced through audit logs.
+| Layer | Technology |
+|-------|-----------|
+| Backend | Express 4, Mongoose 8, Redis (ioredis), JWT, Zod, PDFKit |
+| Admin | Next.js 16, React 18, TailwindCSS 3, Recharts |
+| LMS | Next.js 16, React 18, TailwindCSS 3, Recharts |
+| Editor | TipTap / ProseMirror (shared package) |
+| Tooling | Turborepo, TypeScript 5, Node 20+ |
+| Database | MongoDB Atlas |
+| Payments | Razorpay + manual UPI/QR |
 
 ---
 
-## 2) User roles and experiences
+## Monorepo Structure
 
-### Super Admin
-- Full platform configuration and governance.
-- Approves admin access requests.
-- Oversees system-wide operations and audit surfaces.
-
-### Admin
-- Manages courses, modules, batches, students, coupons, shop products/orders, and payment flows.
-- Creates and manages global badge definitions and award controls.
-
-### Trainer
-- Works on assigned/allowed academic operations (content, batches, delivery and tracking workflows).
-- Has visibility constraints based on role and assignment rules.
-
-### Student
-- Learns through LMS course/module flows.
-- Submits assignments and tracks progress.
-- Earns XP/coins/badges based on configured rules.
-- Uses shop/cart/checkout and order tracking.
-
-### Parent delegate flow (LMS)
-- Supports parent-linked student visibility/access flow where enabled.
-
----
-
-## 3) Product capabilities (feature map)
-
-### A. Learning content system
-- Global modules and global assignments as reusable source assets.
-- Course creation with ordered module snapshots.
-- Batch creation with course snapshots and per-course controls.
-- Versioning and restore patterns on content entities.
-
-### B. Academic operations
-- Enrollment and student access controls.
-- Assignment lifecycle and submission review workflow.
-- Attendance + general attendance tracking.
-- Student profile insights and progress override tools where allowed.
-
-### C. Rewards and gamification
-- **Coins** with grant history and expiry policy.
-- **XP** defined at module level and awarded on completion.
-- **Badges/Achievements**:
-  - global badge definitions
-  - award mode support (`AUTO`, `MANUAL`, `BOTH`)
-  - auto-trigger support for key milestones
-  - manual award workflow for admins
-
-### D. Certificates
-- Certificate generation and verification surfaces.
-- Coin reward integration from course/batch completion context.
-- Certificate-related audit events.
-
-### E. Commerce (shop)
-- Product catalog and stock.
-- Cart-based checkout with coupon + coin redemption.
-- Manual payment submission path with address details.
-- Order status workflow (`CONFIRMED` -> shipping states -> `DELIVERED`, with issue/cancel options).
-- Stock reservation logic and timed release for pending payment scenarios.
-
-### F. Coupons
-- Simplified model:
-  - `SHOP` coupons (cart-level)
-  - `COURSE` coupons (course checkout level)
-- Percent discounts, validity window, and one-time-per-user behavior.
-- Admin coupon management UI with cleaner controls.
-
-### G. Security and governance
-- Role-based authorization and protected routes.
-- Audit logging for critical domain actions.
-- Helmet/rate-limit middleware in API.
-- Strict production env validation.
-
----
-
-## 4) Technical architecture
-
-### Monorepo apps
-- `apps/backend` - Express API + domain services + MongoDB models
-- `apps/admin` - Next.js admin/staff dashboard
-- `apps/lms` - Next.js student/parent LMS
-
-### Shared packages
-- `packages/constants` - shared enums/constants (roles/statuses/types)
-- `packages/types` - shared type contracts
-- `packages/rich-text-editor` - shared editor package/styles
-
-### Patterns used
-- Layered backend: routes -> controllers -> services -> models
-- Snapshot strategy for mutable learning entities in batches/courses
-- Audit-first operational actions
-- Env-driven deployment behavior
-
----
-
-## 5) Repository structure
-
-- `apps/backend/src/config` - env + db config
-- `apps/backend/src/controllers` - request handlers
-- `apps/backend/src/services` - domain/business logic
-- `apps/backend/src/models` - mongoose schemas
-- `apps/backend/src/routes` - API route registration
-- `apps/backend/src/middleware` - auth, security, rate-limits, guards
-- `apps/backend/src/scripts` - operational/dev scripts
-- `apps/admin/src/app` - admin routes/pages
-- `apps/lms/src/app` - lms routes/pages
-- `docs/DEPLOYMENT.md` - production deploy checklist and runbook
-
----
-
-## 6) Environment and configuration
-
-### Backend (`apps/backend/.env`)
-
-Start from:
-
-```bash
-cp apps/backend/.env.example apps/backend/.env
 ```
-
-Required minimum:
-- `MONGO_URI`
-- `JWT_SECRET`
-
-Production-critical:
-- `NODE_ENV=production`
-- `CORS_ORIGINS`
-- `BACKEND_PUBLIC_URL`
-- `FRONTEND_ADMIN_URL`
-- `FRONTEND_LMS_URL`
-
-Production template:
-
-```bash
-cp apps/backend/.env.production.example apps/backend/.env
-```
-
-In production, backend validates:
-- required values present
-- URL format correctness
-- HTTPS/non-localhost safety rules (unless explicitly overridden for temporary local test)
-
-### Admin (`apps/admin/.env.local`)
-
-```bash
-cp apps/admin/.env.example apps/admin/.env.local
-```
-
-Set:
-- `NEXT_PUBLIC_API_URL=https://<backend-domain>`
-
-Production template:
-
-```bash
-cp apps/admin/.env.production.example apps/admin/.env.local
-```
-
-### LMS (`apps/lms/.env.local`)
-
-```bash
-cp apps/lms/.env.example apps/lms/.env.local
-```
-
-Set:
-- `NEXT_PUBLIC_API_URL=https://<backend-domain>`
-
-Production template:
-
-```bash
-cp apps/lms/.env.production.example apps/lms/.env.local
+funt-platform/
+├── apps/
+│   ├── backend/          Express API + business logic + MongoDB models
+│   ├── admin/            Next.js admin/staff dashboard (port 3000)
+│   └── lms/             Next.js student/parent portal (port 3001)
+├── packages/
+│   ├── constants/        Shared enums (roles, statuses, types)
+│   ├── types/            Shared TypeScript type contracts
+│   └── rich-text-editor/ TipTap-based editor with media handling
+├── docs/
+│   └── DEPLOYMENT.md     Production deploy runbook
+├── turbo.json
+└── package.json
 ```
 
 ---
 
-## 7) Local development
+## User Roles
 
-Install once at repo root:
+| Role | Access |
+|------|--------|
+| Super Admin | Full platform governance, admin approvals, system config |
+| Admin | Courses, batches, students, assignments, shop, payments, coupons, badges |
+| Trainer | Assigned academic operations with role-based visibility |
+| Student | LMS courses, assignments, progress, shop, achievements |
+| Parent | Linked student visibility and monitoring |
+
+---
+
+## Features
+
+### Learning & Content
+- Global modules and global assignments (reusable source assets)
+- Course creation with ordered module snapshots
+- Batch management with course snapshots and per-course controls
+- Rich text editor with video embeds (YouTube, Drive, Vimeo), images, tables, code blocks
+- Chapter-based content delivery with progress tracking
+
+### Academic Operations
+- Enrollment lifecycle (pending → active → completed/suspended/dropped)
+- Enrollment requests and license key enrollment
+- Assignment submissions (file, text, link) with review workflow
+- Attendance tracking (course-specific + general/standalone)
+- Progress tracking and manual progress overrides
+- Skill profiles and skill tag system
+
+### Gamification & Rewards
+- **XP** — awarded on module/course completion
+- **Coins** — grant system with expiry, redeemable in shop
+- **Badges/Achievements** — auto-trigger and manual award modes
+- Badge definitions: first assignment, 7-day streak, first course completed, perfect attendance
+
+### Commerce
+- Shop product catalog with stock management
+- Cart-based checkout with coupon + coin redemption
+- Coupon system (SHOP and COURSE types, percent discount, validity window)
+- Order lifecycle (confirmed → shipping → delivered, with cancel/issue flows)
+- Stock reservation with timed release
+
+### Payments
+- Manual UPI submission with QR codes (rolling QR refresh)
+- Razorpay integration (card / UPI app checkout)
+- Payment approval workflows
+- UPI config management with change request auditing
+
+### Invoices & Certificates
+- PDF invoice generation with digital signing
+- Certificate generation with QR verification
+- Public verification endpoint (`/verify`)
+
+### Security & Governance
+- Role-based authorization on all routes
+- Full audit logging for critical actions
+- Helmet + rate limiting (Redis-backed for multi-instance)
+- Strict production env validation (HTTPS, no localhost, min secret length)
+- httpOnly cookie-based auth with configurable idle timeout
+
+---
+
+## Backend API Routes
+
+```
+/health, /health/ping, /health/ready
+/api/auth            Authentication (login, register, Google OAuth, token refresh)
+/api/public          Public endpoints (course catalog, etc.)
+/api/users           User management
+/api/admin           Admin-specific operations
+/api/student         Student-specific operations
+/api/parent          Parent delegate operations
+/api/courses         Course CRUD and management
+/api/batches         Batch CRUD and management
+/api/assignments     Assignment submissions and review
+/api/attendance      Course attendance
+/api/general-attendance  Standalone attendance
+/api/certificates    Certificate generation and management
+/api/global-modules  Global module management
+/api/global-chapters Chapter management within modules
+/api/global-assignments  Global assignment management
+/api/enrollments     Enrollment lifecycle
+/api/progress        Student progress tracking
+/api/skills          Skill profile management
+/api/achievements    Badges and achievement system
+/api/audit           Audit log queries
+/api/profile         User profile operations
+/api/shop            Shop, cart, orders, products
+/verify              Public certificate/invoice verification
+```
+
+---
+
+## Data Models (34)
+
+Achievement, AssignmentSubmission, Attendance, AuditLog, BadgeTypeDefinition, Batch, BatchEnrollmentExclusion, Certificate, CoinGrant, Counter, Coupon, CouponRedemption, Course, Enrollment, EnrollmentRequest, GeneralAttendance, GlobalAssignment, GlobalAssignmentSubmission, GlobalModule, Invoice, InvoiceSettings, LicenseKey, ModuleProgress, OAuthNonce, PaymentQrGeneration, PaymentSubmission, PaymentUpiChangeRequest, PaymentUpiConfig, RazorpayOrderContext, RegistrationRequest, ShopOrder, ShopProduct, User
+
+---
+
+## Admin Dashboard Pages
+
+Analytics, Assignments, Attendance, Audit Hub, Badges, Batches, Certificates, Config, Coupons (+ audit), Courses, Dashboard, Enrollment Requests, Enrollments, Finance, General Attendance, Global Assignments, Global Modules, Invoices, License Keys (+ audit), Payment QR, Payments, People Insights, Profile Search, Shop, Team Management, Users, Admin Management
+
+---
+
+## LMS Student Pages
+
+Dashboard, Courses (+ learn view), Assignments, Attendance, Achievements, Certificates, Invoices, Payment, Progress, Shop, Skills, Profile, FAQ, Enroll License, Verify Invoice
+
+Parent section: Login, Dashboard, Profiles
+
+---
+
+## Local Development
+
+### Prerequisites
+- Node.js 20+
+- npm 10+
+- MongoDB (Atlas or local)
+
+### Setup
 
 ```bash
+# Install dependencies
 npm install
+
+# Copy env files
+cp apps/backend/.env.example apps/backend/.env
+cp apps/admin/.env.example apps/admin/.env.local
+cp apps/lms/.env.example apps/lms/.env.local
+
+# Edit .env files with your MongoDB URI and JWT secret
+
+# Run all services
+npm run dev
+
+# Or run individually
+npm run dev:backend          # Backend only (port 38472)
+npm run dev --workspace=@funt-platform/admin   # Admin (port 3000)
+npm run dev --workspace=@funt-platform/lms     # LMS (port 3001)
 ```
 
-Run all services:
+### Seed Data
 
 ```bash
-npm run dev
+# Create initial super admin
+npm run seed:super-admin --workspace=@funt-platform/backend
+
+# Create dev login accounts (super admin + admin + student)
+DEV_LOGIN_PASSWORD=yourpass DEV_LOGIN_SEED_CONFIRM=1 npm run seed:dev-logins --workspace=@funt-platform/backend
 ```
 
-Run individually:
+---
 
-- backend: `npm run dev:backend`
-- admin: `npm run dev --workspace=@funt-platform/admin`
-- lms: `npm run dev --workspace=@funt-platform/lms`
+## Build & Quality Gates
+
+```bash
+npm run lint              # TypeScript type checking
+npm run build             # Production build (all apps)
+npm run predeploy:check   # lint + build (run before every deploy)
+```
 
 ---
 
-## 8) Quality gates and release checks
+## Deployment
 
-- Type/lint gate: `npm run lint`
-- Build gate: `npm run build`
-- Pre-deploy gate: `npm run predeploy:check`
+### Current Setup
 
-`predeploy:check` runs lint + build and should pass before every release.
+| Service | Platform | Domain | Build Command | Start Command |
+|---------|----------|--------|---------------|---------------|
+| Backend | Railway | `api.funt.in` | `npm ci && npm run build` | `npm run start:backend` |
+| Admin | Vercel | `admin.funt.in` | `npm run build` | auto |
+| LMS | Vercel | `learn.funt.in` | `npm run build` | auto |
 
----
+### Backend Environment Variables (Railway)
 
-## 9) Health, readiness, and operability
+**Required:**
+```
+NODE_ENV=production
+MONGO_URI=<mongodb atlas uri>
+JWT_SECRET=<min 32 chars random>
+CORS_ORIGINS=https://admin.funt.in,https://learn.funt.in
+BACKEND_PUBLIC_URL=https://api.funt.in
+FRONTEND_ADMIN_URL=https://admin.funt.in
+FRONTEND_LMS_URL=https://learn.funt.in
+```
 
-Backend endpoints:
+**Optional:**
+```
+REDIS_URL=<redis connection string>
+JWT_EXPIRES_IN_ADMIN=8h
+JWT_EXPIRES_IN_LMS=12h
+IDLE_TIMEOUT_MINUTES_ADMIN=180
+IDLE_TIMEOUT_MINUTES_LMS=45
+GOOGLE_CLIENT_ID=<for OAuth>
+GOOGLE_CLIENT_SECRET=<for OAuth>
+RAZORPAY_KEY_ID=<for payments>
+RAZORPAY_KEY_SECRET=<for payments>
+PAYMENT_UPI_ID=<UPI VPA>
+INVOICE_SIGNING_SECRET=<min 32 chars>
+```
 
-- `GET /health` - service heartbeat
-- `GET /health/ping` - lightweight ping
-- `GET /health/ready` - readiness with DB connection state
+### Frontend Environment Variables (Vercel)
 
-Use `/health/ready` for deployment platform readiness probes.
+Both admin and LMS need:
+```
+NEXT_PUBLIC_API_URL=https://api.funt.in
+```
 
----
+### Railway Migration (New Account)
 
-## 10) Deployment model
+1. Create new Railway project → deploy backend (connect GitHub repo)
+2. Copy all environment variables from old project
+3. Add custom domain: Settings → Networking → `api.funt.in`
+4. Update DNS CNAME to point to new Railway target
+5. Verify: `https://api.funt.in/health/ready`
 
-### Current production setup
-
-| Service | Platform | Domain |
-|---------|----------|--------|
-| Backend | Railway | `api.funt.in` |
-| Admin | Vercel | `admin.funt.in` |
-| LMS | Vercel | `learn.funt.in` |
-
-### Railway backend migration (new account)
-
-When the Railway trial/plan expires and you need to move to a new account:
-
-1. **New Railway account**: Create project → deploy backend (connect same GitHub repo or use Docker image)
-2. **Copy environment variables**: Transfer all env vars from old project to new (DB URI, JWT secret, CORS origins, etc.)
-3. **Add custom domain**: In new project → Settings → Networking → Custom Domain → add `api.funt.in`
-4. **Update DNS**: Go to your DNS provider → update the CNAME record for `api.funt.in` to point to the new Railway target
-5. **Verify**: Wait for DNS propagation (5 min – few hours), then hit `https://api.funt.in/health/ready`
-
-> If using a Railway-hosted database, export data from old project and import to new before switching DNS.
-
-### General deployment
-
-For complete deployment order, variable matrix, rollback and smoke checks, use:
-
-- `docs/DEPLOYMENT.md`
-
-Quick production order:
-
-1. Fill:
-   - `apps/backend/.env.production.example`
-   - `apps/admin/.env.production.example`
-   - `apps/lms/.env.production.example`
-2. Run release gate at repo root:
-   - `npm ci`
-   - `npm run predeploy:check`
-3. Deploy backend first, then admin/lms.
-4. Verify health and login flows:
-   - backend: `/health`, `/health/ping`, `/health/ready`
-   - admin/lms: login, dashboard, one basic read/write flow
+See `docs/DEPLOYMENT.md` for full deployment runbook.
 
 ---
 
-## 11) Security and production notes
+## Health Checks
 
-- Keep secrets in environment variables only.
-- Never commit `.env.local` or real credentials.
-- Use strong JWT secrets (>= 32 chars).
-- Keep `CORS_ORIGINS` minimal and explicit in production.
-- Route protection in admin/lms uses Next.js `proxy.ts` convention.
+```
+GET /health        → { status: "ok" }
+GET /health/ping   → { ok: true }
+GET /health/ready  → { status: "ok", db: "connected" }
+```
 
----
-
-## 12) Scripts you will use most
-
-- `npm run dev` - full local stack
-- `npm run dev:backend` - backend only
-- `npm run lint` - type/lint checks
-- `npm run build` - production build validation
-- `npm run predeploy:check` - final release gate
-- `npm run start:backend` - run built backend in production mode
+Use `/health/ready` for Railway/platform readiness probes.
 
 ---
 
-## 13) Project status
+## Scripts Reference
 
-The repository is actively evolving with major enhancements around:
-- admin operations UX
-- rewards and badge automation
-- secure checkout/order workflows
-- deployment hardening and production readiness checks
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Run all services locally |
+| `npm run dev:backend` | Backend only |
+| `npm run build` | Production build all apps |
+| `npm run lint` | TypeScript checks |
+| `npm run predeploy:check` | Pre-release gate (lint + build) |
+| `npm run start:backend` | Run built backend |
+| `npm run free-ports` | Kill processes on dev ports (Windows) |
 
+---
+
+## Security Notes
+
+- Secrets live in environment variables only — never commit `.env.local`
+- JWT secret must be 32+ characters in production
+- CORS origins are explicit (no wildcards)
+- Backend enforces HTTPS and non-localhost URLs in production
+- Rate limiting on auth (stricter) and API (general)
+- Auth via httpOnly cookies (not localStorage tokens)
+- Route protection via Next.js `proxy.ts` convention
