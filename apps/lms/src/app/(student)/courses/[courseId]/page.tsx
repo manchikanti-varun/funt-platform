@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, resolveMediaPlaybackUrl } from "@/lib/api";
+import { api, resolveMediaPlaybackUrl, API_URL } from "@/lib/api";
 import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { shouldShowChapterDescription } from "@funt-platform/rich-text-editor";
@@ -641,9 +641,9 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
                             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Content</h3>
                             {shouldShowChapterDescription(selected.description, selected.content) && (
-                              <div className={`text-slate-700 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description) }} />
+                              <div className={`text-slate-700 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
                             )}
-                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content) }} />}
+                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content, API_URL) }} />}
                             {selected.hasContent && (
                               <div className="mt-4">
                                 {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}

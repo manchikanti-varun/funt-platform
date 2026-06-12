@@ -199,7 +199,7 @@ function plainTextToRichHtml(input: string): string {
   return out.join("");
 }
 
-export function sanitizeHtml(html: string | undefined | null): string {
+export function sanitizeHtml(html: string | undefined | null, apiBase?: string): string {
   const raw = decodeEncodedRichText(html);
   const hasHtmlTag = /<[a-z][\s\S]*>/i.test(raw);
   const source = hasHtmlTag ? raw : plainTextToRichHtml(raw);
@@ -211,7 +211,20 @@ export function sanitizeHtml(html: string | undefined | null): string {
     )
   );
   const withDriveImages = rewriteEmbeddedMediaInHtml(normalized);
-  const safe = DOMPurify.sanitize(withDriveImages, {
+
+  // Rewrite <video src="r2://..."> to the backend stream endpoint so the browser
+  // can actually play the video. The stream endpoint validates the student session
+  // and redirects to a short-lived presigned R2 GET URL.
+  const base = (apiBase ?? "").replace(/\/$/, "");
+  const withR2Resolved = withDriveImages.replace(
+    /<video\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*)>/gi,
+    (_match, before: string, quote: string, r2Key: string, after: string) => {
+      const streamUrl = `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+      return `<video${before} src=${quote}${streamUrl}${quote}${after}>`;
+    }
+  );
+
+  const safe = DOMPurify.sanitize(withR2Resolved, {
     USE_PROFILES: { html: true },
     ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ADD_TAGS: ["video", "source", "iframe", "div"],

@@ -18,6 +18,24 @@ import { parseYoutubeVideoId } from "../utils/youtubeId.js";
 import { isEmbeddableHostedVideoUrl, isGoogleDriveUrl, toGoogleDrivePreviewUrl } from "../utils/googleDriveUrl.js";
 import { isR2VideoKey, r2KeyFromVideoUrl, generateSignedVideoUrl } from "../services/r2Video.service.js";
 
+// ---------------------------------------------------------------------------
+// GET /api/student/media/stream  — stream an R2 video embedded in rich-text content
+// ---------------------------------------------------------------------------
+/**
+ * Resolves an r2:// key to a short-lived presigned GET URL and redirects the browser.
+ * Used for <video src="/api/student/media/stream?key=r2://..."> tags embedded in
+ * chapter rich-text content. Requires a valid student session (cookie auth).
+ */
+export const getStudentMediaStreamRedirect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const rawKey = typeof req.query.key === "string" ? req.query.key.trim() : "";
+  if (!rawKey) throw new AppError("key is required", 400);
+  if (!isR2VideoKey(rawKey)) throw new AppError("Invalid video key format", 400);
+
+  const key = r2KeyFromVideoUrl(rawKey);
+  const signedUrl = await generateSignedVideoUrl(key);
+  res.redirect(302, signedUrl);
+});
+
 function signChapterMedia(
   studentId: string,
   batchId: string,

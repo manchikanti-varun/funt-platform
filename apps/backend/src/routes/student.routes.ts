@@ -10,6 +10,7 @@ import {
   getMyCourses,
   getCourseByCourseId,
   getStudentMediaPlaybackRedirect,
+  getStudentMediaStreamRedirect,
   getGeneralAssignments,
   getAssignmentForStudent,
   getTrainers,
@@ -44,6 +45,11 @@ const router = Router();
 // Media playback uses short-lived signed tokens and may be loaded in cross-site iframes/videos
 // where auth cookies are not sent reliably.
 router.get("/media/play", getStudentMediaPlaybackRedirect);
+
+// R2 stream: resolves an r2:// key embedded in rich-text content to a presigned GET URL.
+// Requires student session cookie — placed before the authMiddleware block so the
+// route is registered, but auth is applied inline via authMiddleware on the handler.
+router.get("/media/stream", authMiddleware, requireRoles(ROLE.STUDENT), getStudentMediaStreamRedirect);
 
 // Public endpoints — no auth required (used by marketing site and explore pages)
 router.get("/courses/explore", getExploreCourses);
