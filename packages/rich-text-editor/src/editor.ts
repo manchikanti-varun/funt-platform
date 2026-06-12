@@ -1635,23 +1635,25 @@ export class RichTextEditor implements RichTextEditorApi {
 
     if (!file) return;
 
-    // Show a progress indicator inside the editor
-    const progressId = `rte-upload-${Date.now()}`;
-    this.editor.chain().focus().insertContent(
-      `<p id="${progressId}" class="rte-upload-progress">Uploading video… 0%</p>`
-    ).run();
+    // Show a progress indicator as a plain DOM overlay — NOT inserted into
+    // ProseMirror, which would strip the id attribute and break updates.
+    const progressEl = document.createElement("p");
+    progressEl.className = "rte-upload-progress";
+    progressEl.textContent = "Uploading video… 0%";
+    // Append directly to the content area div so it renders inside the editor
+    // but is fully outside ProseMirror's node tree.
+    const contentArea = this.contentArea;
+    contentArea.appendChild(progressEl);
 
     const updateProgress = (pct: number) => {
-      const el = this.root?.querySelector(`#${progressId}`);
-      if (el) el.textContent = `Uploading video… ${pct}%`;
+      progressEl.textContent = `Uploading video… ${pct}%`;
     };
 
     try {
       const { url, storageUrl } = await uploadFn(file, updateProgress);
 
-      // Remove the progress paragraph
-      const el = this.root?.querySelector(`#${progressId}`);
-      if (el) el.remove();
+      // Remove the progress indicator
+      progressEl.remove();
 
       // storageUrl is what gets persisted in the HTML (e.g. "r2://...").
       // url is used only for the live preview src on the <video> element.
@@ -1684,8 +1686,7 @@ export class RichTextEditor implements RichTextEditorApi {
         });
       }
     } catch (err) {
-      const el = this.root?.querySelector(`#${progressId}`);
-      if (el) el.remove();
+      progressEl.remove();
       await showRteAlert(this.root, err instanceof Error ? err.message : "Video upload failed.");
     }
   }
