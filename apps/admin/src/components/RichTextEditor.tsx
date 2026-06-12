@@ -16,10 +16,11 @@ export interface RichTextEditorProps {
   enableSlashCommands?: boolean;
   /**
    * When provided, a "Upload Video" button appears in the toolbar.
-   * The callback should upload the file to R2 and return a playable URL.
-   * The returned URL is embedded directly as a <video> node in the content.
+   * - `url`        — playable URL for in-editor preview (blob:, presigned, etc.)
+   * - `storageUrl` — optional; the value stored in the HTML (e.g. "r2://...").
+   *                  Falls back to `url` when omitted.
    */
-  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
+  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string; storageUrl?: string }>;
 }
 
 export function RichTextEditor({

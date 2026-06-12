@@ -1647,21 +1647,42 @@ export class RichTextEditor implements RichTextEditorApi {
     };
 
     try {
-      const { url } = await uploadFn(file, updateProgress);
+      const { url, storageUrl } = await uploadFn(file, updateProgress);
 
       // Remove the progress paragraph
       const el = this.root?.querySelector(`#${progressId}`);
       if (el) el.remove();
 
-      // Insert the video node
+      // storageUrl is what gets persisted in the HTML (e.g. "r2://...").
+      // url is used only for the live preview src on the <video> element.
+      // If storageUrl is omitted, fall back to url for both purposes.
+      const persistSrc = storageUrl ?? url;
+
+      // Insert the video node with the storage key as src (what is saved),
+      // then patch the rendered DOM element to use the preview url so it plays.
       this.editor
         .chain()
         .focus()
         .insertContent({
           type: "video",
-          attrs: { src: url, controls: true, renderKind: "video", widthPct: 80, align: "center" },
+          attrs: { src: persistSrc, controls: true, renderKind: "video", widthPct: 80, align: "center" },
         })
         .run();
+
+      // If a separate preview URL was provided, swap the src on the rendered
+      // <video> element so the admin can watch it immediately. The ProseMirror
+      // node still holds persistSrc and that is what getHTML() returns.
+      if (storageUrl && url !== storageUrl) {
+        requestAnimationFrame(() => {
+          const videoEl = this.root?.querySelector<HTMLVideoElement>(
+            `video[src="${CSS.escape(persistSrc)}"]`
+          );
+          if (videoEl) {
+            videoEl.src = url;
+            videoEl.load();
+          }
+        });
+      }
     } catch (err) {
       const el = this.root?.querySelector(`#${progressId}`);
       if (el) el.remove();

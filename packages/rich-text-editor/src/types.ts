@@ -29,8 +29,13 @@ export interface RichTextEditorOptions {
   sanitizeOnGet?: boolean;
   maxHeight?: number;
   contentMinHeight?: number;
-  /** Called when user clicks "Upload Video" in the toolbar. Upload the file and return a playable URL. */
-  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
+  /**
+   * Called when user clicks "Upload Video" in the toolbar.
+   * - `url`        — playable URL used for in-editor preview (may be a blob: or presigned URL)
+   * - `storageUrl` — optional; the value stored in the HTML content (e.g. "r2://...").
+   *                  Falls back to `url` when omitted.
+   */
+  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string; storageUrl?: string }>;
   uploadImage?: (file: File) => Promise<{ url: string; alt?: string }>;
 }
 

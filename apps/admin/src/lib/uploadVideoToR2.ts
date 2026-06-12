@@ -34,7 +34,7 @@ export function makeUploadVideoFn(ctx: UploadVideoContext) {
   return async function uploadVideo(
     file: File,
     onProgress: (pct: number) => void
-  ): Promise<{ url: string }> {
+  ): Promise<{ url: string; storageUrl?: string }> {
     // ── Step 1: get presigned PUT URL ────────────────────────────────────
     const presignRes = await api<{
       uploadUrl: string;
@@ -91,11 +91,17 @@ export function makeUploadVideoFn(ctx: UploadVideoContext) {
       throw new Error(confirmRes.message ?? "Upload confirmation failed");
     }
 
-    // Return the r2:// key as the video src.
-    // The editor stores this in HTML as <video src="r2://...">
-    // The LMS sanitizer and player will resolve it to a signed URL at playback.
-    // For admin preview we return the key — the video won't play in the editor
-    // but it will be stored correctly and play for students.
-    return { url: confirmRes.data.videoKey };
+    // Return two URLs:
+    //   url        — a blob: URL created from the in-memory file for immediate
+    //                admin preview. The browser can play it right away without
+    //                any additional network requests. It lives only for this
+    //                page session (revoked on unload).
+    //   storageUrl — the r2:// key that gets baked into the chapter HTML.
+    //                The LMS resolves this to a signed URL at playback time.
+    const blobUrl = URL.createObjectURL(file);
+    // Clean up the blob URL when the tab is closed so we don't leak memory.
+    window.addEventListener("beforeunload", () => URL.revokeObjectURL(blobUrl), { once: true });
+
+    return { url: blobUrl, storageUrl: confirmRes.data.videoKey };
   };
 }
