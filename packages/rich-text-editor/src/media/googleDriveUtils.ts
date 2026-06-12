@@ -112,9 +112,11 @@ function driveIframeFromAttrs(attrs: string, rest: string, quote: string, previe
   const merged = `${attrs}${rest}`.replace(/\scontrols\b/i, "");
   const isDrive = preview.includes("drive.google.com");
   const sandboxAttr = isDrive ? ' sandbox="allow-scripts allow-same-origin"' : "";
-  const iframe = `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0"${sandboxAttr} style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
   if (isDrive) {
-    return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;">${iframe}<div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
+    // Use a transparent pointer-events overlay to block the Drive pop-out button
+    // without showing a visible black square.
+    const iframe = `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0"${sandboxAttr} style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
+    return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;">${iframe}<div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
   }
   return `<iframe src=${quote}${preview}${quote}${merged} data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
 }
@@ -225,7 +227,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
@@ -240,7 +242,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div class="rte-drive-overlay" style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:#1a1a1a;pointer-events:all;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
