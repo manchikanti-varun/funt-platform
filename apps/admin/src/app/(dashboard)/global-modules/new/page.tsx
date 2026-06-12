@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
 import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles } from "@/components/auth/RequireRoles";
+import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 
 interface AssignmentOption {
   id: string;
@@ -37,6 +38,11 @@ const INITIAL_DRAFT: ChapterDraft = {
 
 export default function NewGlobalChapterPage() {
   const router = useRouter();
+  // Stable temp ID used as R2 key prefix before the chapter has a real MongoDB ID.
+  // Generated once on mount — stays consistent if the user uploads then navigates back.
+  const tempModuleId = useRef(
+    typeof crypto !== "undefined" ? crypto.randomUUID() : `temp-${Date.now()}`
+  );
   const {
     value: form,
     setValue: setForm,
@@ -123,7 +129,12 @@ export default function NewGlobalChapterPage() {
           <label className="mb-1 block text-sm font-semibold text-slate-700">
             Content
           </label>
-          <RichTextEditor value={content} onChange={(v) => update("content", v)} minHeight={320} />
+          <RichTextEditor
+            value={content}
+            onChange={(v) => update("content", v)}
+            minHeight={320}
+            uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: tempModuleId.current })}
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
