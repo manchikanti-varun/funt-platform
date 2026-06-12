@@ -28,6 +28,11 @@ import { auditRoutes } from "./routes/audit.routes.js";
 import { profileRoutes } from "./routes/profile.routes.js";
 import { shopRoutes } from "./routes/shop.routes.js";
 import { publicRoutes } from "./routes/public.routes.js";
+import { r2VideoRoutes } from "./routes/r2Video.routes.js";
+import {
+  contentProtectionConfigRoutes,
+  contentProtectionStudentRoutes,
+} from "./routes/contentProtection.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -85,6 +90,9 @@ app.use("/api/achievements", achievementRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/shop", shopRoutes);
+app.use("/api/admin/videos", r2VideoRoutes);
+app.use("/api/config/content-protection", contentProtectionConfigRoutes);
+app.use("/api/student/content-protection", contentProtectionStudentRoutes);
 app.use("/verify", verifyRoutes);
 
 app.use(errorHandler);

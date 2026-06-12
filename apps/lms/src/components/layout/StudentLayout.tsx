@@ -24,6 +24,8 @@ import {
   IconFaq,
 } from "@/components/icons/NavIcons";
 import { StateScreen } from "@/components/ui/StateScreen";
+import { ProtectionProvider } from "@/components/security/ProtectionContext";
+import { ContentProtectionProvider } from "@/components/security/ContentProtectionProvider";
 
 interface UserMe {
   id: string;
@@ -40,14 +42,6 @@ interface UserMe {
 
 function getInitials(name: string): string {
   return name.trim().split(/\s+/).map((s) => s[0]).join("").toUpperCase().slice(0, 2);
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  const el = target as HTMLElement | null;
-  if (!el) return false;
-  if (el.isContentEditable) return true;
-  const tag = el.tagName?.toLowerCase();
-  return tag === "input" || tag === "textarea" || tag === "select";
 }
 
 const NAV_SECTIONS: Array<{
@@ -332,55 +326,6 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    function onContextMenu(e: MouseEvent) {
-      e.preventDefault();
-    }
-
-    function onDragStart(e: DragEvent) {
-      const t = e.target as HTMLElement | null;
-      if (!t) return;
-      const tag = t.tagName?.toLowerCase();
-      if (tag === "img" || tag === "video" || t.closest("img, video")) {
-        e.preventDefault();
-      }
-    }
-
-    function onKeyDown(e: KeyboardEvent) {
-      const key = e.key.toLowerCase();
-      const ctrlOrMeta = e.ctrlKey || e.metaKey;
-      const blockedInspectShortcuts =
-        key === "f12" ||
-        (ctrlOrMeta && e.shiftKey && (key === "i" || key === "j" || key === "c")) ||
-        (ctrlOrMeta && key === "u") ||
-        (ctrlOrMeta && key === "s");
-      if (blockedInspectShortcuts) {
-        e.preventDefault();
-        return;
-      }
-
-      // Best-effort protection: cannot truly disable OS screenshots.
-      if (key === "printscreen") {
-        e.preventDefault();
-        void navigator.clipboard?.writeText?.("");
-      }
-
-      // Prevent copy/cut on non-editable content in student area.
-      if (ctrlOrMeta && (key === "c" || key === "x") && !isEditableTarget(e.target)) {
-        e.preventDefault();
-      }
-    }
-
-    document.addEventListener("contextmenu", onContextMenu);
-    document.addEventListener("dragstart", onDragStart);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("contextmenu", onContextMenu);
-      document.removeEventListener("dragstart", onDragStart);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, []);
-
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
@@ -436,31 +381,35 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50">
-      {}
-      <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
-      {}
-      {sidebarOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden
-          />
-          <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:hidden">
-            {sidebar}
+    <ProtectionProvider>
+      <ContentProtectionProvider>
+        <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50">
+          {}
+          <div className="hidden h-full shrink-0 lg:block">{sidebar}</div>
+          {}
+          {sidebarOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+                onClick={() => setSidebarOpen(false)}
+                aria-hidden
+              />
+              <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-xl lg:hidden">
+                {sidebar}
+              </div>
+            </>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col min-h-0 overflow-hidden">
+            <LMSTopbar
+              user={user}
+              badgeCount={badgeCount}
+              onLogout={() => { clearToken(); router.push("/login"); }}
+              onMenuClick={() => setSidebarOpen((o) => !o)}
+            />
+            <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 sm:p-6 md:p-8">{children}</main>
           </div>
-        </>
-      )}
-      <div className="flex min-w-0 flex-1 flex-col min-h-0 overflow-hidden">
-        <LMSTopbar
-          user={user}
-          badgeCount={badgeCount}
-          onLogout={() => { clearToken(); router.push("/login"); }}
-          onMenuClick={() => setSidebarOpen((o) => !o)}
-        />
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 sm:p-6 md:p-8">{children}</main>
-      </div>
-    </div>
+        </div>
+      </ContentProtectionProvider>
+    </ProtectionProvider>
   );
 }

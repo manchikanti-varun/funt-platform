@@ -9,6 +9,7 @@ import { MODULE_STATUS, ROLE } from "@funt-platform/constants";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
+import { VideoUploadField } from "@/components/videos/VideoUploadField";
 
 interface VersionSnapshot {
   version: number;
@@ -225,15 +226,28 @@ export default function EditGlobalChapterPage() {
                   className="input"
                 />
               </div>
+              {/* ── R2 Video Upload ── */}
               <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Video URL (uploaded/hosted video)
-                </label>
-                <input
+                <VideoUploadField
+                  courseId="global"
+                  moduleId={id}
+                  lessonId={id}
                   value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                  className="input"
+                  onChange={setVideoUrl}
+                  onError={setError}
+                  label="Chapter Video (upload MP4)"
                 />
+                {/* Allow pasting a legacy external URL when no R2 video is set */}
+                {!videoUrl.startsWith("r2://") && (
+                  <div className="mt-2">
+                    <input
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      className="input text-xs"
+                      placeholder="Or paste an external video URL (e.g. Vimeo)"
+                    />
+                  </div>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-slate-700">

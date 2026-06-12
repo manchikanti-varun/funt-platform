@@ -16,6 +16,7 @@ import { signMediaToken, verifyMediaToken } from "../utils/mediaToken.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "../services/batch.service.js";
 import { parseYoutubeVideoId } from "../utils/youtubeId.js";
 import { isEmbeddableHostedVideoUrl, isGoogleDriveUrl, toGoogleDrivePreviewUrl } from "../utils/googleDriveUrl.js";
+import { isR2VideoKey, r2KeyFromVideoUrl, generateSignedVideoUrl } from "../services/r2Video.service.js";
 
 function signChapterMedia(
   studentId: string,
@@ -35,7 +36,9 @@ function signChapterMedia(
         kind: "VIDEO",
       });
       out.videoPlaybackUrl = `/api/student/media/play?token=${encodeURIComponent(token)}`;
-      if (isEmbeddableHostedVideoUrl(m.videoUrl)) {
+      // R2-hosted videos are native MP4 — use <video> tag, not iframe.
+      // Legacy Google Drive / Vimeo / other embeddable hosts still use iframe.
+      if (!isR2VideoKey(m.videoUrl) && isEmbeddableHostedVideoUrl(m.videoUrl)) {
         out.videoIsEmbed = true;
       }
     }
@@ -158,7 +161,19 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
     | undefined;
   if (!mod) throw new AppError("Chapter not found", 404);
   if (decoded.kind === "VIDEO") {
-    const src = ensureAbsoluteExternalUrl(mod.videoUrl ?? "");
+    const rawVideoUrl = mod.videoUrl ?? "";
+    if (!rawVideoUrl) throw new AppError("Video URL missing", 404);
+
+    // R2-hosted video: generate a short-lived presigned URL and redirect to it.
+    if (isR2VideoKey(rawVideoUrl)) {
+      const key = r2KeyFromVideoUrl(rawVideoUrl);
+      const signedUrl = await generateSignedVideoUrl(key);
+      res.redirect(302, signedUrl);
+      return;
+    }
+
+    // Legacy external URL (Google Drive, Vimeo, etc.)
+    const src = ensureAbsoluteExternalUrl(rawVideoUrl);
     if (!src) throw new AppError("Video URL missing", 404);
     const target = isGoogleDriveUrl(src) ? toGoogleDrivePreviewUrl(src) : src;
     res.redirect(302, target);

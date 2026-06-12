@@ -9,6 +9,7 @@ import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
+import { VideoUploadField } from "@/components/videos/VideoUploadField";
 
 interface CourseModule {
   originalGlobalModuleId: string;
@@ -537,13 +538,26 @@ export default function EditCoursePage() {
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-slate-600">Video URL</label>
-                          <input
+                          {/* ── R2 Video Upload ── */}
+                          <VideoUploadField
+                            courseId={course.courseId ?? id}
+                            moduleId={course.modules[editingIndex]?.originalGlobalModuleId ?? String(editingIndex)}
+                            lessonId={course.modules[editingIndex]?.originalGlobalModuleId ?? String(editingIndex)}
                             value={moduleEdit.videoUrl ?? ""}
-                            onChange={(e) => setModuleEdit((p) => ({ ...p, videoUrl: e.target.value }))}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                            placeholder="https://..."
+                            onChange={(key) => setModuleEdit((p) => ({ ...p, videoUrl: key }))}
+                            onError={setError}
+                            label="Chapter Video (upload MP4)"
+                            disabled={savingModule}
                           />
+                          {/* Allow pasting a legacy external URL when no R2 video is set */}
+                          {!(moduleEdit.videoUrl ?? "").startsWith("r2://") && (
+                            <input
+                              value={moduleEdit.videoUrl ?? ""}
+                              onChange={(e) => setModuleEdit((p) => ({ ...p, videoUrl: e.target.value }))}
+                              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                              placeholder="Or paste an external video URL (e.g. Vimeo)"
+                            />
+                          )}
                         </div>
                         <div className="sm:col-span-2">
                           <label className="mb-1 block text-xs font-medium text-slate-600">Resource link (optional)</label>

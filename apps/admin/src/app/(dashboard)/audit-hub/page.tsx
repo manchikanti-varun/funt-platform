@@ -31,6 +31,21 @@ const AUDIT_ITEMS = [
     title: "QR generation history",
     description: "Track QR generation by admin and timestamp.",
   },
+  {
+    href: "/audit?action=CONTENT_PROTECTION_DEVTOOLS_DETECTED",
+    title: "Content protection — DevTools",
+    description: "Students who triggered DevTools detection during a session.",
+  },
+  {
+    href: "/audit?action=CONTENT_PROTECTION_SCREEN_SHARE_DETECTED",
+    title: "Content protection — Screen share",
+    description: "Screen share / display capture events from student sessions.",
+  },
+  {
+    href: "/audit?action=CONTENT_PROTECTION_COPY_BLOCKED",
+    title: "Content protection — Copy attempts",
+    description: "Copy/cut events blocked in the student LMS.",
+  },
 ];
 
 export default function AuditHubPage() {
@@ -72,6 +87,12 @@ export default function AuditHubPage() {
         </Link>
         <Link href="/payment-qr?section=HISTORY" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
           QR history
+        </Link>
+        <Link href="/audit?action=CONTENT_PROTECTION_DEVTOOLS_DETECTED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+          DevTools
+        </Link>
+        <Link href="/audit?action=CONTENT_PROTECTION_COPY_BLOCKED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+          Copy attempts
         </Link>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">

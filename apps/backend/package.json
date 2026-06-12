@@ -16,6 +16,8 @@
     "regen:test-cert": "tsx src/scripts/regenerateTestCertificate.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.777.0",
+    "@aws-sdk/s3-request-presigner": "3.777.0",
     "@funt-platform/constants": "*",
     "@funt-platform/types": "*",
     "@types/cookie-parser": "^1.4.10",
