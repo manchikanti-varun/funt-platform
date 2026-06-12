@@ -60,6 +60,7 @@ import {
   ALargeSmall,
   Calendar,
   Unlink,
+  FileVideo,
   Search
 } from "lucide";
 import { SlashCommandsExtension } from "./slashCommands.js";
@@ -105,6 +106,7 @@ const TOOLBAR_ACTIONS = {
   divider: "divider",
   image: "image",
   video: "video",
+  uploadVideo: "uploadVideo",
   callout: "callout",
   table: "table",
   textColor: "textColor",
@@ -168,6 +170,7 @@ const ICONS = {
   divider: "minus",
   image: "image-plus",
   video: "video",
+  uploadVideo: "file-video",
   callout: "message-square-warning",
   table: "table-2",
   textColor: "palette",
@@ -475,8 +478,8 @@ export class RichTextEditor implements RichTextEditorApi {
   private statsBar: HTMLDivElement | null = null;
   private floatingInlineBar: HTMLDivElement | null = null;
   private changeCallbacks = new Set<(payload: { html: string; json: JSONContent }) => void>();
-  private options: Required<Omit<RichTextEditorOptions, "content" | "uploadImage">> &
-    Pick<RichTextEditorOptions, "content" | "uploadImage">;
+  private options: Required<Omit<RichTextEditorOptions, "content" | "uploadImage" | "uploadVideo">> &
+    Pick<RichTextEditorOptions, "content" | "uploadImage" | "uploadVideo">;
 
   constructor(options: RichTextEditorOptions = {}) {
     this.options = {
@@ -487,7 +490,8 @@ export class RichTextEditor implements RichTextEditorApi {
       sanitizeOnGet: options.sanitizeOnGet ?? true,
       maxHeight: Math.max(360, Math.floor(options.maxHeight ?? 720)),
       contentMinHeight: Math.max(140, Math.floor(options.contentMinHeight ?? 220)),
-      uploadImage: options.uploadImage
+      uploadImage: options.uploadImage,
+      uploadVideo: options.uploadVideo,
     };
   }
 
@@ -1092,7 +1096,8 @@ export class RichTextEditor implements RichTextEditorApi {
       this.button(this.iconMarkup(ICONS.callout), "Callout block", TOOLBAR_ACTIONS.callout),
       this.button(this.iconMarkup(ICONS.table), "Insert table", TOOLBAR_ACTIONS.table),
       this.button(this.iconMarkup(ICONS.image), "Image (URL or upload)", TOOLBAR_ACTIONS.image),
-      this.button(this.iconMarkup(ICONS.video), "Video URL", TOOLBAR_ACTIONS.video),
+      this.button(this.iconMarkup(ICONS.video), "Video URL (paste link)", TOOLBAR_ACTIONS.video),
+      this.button(this.iconMarkup(ICONS.uploadVideo), "Upload video to R2", TOOLBAR_ACTIONS.uploadVideo),
       this.separator(),
       this.button(this.iconMarkup(ICONS.alignLeft), "Align left", TOOLBAR_ACTIONS.alignLeft),
       this.button(this.iconMarkup(ICONS.alignCenter), "Align center", TOOLBAR_ACTIONS.alignCenter),
@@ -1158,6 +1163,7 @@ export class RichTextEditor implements RichTextEditorApi {
         ALargeSmall,
         Calendar,
         Unlink,
+        FileVideo,
         Search,
         Undo2,
         Redo2
@@ -1541,6 +1547,9 @@ export class RichTextEditor implements RichTextEditorApi {
       case TOOLBAR_ACTIONS.video:
         void this.insertVideoFromUrl();
         break;
+      case TOOLBAR_ACTIONS.uploadVideo:
+        void this.insertVideoFromUpload();
+        break;
       case TOOLBAR_ACTIONS.alignLeft:
         chain.setTextAlign("left").run();
         break;
@@ -1590,6 +1599,74 @@ export class RichTextEditor implements RichTextEditorApi {
         break;
     }
     this.updateToolbarState();
+  }
+
+  private async insertVideoFromUpload(): Promise<void> {
+    if (!this.editor || !this.root) return;
+    const uploadFn = this.options.uploadVideo;
+    if (!uploadFn) {
+      await showRteAlert(this.root, "Video upload is not configured for this editor.");
+      return;
+    }
+
+    // Create a hidden file input and trigger it
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "video/mp4";
+    input.style.display = "none";
+    document.body.appendChild(input);
+
+    const file = await new Promise<File | null>((resolve) => {
+      input.addEventListener("change", () => {
+        resolve(input.files?.[0] ?? null);
+        document.body.removeChild(input);
+      }, { once: true });
+      // Cancelled (no file chosen)
+      window.addEventListener("focus", () => {
+        setTimeout(() => {
+          if (!input.files?.length) {
+            document.body.removeChild(input);
+            resolve(null);
+          }
+        }, 500);
+      }, { once: true });
+      input.click();
+    });
+
+    if (!file) return;
+
+    // Show a progress indicator inside the editor
+    const progressId = `rte-upload-${Date.now()}`;
+    this.editor.chain().focus().insertContent(
+      `<p id="${progressId}" class="rte-upload-progress">Uploading video… 0%</p>`
+    ).run();
+
+    const updateProgress = (pct: number) => {
+      const el = this.root?.querySelector(`#${progressId}`);
+      if (el) el.textContent = `Uploading video… ${pct}%`;
+    };
+
+    try {
+      const { url } = await uploadFn(file, updateProgress);
+
+      // Remove the progress paragraph
+      const el = this.root?.querySelector(`#${progressId}`);
+      if (el) el.remove();
+
+      // Insert the video node
+      this.editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: "video",
+          attrs: { src: url, controls: true, renderKind: "video", widthPct: 80, align: "center" },
+        })
+        .run();
+    } catch (err) {
+      const el = this.root?.querySelector(`#${progressId}`);
+      if (el) el.remove();
+      await showRteAlert(this.root, err instanceof Error ? err.message : "Video upload failed.");
+    }
   }
 
   private async insertVideoFromUrl(): Promise<void> {

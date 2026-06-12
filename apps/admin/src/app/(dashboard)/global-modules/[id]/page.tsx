@@ -10,6 +10,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
+import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 
 interface VersionSnapshot {
   version: number;
@@ -215,7 +216,12 @@ export default function EditGlobalChapterPage() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-semibold text-slate-700">Content</label>
-              <RichTextEditor value={content} onChange={setContent} minHeight={320} />
+              <RichTextEditor
+                value={content}
+                onChange={setContent}
+                minHeight={320}
+                uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: id })}
+              />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

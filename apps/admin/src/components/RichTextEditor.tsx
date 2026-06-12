@@ -14,6 +14,12 @@ export interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   enableSlashCommands?: boolean;
+  /**
+   * When provided, a "Upload Video" button appears in the toolbar.
+   * The callback should upload the file to R2 and return a playable URL.
+   * The returned URL is embedded directly as a <video> node in the content.
+   */
+  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
 }
 
 export function RichTextEditor({
@@ -23,32 +29,41 @@ export function RichTextEditor({
   maxHeight = 720,
   placeholder,
   className = "",
-  enableSlashCommands = true
+  enableSlashCommands = true,
+  uploadVideo,
 }: RichTextEditorProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<RichTextEditorApi | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
   const lastEmittedHtmlRef = useRef(value ?? "");
   const isApplyingExternalRef = useRef(false);
+  // Keep uploadVideo stable via ref so the editor doesn't need to be recreated
+  const uploadVideoRef = useRef(uploadVideo);
+  useEffect(() => { uploadVideoRef.current = uploadVideo; }, [uploadVideo]);
 
   useEffect(() => {
     const mount = rootRef.current;
-    if (!mount) {
-      return;
-    }
+    if (!mount) return;
+
     const editor = new RichTextEditorCore({
       content: value || "",
       placeholder,
       toolbarMode: "top",
       enableSlashCommands,
       maxHeight,
-      contentMinHeight: Math.max(minHeight + 40, 180)
+      contentMinHeight: Math.max(minHeight + 40, 180),
+      // Proxy through the ref so the latest callback is always used
+      ...(uploadVideo !== undefined
+        ? {
+            uploadVideo: (file: File, onProgress: (pct: number) => void) =>
+              uploadVideoRef.current!(file, onProgress),
+          }
+        : {}),
     });
     editor.init(mount);
+
     unsubRef.current = editor.onChange(({ html }) => {
-      if (isApplyingExternalRef.current) {
-        return;
-      }
+      if (isApplyingExternalRef.current) return;
       lastEmittedHtmlRef.current = html;
       onChange(html);
     });
@@ -60,20 +75,15 @@ export function RichTextEditor({
       editor.destroy();
       editorRef.current = null;
     };
+  // uploadVideo intentionally excluded — handled via ref
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor) {
-      return;
-    }
-    if (isApplyingExternalRef.current) {
-      return;
-    }
-    if (value === lastEmittedHtmlRef.current) {
-      return;
-    }
+    if (!editor) return;
+    if (isApplyingExternalRef.current) return;
+    if (value === lastEmittedHtmlRef.current) return;
     isApplyingExternalRef.current = true;
     editor.setContent(value || "");
     lastEmittedHtmlRef.current = value || "";
@@ -109,6 +119,12 @@ export function RichTextEditor({
 
         div :global(.rte-prosemirror.is-editor-empty:first-child::before) {
           color: #94a3b8;
+        }
+
+        div :global(.rte-upload-progress) {
+          color: #0d9488;
+          font-style: italic;
+          font-size: 0.875rem;
         }
       `}</style>
     </div>

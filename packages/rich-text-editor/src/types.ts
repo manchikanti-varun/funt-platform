@@ -29,6 +29,8 @@ export interface RichTextEditorOptions {
   sanitizeOnGet?: boolean;
   maxHeight?: number;
   contentMinHeight?: number;
+  /** Called when user clicks "Upload Video" in the toolbar. Upload the file and return a playable URL. */
+  uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string }>;
   uploadImage?: (file: File) => Promise<{ url: string; alt?: string }>;
 }
 
