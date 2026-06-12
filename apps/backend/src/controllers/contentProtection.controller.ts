@@ -12,6 +12,7 @@ import {
   getContentProtectionSettings,
   updateContentProtectionSettings,
   logProtectionEvent,
+  resolveEffectivePolicy,
   type ContentProtectionPolicy,
 } from "../services/contentProtection.service.js";
 import { successRes } from "../utils/response.js";
@@ -49,13 +50,10 @@ export const updateGlobalContentProtection = asyncHandler(
 );
 
 // ── Student: get effective policy for their session ───────────────────────────
-// This is called once by the LMS on mount to get all protection toggles + watermark config.
-// It also returns the student identity fields needed for the watermark overlay.
 export const getStudentContentProtection = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
     const studentId = getUserId(req);
 
-    // Import here to avoid circular dependency
     const { UserModel } = await import("../models/User.model.js");
     const student = await UserModel.findById(studentId)
       .select("name email username")
@@ -66,11 +64,32 @@ export const getStudentContentProtection = asyncHandler(
 
     const settings = await getContentProtectionSettings();
 
-    // Course/batch level overrides can be passed as query params for the LMS
-    // to retrieve the most specific policy for the active chapter.
-    // For now we use the global LMS policy (course/batch overrides applied client-side
-    // using data embedded in the course response).
-    const effectivePolicy: ContentProtectionPolicy = settings.lmsProtection;
+    // Apply course-level watermark override when courseId is provided
+    let courseWatermarkOverride: Partial<ContentProtectionPolicy> | null = null;
+    const courseId = typeof req.query.courseId === "string" ? req.query.courseId.trim() : "";
+    if (courseId) {
+      const { CourseModel } = await import("../models/Course.model.js");
+      const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/;
+      const course = await CourseModel.findOne(
+        OBJECT_ID_RE.test(courseId)
+          ? { _id: courseId }
+          : { courseId }
+      )
+        .select("enableWatermark")
+        .lean()
+        .exec();
+
+      // Only override if the course explicitly sets enableWatermark (not null/undefined)
+      const courseWm = (course as { enableWatermark?: boolean | null } | null)?.enableWatermark;
+      if (courseWm === true || courseWm === false) {
+        courseWatermarkOverride = { enableWatermark: courseWm };
+      }
+    }
+
+    const effectivePolicy = resolveEffectivePolicy(
+      settings.lmsProtection,
+      courseWatermarkOverride
+    );
 
     successRes(res, {
       policy: effectivePolicy,

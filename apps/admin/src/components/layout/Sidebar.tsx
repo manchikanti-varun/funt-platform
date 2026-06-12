@@ -142,6 +142,10 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/audit-hub" isActive={pathname.startsWith("/audit-hub")}>
               Audit hub
             </SidebarNavLink>
+            <p className={SECTION_LABEL_CLASS}>Config</p>
+            <SidebarNavLink href="/config/content-protection" isActive={pathname.startsWith("/config")}>
+              Content protection
+            </SidebarNavLink>
           </>
         )}
       </nav>

@@ -1,16 +1,5 @@
 "use client";
 
-/**
- * ProtectionContext
- *
- * Fetches the effective content-protection policy + student identity from
- * the backend once on mount, then makes them available to all security
- * components via React context.
- *
- * Also exposes logEvent() so any component can fire an audit event without
- * reimplementing the API call.
- */
-
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 
@@ -44,17 +33,21 @@ interface ProtectionState {
   watermark: WatermarkConfig;
   student: ProtectedStudentIdentity | null;
   ready: boolean;
+  /** Currently active course id — used to apply per-course overrides */
+  activeCourseId: string | null;
 }
 
 interface ProtectionContextValue extends ProtectionState {
   logEvent: (action: string, meta?: { courseId?: string; batchId?: string; event?: string }) => void;
+  /** Call from a course page to apply per-course watermark overrides */
+  setActiveCourseId: (courseId: string | null) => void;
 }
 
 const DEFAULT_POLICY: ContentProtectionPolicy = {
   disableRightClick: true,
   disableKeyboardShortcuts: true,
   disableTextSelection: true,
-  enableWatermark: true,
+  enableWatermark: false,   // off by default — enabled only when backend confirms
   screenshotProtection: true,
   screenRecordingProtection: false,
   screenShareProtection: false,
@@ -73,23 +66,30 @@ const ProtectionContext = createContext<ProtectionContextValue>({
   watermark: DEFAULT_WATERMARK,
   student: null,
   ready: false,
+  activeCourseId: null,
   logEvent: () => {},
+  setActiveCourseId: () => {},
 });
 
 export function ProtectionProvider({ children }: { children: React.ReactNode }) {
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
   const [state, setState] = useState<ProtectionState>({
     policy: DEFAULT_POLICY,
     watermark: DEFAULT_WATERMARK,
     student: null,
     ready: false,
+    activeCourseId: null,
   });
 
   useEffect(() => {
+    const url = activeCourseId
+      ? `/api/student/content-protection?courseId=${encodeURIComponent(activeCourseId)}`
+      : "/api/student/content-protection";
     api<{
       policy: ContentProtectionPolicy;
       watermark: WatermarkConfig;
       student: ProtectedStudentIdentity;
-    }>("/api/student/content-protection")
+    }>(url)
       .then((r) => {
         if (r.success && r.data) {
           setState({
@@ -97,20 +97,19 @@ export function ProtectionProvider({ children }: { children: React.ReactNode }) 
             watermark: { ...DEFAULT_WATERMARK, ...r.data.watermark },
             student: r.data.student,
             ready: true,
+            activeCourseId,
           });
         } else {
-          // Fallback to defaults — protection still active
-          setState((prev) => ({ ...prev, ready: true }));
+          setState((prev) => ({ ...prev, ready: true, activeCourseId }));
         }
       })
       .catch(() => {
-        setState((prev) => ({ ...prev, ready: true }));
+        setState((prev) => ({ ...prev, ready: true, activeCourseId }));
       });
-  }, []);
+  }, [activeCourseId]);
 
   const logEvent = useCallback(
     (action: string, meta?: { courseId?: string; batchId?: string; event?: string }) => {
-      // Fire-and-forget — never block the UI
       void api("/api/student/content-protection/events", {
         method: "POST",
         body: JSON.stringify({ action, ...meta }),
@@ -120,7 +119,7 @@ export function ProtectionProvider({ children }: { children: React.ReactNode }) 
   );
 
   return (
-    <ProtectionContext.Provider value={{ ...state, logEvent }}>
+    <ProtectionContext.Provider value={{ ...state, activeCourseId, logEvent, setActiveCourseId }}>
       {children}
     </ProtectionContext.Provider>
   );

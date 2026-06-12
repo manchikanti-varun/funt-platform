@@ -8,6 +8,7 @@ import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { shouldShowChapterDescription } from "@funt-platform/rich-text-editor";
 import { AppPageShell, DataPanel } from "@/components/ui";
+import { useProtection } from "@/components/security/ProtectionContext";
 
 interface ChapterItem {
   order: number;
@@ -104,6 +105,14 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const selectedYoutubeSnapRef = useRef<{ order: number; vid: string; done: boolean }>({ order: -1, vid: "", done: true });
   const markYoutubeDoneRef = useRef<() => void>(() => {});
   const youtubeFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const { setActiveCourseId } = useProtection();
+
+  // Tell the protection context which course is active so it can apply per-course watermark overrides
+  useEffect(() => {
+    const cid = data?.courseId ?? courseId ?? null;
+    setActiveCourseId(cid);
+    return () => setActiveCourseId(null);
+  }, [data?.courseId, courseId, setActiveCourseId]);
 
   useEffect(() => {
     setYtPageOrigin(typeof window !== "undefined" ? window.location.origin : "");
@@ -633,7 +642,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       </ul>
                     </div>
                   </aside>
-                  <div className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-lg shadow-md ring-1 ring-indigo-100">
+                  <div id="course-content-area" className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-lg shadow-md ring-1 ring-indigo-100">
                     {selected ? (
                       <div className="space-y-8">
                         <h2 className="text-xl font-black tracking-tight text-slate-900 border-b border-slate-200 pb-4">{selected.title}</h2>

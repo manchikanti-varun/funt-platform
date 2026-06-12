@@ -47,6 +47,8 @@ interface Course {
   modules: CourseModule[];
   version: number;
   status: string;
+  /** null = inherit global setting, true/false = override */
+  enableWatermark?: boolean | null;
 }
 
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
@@ -77,6 +79,8 @@ export default function EditCoursePage() {
   const [moduleEdit, setModuleEdit] = useState<Partial<CourseModule>>({});
   const [savingModule, setSavingModule] = useState(false);
   const [globalAssignmentPreview, setGlobalAssignmentPreview] = useState<{ title: string; instructions: string; submissionType?: string; skillTags?: string[] } | null>(null);
+  /** null = inherit global, true = force on, false = force off */
+  const [enableWatermark, setEnableWatermark] = useState<boolean | null | "inherit">("inherit");
 
   const roleGuard = <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />;
 
@@ -97,6 +101,8 @@ export default function EditCoursePage() {
         setLearningOutcomes((r.data.learningOutcomes ?? []).join("\n"));
         setOverview(decodeEncodedRichText(r.data.overview ?? ""));
         setPricingTiers((r.data.pricingTiers ?? []).map((t) => ({ label: t.label, price: t.price, note: t.note ?? "" })));
+        const wm = r.data.enableWatermark;
+        setEnableWatermark(wm === true ? true : wm === false ? false : "inherit");
       }
     });
   }, [id]);
@@ -148,6 +154,7 @@ export default function EditCoursePage() {
       learningOutcomes: learningOutcomes.split("\n").map((l) => l.trim()).filter(Boolean),
       overview: overview.trim(),
       pricingTiers: pricingTiers.filter((t) => t.label.trim() && t.price.trim()),
+      enableWatermark: enableWatermark === "inherit" ? null : enableWatermark,
     };
     const res = await api(`/api/courses/${id}`, {
       method: "PUT",
@@ -439,6 +446,30 @@ export default function EditCoursePage() {
                 </div>
               ))}
               <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-teal-700 hover:text-teal-900">+ Add pricing tier</button>
+            </div>
+          </div>
+          {/* ── Security settings ── */}
+          <div className="border-t border-slate-200 pt-6">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-700">Security</h3>
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+              <p className="mb-3 text-xs text-slate-500">
+                Watermark setting for this course. Choose <strong>Inherit</strong> to follow the global config, or override for this course only.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {(["inherit", true, false] as const).map((val) => (
+                  <label key={String(val)} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${enableWatermark === val ? "border-teal-500 bg-teal-50 text-teal-800" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}>
+                    <input
+                      type="radio"
+                      name="enableWatermark"
+                      value={String(val)}
+                      checked={enableWatermark === val}
+                      onChange={() => setEnableWatermark(val)}
+                      className="sr-only"
+                    />
+                    {val === "inherit" ? "Inherit global setting" : val === true ? "Watermark ON (override)" : "Watermark OFF (override)"}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <div className="border-t border-slate-200 pt-6">

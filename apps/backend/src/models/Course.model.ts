@@ -67,6 +67,13 @@ const courseSchema = new Schema(
     },
     createdBy: { type: String, required: true },
         moderatorIds: { type: [String], required: false, default: [] },
+    /**
+     * Per-course watermark override.
+     * null / undefined = inherit global LMS policy
+     * true = watermark ON for this course regardless of global
+     * false = watermark OFF for this course regardless of global
+     */
+    enableWatermark: { type: Boolean, required: false, default: null },
   },
   { timestamps: true }
 );

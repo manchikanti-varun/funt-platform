@@ -31,16 +31,29 @@ function formatTime(d: Date): string {
 }
 
 export function WatermarkOverlay() {
-  const { policy, watermark, student, ready } = useProtection();
+  const { policy, watermark, student, ready, activeCourseId } = useProtection();
   const [mounted, setMounted] = useState(false);
   const [time, setTime] = useState(() => formatTime(new Date()));
-  // Offset [0..1] range; changes slightly each interval to shift grid position
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Re-resolve the container whenever activeCourseId changes — the course content
+  // div (#course-content-area) only exists when a course page is mounted.
+  useEffect(() => {
+    const resolve = () => {
+      const courseEl = document.getElementById("course-content-area");
+      setContainer(courseEl ?? document.getElementById("lms-main-content"));
+    };
+    resolve();
+    // Small delay to let React paint the course page before querying the DOM
+    const t = setTimeout(resolve, 100);
+    return () => clearTimeout(t);
+  }, [activeCourseId, mounted]);
 
   // Tick the clock every second
   useEffect(() => {
@@ -54,7 +67,7 @@ export function WatermarkOverlay() {
     const ms = (watermark.refreshIntervalSeconds ?? 8) * 1000;
     intervalRef.current = setInterval(() => {
       setOffset({
-        x: Math.random() * 0.15 - 0.075, // ±7.5% of repeat-cell width
+        x: Math.random() * 0.15 - 0.075,
         y: Math.random() * 0.15 - 0.075,
       });
     }, ms);
@@ -63,12 +76,10 @@ export function WatermarkOverlay() {
     };
   }, [ready, policy.enableWatermark, watermark.refreshIntervalSeconds]);
 
-  if (!mounted || !ready || !policy.enableWatermark || !student) return null;
+  if (!mounted || !ready || !policy.enableWatermark || !student || !container) return null;
 
   const { opacity, fontSize, rotation } = watermark;
 
-  // One watermark cell — repeated via CSS background-repeat
-  // We build it as an SVG data URL and tile it.
   const studentLine1 = student.name || student.username;
   const studentLine2 = student.email || student.id.slice(0, 16);
   const timeLine = time;
@@ -96,7 +107,6 @@ export function WatermarkOverlay() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${cellW}" height="${cellH}">${svgLines}</svg>`;
   const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
-  // Shift the background position to defeat static-crop stripping
   const bgX = `${(offset.x * cellW).toFixed(1)}px`;
   const bgY = `${(offset.y * cellH).toFixed(1)}px`;
 
@@ -104,7 +114,7 @@ export function WatermarkOverlay() {
     <div
       aria-hidden="true"
       style={{
-        position: "fixed",
+        position: "absolute",
         inset: 0,
         zIndex: 9000,
         pointerEvents: "none",
@@ -113,12 +123,11 @@ export function WatermarkOverlay() {
         backgroundRepeat: "repeat",
         backgroundSize: `${cellW}px ${cellH}px`,
         backgroundPosition: `${bgX} ${bgY}`,
-        // Extra: also render top-right corner identity stamp for screenshot deterrence
       }}
     />
   );
 
-  return createPortal(overlay, document.body);
+  return createPortal(overlay, container);
 }
 
 function escapeXml(s: string): string {
