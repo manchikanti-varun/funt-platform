@@ -32,51 +32,128 @@ interface ContentProtectionSettings {
   updatedAt: string;
 }
 
-const POLICY_LABELS: Record<keyof ContentProtectionPolicy, { label: string; description: string }> = {
-  disableRightClick: { label: "Block right-click", description: "Prevents the context menu on all page content." },
-  disableKeyboardShortcuts: { label: "Block copy shortcuts", description: "Blocks Ctrl+C, Ctrl+A, Ctrl+S, Ctrl+P and similar shortcuts." },
-  disableTextSelection: { label: "Disable text selection", description: "Prevents students from selecting and copying text." },
-  enableWatermark: { label: "Dynamic watermark", description: "Shows student name, email and timestamp as a repeating overlay." },
-  screenshotProtection: { label: "Screenshot deterrence", description: "Blocks Print Screen key and hides content in print mode." },
-  screenRecordingProtection: { label: "Screen recording detection", description: "Attempts to detect and log screen recording activity." },
-  screenShareProtection: { label: "Screen share detection", description: "Intercepts getDisplayMedia calls and logs sharing events." },
-  devToolsProtection: { label: "DevTools detection", description: "Detects browser DevTools and shows a warning banner." },
+const POLICY_LABELS: Record<keyof ContentProtectionPolicy, { label: string; description: string; icon: string }> = {
+  disableRightClick:       { label: "Block right-click",        description: "Prevents the context menu on all page content.",                          icon: "🖱️" },
+  disableKeyboardShortcuts:{ label: "Block copy shortcuts",      description: "Blocks Ctrl+C, Ctrl+A, Ctrl+S, Ctrl+P and similar shortcuts.",            icon: "⌨️" },
+  disableTextSelection:    { label: "Disable text selection",    description: "Prevents students from selecting and copying text.",                       icon: "🔡" },
+  enableWatermark:         { label: "Dynamic watermark",         description: "Shows student name, email and timestamp as a repeating overlay.",          icon: "💧" },
+  screenshotProtection:    { label: "Screenshot deterrence",     description: "Blocks Print Screen key and hides content in print mode.",                 icon: "📸" },
+  screenRecordingProtection:{ label: "Screen recording detection",description: "Attempts to detect and log screen recording activity.",                   icon: "🎥" },
+  screenShareProtection:   { label: "Screen share detection",    description: "Intercepts getDisplayMedia calls and logs sharing events.",                icon: "🖥️" },
+  devToolsProtection:      { label: "DevTools detection",        description: "Detects browser DevTools and shows a warning banner.",                     icon: "🔧" },
 };
 
+// ── Toggle switch component ────────────────────────────────────────────────
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={[
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2",
+        checked ? "bg-teal-600" : "bg-slate-300",
+        disabled ? "cursor-not-allowed opacity-50" : "",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out",
+          checked ? "translate-x-5" : "translate-x-0",
+        ].join(" ")}
+      />
+    </button>
+  );
+}
+
+// ── Policy card with toggle rows ──────────────────────────────────────────
 function PolicyCard({
   title,
+  subtitle,
   policy,
   onChange,
   disabled,
 }: {
   title: string;
+  subtitle?: string;
   policy: ContentProtectionPolicy;
   onChange: (key: keyof ContentProtectionPolicy, value: boolean) => void;
   disabled: boolean;
 }) {
+  const enabledCount = Object.values(policy).filter(Boolean).length;
+  const totalCount = Object.keys(POLICY_LABELS).length;
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700">{title}</h3>
-      <div className="space-y-3">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {/* Card header */}
+      <div className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">{title}</h3>
+            {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
+          </div>
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            enabledCount === totalCount
+              ? "bg-teal-100 text-teal-800"
+              : enabledCount === 0
+                ? "bg-slate-100 text-slate-500"
+                : "bg-amber-100 text-amber-800"
+          }`}>
+            {enabledCount}/{totalCount} on
+          </span>
+        </div>
+      </div>
+
+      {/* Toggle rows */}
+      <div className="divide-y divide-slate-50 p-1">
         {(Object.keys(POLICY_LABELS) as Array<keyof ContentProtectionPolicy>).map((key) => {
-          const { label, description } = POLICY_LABELS[key];
+          const { label, description, icon } = POLICY_LABELS[key];
+          const isOn = policy[key];
           return (
-            <label
+            <div
               key={key}
-              className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5 transition hover:bg-slate-100/60"
+              className={[
+                "flex items-center gap-4 rounded-xl px-4 py-3 transition",
+                isOn ? "bg-teal-50/40" : "hover:bg-slate-50/60",
+                disabled ? "" : "cursor-pointer",
+              ].join(" ")}
+              onClick={() => !disabled && onChange(key, !isOn)}
             >
-              <input
-                type="checkbox"
-                checked={policy[key]}
-                onChange={(e) => onChange(key, e.target.checked)}
-                disabled={disabled}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-              />
-              <span>
-                <span className="block text-sm font-medium text-slate-800">{label}</span>
-                <span className="block text-xs text-slate-500">{description}</span>
-              </span>
-            </label>
+              {/* Icon */}
+              <span className="text-lg leading-none select-none" aria-hidden>{icon}</span>
+
+              {/* Label + description */}
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-semibold leading-tight ${isOn ? "text-teal-900" : "text-slate-700"}`}>
+                  {label}
+                </p>
+                <p className="mt-0.5 text-xs leading-snug text-slate-500">{description}</p>
+              </div>
+
+              {/* Status pill + toggle */}
+              <div className="flex shrink-0 items-center gap-2.5">
+                <span className={`hidden rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider sm:inline-block ${
+                  isOn ? "bg-teal-100 text-teal-700" : "bg-slate-100 text-slate-400"
+                }`}>
+                  {isOn ? "On" : "Off"}
+                </span>
+                <Toggle
+                  checked={isOn}
+                  onChange={(v) => onChange(key, v)}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
           );
         })}
       </div>
@@ -84,6 +161,7 @@ function PolicyCard({
   );
 }
 
+// ── Main page ──────────────────────────────────────────────────────────────
 export default function ContentProtectionPage() {
   const { roles } = useAdminUser();
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
@@ -152,24 +230,32 @@ export default function ContentProtectionPage() {
     <div className="w-full space-y-6">
       <PageHeader
         title="Content Protection"
-        subtitle="Configure what content-protection behaviours apply to the LMS and admin portals. Watermark is the most effective deterrent — it persists through screenshots."
+        subtitle="Configure content-protection behaviours for the LMS and admin portals. Toggle each protection on or off independently."
       />
 
       {!isSuperAdmin && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
-          Read-only — only Super Admins can change these settings.
-        </p>
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <svg className="h-4 w-4 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <p className="text-sm font-medium text-amber-900">
+            Read-only — only Super Admins can change these settings.
+          </p>
+        </div>
       )}
 
+      {/* Policy cards side-by-side */}
       <div className="grid gap-6 lg:grid-cols-2">
         <PolicyCard
           title="LMS — Student Portal"
+          subtitle="Applies to all students on learn.funt.in"
           policy={settings.lmsProtection}
           onChange={updateLms}
           disabled={!isSuperAdmin || saving}
         />
         <PolicyCard
           title="Admin Portal"
+          subtitle="Applies to admins and trainers on admin.funt.in"
           policy={settings.adminProtection}
           onChange={updateAdmin}
           disabled={!isSuperAdmin || saving}
@@ -177,55 +263,59 @@ export default function ContentProtectionPage() {
       </div>
 
       {/* Watermark settings */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-700">
-          Watermark Settings
-        </h3>
-        <p className="mb-4 text-sm text-slate-600">
-          Applied when watermark is enabled. The overlay shows the student&apos;s name, email,
-          ID and current timestamp — persists across screenshots.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { key: "opacity" as const, label: "Opacity", min: 0.02, max: 0.5, step: 0.01 },
-            { key: "fontSize" as const, label: "Font size (px)", min: 8, max: 32, step: 1 },
-            { key: "rotation" as const, label: "Rotation (°)", min: -90, max: 90, step: 5 },
-            { key: "refreshIntervalSeconds" as const, label: "Shift interval (s)", min: 1, max: 120, step: 1 },
-          ].map(({ key, label, min, max, step }) => (
-            <div key={key}>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                {label}
-                <span className="ml-1 font-mono text-teal-700">{settings.watermark[key]}</span>
-              </label>
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={settings.watermark[key]}
-                onChange={(e) => updateWatermark(key, Number(e.target.value))}
-                disabled={!isSuperAdmin || saving}
-                className="w-full accent-teal-600"
-              />
-              <div className="flex justify-between text-[10px] text-slate-400">
-                <span>{min}</span><span>{max}</span>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white px-5 py-4">
+          <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">Watermark Settings</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Customise the overlay appearance. Active when &ldquo;Dynamic watermark&rdquo; is on.
+          </p>
+        </div>
+        <div className="p-5">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { key: "opacity" as const,               label: "Opacity",           min: 0.02, max: 0.5,  step: 0.01, unit: "" },
+              { key: "fontSize" as const,              label: "Font size",         min: 8,    max: 32,   step: 1,    unit: "px" },
+              { key: "rotation" as const,              label: "Rotation",          min: -90,  max: 90,   step: 5,    unit: "°" },
+              { key: "refreshIntervalSeconds" as const,label: "Shift interval",    min: 1,    max: 120,  step: 1,    unit: "s" },
+            ].map(({ key, label, min, max, step, unit }) => (
+              <div key={key} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-slate-600">{label}</label>
+                  <span className="font-mono text-xs font-bold text-teal-700">
+                    {settings.watermark[key]}{unit}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={settings.watermark[key]}
+                  onChange={(e) => updateWatermark(key, Number(e.target.value))}
+                  disabled={!isSuperAdmin || saving}
+                  className="w-full accent-teal-600 disabled:opacity-50"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>{min}{unit}</span>
+                  <span>{max}{unit}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Last updated */}
       {settings.updatedBy && (
         <p className="text-xs text-slate-500">
-          Last updated by <span className="font-medium text-slate-700">{settings.updatedBy}</span>
-          {settings.updatedAt && (
-            <> on {new Date(settings.updatedAt).toLocaleString()}</>
-          )}
+          Last updated by{" "}
+          <span className="font-medium text-slate-700">{settings.updatedBy}</span>
+          {settings.updatedAt && <> on {new Date(settings.updatedAt).toLocaleString()}</>}
         </p>
       )}
 
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
           {error}
         </p>
       )}
@@ -244,11 +334,21 @@ export default function ContentProtectionPage() {
                 Saving…
               </>
             ) : (
-              "Save settings"
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Save settings
+              </>
             )}
           </button>
           {success && (
-            <span className="text-sm font-medium text-emerald-700">Settings saved.</span>
+            <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Settings saved successfully.
+            </span>
           )}
         </div>
       )}
