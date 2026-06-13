@@ -90,21 +90,34 @@ export async function updateContentProtectionSettings(
   input: UpdateContentProtectionInput,
   updatedBy: string
 ): Promise<ContentProtectionSettings> {
-  const current = await ContentProtectionModel.findOne({ key: SINGLETON_KEY }).exec();
+  // Use lean() so we get a plain JS object — spreading Mongoose subdocuments
+  // can silently drop falsy boolean values (e.g. enableWatermark: false).
+  const current = await ContentProtectionModel.findOne({ key: SINGLETON_KEY }).lean().exec();
 
   const updateFields: Record<string, unknown> = { updatedBy };
 
   if (input.lmsProtection) {
     const prev = (current?.lmsProtection ?? {}) as Partial<ContentProtectionPolicy>;
-    updateFields.lmsProtection = { ...DEFAULT_POLICY, ...prev, ...input.lmsProtection };
+    const merged = { ...DEFAULT_POLICY, ...prev, ...input.lmsProtection };
+    // Write each field individually using dot notation to prevent Mongoose
+    // schema defaults from overwriting explicit `false` boolean values
+    for (const [k, v] of Object.entries(merged)) {
+      updateFields[`lmsProtection.${k}`] = v;
+    }
   }
   if (input.adminProtection) {
     const prev = (current?.adminProtection ?? {}) as Partial<ContentProtectionPolicy>;
-    updateFields.adminProtection = { ...DEFAULT_POLICY, ...prev, ...input.adminProtection };
+    const merged = { ...DEFAULT_POLICY, ...prev, ...input.adminProtection };
+    for (const [k, v] of Object.entries(merged)) {
+      updateFields[`adminProtection.${k}`] = v;
+    }
   }
   if (input.watermark) {
     const prev = (current?.watermark ?? {}) as Partial<WatermarkConfig>;
-    updateFields.watermark = { ...DEFAULT_WATERMARK, ...prev, ...input.watermark };
+    const merged = { ...DEFAULT_WATERMARK, ...prev, ...input.watermark };
+    for (const [k, v] of Object.entries(merged)) {
+      updateFields[`watermark.${k}`] = v;
+    }
   }
 
   const doc = await ContentProtectionModel.findOneAndUpdate(

@@ -17,7 +17,7 @@ const contentProtectionPolicySchema = new Schema(
     disableRightClick: { type: Boolean, default: true },
     disableKeyboardShortcuts: { type: Boolean, default: true },
     disableTextSelection: { type: Boolean, default: true },
-    enableWatermark: { type: Boolean, default: true },
+    enableWatermark: { type: Boolean, default: false },   // off by default — must be explicitly enabled
     screenshotProtection: { type: Boolean, default: true },
     screenRecordingProtection: { type: Boolean, default: false },
     screenShareProtection: { type: Boolean, default: false },
