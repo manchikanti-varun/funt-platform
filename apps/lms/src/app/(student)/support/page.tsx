@@ -3,22 +3,47 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell } from "@/components/ui";
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: "bg-indigo-100 text-indigo-800", ASSIGNED: "bg-blue-100 text-blue-700",
-  IN_PROGRESS: "bg-cyan-100 text-cyan-800", WAITING_FOR_STUDENT: "bg-amber-100 text-amber-800",
-  WAITING_FOR_SUPPORT: "bg-orange-100 text-orange-800", RESOLVED: "bg-emerald-100 text-emerald-800",
-  CLOSED: "bg-slate-100 text-slate-600", ESCALATED: "bg-red-100 text-red-800",
+  OPEN:                 "bg-indigo-100 text-indigo-700",
+  ASSIGNED:             "bg-blue-100 text-blue-700",
+  IN_PROGRESS:          "bg-cyan-100 text-cyan-700",
+  WAITING_FOR_STUDENT:  "bg-amber-100 text-amber-700",
+  WAITING_FOR_SUPPORT:  "bg-orange-100 text-orange-700",
+  RESOLVED:             "bg-emerald-100 text-emerald-700",
+  CLOSED:               "bg-slate-100 text-slate-500",
+  ESCALATED:            "bg-red-100 text-red-700",
 };
+
+const STATUS_ICONS: Record<string, string> = {
+  OPEN: "🔵", ASSIGNED: "👤", IN_PROGRESS: "⚙️",
+  WAITING_FOR_STUDENT: "⏳", WAITING_FOR_SUPPORT: "💬",
+  RESOLVED: "✅", CLOSED: "🔒", ESCALATED: "🚨",
+};
+
 const PRIORITY_COLORS: Record<string, string> = {
-  LOW: "bg-slate-100 text-slate-500", MEDIUM: "bg-blue-100 text-blue-700",
-  HIGH: "bg-amber-100 text-amber-800", URGENT: "bg-red-100 text-red-800",
+  LOW: "text-slate-500", MEDIUM: "text-blue-600",
+  HIGH: "text-amber-600", URGENT: "text-red-600",
+};
+
+const PRIORITY_DOTS: Record<string, string> = {
+  LOW: "bg-slate-300", MEDIUM: "bg-blue-500",
+  HIGH: "bg-amber-500", URGENT: "bg-red-500",
 };
 
 const CATEGORIES = [
-  "COURSE_ACCESS","ASSIGNMENT","ATTENDANCE","CERTIFICATE","PAYMENT",
-  "ENROLLMENT","SHOP_ORDER","TECHNICAL_ISSUE","BUG_REPORT","FEATURE_REQUEST","GENERAL_QUERY",
+  { value: "GENERAL_QUERY",    label: "General Query" },
+  { value: "COURSE_ACCESS",    label: "Course Access" },
+  { value: "ASSIGNMENT",       label: "Assignment" },
+  { value: "ATTENDANCE",       label: "Attendance" },
+  { value: "CERTIFICATE",      label: "Certificate" },
+  { value: "PAYMENT",          label: "Payment" },
+  { value: "ENROLLMENT",       label: "Enrollment" },
+  { value: "SHOP_ORDER",       label: "Shop Order" },
+  { value: "TECHNICAL_ISSUE",  label: "Technical Issue" },
+  { value: "BUG_REPORT",       label: "Bug Report" },
+  { value: "FEATURE_REQUEST",  label: "Feature Request" },
 ];
 
 interface TicketRow {
@@ -30,25 +55,18 @@ interface ListResult { tickets: TicketRow[]; total: number }
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   function copy(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
   }
   return (
-    <button
-      type="button"
-      onClick={copy}
-      title="Copy ticket number"
-      className="ml-1.5 inline-flex items-center gap-1 rounded-md border border-black/10 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-black/50 transition hover:border-indigo-300 hover:text-indigo-700"
-    >
-      {copied ? (
-        <><svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Copied</>
-      ) : (
-        <><svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>
-      )}
+    <button type="button" onClick={copy} title="Copy"
+      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-500 transition hover:border-indigo-300 hover:text-indigo-600">
+      {copied
+        ? <><svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Copied</>
+        : <><svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy</>
+      }
     </button>
   );
 }
@@ -63,7 +81,6 @@ export default function StudentSupportPage() {
   const [formSuccess, setFormSuccess] = useState("");
   const [newTicketNumber, setNewTicketNumber] = useState("");
 
-  // Form state
   const [category, setCategory] = useState("GENERAL_QUERY");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
@@ -83,9 +100,7 @@ export default function StudentSupportPage() {
   async function submitTicket(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
-    if (!subject.trim() || !description.trim()) {
-      setFormError("Subject and description are required."); return;
-    }
+    if (!subject.trim() || !description.trim()) { setFormError("Subject and description are required."); return; }
     setSubmitting(true);
     const res = await api<{ ticketNumber?: string }>("/api/tickets", {
       method: "POST",
@@ -95,10 +110,7 @@ export default function StudentSupportPage() {
     if (res.success) {
       const tktNum = (res.data as { ticketNumber?: string } | undefined)?.ticketNumber ?? "";
       setNewTicketNumber(tktNum);
-      setFormSuccess(tktNum
-        ? `Ticket submitted! Your ticket number is ${tktNum} — save this to check your status or reference it with management.`
-        : "Your support ticket has been submitted. We'll respond soon."
-      );
+      setFormSuccess(tktNum ? `Ticket ${tktNum} submitted successfully.` : "Ticket submitted successfully.");
       setShowForm(false);
       setSubject(""); setDescription(""); setCategory("GENERAL_QUERY"); setPriority("");
       void load();
@@ -107,31 +119,45 @@ export default function StudentSupportPage() {
     }
   }
 
+  const ticketCount = result?.total ?? 0;
+
   return (
-    <AppPageShell className="max-w-4xl pb-8">
-      <div className="page-hero shrink-0 py-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <AppPageShell className="max-w-3xl pb-8">
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <div className="page-hero shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-black">Support</h1>
+            <p className="label-overline">Help Center</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-black">Support</h1>
             <p className="mt-1 text-sm text-black/60">Raise and track your support tickets.</p>
           </div>
-          <button onClick={() => { setShowForm((s) => !s); setFormError(""); setFormSuccess(""); setNewTicketNumber(""); }}
-            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">
-            {showForm ? "Cancel" : "+ New Ticket"}
+          <button
+            onClick={() => { setShowForm((s) => !s); setFormError(""); setFormSuccess(""); setNewTicketNumber(""); }}
+            className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold shadow-sm transition ${
+              showForm
+                ? "border-2 border-black/10 bg-white text-black/70 hover:bg-slate-50"
+                : "bg-indigo-600 text-white hover:bg-indigo-500"
+            }`}
+          >
+            {showForm ? (
+              <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>Cancel</>
+            ) : (
+              <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>New Ticket</>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Success banner with prominent ticket number */}
+      {/* ── Success banner ──────────────────────────────────────────── */}
       {formSuccess && (
-        <div className="rounded-2xl border-2 border-indigo-200 bg-indigo-50 px-5 py-4 space-y-2">
-          <div className="flex items-start gap-2">
-            <svg className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+        <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-indigo-50">
+          <div className="flex items-start gap-3 px-5 py-4">
+            <svg className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
             <p className="text-sm font-semibold text-indigo-900">{formSuccess}</p>
           </div>
           {newTicketNumber && (
-            <div className="flex items-center gap-2 rounded-xl border border-indigo-300 bg-white px-4 py-2.5">
-              <span className="text-xs font-semibold text-black/50 uppercase tracking-wider">Your Ticket ID</span>
+            <div className="border-t border-indigo-200 bg-white px-5 py-3 flex items-center gap-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Your Ticket ID</p>
               <span className="font-mono text-lg font-black text-indigo-700">{newTicketNumber}</span>
               <CopyButton text={newTicketNumber} />
             </div>
@@ -139,105 +165,151 @@ export default function StudentSupportPage() {
         </div>
       )}
 
-      {/* Create form */}
+      {/* ── New ticket form ─────────────────────────────────────────── */}
       {showForm && (
-        <DataPanel className="border-2 border-black/10 shadow-sm">
-          <form onSubmit={(e) => void submitTicket(e)} className="space-y-4">
-            <h2 className="text-base font-bold text-black">New Support Ticket</h2>
+        <div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-100/80">
+          <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-4">
+            <p className="label-overline">New Support Ticket</p>
+            <p className="mt-0.5 text-xs text-slate-500">Our team will get back to you as soon as possible.</p>
+          </div>
+          <form onSubmit={(e) => void submitTicket(e)} className="space-y-4 p-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-semibold text-black">Category</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)}
-                  className="w-full rounded-xl border-2 border-black/10 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none">
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c.replace(/_/g," ")}</option>)}
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Category</label>
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="input">
+                  {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-semibold text-black">Priority <span className="font-normal text-black/50">(optional)</span></label>
-                <select value={priority} onChange={(e) => setPriority(e.target.value)}
-                  className="w-full rounded-xl border-2 border-black/10 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none">
-                  <option value="">Auto</option>
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                  Priority <span className="font-normal text-slate-400">(optional)</span>
+                </label>
+                <select value={priority} onChange={(e) => setPriority(e.target.value)} className="input">
+                  <option value="">Auto-detect</option>
                   {["LOW","MEDIUM","HIGH","URGENT"].map((p) => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-black">Subject <span className="text-red-500">*</span></label>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} required
-                className="w-full rounded-xl border-2 border-black/10 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none"
-                placeholder="Briefly describe your issue…" />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Subject <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                required
+                className="input"
+                placeholder="Briefly describe your issue"
+              />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-semibold text-black">Description <span className="text-red-500">*</span></label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} required rows={5}
-                className="w-full rounded-xl border-2 border-black/10 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-y"
-                placeholder="Provide detailed information about your issue…" />
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+                rows={5}
+                className="input resize-y"
+                placeholder="Provide as much detail as possible — what happened, what you expected, any error messages…"
+              />
             </div>
-            {formError && <p className="text-sm font-semibold text-red-600">{formError}</p>}
-            <div className="flex gap-3">
-              <button type="submit" disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50">
-                {submitting ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"/>Submitting…</> : "Submit Ticket"}
+            {formError && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{formError}</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={submitting} className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50">
+                {submitting
+                  ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"/>Submitting…</>
+                  : <><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>Submit Ticket</>
+                }
               </button>
-              <button type="button" onClick={() => setShowForm(false)}
-                className="rounded-xl border-2 border-black/10 bg-white px-5 py-2.5 text-sm font-semibold text-black/70 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary px-5 py-2.5 text-sm">
+                Cancel
+              </button>
             </div>
           </form>
-        </DataPanel>
+        </div>
       )}
 
-      {/* Filter */}
-      <div className="flex items-center gap-3">
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); }}
-          className="rounded-xl border-2 border-black/10 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
-          <option value="">All Statuses</option>
-          {["OPEN","ASSIGNED","IN_PROGRESS","WAITING_FOR_STUDENT","RESOLVED","CLOSED","ESCALATED"].map((s) => (
-            <option key={s} value={s}>{s.replace(/_/g," ")}</option>
-          ))}
-        </select>
-        <span className="text-sm text-black/50">{result?.total ?? 0} tickets</span>
+      {/* ── Filter + count ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="input w-auto text-sm py-2"
+          >
+            <option value="">All Statuses</option>
+            {["OPEN","ASSIGNED","IN_PROGRESS","WAITING_FOR_STUDENT","RESOLVED","CLOSED","ESCALATED"].map((s) => (
+              <option key={s} value={s}>{s.replace(/_/g," ")}</option>
+            ))}
+          </select>
+        </div>
+        <span className="text-xs font-semibold text-slate-500">
+          {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
+        </span>
       </div>
 
-      {/* Ticket list */}
+      {/* ── Ticket list ─────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex min-h-[120px] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-black/10 border-t-indigo-600" />
+        <div className="flex min-h-[160px] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
         </div>
       ) : !result?.tickets.length ? (
-        <DataPanel className="border-2 border-black/10">
-          <div className="flex min-h-[100px] items-center justify-center text-sm text-black/50">
-            No tickets yet. Create one above if you need help.
-          </div>
-        </DataPanel>
+        <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-slate-200/90 bg-white/80 text-center shadow-sm ring-1 ring-slate-100/80">
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">🎫</div>
+          <p className="text-sm font-semibold text-slate-700">No support tickets yet</p>
+          <p className="mt-1 text-xs text-slate-500">Need help? Create a new ticket and we&apos;ll assist you.</p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-4 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-500"
+          >
+            + New Ticket
+          </button>
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {result.tickets.map((t) => (
-            <Link key={t.id} href={`/support/${t.id}`}
-              className="block rounded-2xl border-2 border-black/10 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  {/* Prominent ticket number with copy */}
-                  <div className="flex items-center gap-0.5">
-                    <span className="font-mono text-sm font-bold text-indigo-700">{t.ticketNumber}</span>
+            <Link
+              key={t.id}
+              href={`/support/${t.id}`}
+              className="group block rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100/50 transition hover:border-indigo-300 hover:shadow-md hover:ring-indigo-100"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {/* Ticket number + copy */}
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-indigo-600">{t.ticketNumber}</span>
                     <CopyButton text={t.ticketNumber} />
                   </div>
-                  <p className="mt-0.5 font-bold text-black truncate">{t.subject}</p>
-                  <p className="mt-0.5 text-xs text-black/50">{t.category.replace(/_/g," ")} · {new Date(t.createdAt).toLocaleDateString()}</p>
+                  {/* Subject */}
+                  <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-indigo-700 transition">
+                    {t.subject}
+                  </p>
+                  {/* Meta */}
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{CATEGORIES.find((c) => c.value === t.category)?.label ?? t.category.replace(/_/g," ")}</span>
+                    <span className="h-3 w-px bg-slate-200" />
+                    <span>{new Date(t.createdAt).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PRIORITY_COLORS[t.priority] ?? "bg-slate-100 text-slate-500"}`}>{t.priority}</span>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[t.status] ?? "bg-slate-100 text-slate-500"}`}>{t.status.replace(/_/g," ")}</span>
+
+                {/* Priority + Status */}
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[t.status] ?? "bg-slate-100 text-slate-500"}`}>
+                    <span>{STATUS_ICONS[t.status] ?? "•"}</span>
+                    {t.status.replace(/_/g," ")}
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-xs font-semibold ${PRIORITY_COLORS[t.priority] ?? "text-slate-500"}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_DOTS[t.priority] ?? "bg-slate-300"}`} />
+                    {t.priority}
+                  </span>
                 </div>
               </div>
             </Link>
           ))}
-        </div>
-      )}
-
-      {/* How to reference tip */}
-      {(result?.tickets.length ?? 0) > 0 && (
-        <div className="rounded-xl border border-black/10 bg-slate-50/60 px-4 py-3 text-xs text-black/50">
-          💡 <strong className="text-black/70">Tip:</strong> When contacting management about a ticket, share your ticket number (e.g. <span className="font-mono font-semibold">TKT-2026-000001</span>). They can find it instantly.
         </div>
       )}
     </AppPageShell>

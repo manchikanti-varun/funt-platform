@@ -367,12 +367,14 @@ export async function updateTicketStatus(
       TICKET_STATUS.IN_PROGRESS,
       TICKET_STATUS.WAITING_FOR_STUDENT,
       TICKET_STATUS.RESOLVED,
+      TICKET_STATUS.ESCALATED,  // trainers can escalate to admin/SA attention
     ];
     if (!trainerAllowed.includes(newStatus)) {
-      throw new AppError("Trainers can only set IN_PROGRESS, WAITING_FOR_STUDENT, or RESOLVED", 403);
+      throw new AppError("Trainers can only set IN_PROGRESS, WAITING_FOR_STUDENT, RESOLVED, or ESCALATED", 403);
     }
-    // Trainer must be assigned
-    if (ticket.assignedTo !== actorId) {
+    // Trainer must be assigned to the ticket to change status
+    // (except ESCALATED — any trainer can escalate any ticket to get admin attention)
+    if (newStatus !== TICKET_STATUS.ESCALATED && ticket.assignedTo !== actorId) {
       throw new AppError("You can only update status of tickets assigned to you", 403);
     }
   }
@@ -604,20 +606,41 @@ export async function getTicketById(ticketId: string, viewerId: string, viewerRo
   if (!staff) messagesQuery.isInternalNote = false;
   const messages = await TicketMessageModel.find(messagesQuery).sort({ createdAt: 1 }).lean().exec();
 
+  // Enrich messages with sender names
+  const senderIds = [...new Set(messages.map((m) => m.senderId).filter(Boolean))];
+  const senderUsers = senderIds.length > 0
+    ? await UserModel.find({ _id: { $in: senderIds } }).select("_id name username").lean().exec()
+    : [];
+  const senderMap = new Map(
+    senderUsers.map((u) => [
+      String(u._id),
+      {
+        name: (u as { name?: string }).name ?? "",
+        username: (u as { username?: string }).username ?? "",
+      },
+    ])
+  );
+
   const enriched = await enrichTickets([ticket as Record<string, unknown>]);
 
   return {
     ...enriched[0],
-    messages: messages.map((m) => ({
-      id: String(m._id),
-      ticketId: m.ticketId,
-      senderId: m.senderId,
-      senderRole: m.senderRole,
-      message: m.message,
-      attachments: m.attachments,
-      isInternalNote: m.isInternalNote,
-      createdAt: m.createdAt,
-    })),
+    messages: messages.map((m) => {
+      const sender = senderMap.get(m.senderId) ?? { name: "", username: "" };
+      const senderName = sender.name || sender.username || m.senderRole;
+      return {
+        id: String(m._id),
+        ticketId: m.ticketId,
+        senderId: m.senderId,
+        senderName,
+        senderUsername: sender.username,
+        senderRole: m.senderRole,
+        message: m.message,
+        attachments: m.attachments,
+        isInternalNote: m.isInternalNote,
+        createdAt: m.createdAt,
+      };
+    }),
   };
 }
 

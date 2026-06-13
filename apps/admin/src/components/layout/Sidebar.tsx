@@ -113,6 +113,18 @@ export function Sidebar({ roles }: SidebarProps) {
             </SidebarNavLink>
           </>
         )}
+        {/* Trainers get access to their own leaves and support desk (assigned tickets) */}
+        {isTrainer && !isAdmin && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <SidebarNavLink href="/leaves/my" isActive={pathname.startsWith("/leaves/my")}>
+              My leaves
+            </SidebarNavLink>
+            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
+              Support desk
+            </SidebarNavLink>
+          </>
+        )}
         {isAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>Payments & Commerce</p>

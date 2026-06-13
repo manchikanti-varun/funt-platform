@@ -591,6 +591,9 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     if (res.success) {
       const u = res.data?.username;
       onSuccess(u ? `Student created. Username: ${u}` : "Student created.");
+      setUsername(""); setName(""); setEmail(""); setCountryCode("+91");
+      setMobileNumber(""); setPassword(""); setConfirmPassword(""); setAge("10");
+      setUsernameStatus({ checking: false, available: null, message: "" });
     } else onError(res.message ?? "Failed to create student.");
   }
 
@@ -819,6 +822,15 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     if (res.success) {
       const u = res.data?.username;
       onSuccess(u ? `Trainer created. Username: ${u}` : "Trainer created.");
+      // Reset form after successful creation
+      setUsername("");
+      setName("");
+      setEmail("");
+      setCountryCode("+91");
+      setMobileNumber("");
+      setPassword("");
+      setConfirmPassword("");
+      setUsernameStatus({ checking: false, available: null, message: "" });
     } else onError(res.message ?? "Failed to create trainer.");
   }
 
@@ -952,6 +964,8 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
     if (res.success) {
       const u = res.data?.username;
       onSuccess(u ? `Admin created. Username: ${u}` : "Admin created.");
+      setName(""); setEmail(""); setCountryCode("+91");
+      setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create admin.");
   }
 
@@ -1057,6 +1071,8 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
     if (res.success) {
       const u = res.data?.username;
       onSuccess(u ? `Super Admin created. Username: ${u}` : "Super Admin created.");
+      setName(""); setEmail(""); setCountryCode("+91");
+      setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create super admin.");
   }
 
@@ -1153,6 +1169,7 @@ function ResetLoginForm({
     setLoading(false);
     if (res.success) {
       onSuccess(res.data?.message ?? "Login reset.");
+      setUsername(""); setNewPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to reset.");
   }
 

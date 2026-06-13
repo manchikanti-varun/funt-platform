@@ -13,7 +13,7 @@ const STATUS_COLORS: Record<string, string> = {
   CLOSED: "bg-slate-100 text-slate-600", ESCALATED: "bg-red-100 text-red-800",
 };
 
-interface TicketMessage { id: string; senderRole: string; message: string; isInternalNote: boolean; createdAt: string }
+interface TicketMessage { id: string; senderRole: string; senderName?: string; senderUsername?: string; message: string; isInternalNote: boolean; createdAt: string }
 interface TicketDetail {
   id: string; ticketNumber: string; category: string; subject: string; description: string;
   priority: string; status: string; resolution?: string; resolvedAt?: string; closedAt?: string;
@@ -150,12 +150,19 @@ export default function StudentTicketDetailPage() {
             <p className="text-xs font-semibold uppercase tracking-wider text-black/40">Conversation</p>
             {ticket.messages.map((m) => {
               const isStaff = !["STUDENT","PARENT"].includes(m.senderRole);
+              // Show real name for staff, "You" for student/parent
+              const displayName = isStaff
+                ? (m.senderName || m.senderRole.replace(/_/g," "))
+                : "You";
               return (
                 <div key={m.id} className={`rounded-xl px-4 py-3 text-sm ${isStaff ? "bg-indigo-50 border border-indigo-100 ml-4" : "bg-slate-50 border border-black/10 mr-4"}`}>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className={`text-xs font-semibold ${isStaff ? "text-indigo-700" : "text-black/60"}`}>
-                      {isStaff ? "Support Team" : "You"}
+                      {displayName}
                     </span>
+                    {isStaff && m.senderUsername && (
+                      <span className="text-[11px] text-indigo-400">@{m.senderUsername}</span>
+                    )}
                     <span className="text-xs text-black/40">{new Date(m.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="text-black/80 whitespace-pre-wrap">{m.message}</p>
