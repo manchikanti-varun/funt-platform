@@ -42,7 +42,7 @@ const DEFAULT_POLICY: ContentProtectionPolicy = {
   disableRightClick: true,
   disableKeyboardShortcuts: true,
   disableTextSelection: true,
-  enableWatermark: true,
+  enableWatermark: false,   // off by default — must be explicitly enabled by admin
   screenshotProtection: true,
   screenRecordingProtection: false,
   screenShareProtection: false,

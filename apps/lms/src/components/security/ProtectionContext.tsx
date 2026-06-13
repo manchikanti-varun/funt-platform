@@ -114,15 +114,26 @@ export function ProtectionProvider({ children }: { children: React.ReactNode }) 
   }, [activeCourseId, fetchTick]);
 
   // Re-fetch when the tab becomes visible again — picks up admin config changes
-  // made in another tab without requiring a full page reload
+  // made in another tab without requiring a full page reload.
+  // Also polls every 30 seconds in case the tab stays in the foreground.
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === "visible") {
         setFetchTick((t) => t + 1);
       }
     }
+    // Poll every 30 seconds so changes reflect without needing a tab switch
+    const pollInterval = setInterval(() => {
+      setFetchTick((t) => t + 1);
+    }, 30_000);
+
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   const logEvent = useCallback(
