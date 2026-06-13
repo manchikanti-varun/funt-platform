@@ -71,6 +71,16 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             >
               Dashboard
             </Link>
+            <Link
+              href="/parent/support"
+              className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                pathname.startsWith("/parent/support")
+                  ? "bg-indigo-600 text-white shadow-md ring-1 ring-indigo-700/20"
+                  : "border border-slate-200 bg-white text-slate-700 hover:bg-indigo-50"
+              }`}
+            >
+              Support
+            </Link>
             <button
               type="button"
               onClick={() => {

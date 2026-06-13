@@ -104,6 +104,17 @@ export function Sidebar({ roles }: SidebarProps) {
         )}
         {isAdmin && (
           <>
+            <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <SidebarNavLink href="/leaves" isActive={pathname.startsWith("/leaves")}>
+              Leave management
+            </SidebarNavLink>
+            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
+              Support desk
+            </SidebarNavLink>
+          </>
+        )}
+        {isAdmin && (
+          <>
             <p className={SECTION_LABEL_CLASS}>Payments & Commerce</p>
             <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
               Payment approvals

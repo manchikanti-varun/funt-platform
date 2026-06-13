@@ -33,6 +33,9 @@ import {
   contentProtectionConfigRoutes,
   contentProtectionStudentRoutes,
 } from "./routes/contentProtection.routes.js";
+import { leaveRoutes } from "./routes/leave.routes.js";
+import { notificationRoutes } from "./routes/notification.routes.js";
+import { ticketRoutes } from "./routes/ticket.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -93,6 +96,9 @@ app.use("/api/shop", shopRoutes);
 app.use("/api/admin/videos", r2VideoRoutes);
 app.use("/api/config/content-protection", contentProtectionConfigRoutes);
 app.use("/api/student/content-protection", contentProtectionStudentRoutes);
+app.use("/api/leaves", leaveRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/tickets", ticketRoutes);
 app.use("/verify", verifyRoutes);
 
 app.use(errorHandler);
