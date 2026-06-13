@@ -5,6 +5,7 @@ import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { UserModel } from "../models/User.model.js";
 import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
+import { LicenseKeyModel } from "../models/LicenseKey.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { normalizeAllowedPaymentMethods, formatPaymentMethodsLabel } from "../utils/coursePaymentMethods.js";
 import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
@@ -18,6 +19,18 @@ function isDuplicateKeyError(err: unknown): boolean {
 }
 
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
+
+/**
+ * Returns true when the student enrolled in this batch via a license key.
+ * License key enrollments bypass the payment gate — the key itself IS the proof of purchase.
+ */
+async function hasLicenseKeyEnrollment(studentId: string, batchId: string): Promise<boolean> {
+  const exists = await LicenseKeyModel.exists({
+    batchId,
+    usedByStudentId: studentId,
+  }).exec();
+  return !!exists;
+}
 
 async function loadCourseHeaderImageMap(courseIds: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(courseIds.map((id) => id.trim()).filter(Boolean))];
@@ -142,6 +155,10 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   if (!!enrollment && !blocked && enrollmentPriceInPaise >= 100) {
     const payState = await getLatestCoursePaymentState(studentId, batchMongoId, snapshotCourseId);
     hasVerifiedCoursePayment = payState?.status === "VERIFIED";
+    // License key enrollment bypasses payment requirement
+    if (!hasVerifiedCoursePayment) {
+      hasVerifiedCoursePayment = await hasLicenseKeyEnrollment(studentId, batchMongoId);
+    }
   }
   const hasAccess = !!enrollment && !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedCoursePayment);
 
@@ -359,7 +376,12 @@ export async function getMyCoursesForStudent(studentId: string) {
         !blocked && !courseBlocked && enrollmentPriceInPaise >= 100
           ? await getLatestCoursePaymentState(studentId, String(batch._id), courseId)
           : null;
-      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || payState?.status === "VERIFIED");
+      // License key enrollment bypasses the payment gate
+      const licenseAccess =
+        enrollmentPriceInPaise >= 100 && !payState
+          ? await hasLicenseKeyEnrollment(studentId, String(batch._id))
+          : false;
+      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || payState?.status === "VERIFIED" || licenseAccess);
       if (!hasCourseAccess) continue;
 
       const isAdminBlocked = blocked || courseBlocked;

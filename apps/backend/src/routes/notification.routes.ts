@@ -11,10 +11,12 @@ import {
 const router = Router();
 router.use(authMiddleware);
 
-const ALL_STAFF = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER] as const;
+// All authenticated roles can read their own notifications
+// (students receive ticket reply notifications, staff receive assignment/leave alerts)
+const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT] as const;
 
-router.get("/", requireRoles(...ALL_STAFF), getNotifications);
-router.patch("/read-all", requireRoles(...ALL_STAFF), patchMarkAllRead);
-router.patch("/:id/read", requireRoles(...ALL_STAFF), patchMarkRead);
+router.get("/", requireRoles(...ALL_ROLES), getNotifications);
+router.patch("/read-all", requireRoles(...ALL_ROLES), patchMarkAllRead);
+router.patch("/:id/read", requireRoles(...ALL_ROLES), patchMarkRead);
 
 export const notificationRoutes = router;

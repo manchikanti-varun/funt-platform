@@ -464,7 +464,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
             <div className="min-w-0">
               <h1 className="text-2xl font-black tracking-tight text-slate-900">{courseTitle}</h1>
               {courseDescription && (
-                <div className={`mt-5 w-full text-slate-700 text-sm ${RICH_TEXT_VIEW_CLASS} [&_.ql-cursor]:hidden`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription) }} />
+                <div className={`mt-5 w-full text-slate-700 text-sm ${RICH_TEXT_VIEW_CLASS} [&_.ql-cursor]:hidden`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(courseDescription, API_URL) }} />
               )}
             </div>
           </div>

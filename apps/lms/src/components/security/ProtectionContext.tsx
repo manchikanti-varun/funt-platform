@@ -73,6 +73,8 @@ const ProtectionContext = createContext<ProtectionContextValue>({
 
 export function ProtectionProvider({ children }: { children: React.ReactNode }) {
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null);
+  // Bump this counter to force a re-fetch without changing activeCourseId
+  const [fetchTick, setFetchTick] = useState(0);
   const [state, setState] = useState<ProtectionState>({
     policy: DEFAULT_POLICY,
     watermark: DEFAULT_WATERMARK,
@@ -81,6 +83,7 @@ export function ProtectionProvider({ children }: { children: React.ReactNode }) 
     activeCourseId: null,
   });
 
+  // Re-fetch the policy whenever activeCourseId or fetchTick changes
   useEffect(() => {
     const url = activeCourseId
       ? `/api/student/content-protection?courseId=${encodeURIComponent(activeCourseId)}`
@@ -106,7 +109,21 @@ export function ProtectionProvider({ children }: { children: React.ReactNode }) 
       .catch(() => {
         setState((prev) => ({ ...prev, ready: true, activeCourseId }));
       });
-  }, [activeCourseId]);
+  // fetchTick is intentionally included so visibility changes re-fetch
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCourseId, fetchTick]);
+
+  // Re-fetch when the tab becomes visible again — picks up admin config changes
+  // made in another tab without requiring a full page reload
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        setFetchTick((t) => t + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   const logEvent = useCallback(
     (action: string, meta?: { courseId?: string; batchId?: string; event?: string }) => {

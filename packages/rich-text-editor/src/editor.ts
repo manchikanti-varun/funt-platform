@@ -1656,34 +1656,42 @@ export class RichTextEditor implements RichTextEditorApi {
       progressEl.remove();
 
       // storageUrl is what gets persisted in the HTML (e.g. "r2://...").
-      // url is used only for the live preview src on the <video> element.
+      // url is the blob: URL for live admin preview.
       // If storageUrl is omitted, fall back to url for both purposes.
       const persistSrc = storageUrl ?? url;
+      const previewSrc = url;
 
-      // Insert the video node with the storage key as src (what is saved),
-      // then patch the rendered DOM element to use the preview url so it plays.
+      // Insert using the blob URL so the <video> element can actually play.
+      // The browser cannot handle r2:// as a src, so we display with blob first.
       this.editor
         .chain()
         .focus()
         .insertContent({
           type: "video",
-          attrs: { src: persistSrc, controls: true, renderKind: "video", widthPct: 80, align: "center" },
+          attrs: { src: previewSrc, controls: true, renderKind: "video", widthPct: 80, align: "center" },
         })
         .run();
 
-      // If a separate preview URL was provided, swap the src on the rendered
-      // <video> element so the admin can watch it immediately. The ProseMirror
-      // node still holds persistSrc and that is what getHTML() returns.
-      if (storageUrl && url !== storageUrl) {
-        requestAnimationFrame(() => {
-          const videoEl = this.root?.querySelector<HTMLVideoElement>(
-            `video[src="${CSS.escape(persistSrc)}"]`
-          );
-          if (videoEl) {
-            videoEl.src = url;
-            videoEl.load();
+      // If storageUrl differs from the preview URL (i.e. r2:// was provided),
+      // we need to update the ProseMirror node's stored src to persistSrc
+      // so that getHTML() returns the r2:// key, not the blob URL.
+      // We do this by finding the node at the current selection and replacing it.
+      if (storageUrl && previewSrc !== persistSrc) {
+        // Walk the document to find the video node we just inserted and update its src attr
+        const { state, dispatch } = this.editor.view;
+        const { tr, doc } = state;
+        let updated = false;
+        doc.descendants((node, pos) => {
+          if (updated) return false;
+          if (node.type.name === "video" && node.attrs.src === previewSrc) {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, src: persistSrc });
+            updated = true;
+            return false;
           }
         });
+        if (updated) {
+          dispatch(tr);
+        }
       }
     } catch (err) {
       progressEl.remove();
