@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toGoogleDrivePreviewUrl, toEmbeddableIframeSrc } from "@funt-platform/rich-text-editor";
+import { api } from "@/lib/api";
 
 function parseYoutubeId(url: string): string | null {
   const raw = url.trim();
@@ -26,12 +28,12 @@ function parseYoutubeId(url: string): string | null {
 function hostedVideoSrc(url: string): string {
   const t = url.trim();
   if (!t) return "";
+  if (t.startsWith("r2://")) return t; // handled separately
   if (t.startsWith("data:video/") || t.startsWith("blob:")) return t;
   if (/^https?:\/\//i.test(t)) return t;
   return `https://${t}`;
 }
 
-/** Returns true for URLs that must be rendered as iframes (not <video> elements). */
 function isEmbedOnlyUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname.toLowerCase();
@@ -46,10 +48,26 @@ interface ChapterHostedMediaProps {
   videoUrl?: string;
 }
 
-/** Matches LMS Learn tab: inline YouTube + hosted video players (not plain links). */
 export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaProps) {
   const yt = parseYoutubeId(youtubeUrl ?? "");
-  const videoSrc = hostedVideoSrc(videoUrl ?? "");
+  const rawVideo = (videoUrl ?? "").trim();
+  const isR2 = rawVideo.startsWith("r2://");
+
+  // For R2 videos — fetch a short-lived presigned GET URL from the admin preview endpoint
+  const [r2PreviewUrl, setR2PreviewUrl] = useState<string | null>(null);
+  const [r2Loading, setR2Loading] = useState(false);
+
+  useEffect(() => {
+    if (!isR2) return;
+    setR2Loading(true);
+    api<{ previewUrl: string }>(`/api/admin/videos/preview?key=${encodeURIComponent(rawVideo)}`)
+      .then((r) => {
+        if (r.success && r.data?.previewUrl) setR2PreviewUrl(r.data.previewUrl);
+      })
+      .finally(() => setR2Loading(false));
+  }, [rawVideo, isR2]);
+
+  const videoSrc = isR2 ? (r2PreviewUrl ?? "") : hostedVideoSrc(rawVideo);
   const drivePreview =
     videoSrc && /drive\.google\.com|docs\.google\.com/i.test(videoSrc)
       ? toGoogleDrivePreviewUrl(videoSrc)
@@ -58,7 +76,7 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
     ? toEmbeddableIframeSrc(videoSrc)
     : "";
 
-  if (!yt && !videoSrc) return null;
+  if (!yt && !rawVideo) return null;
 
   return (
     <div className="space-y-6">
@@ -76,10 +94,35 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
           </div>
         </div>
       ) : null}
-      {videoSrc ? (
+
+      {rawVideo ? (
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Hosted video</p>
-          {drivePreview ? (
+
+          {/* R2 video — wait for presigned URL */}
+          {isR2 ? (
+            r2Loading ? (
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-slate-200 bg-slate-100">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+              </div>
+            ) : r2PreviewUrl ? (
+              <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm">
+                <video
+                  src={r2PreviewUrl}
+                  controls
+                  controlsList="nodownload noremoteplayback"
+                  disablePictureInPicture
+                  playsInline
+                  preload="metadata"
+                  className="h-full w-full"
+                />
+              </div>
+            ) : (
+              <div className="flex aspect-video items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
+                Could not load video preview.
+              </div>
+            )
+          ) : drivePreview ? (
             <div className="relative aspect-video overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
               <iframe
                 title="Video preview"
@@ -89,7 +132,6 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
                 allow="autoplay; fullscreen"
                 allowFullScreen
               />
-              {/* Transparent overlay to block the Drive pop-out button without showing a visible box */}
               <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-transparent pointer-events-auto" />
             </div>
           ) : embedSrc ? (
@@ -102,11 +144,19 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
                 allowFullScreen
               />
             </div>
-          ) : (
+          ) : videoSrc ? (
             <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm">
-              <video src={videoSrc} controls controlsList="nodownload noremoteplayback" disablePictureInPicture playsInline preload="metadata" className="h-full w-full" />
+              <video
+                src={videoSrc}
+                controls
+                controlsList="nodownload noremoteplayback"
+                disablePictureInPicture
+                playsInline
+                preload="metadata"
+                className="h-full w-full"
+              />
             </div>
-          )}
+          ) : null}
         </div>
       ) : null}
     </div>

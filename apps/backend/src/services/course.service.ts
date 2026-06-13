@@ -467,6 +467,52 @@ export async function updateCourseModule(
   doc.set("modules", modules);
   await doc.save();
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));
+
+  // Propagate the updated module fields to all batch snapshots that use this course.
+  // This ensures students see the latest content, video and YouTube URLs without
+  // needing to recreate the batch.
+  const courseMongoId = String(doc._id);
+  const courseHumanId = (doc as { courseId?: string }).courseId ?? "";
+  const batchQuery = {
+    $or: [
+      { "courseSnapshots.courseId": { $in: [courseMongoId, courseHumanId].filter(Boolean) } },
+      { "courseSnapshot.courseId": { $in: [courseMongoId, courseHumanId].filter(Boolean) } },
+    ],
+  };
+  const batches = await BatchModel.find(batchQuery).exec();
+  const updatedFields: Record<string, unknown> = {};
+  if (input.title !== undefined) updatedFields.title = mod.title;
+  if (input.description !== undefined) updatedFields.description = mod.description;
+  if (input.content !== undefined) updatedFields.content = mod.content;
+  if (input.youtubeUrl !== undefined) updatedFields.youtubeUrl = mod.youtubeUrl ?? null;
+  if (input.videoUrl !== undefined) updatedFields.videoUrl = mod.videoUrl ?? null;
+  if (input.resourceLinkUrl !== undefined) updatedFields.resourceLinkUrl = (mod as { resourceLinkUrl?: string }).resourceLinkUrl ?? null;
+
+  if (Object.keys(updatedFields).length > 0 && batches.length > 0) {
+    for (const batch of batches) {
+      const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      let changed = false;
+      for (const snap of snapshots) {
+        const s = snap as { courseId?: string; modules?: Array<Record<string, unknown>> };
+        const snapCourseId = s.courseId ?? "";
+        if (snapCourseId !== courseMongoId && snapCourseId !== courseHumanId) continue;
+        if (!Array.isArray(s.modules)) continue;
+        const snapMod = s.modules[moduleIndex] as Record<string, unknown> | undefined;
+        if (!snapMod) continue;
+        for (const [k, v] of Object.entries(updatedFields)) {
+          if (v === null) delete snapMod[k];
+          else snapMod[k] = v;
+        }
+        changed = true;
+      }
+      if (changed) {
+        batch.markModified("courseSnapshots");
+        batch.markModified("courseSnapshot");
+        await batch.save();
+      }
+    }
+  }
+
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 

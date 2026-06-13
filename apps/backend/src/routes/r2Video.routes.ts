@@ -16,6 +16,7 @@ import {
   presignVideoUpload,
   confirmVideo,
   deleteVideo,
+  getVideoPreview,
 } from "../controllers/r2Video.controller.js";
 
 const router = Router();
@@ -42,6 +43,16 @@ router.post(
   "/confirm",
   requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
   confirmVideo
+);
+
+/**
+ * GET /api/admin/videos/preview?key=r2://...
+ * Returns: { previewUrl } — short-lived presigned GET URL for admin video preview
+ */
+router.get(
+  "/preview",
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER),
+  getVideoPreview
 );
 
 /**

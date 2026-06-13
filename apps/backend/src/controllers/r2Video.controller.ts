@@ -8,21 +8,17 @@
  *   POST /api/admin/videos/presign
  *     Body:    { courseId, moduleId, lessonId? }
  *     Returns: { uploadUrl, videoKey, expiresInSeconds }
- *     The browser PUTs the MP4 file directly to uploadUrl with
- *     Content-Type: video/mp4. No auth header required on the PUT
- *     because the presigned URL carries the credentials.
  *
  *   POST /api/admin/videos/confirm
  *     Body:    { videoKey }
  *     Returns: { videoKey, size, contentType }
- *     Call this after the browser PUT succeeds. The backend does a
- *     HeadObject to verify the file is in R2, then returns the key
- *     the frontend should persist into the chapter's videoUrl field.
+ *
+ *   GET  /api/admin/videos/preview?key=r2://...
+ *     Returns: { previewUrl } — short-lived presigned GET URL for admin preview
  *
  *   DELETE /api/admin/videos
  *     Body:    { videoKey }
  *     Returns: { deleted: true }
- *     Removes the R2 object. Used when replacing or removing a video.
  */
 
 import type { Request, Response } from "express";
@@ -30,6 +26,7 @@ import {
   generatePresignedUploadUrl,
   confirmVideoUpload,
   deleteVideoFromR2,
+  generateSignedVideoUrl,
   r2KeyFromVideoUrl,
   ALLOWED_VIDEO_MIME_TYPES,
 } from "../services/r2Video.service.js";
@@ -118,4 +115,19 @@ export const deleteVideo = asyncHandler(async (req: Request, res: Response): Pro
   await deleteVideoFromR2(key);
 
   successRes(res, { deleted: true }, "Video deleted");
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/videos/preview?key=r2://...
+// Returns a short-lived presigned GET URL so admins can preview R2 videos.
+// ---------------------------------------------------------------------------
+export const getVideoPreview = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const rawKey = typeof req.query.key === "string" ? req.query.key.trim() : "";
+  if (!rawKey) throw new AppError("key query param is required", 400);
+  if (!rawKey.startsWith("r2://")) throw new AppError("key must start with 'r2://'", 400);
+
+  const key = r2KeyFromVideoUrl(rawKey);
+  const previewUrl = await generateSignedVideoUrl(key);
+
+  successRes(res, { previewUrl });
 });

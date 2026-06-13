@@ -579,8 +579,9 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                   </button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-lg shadow-md ring-1 ring-indigo-100 lg:w-80">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+                  {/* ── Chapter sidebar ── */}
+                  <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 lg:w-72 lg:sticky lg:top-4">
                     <button
                       type="button"
                       onClick={() => {
@@ -642,30 +643,46 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                       </ul>
                     </div>
                   </aside>
-                  <div id="course-content-area" className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/95 p-6 shadow-lg shadow-md ring-1 ring-indigo-100">
+                  {/* ── Content area ── */}
+                  <div id="course-content-area" className="relative min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white/95 shadow-sm ring-1 ring-slate-100">
                     {selected ? (
-                      <div className="space-y-8">
-                        <h2 className="text-xl font-black tracking-tight text-slate-900 border-b border-slate-200 pb-4">{selected.title}</h2>
+                      <div>
+                        {/* Chapter title */}
+                        <div className="border-b border-slate-100 px-6 py-5">
+                          <h2 className="text-xl font-black tracking-tight text-slate-900">{selected.title}</h2>
+                        </div>
+
+                        <div className="space-y-0 divide-y divide-slate-100">
                         {hasLessons && (
-                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Content</h3>
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
                             {shouldShowChapterDescription(selected.description, selected.content) && (
-                              <div className={`text-slate-700 text-sm mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
+                              <div className={`text-slate-700 mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
                             )}
                             {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content, API_URL) }} />}
                             {selected.hasContent && (
-                              <div className="mt-4">
-                                {isPartCompleted("content") ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Completed</span> : <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">{markingComplete ? "Marking…" : "Mark as completed"}</button>}
+                              <div className="mt-6">
+                                {isPartCompleted("content") ? (
+                                  <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600">
+                                    <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    Completed
+                                  </span>
+                                ) : (
+                                  <button type="button" onClick={() => handleMarkPartComplete("content")} disabled={markingComplete}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">
+                                    {markingComplete ? "Marking…" : "Mark as completed"}
+                                  </button>
+                                )}
                               </div>
                             )}
-                          </section>
+                          </div>
                         )}
                         {hasYoutube && (
-                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">YouTube Video</h3>
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">YouTube Video</p>
                             {selected.youtubeVideoId ? (
                               <>
-                                <div className="aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner ring-1 ring-indigo-200">
+                                <div className="aspect-video rounded-xl overflow-hidden bg-black shadow-sm ring-1 ring-slate-200">
                                   <iframe
                                     ref={youtubeFrameRef}
                                     title={selected.title}
@@ -675,130 +692,102 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                     allowFullScreen
                                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                     suppressHydrationWarning
-                                    onLoad={() => {
-                                      wireYoutubeIframeListening();
-                                      window.setTimeout(wireYoutubeIframeListening, 400);
-                                    }}
+                                    onLoad={() => { wireYoutubeIframeListening(); window.setTimeout(wireYoutubeIframeListening, 400); }}
                                   />
                                 </div>
                                 <div className="mt-4 space-y-2">
-                                  <span
-                                    className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold ${
-                                      selected.youtubeCompleted
-                                        ? "border-slate-300 bg-slate-50 text-slate-900"
-                                        : selected.unlocked
-                                          ? "border-slate-200 bg-white text-slate-75"
-                                          : "border-slate-200 bg-white text-slate-55"
-                                    }`}
-                                  >
-                                    {selected.youtubeCompleted
-                                      ? "Completed"
-                                      : selected.unlocked
-                                        ? "In Progress"
-                                        : "Not Started"}
+                                  <span className={`inline-flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-semibold ${selected.youtubeCompleted ? "border-slate-200 bg-slate-50 text-slate-600" : "border-slate-200 bg-white text-slate-700"}`}>
+                                    {selected.youtubeCompleted ? (
+                                      <><svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>Completed</>
+                                    ) : "In Progress"}
                                   </span>
-                                  {markCompleteError && <p className="text-sm font-medium text-slate-900">{markCompleteError}</p>}
+                                  {markCompleteError && <p className="text-sm font-medium text-red-600">{markCompleteError}</p>}
                                 </div>
                               </>
                             ) : (
-                              <div className="rounded-xl border border-slate-200 bg-slate-50/30 p-4 text-sm text-slate-800">
-                                <p className="font-medium text-slate-900">Inline player needs a course refresh</p>
-                                <p className="mt-2 text-slate-700">
-                                  This chapter has no embed id yet. Ask your admin to re-save the course, or open the video in a new tab (your LMS tab stays here).
-                                </p>
-                                {selected.youtubeEmbedUrl ? (
-                                  <a
-                                    href={resolveMediaPlaybackUrl(selected.youtubeEmbedUrl)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500"
-                                  >
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                                <p className="font-semibold text-slate-900">Inline player needs a course refresh</p>
+                                <p className="mt-1 text-slate-600">Ask your admin to re-save the course, or open in a new tab.</p>
+                                {selected.youtubeEmbedUrl && (
+                                  <a href={resolveMediaPlaybackUrl(selected.youtubeEmbedUrl)} target="_blank" rel="noopener noreferrer"
+                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">
                                     Open video in new tab
                                   </a>
-                                ) : null}
+                                )}
                               </div>
                             )}
-                          </section>
+                          </div>
                         )}
                         {hasHostedVideo && (
-                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Video</h3>
-                            <div className="relative aspect-video rounded-xl overflow-hidden bg-black/10 shadow-inner">
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Video</p>
+                            <div className="relative aspect-video rounded-xl overflow-hidden bg-black shadow-sm ring-1 ring-slate-200">
                               {selected.videoIsEmbed ? (
                                 <>
-                                <iframe
-                                  title={selected.title}
-                                  src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
-                                  className="h-full w-full min-h-[220px]"
-                                  sandbox="allow-scripts allow-same-origin"
-                                  allow="autoplay; fullscreen"
-                                  allowFullScreen
-                                />
-                                <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-[#1a1a1a] pointer-events-auto" />
+                                  <iframe title={selected.title} src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
+                                    className="h-full w-full min-h-[220px]" sandbox="allow-scripts allow-same-origin"
+                                    allow="autoplay; fullscreen" allowFullScreen />
+                                  <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-transparent pointer-events-auto" />
                                 </>
                               ) : (
-                                <video
-                                  src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
-                                  controls
-                                  controlsList="nodownload noremoteplayback"
-                                  disablePictureInPicture
+                                <video src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)} controls
+                                  controlsList="nodownload noremoteplayback" disablePictureInPicture
                                   className="w-full h-full"
-                                  onEnded={() => {
-                                    if (!isPartCompleted("video")) void handleMarkPartComplete("video");
-                                  }}
-                                />
+                                  onEnded={() => { if (!isPartCompleted("video")) void handleMarkPartComplete("video"); }} />
                               )}
                             </div>
-                            <div className="mt-4">
+                            <div className="mt-4 flex flex-wrap gap-3 items-center">
                               {isPartCompleted("video") ? (
-                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Completed</span>
+                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600">
+                                  <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                  Completed
+                                </span>
                               ) : selected.videoIsEmbed ? (
-                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
-                                  Watch the full video, then mark as completed when you are done.
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
-                                  Auto-completes after full video playback.
-                                </span>
-                              )}
-                              {!isPartCompleted("video") && selected.videoIsEmbed && (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleMarkPartComplete("video")}
-                                  disabled={markingComplete}
-                                  className="mt-3 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60"
-                                >
+                                <button type="button" onClick={() => void handleMarkPartComplete("video")} disabled={markingComplete}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">
                                   {markingComplete ? "Marking…" : "Mark as completed"}
                                 </button>
+                              ) : (
+                                <span className="text-xs text-slate-500">Auto-completes when you finish watching.</span>
                               )}
-                              {markCompleteError && <p className="mt-2 text-sm font-medium text-slate-900">{markCompleteError}</p>}
+                              {markCompleteError && <p className="text-sm font-medium text-red-600">{markCompleteError}</p>}
                             </div>
-                          </section>
+                          </div>
                         )}
                         {hasResourceLink && (
-                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Resource</h3>
-                            <a
-                              href={selected.resourceLinkUrl!.startsWith("http") ? selected.resourceLinkUrl! : `https://${selected.resourceLinkUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:border-indigo-300 hover:bg-slate-50/50"
-                            >
-                              <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Resource</p>
+                            <a href={selected.resourceLinkUrl!.startsWith("http") ? selected.resourceLinkUrl! : `https://${selected.resourceLinkUrl}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50">
+                              <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                               Open resource
                             </a>
-                          </section>
+                          </div>
                         )}
                         {hasAssignments && (
-                          <section className="rounded-2xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-6">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 mb-2">Assignment</h3>
-                            <p className="text-slate-700 mb-4">Course assignment for this chapter. Submit and wait for admin approval to complete this part.</p>
-                            {selected.assignmentCompleted ? <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900">Approved</span> : <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500">Submit Assignment</Link>}
-                          </section>
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Assignment</p>
+                            <p className="mb-4 text-sm text-slate-600">Submit this chapter&apos;s assignment. Your trainer will review and approve it.</p>
+                            {selected.assignmentCompleted ? (
+                              <span className="inline-flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600">
+                                <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                Approved
+                              </span>
+                            ) : (
+                              <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">
+                                Submit Assignment
+                              </Link>
+                            )}
+                          </div>
                         )}
+                        </div>{/* end divide-y */}
                       </div>
                     ) : (
-                      <div className="flex min-h-[240px] items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/20"><p className="text-slate-55">Select a chapter from the list.</p></div>
+                      <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-400">
+                        Select a chapter from the list to start.
+                      </div>
                     )}
                   </div>
                 </div>
