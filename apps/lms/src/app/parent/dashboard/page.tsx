@@ -82,6 +82,25 @@ interface ParentStudentProfile {
       completionPercent: number;
     }>;
   };
+  learningPlanSummary?: Array<{
+    courseKey: string;
+    courseName: string;
+    batchName?: string;
+    currentMilestoneId?: string;
+    nextEligibleMilestoneId?: string;
+    milestones: Array<{
+      milestoneId: string;
+      milestoneTitle: string;
+      milestoneOrder: number;
+      unlocked: boolean;
+      completed: boolean;
+      completionPct: number;
+      paymentStatus: string;
+      paymentDueAt?: string;
+      eligibleForNext: boolean;
+      milestoneCertificateId?: string;
+    }>;
+  }>;
 }
 
 function StatCard({ title, value, accentClass }: { title: string; value: string | number; accentClass: string }) {
@@ -676,6 +695,62 @@ export default function ParentDashboardPage() {
           </div>
         ) : null}
       </div>
+
+      {/* ── Learning Plan milestone visibility for parents ── */}
+      {data.learningPlanSummary && data.learningPlanSummary.length > 0 && (
+        <div className="card border border-black/10 bg-gradient-to-b from-white to-[#fffdf7]">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">📋</span>
+            <h2 className="text-lg font-bold text-black">Learning Plan</h2>
+          </div>
+          <p className="text-xs text-black/50 mb-4">Your child&apos;s milestone-based course progress.</p>
+
+          <div className="space-y-4">
+            {data.learningPlanSummary.map((plan) => (
+              <div key={plan.courseKey} className="rounded-xl border border-teal-200/60 bg-teal-50/30 px-4 py-3">
+                <p className="text-sm font-bold text-teal-900">{plan.courseName}</p>
+                {plan.batchName && <p className="text-[11px] text-teal-700/70 mt-0.5">{plan.batchName}</p>}
+
+                <div className="mt-3 space-y-2">
+                  {plan.milestones.map((ms) => {
+                    const statusColor = ms.completed
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : ms.unlocked
+                        ? "border-indigo-200 bg-indigo-50 text-indigo-900"
+                        : "border-slate-200 bg-slate-50 text-slate-600";
+                    const statusLabel = ms.completed
+                      ? "✓ Completed"
+                      : ms.unlocked
+                        ? `In Progress — ${ms.completionPct}%`
+                        : ms.paymentStatus === "OVERDUE"
+                          ? "⚠ Payment Overdue"
+                          : ms.eligibleForNext
+                            ? "Eligible (Payment Pending)"
+                            : "Locked";
+                    return (
+                      <div key={ms.milestoneId} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${statusColor}`}>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold truncate">{ms.milestoneTitle}</p>
+                          {ms.paymentDueAt && !ms.completed && !ms.unlocked && (
+                            <p className="text-[10px] mt-0.5 opacity-70">Due: {formatISODate(ms.paymentDueAt)}</p>
+                          )}
+                        </div>
+                        <span className="shrink-0 text-[11px] font-semibold">{statusLabel}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {plan.milestones.some((ms) => ms.milestoneCertificateId) && (
+                  <p className="mt-2 text-[11px] text-teal-700">
+                    🎖 {plan.milestones.filter((ms) => ms.milestoneCertificateId).length} milestone certificate(s) earned
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Simple attendance card (no batch concept) */}
       <div className="card border border-black/10 bg-gradient-to-b from-white to-[#fffdf7]">

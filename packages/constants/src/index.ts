@@ -215,5 +215,49 @@ export enum BADGE_TYPE {
 /** Student rolling UPI QR refresh interval (seconds); must match backend rolling QR generation. */
 export const ROLLING_UPI_QR_REFRESH_AFTER_SECONDS = 30;
 
+// ─── Learning Plan ────────────────────────────────────────────────────────────
+
+export enum COURSE_DELIVERY_MODE {
+  FULL_ACCESS   = "FULL_ACCESS",
+  LEARNING_PLAN = "LEARNING_PLAN",
+}
+
+export enum MILESTONE_UNLOCK_TYPE {
+  FREE                     = "FREE",
+  PAYMENT_AFTER_COMPLETION = "PAYMENT_AFTER_COMPLETION",
+  MANUAL                   = "MANUAL",
+  DATE_BASED               = "DATE_BASED",
+  RELATIVE_DATE            = "RELATIVE_DATE",
+}
+
+export enum MILESTONE_COMPLETION_RULE {
+  COMPLETE_ALL_CHAPTERS   = "COMPLETE_ALL_CHAPTERS",
+  COMPLETE_80_PERCENT     = "COMPLETE_80_PERCENT",
+  COMPLETE_ASSIGNMENT     = "COMPLETE_ASSIGNMENT",
+  MANUAL_APPROVAL         = "MANUAL_APPROVAL",
+}
+
+export enum MILESTONE_UNLOCK_SOURCE {
+  PAYMENT  = "PAYMENT",
+  LICENSE_KEY = "LICENSE_KEY",
+  MANUAL   = "MANUAL",
+  FREE     = "FREE",
+  DATE_AUTO = "DATE_AUTO",
+}
+
+export enum MILESTONE_PAYMENT_STATUS {
+  ACTIVE          = "ACTIVE",
+  PAYMENT_PENDING = "PAYMENT_PENDING",
+  OVERDUE         = "OVERDUE",
+  COMPLETED       = "COMPLETED",
+}
+
+export enum LICENSE_KEY_TYPE {
+  COURSE_ACCESS         = "COURSE_ACCESS",
+  MILESTONE_ACCESS      = "MILESTONE_ACCESS",
+  MULTI_MILESTONE_ACCESS = "MULTI_MILESTONE_ACCESS",
+  FULL_PLAN_ACCESS      = "FULL_PLAN_ACCESS",
+}
+
 export { INVOICE_SOURCE, INVOICE_STATUS } from "./invoice";
 export type { InvoiceSource, InvoiceStatus } from "./invoice";

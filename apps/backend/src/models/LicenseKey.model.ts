@@ -1,17 +1,33 @@
 import mongoose, { Schema } from "mongoose";
+import { LICENSE_KEY_TYPE } from "@funt-platform/constants";
 
 const licenseKeySchema = new Schema(
   {
-    courseId: { type: String, required: true },
-    batchId: { type: String, required: false },
-    key: { type: String, required: true, unique: true },
-    createdBy: { type: String, required: true },
-    usedByStudentId: { type: String, required: false },
-    usedAt: { type: Date, required: false },
+    courseId:         { type: String, required: true },
+    batchId:          { type: String, required: false },
+    key:              { type: String, required: true, unique: true },
+    createdBy:        { type: String, required: true },
+    usedByStudentId:  { type: String, required: false },
+    usedAt:           { type: Date,   required: false },
+
+    // ── Learning Plan extensions ─────────────────────────────────────────
+    /** Type of access this key grants. Defaults to COURSE_ACCESS for backward compatibility. */
+    licenseType: {
+      type: String,
+      required: false,
+      enum: Object.values(LICENSE_KEY_TYPE),
+      default: LICENSE_KEY_TYPE.COURSE_ACCESS,
+    },
+    /**
+     * For MILESTONE_ACCESS / MULTI_MILESTONE_ACCESS:
+     * the milestoneIds this key unlocks. Empty = all milestones (FULL_PLAN_ACCESS).
+     */
+    targetMilestoneIds: { type: [String], required: false, default: [] },
   },
   { timestamps: true }
 );
 
 licenseKeySchema.index({ courseId: 1 });
+licenseKeySchema.index({ batchId: 1, usedByStudentId: 1 });
 
 export const LicenseKeyModel = mongoose.model("LicenseKey", licenseKeySchema);

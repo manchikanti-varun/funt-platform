@@ -7,6 +7,7 @@ import { getMyEnrollments } from "./enrollment.service.js";
 import { listCertificatesForStudent } from "./certificate.service.js";
 import { getAttendanceSummaryForStudent, type StudentAttendanceSummaryItem } from "./attendance.service.js";
 import { ChapterProgressModel } from "../models/ModuleProgress.model.js";
+import { MilestoneProgressModel } from "../models/MilestoneProgress.model.js";
 import { listCoinGrantHistoryForUser } from "./coinBalance.service.js";
 import { listAchievements } from "./achievement.service.js";
 
@@ -179,6 +180,25 @@ export interface ProfileResult {
       completionPercent: number;
     }>;
   };
+  learningPlanSummary?: Array<{
+    courseKey: string;
+    courseName: string;
+    batchName?: string;
+    currentMilestoneId?: string;
+    nextEligibleMilestoneId?: string;
+    milestones: Array<{
+      milestoneId: string;
+      milestoneTitle: string;
+      milestoneOrder: number;
+      unlocked: boolean;
+      completed: boolean;
+      completionPct: number;
+      paymentStatus: string;
+      paymentDueAt?: Date;
+      eligibleForNext: boolean;
+      milestoneCertificateId?: string;
+    }>;
+  }>;
 }
 
 
@@ -375,6 +395,81 @@ export async function getProfileForAdmin(identifier: string, isSuperAdmin: boole
         completionPercent: c.completionPercent,
       })),
     };
+
+    // ── Learning Plan milestone summary (parent visibility) ────────────────
+    if (batchIds.length > 0) {
+      const milestoneDocs = await MilestoneProgressModel.find({
+        studentId,
+        batchId: { $in: batchIds },
+      })
+        .select("batchId courseId milestoneId milestoneTitle milestoneOrder unlocked completed completionPct paymentStatus paymentDueAt eligibleForNext milestoneCertificateId")
+        .sort({ milestoneOrder: 1 })
+        .lean()
+        .exec();
+
+      if (milestoneDocs.length > 0) {
+        // Group by courseKey
+        const lpByCourse = new Map<string, {
+          courseKey: string; courseName: string; batchName?: string;
+          currentMilestoneId?: string; nextEligibleMilestoneId?: string;
+          milestones: typeof milestoneDocs;
+        }>();
+
+        for (const doc of milestoneDocs) {
+          const batchId = String((doc as { batchId: string }).batchId);
+          const courseId = (doc as { courseId?: string }).courseId ?? batchId;
+          const courseKey = `${batchId}|${courseId}`;
+          if (!lpByCourse.has(courseKey)) {
+            // Find course name from existing courses array
+            const existing = courses.find((c) => c.courseKey === courseKey);
+            lpByCourse.set(courseKey, {
+              courseKey,
+              courseName: existing?.courseName ?? "Course",
+              batchName: existing?.batchName,
+              milestones: [],
+            });
+          }
+          lpByCourse.get(courseKey)!.milestones.push(doc);
+        }
+
+        // Attach currentMilestoneId / nextEligibleMilestoneId from enrollments
+        for (const e of enrollments) {
+          const batchId = String(e.batchId);
+          const batchAny = e.batch as unknown as { courseSnapshots?: Array<{ courseId?: string }> } | null;
+          const snapshots = batchAny?.courseSnapshots ?? [];
+          for (const s of snapshots) {
+            const courseId = s.courseId ?? batchId;
+            const courseKey = `${batchId}|${courseId}`;
+            const entry = lpByCourse.get(courseKey);
+            if (entry) {
+              const enr = e as unknown as { currentMilestoneId?: string; nextEligibleMilestoneId?: string };
+              entry.currentMilestoneId = enr.currentMilestoneId;
+              entry.nextEligibleMilestoneId = enr.nextEligibleMilestoneId;
+            }
+          }
+        }
+
+        result.learningPlanSummary = Array.from(lpByCourse.values()).map((entry) => ({
+          courseKey: entry.courseKey,
+          courseName: entry.courseName,
+          batchName: entry.batchName,
+          currentMilestoneId: entry.currentMilestoneId,
+          nextEligibleMilestoneId: entry.nextEligibleMilestoneId,
+          milestones: entry.milestones.map((doc) => ({
+            milestoneId: (doc as { milestoneId: string }).milestoneId,
+            milestoneTitle: (doc as { milestoneTitle: string }).milestoneTitle,
+            milestoneOrder: (doc as { milestoneOrder: number }).milestoneOrder,
+            unlocked: !!(doc as { unlocked?: boolean }).unlocked,
+            completed: !!(doc as { completed?: boolean }).completed,
+            completionPct: Number((doc as { completionPct?: number }).completionPct ?? 0),
+            paymentStatus: String((doc as { paymentStatus?: string }).paymentStatus ?? "ACTIVE"),
+            paymentDueAt: (doc as { paymentDueAt?: Date }).paymentDueAt,
+            eligibleForNext: !!(doc as { eligibleForNext?: boolean }).eligibleForNext,
+            milestoneCertificateId: (doc as { milestoneCertificateId?: string }).milestoneCertificateId,
+          })),
+        }));
+      }
+    }
   }
 
   return result;

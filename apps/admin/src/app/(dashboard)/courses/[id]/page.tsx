@@ -49,11 +49,13 @@ interface Course {
   status: string;
   /** null = inherit global setting, true/false = override */
   enableWatermark?: boolean | null;
+  deliveryMode?: string;
 }
 
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
+import { COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 
 export default function EditCoursePage() {
   const dialog = useAppDialog();
@@ -316,6 +318,11 @@ export default function EditCoursePage() {
               {course.status === COURSE_STATUS.ARCHIVED ? "Archived" : course.status === COURSE_STATUS.LAUNCHING_SOON ? "Launching Soon" : "Active"}
             </span>
             <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">Snapshot context</span>
+            {course.deliveryMode === COURSE_DELIVERY_MODE.LEARNING_PLAN && (
+              <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-200">
+                Learning Plan
+              </span>
+            )}
           </>
         }
         headerAside={
@@ -358,6 +365,12 @@ export default function EditCoursePage() {
             <Link href={`/courses/${id}/duplicate`} className="btn-duplicate">
               <DuplicateIcon />
               Duplicate
+            </Link>
+            <Link
+              href={`/courses/${id}/learning-plan`}
+              className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 transition"
+            >
+              🗺 Learning Plan
             </Link>
           </>
         }

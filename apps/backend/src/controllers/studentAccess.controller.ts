@@ -62,6 +62,7 @@ export const postSubmitPayment = asyncHandler(async (req: Request, res: Response
     amountPaise?: number;
     payerName?: string;
     couponCode?: string;
+    milestoneId?: string;
     shopCheckout?: {
       items?: Array<{
         productId?: string;
@@ -106,6 +107,7 @@ export const postSubmitPayment = asyncHandler(async (req: Request, res: Response
     amountPaise: kind === "COURSE" ? amountPaise : undefined,
     payerName: kind === "COURSE" || kind === "SHOP" ? payerName : undefined,
     couponCode: kind === "COURSE" && typeof body.couponCode === "string" ? body.couponCode : undefined,
+    milestoneId: kind === "COURSE" && typeof body.milestoneId === "string" ? body.milestoneId : undefined,
     submitterIp: req.ip,
     deviceId: typeof req.headers["x-device-id"] === "string" ? req.headers["x-device-id"] : undefined,
     idempotencyKey: typeof req.headers["x-idempotency-key"] === "string" ? req.headers["x-idempotency-key"] : undefined,
@@ -204,11 +206,12 @@ export const postStudentRazorpayConfirm = asyncHandler(async (req: Request, res:
     batchId?: string;
     courseId?: string;
     couponCode?: string;
+    milestoneId?: string;
     razorpay_order_id?: string;
     razorpay_payment_id?: string;
     razorpay_signature?: string;
   };
-  const { batchId, courseId, couponCode, razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+  const { batchId, courseId, couponCode, milestoneId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
   if (!batchId?.trim() || !courseId?.trim()) throw new AppError("batchId and courseId are required", 400);
   if (!razorpay_order_id?.trim() || !razorpay_payment_id?.trim() || !razorpay_signature?.trim()) {
     throw new AppError("razorpay_order_id, razorpay_payment_id, and razorpay_signature are required", 400);
@@ -218,6 +221,7 @@ export const postStudentRazorpayConfirm = asyncHandler(async (req: Request, res:
     batchId: batchId.trim(),
     courseId: courseId.trim(),
     couponCode,
+    milestoneId: milestoneId?.trim() || undefined,
     razorpay_order_id: razorpay_order_id.trim(),
     razorpay_payment_id: razorpay_payment_id.trim(),
     razorpay_signature: razorpay_signature.trim(),

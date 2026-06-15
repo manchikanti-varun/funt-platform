@@ -13,6 +13,12 @@ import { requireActiveEnrollment } from "./enrollment.service.js";
 import { ensureFirstAssignmentBadge } from "./achievement.service.js";
 import { generateSubmissionId } from "../utils/funtIdGenerator.js";
 import { AppError } from "../utils/AppError.js";
+import {
+  isLearningPlanActive,
+  getMilestonesFromSnapshot,
+  findMilestoneForChapter,
+  recalculateMilestoneProgress,
+} from "./learningPlan.service.js";
 
 export interface SubmitAssignmentInput {
   studentId: string;
@@ -172,6 +178,26 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
       (!hasAssignment || !!p.assignmentCompletedAt);
     if (allDone) {
       await ChapterProgressModel.updateOne(progressQuery, { $set: { completedAt: now } }).exec();
+    }
+
+    // ── Learning Plan: recalculate milestone progress after assignment approval ──
+    if (snapshot && isLearningPlanActive(snapshot)) {
+      const milestones = getMilestonesFromSnapshot(snapshot);
+      const milestone = findMilestoneForChapter(milestones, sub.moduleOrder);
+      if (milestone) {
+        const snapshotCourseId = subCourseId ?? sub.batchId;
+        try {
+          await recalculateMilestoneProgress(
+            sub.studentId, sub.batchId, snapshotCourseId,
+            milestone.milestoneId, milestone
+          );
+        } catch (lpErr) {
+          console.error(
+            `[LP_RECALC_FAILED] assignment approval: studentId=${sub.studentId} milestoneId=${milestone.milestoneId}`,
+            lpErr instanceof Error ? lpErr.message : lpErr
+          );
+        }
+      }
     }
   } else {
     await createAuditLog("ASSIGNMENT_REJECTED", input.reviewedBy, "AssignmentSubmission", String(sub._id));

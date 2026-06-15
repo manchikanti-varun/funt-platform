@@ -13,6 +13,14 @@ import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 import { resolveHeaderImageDisplayUrl } from "../utils/headerImageUrl.js";
 import { ensureFirstModuleCompletedBadge } from "./achievement.service.js";
+import {
+  isLearningPlanActive,
+  getMilestonesFromSnapshot,
+  findMilestoneForChapter,
+  recalculateMilestoneProgress,
+  processScheduledUnlocks,
+  canStudentAccessChapter,
+} from "./learningPlan.service.js";
 
 function isDuplicateKeyError(err: unknown): boolean {
   return (err as { code?: number })?.code === 11000;
@@ -179,6 +187,11 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   }>;
 
   if (hasAccess) {
+    // ── Learning Plan: process scheduled unlocks lazily ───────────────
+    if (isLearningPlanActive(snapshot)) {
+      await processScheduledUnlocks(studentId, batchMongoId, snapshotCourseId).catch(() => {});
+    }
+
     const progressList = await ChapterProgressModel.find(
       snapshots.length > 1
         ? { studentId, batchId: batchMongoId, courseId: snapshotCourseId }
@@ -211,6 +224,29 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
         assignmentCompleted: !!progress?.assignmentCompletedAt,
       };
     });
+
+    // ── Learning Plan: apply milestone-level access gate ─────────────
+    if (isLearningPlanActive(snapshot)) {
+      modules = await Promise.all(
+        modules.map(async (m) => {
+          const { allowed } = await canStudentAccessChapter(
+            studentId, batchMongoId, snapshotCourseId,
+            m.order as number, snapshot
+          );
+          if (!allowed) {
+            // Return locked stub — never expose content for locked milestones
+            return {
+              order: m.order,
+              title: m.title,
+              unlocked: false,
+              completed: false,
+              milestoneLocked: true,
+            } as typeof m;
+          }
+          return m;
+        })
+      );
+    }
   } else {
     modules = rawModules.map((m, idx) => ({
       order: (m.order as number) ?? idx,
@@ -619,6 +655,16 @@ export async function markChapterPartComplete(
     throw new AppError("Access to this course has been disabled", 403);
   }
 
+  // ── Learning Plan: verify milestone access before any progress write ──
+  if (isLearningPlanActive(snapshot)) {
+    const { allowed, reason } = await canStudentAccessChapter(
+      studentId, batchMongoId, snapshotCourseId, chapterOrder, snapshot
+    );
+    if (!allowed) {
+      throw new AppError(reason ?? "This chapter is locked by a milestone restriction", 403);
+    }
+  }
+
   const mod = rawModules[chapterOrder] as ModuleSnapshot;
   const parts = moduleParts(mod);
   const field = part === "content" ? "contentCompletedAt" : part === "video" ? "videoCompletedAt" : "youtubeCompletedAt";
@@ -666,6 +712,25 @@ export async function markChapterPartComplete(
     if (!(prevProgress as ProgressDoc | null)?.completedAt) {
       await awardChapterXp(studentId, xpAwardForModuleSnapshot(mod));
       await ensureFirstModuleCompletedBadge(studentId, batchMongoId, chapterOrder).catch(() => {});
+
+      // ── Learning Plan: recalculate milestone progress ──────────────
+      if (isLearningPlanActive(snapshot)) {
+        const milestones = getMilestonesFromSnapshot(snapshot);
+        const milestone = findMilestoneForChapter(milestones, chapterOrder);
+        if (milestone) {
+          try {
+            await recalculateMilestoneProgress(
+              studentId, batchMongoId, snapshotCourseId,
+              milestone.milestoneId, milestone
+            );
+          } catch (lpErr) {
+            console.error(
+              `[LP_RECALC_FAILED] studentId=${studentId} milestoneId=${milestone.milestoneId}`,
+              lpErr instanceof Error ? lpErr.message : lpErr
+            );
+          }
+        }
+      }
     }
   }
 
@@ -710,6 +775,16 @@ export async function markChapterComplete(studentId: string, batchId: string, ch
     )
   ) {
     throw new AppError("Access to this course has been disabled", 403);
+  }
+
+  // ── Learning Plan: verify milestone access before any progress write ──
+  if (isLearningPlanActive(snapshot)) {
+    const { allowed, reason } = await canStudentAccessChapter(
+      studentId, batchMongoId, snapshotCourseId, chapterOrder, snapshot
+    );
+    if (!allowed) {
+      throw new AppError(reason ?? "This chapter is locked by a milestone restriction", 403);
+    }
   }
 
   const before = await ChapterProgressModel.findOne({

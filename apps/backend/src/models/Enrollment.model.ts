@@ -17,6 +17,14 @@ const enrollmentSchema = new Schema(
     /** Batch-scoped course access overrides: key=courseId in this batch snapshot, value=true means blocked */
     courseAccessBlocked: { type: Map, of: Boolean, required: false, default: {} },
     progressTracking: { type: Schema.Types.Mixed, required: false },
+
+    // ── Learning Plan fields ────────────────────────────────────────────
+    /** true when this enrollment uses the Learning Plan delivery mode */
+    learningPlanActive:       { type: Boolean, required: false, default: false },
+    /** milestoneId of the milestone the student is currently working on */
+    currentMilestoneId:       { type: String, required: false },
+    /** milestoneId of the next milestone the student is eligible to unlock */
+    nextEligibleMilestoneId:  { type: String, required: false },
   },
   { timestamps: false }
 );

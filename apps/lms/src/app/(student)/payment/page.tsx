@@ -53,6 +53,7 @@ function PaymentForm() {
   const courseId = searchParams.get("courseId") ?? "";
   const productId = searchParams.get("productId") ?? "";
   const productName = searchParams.get("productName") ?? "";
+  const milestoneId = searchParams.get("milestoneId") ?? "";
 
   const [checkout, setCheckout] = useState<CheckoutInfo | null>(null);
   const [checkoutErr, setCheckoutErr] = useState<string | null>(null);
@@ -243,6 +244,7 @@ function PaymentForm() {
       body.batchId = batchId;
       body.courseId = courseId;
       if (appliedCoupon.trim()) body.couponCode = appliedCoupon.trim();
+      if (milestoneId.trim()) body.milestoneId = milestoneId.trim();
     } else {
       body.productId = productId;
     }
@@ -300,6 +302,7 @@ function PaymentForm() {
           batchId,
           courseId,
           ...(appliedCoupon.trim() ? { couponCode: appliedCoupon.trim() } : {}),
+          ...(milestoneId.trim() ? { milestoneId: milestoneId.trim() } : {}),
         }),
       });
       if (!orderRes.success || !orderRes.data) {
@@ -327,6 +330,7 @@ function PaymentForm() {
               batchId,
               courseId,
               ...(appliedCoupon.trim() ? { couponCode: appliedCoupon.trim() } : {}),
+              ...(milestoneId.trim() ? { milestoneId: milestoneId.trim() } : {}),
               razorpay_order_id: resp.razorpay_order_id,
               razorpay_payment_id: resp.razorpay_payment_id,
               razorpay_signature: resp.razorpay_signature,

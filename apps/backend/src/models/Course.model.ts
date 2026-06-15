@@ -1,6 +1,52 @@
 
 import mongoose, { Schema } from "mongoose";
-import { COURSE_STATUS } from "@funt-platform/constants";
+import {
+  COURSE_STATUS,
+  COURSE_DELIVERY_MODE,
+  MILESTONE_UNLOCK_TYPE,
+  MILESTONE_COMPLETION_RULE,
+} from "@funt-platform/constants";
+
+// ─── Milestone sub-schema ─────────────────────────────────────────────────────
+const milestoneSchema = new Schema(
+  {
+    milestoneId:          { type: String, required: true },   // stable cuid/uuid — never reorder
+    title:                { type: String, required: true, maxlength: 200 },
+    description:          { type: String, required: false, default: "" },
+    order:                { type: Number, required: true },   // display only — not a FK
+    feeInPaise:           { type: Number, required: true, default: 0, min: 0 },
+    unlockType:           {
+      type: String,
+      required: true,
+      enum: Object.values(MILESTONE_UNLOCK_TYPE),
+      default: MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION,
+    },
+    completionRule:       {
+      type: String,
+      required: true,
+      enum: Object.values(MILESTONE_COMPLETION_RULE),
+      default: MILESTONE_COMPLETION_RULE.COMPLETE_ALL_CHAPTERS,
+    },
+    unlockAfterDate:      { type: Date,   required: false },
+    unlockAfterDays:      { type: Number, required: false, min: 0 },  // relative to enrolledAt
+    paymentDueInDays:     { type: Number, required: false, min: 0 },  // days after eligibility to pay
+    certificateEligible:  { type: Boolean, required: true, default: false },
+    active:               { type: Boolean, required: true, default: true },
+    /** Chapter orders (moduleOrder values) that belong to this milestone */
+    chapterOrders:        { type: [Number], required: true, default: [] },
+  },
+  { _id: false }
+);
+
+// ─── LearningPlan sub-schema ──────────────────────────────────────────────────
+const learningPlanSchema = new Schema(
+  {
+    enabled:                    { type: Boolean, required: true, default: false },
+    autoLockPreviousMilestones: { type: Boolean, required: true, default: false },
+    milestones:                 { type: [milestoneSchema], required: true, default: [] },
+  },
+  { _id: false }
+);
 
 const courseModuleSnapshotSchema = new Schema(
   {
@@ -74,6 +120,19 @@ const courseSchema = new Schema(
      * false = watermark OFF for this course regardless of global
      */
     enableWatermark: { type: Boolean, required: false, default: null },
+
+    // ── Learning Plan ──────────────────────────────────────────────────
+    deliveryMode: {
+      type: String,
+      required: true,
+      enum: Object.values(COURSE_DELIVERY_MODE),
+      default: COURSE_DELIVERY_MODE.FULL_ACCESS,
+    },
+    learningPlan: {
+      type: learningPlanSchema,
+      required: false,
+      default: () => ({ enabled: false, autoLockPreviousMilestones: false, milestones: [] }),
+    },
   },
   { timestamps: true }
 );

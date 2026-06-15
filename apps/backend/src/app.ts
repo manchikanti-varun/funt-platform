@@ -36,6 +36,13 @@ import {
 import { leaveRoutes } from "./routes/leave.routes.js";
 import { notificationRoutes } from "./routes/notification.routes.js";
 import { ticketRoutes } from "./routes/ticket.routes.js";
+import {
+  courseLearningPlanRouter,
+  studentMilestoneRouter,
+  adminMilestoneRouter,
+  learningPlanAnalyticsRouter,
+} from "./routes/learningPlan.routes.js";
+import { exportImportRoutes } from "./routes/exportImport.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -99,6 +106,11 @@ app.use("/api/student/content-protection", contentProtectionStudentRoutes);
 app.use("/api/leaves", leaveRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/tickets", ticketRoutes);
+app.use("/api/courses/:id/learning-plan", courseLearningPlanRouter);
+app.use("/api/student", studentMilestoneRouter);
+app.use("/api/admin", adminMilestoneRouter);
+app.use("/api/analytics", learningPlanAnalyticsRouter);
+app.use("/api/admin/data", exportImportRoutes);
 app.use("/verify", verifyRoutes);
 
 app.use(errorHandler);

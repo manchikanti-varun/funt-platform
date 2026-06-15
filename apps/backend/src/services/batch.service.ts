@@ -9,7 +9,7 @@ import { CertificateModel } from "../models/Certificate.model.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { AttendanceModel } from "../models/Attendance.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
-import { BATCH_STATUS, COURSE_STATUS } from "@funt-platform/constants";
+import { BATCH_STATUS, COURSE_STATUS, COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
@@ -302,7 +302,12 @@ function copyCourseToSnapshot(course: {
   modules: unknown[];
   version: number;
   isDemo?: boolean;
+  deliveryMode?: string;
+  learningPlan?: unknown;
 }) {
+  const deliveryMode = (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS;
+  const learningPlan = (course as { learningPlan?: unknown }).learningPlan;
+
   return {
     courseId: course.courseId ?? String(course._id),
     title: course.title,
@@ -315,6 +320,8 @@ function copyCourseToSnapshot(course: {
     enrollmentPriceInPaise: 0,
     completionRewardCoins: 0,
     completionBadgeTypes: [],
+    deliveryMode,
+    learningPlan: learningPlan ? JSON.parse(JSON.stringify(learningPlan)) : { enabled: false, autoLockPreviousMilestones: false, milestones: [] },
   };
 }
 

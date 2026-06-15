@@ -1,6 +1,11 @@
 
 import mongoose, { Schema } from "mongoose";
-import { BATCH_STATUS } from "@funt-platform/constants";
+import {
+  BATCH_STATUS,
+  COURSE_DELIVERY_MODE,
+  MILESTONE_UNLOCK_TYPE,
+  MILESTONE_COMPLETION_RULE,
+} from "@funt-platform/constants";
 
 const courseModuleSnapshotSchema = new Schema(
   {
@@ -20,6 +25,35 @@ const courseModuleSnapshotSchema = new Schema(
     order: { type: Number, required: true },
     /** XP granted when the student fully completes this module in a batch (snapshot value at batch creation). */
     xpReward: { type: Number, required: false, default: 40, min: 0, max: 100_000 },
+  },
+  { _id: false }
+);
+
+// ─── Milestone sub-schema (mirrored from Course.model.ts) ──────────────────
+const batchMilestoneSchema = new Schema(
+  {
+    milestoneId:          { type: String, required: true },
+    title:                { type: String, required: true },
+    description:          { type: String, required: false, default: "" },
+    order:                { type: Number, required: true },
+    feeInPaise:           { type: Number, required: true, default: 0, min: 0 },
+    unlockType:           { type: String, required: true, enum: Object.values(MILESTONE_UNLOCK_TYPE), default: MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION },
+    completionRule:       { type: String, required: true, enum: Object.values(MILESTONE_COMPLETION_RULE), default: MILESTONE_COMPLETION_RULE.COMPLETE_ALL_CHAPTERS },
+    unlockAfterDate:      { type: Date,   required: false },
+    unlockAfterDays:      { type: Number, required: false, min: 0 },
+    paymentDueInDays:     { type: Number, required: false, min: 0 },
+    certificateEligible:  { type: Boolean, required: true, default: false },
+    active:               { type: Boolean, required: true, default: true },
+    chapterOrders:        { type: [Number], required: true, default: [] },
+  },
+  { _id: false }
+);
+
+const batchLearningPlanSchema = new Schema(
+  {
+    enabled:                    { type: Boolean, required: true, default: false },
+    autoLockPreviousMilestones: { type: Boolean, required: true, default: false },
+    milestones:                 { type: [batchMilestoneSchema], required: true, default: [] },
   },
   { _id: false }
 );
@@ -60,6 +94,19 @@ const courseSnapshotSchema = new Schema(
     completionBadgeTypes: { type: [String], required: false, default: [] },
     /** Copied from source course: shown as free demo in student UI. */
     isDemo: { type: Boolean, required: false, default: false },
+    /** Delivery mode snapshot — FULL_ACCESS (default) or LEARNING_PLAN */
+    deliveryMode: {
+      type: String,
+      required: false,
+      enum: Object.values(COURSE_DELIVERY_MODE),
+      default: COURSE_DELIVERY_MODE.FULL_ACCESS,
+    },
+    /** Learning plan config — only meaningful when deliveryMode = LEARNING_PLAN */
+    learningPlan: {
+      type: batchLearningPlanSchema,
+      required: false,
+      default: () => ({ enabled: false, autoLockPreviousMilestones: false, milestones: [] }),
+    },
   },
   { _id: false }
 );

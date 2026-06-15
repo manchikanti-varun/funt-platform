@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
@@ -51,8 +50,6 @@ export default function LeaveDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [remarks, setRemarks] = useState("");
-  const [substituteId, setSubstituteId] = useState("");
-  const [impactNotes, setImpactNotes] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -61,8 +58,6 @@ export default function LeaveDetailPage() {
     api<LeaveDetail>(`/api/leaves/${id}`).then((r) => {
       if (r.success && r.data) {
         setLeave(r.data);
-        setSubstituteId(r.data.substituteTrainerId ?? "");
-        setImpactNotes(r.data.leaveImpactNotes ?? "");
       }
       setLoading(false);
     });
@@ -90,21 +85,6 @@ export default function LeaveDetailPage() {
     }
   }
 
-  async function saveSubstitute() {
-    setError("");
-    setActionLoading(true);
-    const res = await api(`/api/leaves/${id}/substitute`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        substituteTrainerId: substituteId.trim() || null,
-        leaveImpactNotes: impactNotes,
-      }),
-    });
-    setActionLoading(false);
-    if (res.success) setSuccess("Substitute trainer saved.");
-    else setError(res.message ?? "Failed to save.");
-  }
-
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -124,7 +104,6 @@ export default function LeaveDetailPage() {
 
   const canReview = isAdmin && leave.status === "PENDING" &&
     (leave.requestedByRole !== "ADMIN" || isSuperAdmin);
-  const isTrainerLeave = leave.requestedByRole === "TRAINER";
 
   const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div>
@@ -179,63 +158,6 @@ export default function LeaveDetailPage() {
             <Field label="Cancelled At" value={new Date(leave.cancelledAt).toLocaleString()} />
           )}
         </div>
-
-        {/* Trainer-specific: affected batches + substitute */}
-        {isTrainerLeave && (
-          <div className="border-t border-slate-200 px-6 py-5 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">Trainer Impact</h2>
-            {(leave.affectedBatches ?? []).length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Affected Batches</p>
-                <div className="flex flex-wrap gap-2">
-                  {leave.affectedBatches!.map((bId) => (
-                    <Link key={bId} href={`/batches/${bId}`} className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100">
-                      {bId.slice(-8)}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-            {leave.leaveImpactNotes && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Impact Notes</p>
-                <p className="mt-1 text-sm text-slate-700">{leave.leaveImpactNotes}</p>
-              </div>
-            )}
-            {isAdmin && (
-              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-                <h3 className="text-sm font-semibold text-slate-800">Assign Substitute Trainer</h3>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Substitute Trainer User ID</label>
-                    <input
-                      value={substituteId}
-                      onChange={(e) => setSubstituteId(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
-                      placeholder="MongoDB user ID"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-slate-600">Impact Notes</label>
-                    <input
-                      value={impactNotes}
-                      onChange={(e) => setImpactNotes(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
-                      placeholder="e.g. Batch 3 will be covered by Ravi"
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => void saveSubstitute()}
-                  disabled={actionLoading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-                >
-                  {actionLoading ? "Saving…" : "Save Substitute"}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Review actions */}
         {canReview && (

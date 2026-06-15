@@ -12,6 +12,11 @@ import {
 } from "./demoEnrollment.service.js";
 import { issueInvoiceForEnrollment } from "./invoice.service.js";
 import { AppError } from "../utils/AppError.js";
+import {
+  isLearningPlanActive,
+  getMilestonesFromSnapshot,
+  initializeMilestoneProgress,
+} from "./learningPlan.service.js";
 
 export interface CreateEnrollmentInput {
   studentId: string;
@@ -72,6 +77,36 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
     String(input.courseId ?? "").trim() ||
     String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() ||
     undefined;
+
+  // ── Learning Plan: initialize milestone progress for each course in snapshot ──
+  for (const snap of snapshots) {
+    const snapCourseId = String((snap as { courseId?: string }).courseId ?? "").trim();
+    if (!snapCourseId) continue;
+    if (isLearningPlanActive(snap)) {
+      const milestones = getMilestonesFromSnapshot(snap);
+      try {
+        await initializeMilestoneProgress(
+          studentId,
+          batchMongoId,
+          snapCourseId,
+          milestones,
+          doc.enrolledAt ?? new Date()
+        );
+      } catch (lpErr) {
+        // Critical: LP initialization failed — enrollment succeeds but student will have broken milestone state.
+        // Log for admin visibility and flag the enrollment for retry.
+        console.error(
+          `[LP_INIT_FAILED] studentId=${studentId} batchId=${batchMongoId} courseId=${snapCourseId}`,
+          lpErr instanceof Error ? lpErr.message : lpErr
+        );
+        // Mark enrollment so a background check can retry initialization
+        await EnrollmentModel.updateOne(
+          { studentId, batchId: batchMongoId },
+          { $set: { learningPlanActive: true, _milestoneInitPending: true } }
+        ).exec().catch(() => {});
+      }
+    }
+  }
 
   if (!input.skipAutoInvoice && !(await shouldSkipEnrollmentInvoice(batchMongoId, courseId))) {
     await issueInvoiceForEnrollment({

@@ -7,7 +7,8 @@ import { CourseModel } from "../models/Course.model.js";
 import { UserModel } from "../models/User.model.js";
 import { getBatchCourseSnapshots } from "./batch.service.js";
 import { createEnrollment } from "./enrollment.service.js";
-import { ENROLLMENT_STATUS } from "@funt-platform/constants";
+import { unlockMilestonesByLicenseKey } from "./learningPlan.service.js";
+import { ENROLLMENT_STATUS, LICENSE_KEY_TYPE } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 
 const MAX_KEYS_PER_REQUEST = 100;
@@ -294,6 +295,32 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
     { _id: license._id },
     { $set: { usedByStudentId: studentId, usedAt: new Date() } }
   ).exec();
+
+  // ── Learning Plan: unlock milestones if this is a milestone-type license key ──
+  const licenseType = (license as { licenseType?: string }).licenseType;
+  const targetMilestoneIds = (license as { targetMilestoneIds?: string[] }).targetMilestoneIds ?? [];
+  if (
+    licenseType &&
+    licenseType !== LICENSE_KEY_TYPE.COURSE_ACCESS &&
+    license.courseId
+  ) {
+    try {
+      await unlockMilestonesByLicenseKey(
+        studentId,
+        batchId,
+        license.courseId,
+        String(license._id),
+        String(license.key),
+        licenseType === LICENSE_KEY_TYPE.FULL_PLAN_ACCESS ? [] : targetMilestoneIds
+      );
+    } catch (lpErr) {
+      console.error(
+        `[LP_LICENSE_UNLOCK_FAILED] studentId=${studentId} licenseId=${String(license._id)}`,
+        lpErr instanceof Error ? lpErr.message : lpErr
+      );
+      // Non-blocking: enrollment succeeded, license marked used. Milestone unlock can be retried by admin.
+    }
+  }
 
   return { message: "Enrolled successfully using license key", batchId };
 }

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { PaymentSubmissionModel } from "../models/PaymentSubmission.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
+import { MilestoneProgressModel } from "../models/MilestoneProgress.model.js";
 import { ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { createShopOrderAfterCheckout, getShopCheckoutSummary } from "./shop.service.js";
 import { recordLicenseKeyConsumedForPayment } from "./licenseKey.service.js";
@@ -21,11 +22,28 @@ import { createAuditLog } from "./audit.service.js";
 import { issueInvoiceForPayment } from "./invoice.service.js";
 import { RazorpayOrderContextModel } from "../models/RazorpayOrderContext.model.js";
 import { ShopProductModel } from "../models/ShopProduct.model.js";
+import { unlockMilestoneByPayment, getMilestonesFromSnapshot } from "./learningPlan.service.js";
 
 export type PaymentKind = "COURSE" | "SHOP";
 const SHOP_STOCK_RESERVATION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 type BatchDoc = Parameters<typeof getBatchCourseSnapshots>[0];
+
+/** Resolve milestone title from the batch snapshot for payment record enrichment. */
+async function resolveMilestoneTitle(batchIdParam: string, courseId: string, milestoneId: string): Promise<string | undefined> {
+  try {
+    const batch = await findBatchByParam(batchIdParam);
+    if (!batch) return undefined;
+    const snaps = getBatchCourseSnapshots(batch as BatchDoc);
+    const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+    if (!snap) return undefined;
+    const milestones = getMilestonesFromSnapshot(snap);
+    const m = milestones.find((ms) => ms.milestoneId === milestoneId);
+    return m?.title?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function releaseExpiredShopStockReservations(now = new Date()): Promise<number> {
   const ids = await PaymentSubmissionModel.find({
@@ -250,6 +268,7 @@ export async function confirmRazorpayCoursePayment(input: {
   batchId: string;
   courseId: string;
   couponCode?: string;
+  milestoneId?: string;
   razorpay_order_id: string;
   razorpay_payment_id: string;
   razorpay_signature: string;
@@ -266,6 +285,40 @@ export async function confirmRazorpayCoursePayment(input: {
 
   await assertStudentCanPurchaseCourseEnrollment(input.studentId, batchParam, courseId);
   const batchMongoId = await resolveBatchMongoId(batchParam);
+
+  // ── Learning Plan milestone validation (same as UPI flow) ───────────────
+  const milestoneIdTrimmed = input.milestoneId?.trim() || undefined;
+  if (milestoneIdTrimmed) {
+    const alreadyUnlocked = await MilestoneProgressModel.findOne({
+      studentId: input.studentId,
+      batchId: batchMongoId,
+      courseId,
+      milestoneId: milestoneIdTrimmed,
+      unlocked: true,
+    }).select("_id").lean().exec();
+    if (alreadyUnlocked) {
+      throw new AppError("This milestone is already unlocked. No payment needed.", 400);
+    }
+    const existingMilestonePayment = await PaymentSubmissionModel.findOne({
+      studentId: input.studentId,
+      batchId: batchMongoId,
+      courseId,
+      milestoneId: milestoneIdTrimmed,
+      status: { $in: ["PENDING", "VERIFIED"] },
+    }).select("_id").lean().exec();
+    if (existingMilestonePayment) {
+      throw new AppError("A payment for this milestone already exists.", 400);
+    }
+    const enrollment = await EnrollmentModel.findOne({
+      studentId: input.studentId,
+      batchId: batchMongoId,
+    }).select("nextEligibleMilestoneId").lean().exec();
+    const nextEligible = (enrollment as { nextEligibleMilestoneId?: string } | null)?.nextEligibleMilestoneId;
+    if (nextEligible && nextEligible !== milestoneIdTrimmed) {
+      throw new AppError("You can only pay for the next eligible milestone in sequence.", 400);
+    }
+  }
+
   const meta = await getCourseEnrollmentCheckoutMeta(batchParam, courseId);
   if (!meta.allowRazorpayMethod) {
     throw new AppError("Razorpay is not enabled for this course in your batch.", 400);
@@ -322,6 +375,9 @@ export async function confirmRazorpayCoursePayment(input: {
   const codeUpper = input.couponCode?.trim() ? input.couponCode.trim().toUpperCase() : undefined;
 
   try {
+    const resolvedMilestoneTitle = input.milestoneId?.trim()
+      ? await resolveMilestoneTitle(input.batchId, courseId, input.milestoneId.trim())
+      : undefined;
     const doc = await PaymentSubmissionModel.create({
       kind: "COURSE",
       studentId: input.studentId,
@@ -338,6 +394,8 @@ export async function confirmRazorpayCoursePayment(input: {
       enrollmentDiscountPaise: Math.max(0, listPaise - finalPaise),
       couponId: priced.couponId ?? undefined,
       couponCode: codeUpper,
+      milestoneId: input.milestoneId?.trim() || undefined,
+      milestoneTitle: resolvedMilestoneTitle,
     });
     const verified = await verifyPaymentAndEnroll(String(doc._id), PAYMENT_VERIFIED_BY_RAZORPAY_AUTO);
     const assignedLicenseKey = verified.kind === "COURSE" ? verified.assignedLicenseKey : undefined;
@@ -370,6 +428,7 @@ export async function submitStudentPayment(input: {
   amountPaise?: number;
   payerName?: string;
   couponCode?: string;
+  milestoneId?: string;
   submitterIp?: string;
   deviceId?: string;
   idempotencyKey?: string;
@@ -434,6 +493,54 @@ export async function submitStudentPayment(input: {
 
     await assertStudentCanPurchaseCourseEnrollment(input.studentId, batchParam, courseId);
     const batchMongoId = await resolveBatchMongoId(batchParam);
+
+    // ── Learning Plan milestone validation ────────────────────────────────
+    const milestoneIdTrimmed = input.milestoneId?.trim() || undefined;
+    if (milestoneIdTrimmed) {
+      // Check 1: Milestone already unlocked — no payment needed
+      const alreadyUnlocked = await MilestoneProgressModel.findOne({
+        studentId: input.studentId,
+        batchId: batchMongoId,
+        courseId,
+        milestoneId: milestoneIdTrimmed,
+        unlocked: true,
+      }).select("_id").lean().exec();
+      if (alreadyUnlocked) {
+        throw new AppError("This milestone is already unlocked. No payment needed.", 400);
+      }
+
+      // Check 2: Duplicate pending/verified payment for this milestone
+      const existingMilestonePayment = await PaymentSubmissionModel.findOne({
+        studentId: input.studentId,
+        batchId: batchMongoId,
+        courseId,
+        milestoneId: milestoneIdTrimmed,
+        status: { $in: ["PENDING", "VERIFIED"] },
+      }).select("_id status").lean().exec();
+      if (existingMilestonePayment) {
+        const st = (existingMilestonePayment as { status: string }).status;
+        throw new AppError(
+          st === "VERIFIED"
+            ? "This milestone already has a verified payment."
+            : "You already have a pending payment for this milestone.",
+          400
+        );
+      }
+
+      // Check 3: Validate milestone is the next eligible one
+      const enrollment = await EnrollmentModel.findOne({
+        studentId: input.studentId,
+        batchId: batchMongoId,
+      }).select("nextEligibleMilestoneId").lean().exec();
+      const nextEligible = (enrollment as { nextEligibleMilestoneId?: string } | null)?.nextEligibleMilestoneId;
+      if (nextEligible && nextEligible !== milestoneIdTrimmed) {
+        throw new AppError(
+          "You can only pay for the next eligible milestone in sequence. Please complete the current milestone first.",
+          400
+        );
+      }
+    }
+
     const meta = await getCourseEnrollmentCheckoutMeta(batchParam, courseId);
     if (!meta.allowUpiManual) {
       throw new AppError("Manual UPI payment is not enabled for this course in your batch.", 400);
@@ -500,6 +607,9 @@ export async function submitStudentPayment(input: {
     }
 
     try {
+      const resolvedMilestoneTitle = input.milestoneId?.trim()
+        ? await resolveMilestoneTitle(batchParam!, courseId!, input.milestoneId.trim())
+        : undefined;
       const doc = await PaymentSubmissionModel.create({
         kind: "COURSE",
         studentId: input.studentId,
@@ -515,6 +625,8 @@ export async function submitStudentPayment(input: {
         enrollmentDiscountPaise: listPaise > 0 ? Math.max(0, listPaise - amountPaise) : undefined,
         couponId: priced.couponId ?? undefined,
         couponCode: codeUpper,
+        milestoneId: input.milestoneId?.trim() || undefined,
+        milestoneTitle: resolvedMilestoneTitle,
         idempotencyKey: idemKey,
         submitterIp,
         deviceId,
@@ -735,6 +847,27 @@ export async function verifyPaymentAndEnroll(
           createdBy: adminId,
           session,
         });
+        // ── Learning Plan: unlock milestone if this payment was for a specific milestone ──
+        const paymentMilestoneId = (doc as { milestoneId?: string }).milestoneId?.trim();
+        if (paymentMilestoneId && courseId) {
+          try {
+            await unlockMilestoneByPayment(
+              doc.studentId, batchId, courseId,
+              paymentMilestoneId, String(doc._id), adminId
+            );
+          } catch (unlockErr) {
+            // Log critical failure — payment verified but milestone not unlocked
+            console.error(
+              `[CRITICAL] Payment ${String(doc._id)} verified but milestone ${paymentMilestoneId} unlock failed:`,
+              unlockErr instanceof Error ? unlockErr.message : unlockErr
+            );
+            // Re-throw to roll back the transaction — payment should NOT be verified if unlock fails
+            throw new AppError(
+              "Payment recorded but milestone unlock failed. Contact support with your transaction ID.",
+              500
+            );
+          }
+        }
         const couponIdForRedeem = (doc as { couponId?: string }).couponId?.trim();
         if (couponIdForRedeem) {
           await recordCouponRedemption(couponIdForRedeem, doc.studentId, `enrollment_payment:${String(doc._id)}`, session);

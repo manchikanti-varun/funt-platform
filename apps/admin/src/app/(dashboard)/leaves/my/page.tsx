@@ -52,8 +52,6 @@ export default function MyLeavesPage() {
   const [endDate, setEndDate] = useState("");
   const [isHalfDay, setIsHalfDay] = useState(false);
   const [reason, setReason] = useState("");
-  const [affectedBatches, setAffectedBatches] = useState("");
-  const [impactNotes, setImpactNotes] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,7 +75,6 @@ export default function MyLeavesPage() {
     if (new Date(endDate) < new Date(startDate)) { setFormError("End date cannot be before start date."); return; }
     if (!reason.trim()) { setFormError("Reason is required."); return; }
     setSubmitting(true);
-    const batches = affectedBatches.split(",").map((s) => s.trim()).filter(Boolean);
     const res = await api("/api/leaves", {
       method: "POST",
       body: JSON.stringify({
@@ -87,15 +84,13 @@ export default function MyLeavesPage() {
         endDate,
         isHalfDay,
         reason,
-        affectedBatches: batches,
-        leaveImpactNotes: impactNotes || undefined,
       }),
     });
     setSubmitting(false);
     if (res.success) {
       setFormSuccess("Leave request submitted successfully.");
       setShowForm(false);
-      setStartDate(""); setEndDate(""); setReason(""); setAffectedBatches(""); setImpactNotes("");
+      setStartDate(""); setEndDate(""); setReason("");
       setIsHalfDay(false); setLeaveType("SICK");
       void load();
     } else {
@@ -231,27 +226,6 @@ export default function MyLeavesPage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
               placeholder="Describe the reason for your leave…"
             />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">Affected Batch IDs <span className="text-slate-400">(optional, comma-separated)</span></label>
-              <input
-                value={affectedBatches}
-                onChange={(e) => setAffectedBatches(e.target.value)}
-                className="input w-full"
-                placeholder="batchId1, batchId2"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-slate-700">Impact Notes <span className="text-slate-400">(optional)</span></label>
-              <input
-                value={impactNotes}
-                onChange={(e) => setImpactNotes(e.target.value)}
-                className="input w-full"
-                placeholder="e.g. Batch 3 needs substitute"
-              />
-            </div>
           </div>
 
           {formError && <p className="text-sm font-medium text-red-600">{formError}</p>}

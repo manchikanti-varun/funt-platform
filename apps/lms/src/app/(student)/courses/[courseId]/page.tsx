@@ -27,6 +27,8 @@ interface ChapterItem {
   linkedAssignmentId?: string;
   unlocked: boolean;
   completed: boolean;
+  /** Set by backend when the chapter is locked by an uncleared milestone */
+  milestoneLocked?: boolean;
   hasContent?: boolean;
   hasVideo?: boolean;
   hasYoutube?: boolean;
@@ -35,6 +37,39 @@ interface ChapterItem {
   videoCompleted?: boolean;
   youtubeCompleted?: boolean;
   assignmentCompleted?: boolean;
+}
+
+interface MilestoneStatus {
+  milestoneId: string;
+  title: string;
+  description?: string;
+  order: number;
+  feeInPaise: number;
+  feeRupees: number;
+  unlockType: string;
+  completionRule: string;
+  certificateEligible: boolean;
+  chapterCount: number;
+  unlocked: boolean;
+  locked: boolean;
+  completed: boolean;
+  completionPct: number;
+  completedChapters: number;
+  totalChapters: number;
+  eligibleForNext: boolean;
+  paymentStatus: string;
+  paymentDueAt?: string;
+  unlockedAt?: string;
+  completedAt?: string;
+  scheduledUnlockAt?: string;
+  milestoneCertificateId?: string;
+}
+
+interface LearningPlanStatus {
+  autoLockPreviousMilestones: boolean;
+  currentMilestoneId?: string;
+  nextEligibleMilestoneId?: string;
+  milestones: MilestoneStatus[];
 }
 
 interface BatchCourse {
@@ -100,6 +135,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const [certError, setCertError] = useState<string | null>(null);
   const [completedJustNow, setCompletedJustNow] = useState<{ chapterOrder: number; part: "content" | "video" | "youtube" } | null>(null);
   const [ytPageOrigin, setYtPageOrigin] = useState("");
+  const [learningPlan, setLearningPlan] = useState<LearningPlanStatus | null>(null);
   const youtubeAutoMarkedRef = useRef("");
   const ytListenerGenRef = useRef(0);
   const selectedYoutubeSnapRef = useRef<{ order: number; vid: string; done: boolean }>({ order: -1, vid: "", done: true });
@@ -148,6 +184,13 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
       if (r.success && r.data) {
         setData(r.data);
         setLoadError(null);
+        // Refresh learning plan status when course data reloads
+        const bId = r.data.batchId;
+        if (bId) {
+          api<LearningPlanStatus>(`/api/student/courses/${encodeURIComponent(courseId)}/milestones?batchId=${encodeURIComponent(bId)}`, { cache: "no-store" })
+            .then((lr) => { if (lr.success && lr.data) setLearningPlan(lr.data); })
+            .catch(() => {});
+        }
       }
     });
   };
@@ -171,6 +214,13 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
         if (r.success && r.data) {
           setData(r.data);
           setLoadError(null);
+          // Load learning plan status if applicable
+          const bId = r.data.batchId;
+          if (bId) {
+            api<LearningPlanStatus>(`/api/student/courses/${encodeURIComponent(courseId)}/milestones?batchId=${encodeURIComponent(bId)}`, { cache: "no-store" })
+              .then((lr) => { if (lr.success && lr.data) setLearningPlan(lr.data); })
+              .catch(() => {});
+          }
           return;
         }
         setData(null);
@@ -627,15 +677,83 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                         )}
                       </div>
                     )}
+                    {/* ── Learning Plan milestone panel ── */}
+                    {learningPlan && learningPlan.milestones.length > 0 && (
+                      <div className="mb-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
+                        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-teal-700">Learning Plan</p>
+                        <ul className="space-y-1.5">
+                          {learningPlan.milestones.map((ms) => (
+                            <li key={ms.milestoneId} className={`rounded-lg border px-2.5 py-2 text-xs ${
+                              ms.unlocked && !ms.locked
+                                ? ms.completed
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                  : "border-teal-300 bg-teal-100/60 text-teal-900"
+                                : "border-slate-200 bg-white text-slate-500"
+                            }`}>
+                              <div className="flex items-center gap-1.5 font-semibold">
+                                <span>{ms.completed ? "✓" : ms.unlocked && !ms.locked ? "▶" : "🔒"}</span>
+                                <span className="flex-1 truncate">{ms.title}</span>
+                                {ms.unlocked && !ms.completed && ms.totalChapters > 0 && (
+                                  <span className="shrink-0 font-normal text-teal-600">{ms.completionPct}%</span>
+                                )}
+                              </div>
+                              {/* Eligible but not yet paid */}
+                              {!ms.unlocked && !ms.locked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId && (
+                                <div className="mt-1.5">
+                                  <Link
+                                    href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
+                                    className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-indigo-500"
+                                  >
+                                    Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock
+                                  </Link>
+                                </div>
+                              )}
+                              {/* Overdue */}
+                              {ms.paymentStatus === "OVERDUE" && (
+                                <div className="mt-1 text-[11px] font-semibold text-red-600">Payment overdue</div>
+                              )}
+                              {/* Certificate issued */}
+                              {ms.milestoneCertificateId && (
+                                <div className="mt-1">
+                                  <Link href="/certificates" className="text-[11px] font-semibold text-amber-700 hover:underline">
+                                    🏅 View certificate
+                                  </Link>
+                                </div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div className="-mx-1 px-1">
                       <ul className="space-y-1.5">
                         {chapters.map((m) => (
                           <li key={m.order}>
-                            <button type="button" onClick={() => setSelectedOrder(m.order)} disabled={!m.unlocked} className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${selected?.order === m.order ? "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-200" : m.unlocked ? "text-slate-800 hover:bg-slate-50/50 hover:text-slate-900" : "cursor-not-allowed text-slate-400"}`}>
-                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">{m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}</span>
+                            <button
+                              type="button"
+                              onClick={() => m.unlocked && !m.milestoneLocked ? setSelectedOrder(m.order) : undefined}
+                              disabled={!m.unlocked || !!m.milestoneLocked}
+                              className={`flex w-full items-center gap-2 rounded-xl px-3.5 py-3 text-left text-sm font-semibold transition ${
+                                selected?.order === m.order
+                                  ? "bg-indigo-600 text-white shadow-md ring-2 ring-indigo-200"
+                                  : m.unlocked && !m.milestoneLocked
+                                    ? "text-slate-800 hover:bg-slate-50/50 hover:text-slate-900"
+                                    : "cursor-not-allowed text-slate-400"
+                              }`}
+                            >
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                                {m.milestoneLocked ? "🔐" : m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}
+                              </span>
                               <span className="min-w-0 flex-1 truncate">{m.title}</span>
                               <span className="shrink-0 text-[11px] font-semibold text-slate-55">
-                                {m.completed ? "Completed" : m.unlocked ? "In Progress" : "Not Started"}
+                                {m.milestoneLocked
+                                  ? "Locked"
+                                  : m.completed
+                                    ? "Completed"
+                                    : m.unlocked
+                                      ? "In Progress"
+                                      : "Not Started"}
                               </span>
                             </button>
                           </li>
@@ -652,6 +770,32 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           <h2 className="text-xl font-black tracking-tight text-slate-900">{selected.title}</h2>
                         </div>
 
+                        {/* Milestone-locked overlay */}
+                        {selected.milestoneLocked ? (
+                          <div className="flex min-h-[300px] flex-col items-center justify-center px-8 py-12 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-3xl mb-4">🔐</div>
+                            <h3 className="text-lg font-bold text-slate-800">Chapter Locked</h3>
+                            <p className="mt-2 text-sm text-slate-500 max-w-sm">
+                              This chapter is part of a locked milestone. Complete and unlock the previous milestone to access this content.
+                            </p>
+                            {learningPlan && (
+                              <div className="mt-6 w-full max-w-sm space-y-2">
+                                {learningPlan.milestones
+                                  .filter((ms) => !ms.unlocked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId)
+                                  .slice(0, 1)
+                                  .map((ms) => (
+                                    <Link
+                                      key={ms.milestoneId}
+                                      href={`/payment?type=milestone&batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
+                                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
+                                    >
+                                      Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock {ms.title}
+                                    </Link>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
                         <div className="space-y-0 divide-y divide-slate-100">
                         {hasLessons && (
                           <div className="px-6 py-6">
@@ -783,6 +927,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                           </div>
                         )}
                         </div>{/* end divide-y */}
+                        )} {/* end milestone-locked conditional */}
                       </div>
                     ) : (
                       <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-400">

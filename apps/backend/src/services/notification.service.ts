@@ -11,6 +11,10 @@ export type NotificationType =
   | "LEAVE_REJECTED"
   | "LEAVE_CANCELLED"
   | "LEAVE_PENDING_REVIEW"
+  | "MILESTONE_UNLOCKED"
+  | "MILESTONE_COMPLETED"
+  | "MILESTONE_PAYMENT_DUE"
+  | "MILESTONE_OVERDUE"
   | "GENERAL";
 
 export interface CreateNotificationInput {

@@ -36,6 +36,10 @@ const paymentSubmissionSchema = new Schema(
     deviceId: { type: String, required: false },
     riskFlags: { type: [String], required: false, default: [] },
     riskEscalatedAt: { type: Date, required: false },
+    // ── Learning Plan extension ──────────────────────────────────────────
+    /** When set, this payment is for a specific Learning Plan milestone (not the full course) */
+    milestoneId:    { type: String, required: false },
+    milestoneTitle: { type: String, required: false },
     shopCheckout: {
       items: {
         type: [
@@ -91,5 +95,6 @@ const paymentSubmissionSchema = new Schema(
 
 paymentSubmissionSchema.index({ studentId: 1, batchId: 1, courseId: 1, status: 1 });
 paymentSubmissionSchema.index({ studentId: 1, productId: 1, status: 1 });
+paymentSubmissionSchema.index({ milestoneId: 1, status: 1 }, { sparse: true });
 
 export const PaymentSubmissionModel = mongoose.model("PaymentSubmission", paymentSubmissionSchema);

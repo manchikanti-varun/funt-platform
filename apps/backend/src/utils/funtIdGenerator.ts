@@ -61,8 +61,16 @@ export async function generateSubmissionId(): Promise<string> {
   return `${SUBMISSION_ID_PREFIX}-${YY()}-${PAD(seq, 8)}`;
 }
 
+export const MILESTONE_ID_PREFIX = "MS";
+
 export async function generateUserFuntId(): Promise<string> {
   const key = `user_${YY()}`;
   const seq = await nextSeq(key);
   return `${USER_ID_PREFIX}-${YY()}-${PAD(seq, 8)}`;
+}
+
+export async function generateMilestoneId(): Promise<string> {
+  const key = `milestone_${YY()}`;
+  const seq = await nextSeq(key);
+  return `${MILESTONE_ID_PREFIX}-${YY()}-${PAD(seq, 6)}`;
 }
