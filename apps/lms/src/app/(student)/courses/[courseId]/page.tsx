@@ -926,8 +926,8 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                             )}
                           </div>
                         )}
-                        </div>{/* end divide-y */}
-                        )} {/* end milestone-locked conditional */}
+                        </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex min-h-[260px] items-center justify-center text-sm text-slate-400">
