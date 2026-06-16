@@ -295,16 +295,15 @@ function ImportPanel() {
 
 export default function ImportExportPage() {
   return (
-    <RequireRoles roles={[...STAFF_ROLES]}>
-      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Import / Export</h1>
-          <p className="mt-1 text-sm text-slate-500">Backup, migrate, and clone platform data.</p>
-        </div>
-
-        <ExportPanel />
-        <ImportPanel />
+    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Import / Export</h1>
+        <p className="mt-1 text-sm text-slate-500">Backup, migrate, and clone platform data.</p>
       </div>
-    </RequireRoles>
+
+      <ExportPanel />
+      <ImportPanel />
+    </div>
   );
 }
