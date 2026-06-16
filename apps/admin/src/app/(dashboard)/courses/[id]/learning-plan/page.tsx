@@ -121,7 +121,6 @@ function formToPayload(f: MilestoneForm) {
 const UNLOCK_TYPE_LABELS: Record<string, string> = {
   [MILESTONE_UNLOCK_TYPE.FREE]: "Free (auto-unlock on enrollment)",
   [MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION]: "Payment after previous milestone completion",
-  [MILESTONE_UNLOCK_TYPE.MANUAL]: "Manual admin unlock",
   [MILESTONE_UNLOCK_TYPE.DATE_BASED]: "Unlock on specific date",
   [MILESTONE_UNLOCK_TYPE.RELATIVE_DATE]: "Unlock after X days from enrollment",
 };
@@ -154,9 +153,15 @@ function MilestoneFormPanel({
   modules: { order: number; title?: string }[];
   isEdit: boolean;
 }) {
+  const [chapterSearch, setChapterSearch] = useState("");
+
   function set<K extends keyof MilestoneForm>(key: K, value: MilestoneForm[K]) {
     onChange({ ...form, [key]: value });
   }
+
+  const filteredModules = chapterSearch.trim()
+    ? modules.filter((m) => (m.title ?? `Chapter ${m.order + 1}`).toLowerCase().includes(chapterSearch.toLowerCase()))
+    : modules;
 
   const showDateField = form.unlockType === MILESTONE_UNLOCK_TYPE.DATE_BASED;
   const showRelativeDays = form.unlockType === MILESTONE_UNLOCK_TYPE.RELATIVE_DATE;
@@ -198,19 +203,6 @@ function MilestoneFormPanel({
             className="input w-full"
             placeholder="Brief overview of what students learn in this milestone"
           />
-        </div>
-
-        {/* Order */}
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-slate-700">Display Order</label>
-          <input
-            type="number"
-            min={0}
-            value={form.order}
-            onChange={(e) => set("order", Number(e.target.value))}
-            className="input w-full"
-          />
-          <p className="mt-1 text-xs text-slate-500">Lower = shown first. Display only — not used as ID.</p>
         </div>
 
         {/* Unlock type */}
@@ -303,55 +295,73 @@ function MilestoneFormPanel({
         </div>
       </div>
 
-      {/* Chapter assignments */}
+      {/* Chapter assignments — checkboxes with search */}
       <div>
         <label className="mb-1 block text-xs font-semibold text-slate-700">
-          Assign Chapters <span className="font-normal text-slate-500">(by order number, comma-separated)</span>
+          Assign Chapters
         </label>
-        <input
-          value={form.chapterOrders}
-          onChange={(e) => set("chapterOrders", e.target.value)}
-          className="input w-full"
-          placeholder="e.g. 0, 1, 2, 3"
-        />
         {modules.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {modules.map((m) => {
-              const isAssigned = form.chapterOrders
-                .split(",")
-                .map((s) => parseInt(s.trim(), 10))
-                .includes(m.order);
-              return (
-                <button
-                  key={m.order}
-                  type="button"
-                  onClick={() => {
-                    const orders = form.chapterOrders
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean);
-                    const orderStr = String(m.order);
-                    if (isAssigned) {
-                      set("chapterOrders", orders.filter((o) => o !== orderStr).join(", "));
-                    } else {
-                      set("chapterOrders", [...orders, orderStr].join(", "));
-                    }
-                  }}
-                  className={`rounded-md border px-2 py-0.5 text-xs font-medium transition ${
-                    isAssigned
-                      ? "border-teal-400 bg-teal-100 text-teal-800"
-                      : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {m.order}: {m.title ?? `Chapter ${m.order}`}
-                </button>
-              );
-            })}
+          <>
+            <input
+              type="text"
+              placeholder="Search chapters..."
+              value={chapterSearch}
+              onChange={(e) => setChapterSearch(e.target.value)}
+              className="input mb-2 w-full max-w-sm"
+            />
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 space-y-1">
+              {filteredModules.map((m) => {
+                const isAssigned = form.chapterOrders
+                  .split(",")
+                  .map((s) => parseInt(s.trim(), 10))
+                  .includes(m.order);
+                return (
+                  <label
+                    key={m.order}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isAssigned}
+                      onChange={() => {
+                        const orders = form.chapterOrders
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean);
+                        const orderStr = String(m.order);
+                        if (isAssigned) {
+                          set("chapterOrders", orders.filter((o) => o !== orderStr).join(", "));
+                        } else {
+                          set("chapterOrders", [...orders, orderStr].join(", "));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span className="text-sm text-slate-800">
+                      {m.title ?? `Chapter ${m.order + 1}`}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {/* Selected chapters display */}
+        {form.chapterOrders.trim() && (
+          <div className="mt-2">
+            <p className="text-xs font-medium text-slate-600 mb-1">Selected ({form.chapterOrders.split(",").filter((s) => s.trim()).length})</p>
+            <div className="flex flex-wrap gap-1.5">
+              {form.chapterOrders.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)).map((order) => {
+                const mod = modules.find((m) => m.order === order);
+                return (
+                  <span key={order} className="rounded-full bg-teal-100 border border-teal-300 px-2 py-0.5 text-xs font-medium text-teal-800">
+                    {mod?.title ?? `Chapter ${order + 1}`}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         )}
-        <p className="mt-1 text-xs text-slate-500">
-          Click chapters above to assign/unassign. A chapter not assigned to any milestone is freely accessible.
-        </p>
       </div>
 
       {/* Flags */}
