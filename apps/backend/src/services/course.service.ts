@@ -548,6 +548,80 @@ export async function reorderModules(id: string, input: ReorderModulesInput, per
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 
+/**
+ * Add a global chapter (by globalModuleId) to an existing course.
+ * The chapter is appended at the end with the next available order.
+ */
+export async function addChapterToCourse(id: string, globalModuleId: string, performedBy: string) {
+  const doc = await findCourseByParam(id);
+  if (!doc) throw new AppError("Course not found", 404);
+  await assertCanEditCourseAsync(performedBy, doc);
+
+  const { GlobalModuleModel } = await import("../models/GlobalModule.model.js");
+  const gm = await GlobalModuleModel.findById(globalModuleId).lean().exec();
+  if (!gm) throw new AppError("Global chapter not found", 404);
+
+  const modules = (doc.modules ?? []) as unknown as Array<Record<string, unknown>>;
+  const nextOrder = modules.length > 0 ? Math.max(...modules.map((m) => Number(m.order ?? 0))) + 1 : 0;
+
+  const newModule = {
+    originalGlobalModuleId: String(gm._id),
+    title: (gm as { title: string }).title,
+    description: (gm as { description: string }).description ?? "",
+    content: (gm as { content: string }).content ?? "",
+    youtubeUrl: (gm as { youtubeUrl?: string }).youtubeUrl ?? undefined,
+    videoUrl: (gm as { videoUrl?: string }).videoUrl ?? undefined,
+    resourceLinkUrl: (gm as { resourceLinkUrl?: string }).resourceLinkUrl ?? undefined,
+    linkedAssignmentId: (gm as { linkedAssignmentId?: string }).linkedAssignmentId ?? undefined,
+    versionAtSnapshot: (gm as { version: number }).version ?? 1,
+    order: nextOrder,
+    xpReward: 40,
+  };
+
+  modules.push(newModule);
+  doc.set("modules", modules);
+  doc.set("version", (doc.version ?? 1) + 1);
+  await doc.save();
+
+  await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id), {
+    action: "chapter_added",
+    globalModuleId,
+    order: nextOrder,
+  });
+
+  return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
+}
+
+/**
+ * Remove a chapter from a course by its index.
+ */
+export async function removeChapterFromCourse(id: string, chapterIndex: number, performedBy: string) {
+  const doc = await findCourseByParam(id);
+  if (!doc) throw new AppError("Course not found", 404);
+  await assertCanEditCourseAsync(performedBy, doc);
+
+  const modules = (doc.modules ?? []) as unknown as Array<Record<string, unknown>>;
+  const sorted = [...modules].sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0));
+
+  if (chapterIndex < 0 || chapterIndex >= sorted.length) {
+    throw new AppError("Chapter index out of range", 400);
+  }
+
+  sorted.splice(chapterIndex, 1);
+  // Re-assign sequential order
+  const reordered = sorted.map((m, idx) => ({ ...m, order: idx }));
+  doc.set("modules", reordered);
+  doc.set("version", (doc.version ?? 1) + 1);
+  await doc.save();
+
+  await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id), {
+    action: "chapter_removed",
+    chapterIndex,
+  });
+
+  return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
+}
+
 export async function duplicateCourse(id: string, performedBy: string) {
   const source = await findCourseByParam(id);
   if (!source) throw new AppError("Course not found", 404);

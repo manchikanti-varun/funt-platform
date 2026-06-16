@@ -135,8 +135,8 @@ export default function LeaveDetailPage() {
 
         {/* Details grid */}
         <div className="grid gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Field label="Start Date" value={new Date(leave.startDate).toLocaleDateString()} />
-          <Field label="End Date" value={new Date(leave.endDate).toLocaleDateString()} />
+          <Field label="Start Date" value={leave.startDate.split("-").reverse().join("/")} />
+          <Field label="End Date" value={leave.endDate.split("-").reverse().join("/")} />
           <Field label="Total Days" value={leave.isHalfDay ? "Half day" : `${leave.totalDays} day${leave.totalDays !== 1 ? "s" : ""}`} />
           <Field label="Reason" value={leave.reason} />
           <Field label="Applied On" value={new Date(leave.createdAt).toLocaleString()} />

@@ -9,6 +9,7 @@ import {
   getBatch,
   updateBatch,
   duplicateBatch,
+  syncCourseContent,
   archiveBatch,
   unarchiveBatch,
   deleteBatch,
@@ -33,6 +34,7 @@ router.delete("/:id/students/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.AD
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatch);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), updateBatch);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateBatch);
+router.post("/:id/sync-course", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), syncCourseContent);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveBatch);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveBatch);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteBatch);

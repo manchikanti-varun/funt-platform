@@ -691,6 +691,77 @@ export interface DuplicateBatchInput {
   performedBy: string;
 }
 
+/**
+ * Sync course content (chapters, videos, assignments, title, description, LP) from the source Course
+ * into the batch snapshot. Preserves batch-specific settings (price, payment methods, coins, badges).
+ */
+export async function syncCourseContentToBatch(batchId: string, courseId: string, performedBy: string) {
+  const batch = await findBatchByParam(batchId);
+  if (!batch) throw new AppError("Batch not found", 404);
+  const batchMongoId = String((batch as { _id: unknown })._id);
+
+  const batchDoc = await BatchModel.findById(batchMongoId).exec();
+  if (!batchDoc) throw new AppError("Batch not found", 404);
+
+  // Find the source course
+  const course = await CourseModel.findOne({
+    $or: [{ courseId }, { _id: /^[a-f\d]{24}$/i.test(courseId) ? courseId : "000000000000" }],
+  }).lean().exec();
+  if (!course) throw new AppError("Course not found", 404);
+
+  // Find the snapshot to update
+  const snapshots = (batchDoc as { courseSnapshots?: unknown[] }).courseSnapshots;
+  if (!Array.isArray(snapshots) || snapshots.length === 0) {
+    throw new AppError("Batch has no course snapshots", 400);
+  }
+
+  const snapIdx = snapshots.findIndex(
+    (s) => (s as { courseId?: string }).courseId === courseId
+  );
+  if (snapIdx === -1) throw new AppError("Course not found in this batch", 400);
+
+  const existingSnap = snapshots[snapIdx] as Record<string, unknown>;
+
+  // Preserve batch-specific settings
+  const preserved = {
+    enrollmentPriceInPaise: existingSnap.enrollmentPriceInPaise ?? 0,
+    allowedPaymentMethods: existingSnap.allowedPaymentMethods,
+    completionRewardCoins: existingSnap.completionRewardCoins ?? 0,
+    completionBadgeTypes: existingSnap.completionBadgeTypes ?? [],
+  };
+
+  // Build updated snapshot from source course
+  const updated = {
+    courseId: (course as { courseId?: string }).courseId ?? String(course._id),
+    title: course.title,
+    description: course.description,
+    headerImageUrl: String((course as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
+    durationText: (course as { durationText?: string }).durationText ?? "",
+    isDemo: !!(course as { isDemo?: boolean }).isDemo,
+    modules: JSON.parse(JSON.stringify(course.modules)),
+    version: course.version,
+    deliveryMode: (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS,
+    learningPlan: (course as { learningPlan?: unknown }).learningPlan
+      ? JSON.parse(JSON.stringify((course as { learningPlan?: unknown }).learningPlan))
+      : { enabled: false, autoLockPreviousMilestones: false, milestones: [] },
+    // Restore batch-specific settings
+    ...preserved,
+  };
+
+  // Replace snapshot in place
+  snapshots[snapIdx] = updated;
+  batchDoc.markModified("courseSnapshots");
+  await batchDoc.save();
+
+  await createAuditLog("BATCH_UPDATED", performedBy, ENTITY_BATCH, batchMongoId, {
+    action: "sync_course_content",
+    courseId,
+    newVersion: course.version,
+  });
+
+  return { synced: true, batchId: batchMongoId, courseId, version: course.version };
+}
+
 export async function duplicateBatch(sourceId: string, input: DuplicateBatchInput) {
   const source = await findBatchByParam(sourceId);
   if (!source) throw new AppError("Batch not found", 404);

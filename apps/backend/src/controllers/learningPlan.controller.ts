@@ -18,6 +18,7 @@ import {
 } from "../services/learningPlan.service.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "../services/batch.service.js";
 import { MilestoneProgressModel } from "../models/MilestoneProgress.model.js";
+import { generateMilestoneLicenseKeys } from "../services/licenseKey.service.js";
 
 function uid(req: Request): string {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
@@ -143,6 +144,24 @@ export const patchAdminSkip = asyncHandler(async (req: Request, res: Response): 
   if (!studentId || !batchId || !courseId) throw new AppError("studentId, batchId, courseId required", 400);
   await adminSkipMilestone(studentId, batchId, courseId, milestoneId, adminId);
   successRes(res, { skipped: true }, "Milestone skipped — student promoted to next");
+});
+
+// ── Milestone License Key Generation ──────────────────────────────────────
+
+// POST /api/admin/milestones/:milestoneId/generate-key
+export const postGenerateMilestoneKey = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const adminId = uid(req);
+  const milestoneId = req.params.milestoneId;
+  const { courseId, batchId, count } = req.body ?? {};
+  if (!courseId || !batchId) throw new AppError("courseId and batchId are required", 400);
+  const data = await generateMilestoneLicenseKeys({
+    courseId,
+    batchId,
+    milestoneId,
+    createdBy: adminId,
+    count: count ? Number(count) : 1,
+  });
+  successRes(res, data, `${data.keys.length} milestone license key(s) generated`, 201);
 });
 
 // ── Analytics ─────────────────────────────────────────────────────────────

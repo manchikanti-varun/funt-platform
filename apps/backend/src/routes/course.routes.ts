@@ -10,6 +10,8 @@ import {
   updateCourse,
   reorderModules as reorderChapters,
   updateCourseModule as updateCourseChapter,
+  addChapter,
+  removeChapter,
   duplicateCourse,
   archiveCourse,
   unarchiveCourse,
@@ -27,6 +29,8 @@ router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), get
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourse);
 router.patch("/:id/reorder-chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), reorderChapters);
 router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourseChapter);
+router.post("/:id/chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addChapter);
+router.delete("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), removeChapter);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateCourse);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveCourse);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveCourse);

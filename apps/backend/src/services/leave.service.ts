@@ -18,19 +18,14 @@ import { AppError } from "../utils/AppError.js";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Count business days (Mon–Fri) between two dates, inclusive. */
-function countBusinessDays(start: Date, end: Date): number {
-  let count = 0;
-  const cur = new Date(start);
-  cur.setHours(0, 0, 0, 0);
-  const endDay = new Date(end);
-  endDay.setHours(0, 0, 0, 0);
-  while (cur <= endDay) {
-    const dow = cur.getDay();
-    if (dow !== 0 && dow !== 6) count++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return count;
+/** Count calendar days between two dates, inclusive. */
+function countDays(start: Date, end: Date): number {
+  const s = new Date(start);
+  s.setHours(0, 0, 0, 0);
+  const e = new Date(end);
+  e.setHours(0, 0, 0, 0);
+  const diff = Math.round((e.getTime() - s.getTime()) / (24 * 60 * 60 * 1000));
+  return Math.max(1, diff + 1); // inclusive of both start and end
 }
 
 /** Get or create leave balance for user+year. */
@@ -91,10 +86,8 @@ export interface CreateLeaveInput {
 }
 
 export async function createLeaveRequest(input: CreateLeaveInput) {
-  const start = new Date(input.startDate);
-  const end = new Date(input.endDate);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
+  const start = new Date(input.startDate + "T00:00:00.000Z");
+  const end = new Date(input.endDate + "T00:00:00.000Z");
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     throw new AppError("Invalid start or end date", 400);
@@ -110,7 +103,7 @@ export async function createLeaveRequest(input: CreateLeaveInput) {
     throw new AppError("Half-day leaves are not allowed by current policy", 400);
   }
 
-  let totalDays = isHalfDay ? 0.5 : countBusinessDays(start, end);
+  let totalDays = isHalfDay ? 0.5 : countDays(start, end);
   if (totalDays === 0) totalDays = 0.5;
 
   if (totalDays > policy.maxConsecutiveLeaves) {
@@ -566,14 +559,20 @@ export async function assignSubstituteTrainer(
 // ─── Formatters ─────────────────────────────────────────────────────────────
 
 function formatLeave(doc: Record<string, unknown>) {
+  const startRaw = doc.startDate;
+  const endRaw = doc.endDate;
+  // Always return dates as YYYY-MM-DD strings to avoid timezone display issues
+  const startStr = startRaw instanceof Date ? startRaw.toISOString().slice(0, 10) : String(startRaw ?? "").slice(0, 10);
+  const endStr = endRaw instanceof Date ? endRaw.toISOString().slice(0, 10) : String(endRaw ?? "").slice(0, 10);
+
   return {
     id: String(doc._id),
     requestedBy: doc.requestedBy,
     requestedByRole: doc.requestedByRole,
     leaveType: doc.leaveType,
     customLeaveType: doc.customLeaveType,
-    startDate: doc.startDate,
-    endDate: doc.endDate,
+    startDate: startStr,
+    endDate: endStr,
     totalDays: doc.totalDays,
     isHalfDay: doc.isHalfDay,
     reason: doc.reason,

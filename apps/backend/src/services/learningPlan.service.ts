@@ -521,6 +521,17 @@ async function onMilestoneCompleted(
     referenceId: milestoneId,
   });
 
+  // ── Last milestone completed → auto-issue program certificate ──────────
+  if (!nextMilestone) {
+    try {
+      const { generateCertificate } = await import("./certificate.service.js");
+      await generateCertificate(studentId, batchId, "system");
+    } catch {
+      // Eligibility check may fail (e.g. not all chapters done due to 80% rule, or cert already issued)
+      // Non-blocking — student can still claim manually later
+    }
+  }
+
   // Auto-unlock next milestone if it's FREE
   if (nextMilestone && nextMilestone.unlockType === MILESTONE_UNLOCK_TYPE.FREE && nextMilestone.feeInPaise === 0) {
     await unlockMilestone({
@@ -763,6 +774,44 @@ export async function unlockMilestoneByPayment(
   });
 }
 
+/**
+ * Unlock ALL milestones for a student via full program payment.
+ * Bypasses progression — all milestones unlock immediately.
+ */
+export async function unlockAllMilestonesByPayment(
+  studentId: string,
+  batchId: string,
+  courseId: string,
+  paymentId: string,
+  actorId: string
+): Promise<void> {
+  const batch = await findBatchByParam(batchId);
+  if (!batch) throw new AppError("Batch not found", 404);
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+  if (!snap) throw new AppError("Course not found in batch", 404);
+
+  const milestones = getMilestonesFromSnapshot(snap);
+  const ordered = orderedActiveMilestones(milestones);
+
+  for (const milestone of ordered) {
+    // Skip already unlocked milestones
+    const existing = await MilestoneProgressModel.findOne({
+      studentId, batchId, courseId, milestoneId: milestone.milestoneId,
+    }).select("unlocked").lean().exec();
+    if ((existing as { unlocked?: boolean } | null)?.unlocked) continue;
+
+    await unlockMilestone({
+      studentId, batchId, courseId,
+      milestoneId: milestone.milestoneId,
+      milestone,
+      source: MILESTONE_UNLOCK_SOURCE.PAYMENT,
+      actorId,
+      paymentId,
+    });
+  }
+}
+
 // ─── License key unlock ───────────────────────────────────────────────────────
 
 export async function unlockMilestonesByLicenseKey(
@@ -788,28 +837,7 @@ export async function unlockMilestonesByLicenseKey(
     : ordered.filter((m) => targetMilestoneIds.includes(m.milestoneId));
 
   for (const milestone of toUnlock) {
-    // Check eligibility (license bypasses payment, NOT progression)
-    // For first milestone: always eligible
-    // For others: previous must be completed
-    const milestoneIdx = ordered.findIndex((m) => m.milestoneId === milestone.milestoneId);
-    if (milestoneIdx > 0) {
-      const prev = ordered[milestoneIdx - 1];
-      const prevProgress = await MilestoneProgressModel.findOne({
-        studentId, batchId, courseId,
-        milestoneId: prev.milestoneId,
-      }).select("completed").lean().exec();
-
-      if (!(prevProgress as { completed?: boolean } | null)?.completed) {
-        // Queue the unlock — store license claim, unlock when eligible
-        await MilestoneProgressModel.updateOne(
-          { studentId, batchId, courseId, milestoneId: milestone.milestoneId },
-          { $set: { licenseKeyId, licenseKeyCode } },
-          { upsert: false }
-        ).exec();
-        continue;
-      }
-    }
-
+    // FULL_PLAN_ACCESS and targeted milestone keys both bypass progression — unlock immediately
     await unlockMilestone({
       studentId, batchId, courseId,
       milestoneId: milestone.milestoneId,

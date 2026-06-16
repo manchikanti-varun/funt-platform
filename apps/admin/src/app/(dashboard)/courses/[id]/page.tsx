@@ -726,6 +726,29 @@ export default function EditCoursePage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  const globalModuleId = prompt("Enter Global Chapter ID to add (from the Chapters page):");
+                  if (!globalModuleId?.trim()) return;
+                  setError("");
+                  const res = await api<Course>(`/api/courses/${id}/chapters`, {
+                    method: "POST",
+                    body: JSON.stringify({ globalModuleId: globalModuleId.trim() }),
+                  });
+                  if (res.success && res.data) {
+                    setCourse(res.data);
+                  } else {
+                    setError(res.message ?? "Failed to add chapter.");
+                  }
+                }}
+                className="inline-flex items-center gap-2 rounded-lg border border-teal-300 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Add Chapter
+              </button>
+            </div>
           </div>
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">

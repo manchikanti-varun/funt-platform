@@ -36,6 +36,8 @@ export default function ViewBatchPage() {
   const id = params.id as string;
   const [batch, setBatch] = useState<Batch | null>(null);
   const [copiedCourseId, setCopiedCourseId] = useState<string | null>(null);
+  const [syncingCourseId, setSyncingCourseId] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState("");
 
   function buildStudentCourseLink(courseId: string): string {
     const path = `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(id)}`;
@@ -215,6 +217,7 @@ export default function ViewBatchPage() {
         {courses.length === 0 ? (
           <p className="text-sm text-slate-500">No courses in this batch.</p>
         ) : (
+          <>
           <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
             {courses.map((c, i) => {
               const keyQs = new URLSearchParams({ batchId: id });
@@ -268,11 +271,36 @@ export default function ViewBatchPage() {
                     >
                       License keys
                     </Link>
+                    <button
+                      type="button"
+                      disabled={syncingCourseId === c.courseId}
+                      onClick={async () => {
+                        if (!c.courseId) return;
+                        setSyncingCourseId(c.courseId);
+                        setSyncMessage("");
+                        const res = await api(`/api/batches/${id}/sync-course`, {
+                          method: "POST",
+                          body: JSON.stringify({ courseId: c.courseId }),
+                        });
+                        setSyncingCourseId(null);
+                        setSyncMessage(res.success ? `${c.title ?? "Course"} synced!` : (res.message ?? "Sync failed"));
+                        if (res.success) setTimeout(() => setSyncMessage(""), 3000);
+                      }}
+                      className="shrink-0 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-900 transition hover:bg-teal-100 disabled:opacity-50"
+                    >
+                      {syncingCourseId === c.courseId ? "Syncing..." : "Sync Content"}
+                    </button>
                   </div>
                 </li>
               );
             })}
           </ul>
+          {syncMessage && (
+            <p className={`mt-2 text-xs font-medium ${syncMessage.includes("failed") ? "text-red-600" : "text-emerald-700"}`}>
+              {syncMessage}
+            </p>
+          )}
+          </>
         )}
       </EntityDetailSection>
     </EntityDetailShell>

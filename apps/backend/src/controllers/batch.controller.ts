@@ -243,6 +243,16 @@ export const duplicateBatch = asyncHandler(async (req: Request, res: Response): 
   successRes(res, data, "Batch duplicated", 201);
 });
 
+export const syncCourseContent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const batchId = req.params.id;
+  const performedBy = getUserId(req);
+  const { courseId } = req.body ?? {};
+  if (!batchId) throw new AppError("Batch ID is required", 400);
+  if (!courseId) throw new AppError("courseId is required", 400);
+  const data = await service.syncCourseContentToBatch(batchId, courseId, performedBy);
+  successRes(res, data, "Course content synced to batch");
+});
+
 export const archiveBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

@@ -13,6 +13,7 @@ interface CourseOption {
   description?: string;
   status: string;
   isDemo?: boolean;
+  deliveryMode?: string;
   headerImageUrl?: string;
 }
 
@@ -532,6 +533,7 @@ export default function NewBatchPage() {
                   filteredCourses.map((c) => {
                     const checked = selectedCourseIds.includes(c.id);
                     const demo = !!c.isDemo;
+                    const isLP = c.deliveryMode === "LEARNING_PLAN";
                     const raw = enrollmentInrByCourseId[c.id]?.trim();
                     const ru = demo ? 0 : raw === "" || raw === undefined ? NaN : Number(raw);
                     const payControls = !demo && Number.isFinite(ru) && ru >= 1;
@@ -574,6 +576,13 @@ export default function NewBatchPage() {
                             </div>
                             {checked ? (
                               <div className="border-t border-slate-100 pt-3 space-y-3">
+                                {isLP ? (
+                                  <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3">
+                                    <p className="text-xs font-semibold text-teal-800">Learning Plan Course</p>
+                                    <p className="mt-1 text-xs text-teal-700">Students pay per milestone. Enrollment is free. Fee is configured in the Learning Plan settings.</p>
+                                  </div>
+                                ) : (
+                                  <>
                                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                                   <label className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
                                     Course fee (₹ INR)
@@ -681,6 +690,8 @@ export default function NewBatchPage() {
                                   <p className="text-[11px] leading-relaxed text-slate-400">
                                     Payment controls unlock once fee is ₹1 or higher.
                                   </p>
+                                )}
+                                  </>
                                 )}
                               </div>
                             ) : null}

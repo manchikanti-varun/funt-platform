@@ -689,6 +689,20 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                             Total program: ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
                           </p>
                         ) : null}
+                        {/* Buy Full Program button — show when not all milestones are unlocked */}
+                        {learningPlan.totalProgramFeeRupees && learningPlan.totalProgramFeeRupees > 0 &&
+                         learningPlan.milestones.some((ms) => !ms.unlocked) && data?.batchId && (
+                          <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 p-2.5">
+                            <Link
+                              href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=FULL_PROGRAM`}
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
+                            >
+                              <CreditCard className="h-4 w-4" />
+                              Buy Full Program — ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
+                            </Link>
+                            <p className="mt-1.5 text-center text-[10px] text-indigo-600">Unlock all milestones at once</p>
+                          </div>
+                        )}
                         <ul className="space-y-1.5">
                           {learningPlan.milestones.map((ms) => (
                             <li key={ms.milestoneId} className={`rounded-lg border px-2.5 py-2 text-xs ${

@@ -100,6 +100,27 @@ export const updateCourseModule = asyncHandler(async (req: Request, res: Respons
   successRes(res, data, "Chapter snapshot updated");
 });
 
+export const addChapter = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Course ID is required", 400);
+  const { globalModuleId } = req.body ?? {};
+  if (!globalModuleId) throw new AppError("globalModuleId is required", 400);
+  const data = await service.addChapterToCourse(id, globalModuleId, performedBy);
+  successRes(res, data, "Chapter added to course", 201);
+});
+
+export const removeChapter = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  const indexParam = req.params.index;
+  if (!id) throw new AppError("Course ID is required", 400);
+  const chapterIndex = indexParam != null ? parseInt(indexParam, 10) : NaN;
+  if (Number.isNaN(chapterIndex) || chapterIndex < 0) throw new AppError("Valid chapter index is required", 400);
+  const data = await service.removeChapterFromCourse(id, chapterIndex, performedBy);
+  successRes(res, data, "Chapter removed from course");
+});
+
 export const duplicateCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

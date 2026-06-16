@@ -167,8 +167,8 @@ export default function LeaveManagementPage() {
                     <td className="px-4 py-3 text-slate-700">
                       {leave.leaveType === "CUSTOM" ? (leave.customLeaveType ?? "Custom") : (LEAVE_TYPE_LABELS[leave.leaveType] ?? leave.leaveType)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{new Date(leave.startDate).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-slate-600">{new Date(leave.endDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-slate-600">{leave.startDate.split("-").reverse().join("/")}</td>
+                    <td className="px-4 py-3 text-slate-600">{leave.endDate.split("-").reverse().join("/")}</td>
                     <td className="px-4 py-3 text-slate-700">
                       {leave.isHalfDay ? "½" : leave.totalDays}
                     </td>

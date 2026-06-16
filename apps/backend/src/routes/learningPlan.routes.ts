@@ -38,6 +38,7 @@ import {
   patchAdminReset,
   patchAdminSkip,
   patchExtendDue,
+  postGenerateMilestoneKey,
   getLearningPlanAnalyticsHandler,
   postProcessOverdue,
 } from "../controllers/learningPlan.controller.js";
@@ -69,6 +70,7 @@ adminMilestoneRouter.patch("/milestones/:milestoneId/lock",       patchAdminLock
 adminMilestoneRouter.patch("/milestones/:milestoneId/reset",      patchAdminReset);
 adminMilestoneRouter.patch("/milestones/:milestoneId/skip",       patchAdminSkip);
 adminMilestoneRouter.patch("/milestones/:milestoneId/extend-due", patchExtendDue);
+adminMilestoneRouter.post("/milestones/:milestoneId/generate-key", postGenerateMilestoneKey);
 adminMilestoneRouter.post("/learning-plan/process-overdue",       postProcessOverdue);
 
 // ── Analytics router (mounted at /api/analytics) ──────────────────────────

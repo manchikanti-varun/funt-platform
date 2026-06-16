@@ -130,6 +130,67 @@ export async function generateCourseLicenseKeys(input: {
   return { keys: shuffleArray(keys), courseId: input.courseId, batchId: batchMongoId };
 }
 
+/**
+ * Create license key(s) for a specific milestone. When redeemed, unlocks that milestone directly (bypasses progression).
+ */
+export async function generateMilestoneLicenseKeys(input: {
+  courseId: string;
+  batchId: string;
+  milestoneId: string;
+  createdBy: string;
+  count?: number;
+}): Promise<{ keys: string[]; courseId: string; batchId: string; milestoneId: string }> {
+  const n = Math.min(Math.max(Math.floor(Number(input.count) || 1), 1), MAX_KEYS_PER_REQUEST);
+  const batch = await BatchModel.findById(input.batchId).lean().exec();
+  if (!batch) throw new AppError("Batch not found", 404);
+  const batchMongoId = String(batch._id);
+
+  const keys: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const key = randomKey();
+    await LicenseKeyModel.create({
+      courseId: input.courseId,
+      batchId: batchMongoId,
+      key,
+      createdBy: input.createdBy,
+      licenseType: LICENSE_KEY_TYPE.MILESTONE_ACCESS,
+      targetMilestoneIds: [input.milestoneId],
+    });
+    keys.push(key);
+  }
+  return { keys: shuffleArray(keys), courseId: input.courseId, batchId: batchMongoId, milestoneId: input.milestoneId };
+}
+
+/**
+ * Create license key(s) for full program access. When redeemed, unlocks ALL milestones (bypasses progression).
+ */
+export async function generateFullPlanLicenseKeys(input: {
+  courseId: string;
+  batchId: string;
+  createdBy: string;
+  count?: number;
+}): Promise<{ keys: string[]; courseId: string; batchId: string }> {
+  const n = Math.min(Math.max(Math.floor(Number(input.count) || 1), 1), MAX_KEYS_PER_REQUEST);
+  const batch = await BatchModel.findById(input.batchId).lean().exec();
+  if (!batch) throw new AppError("Batch not found", 404);
+  const batchMongoId = String(batch._id);
+
+  const keys: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const key = randomKey();
+    await LicenseKeyModel.create({
+      courseId: input.courseId,
+      batchId: batchMongoId,
+      key,
+      createdBy: input.createdBy,
+      licenseType: LICENSE_KEY_TYPE.FULL_PLAN_ACCESS,
+      targetMilestoneIds: [],
+    });
+    keys.push(key);
+  }
+  return { keys: shuffleArray(keys), courseId: input.courseId, batchId: batchMongoId };
+}
+
 export async function listLicenseKeyAudit(input: {
   page: number;
   limit: number;
@@ -281,15 +342,24 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
   if (!allowed) throw new AppError("License does not match course offering", 400);
 
   const existing = await EnrollmentModel.findOne({ studentId, batchId }).exec();
-  if (existing && (existing.status === ENROLLMENT_STATUS.ACTIVE || existing.status === ENROLLMENT_STATUS.COMPLETED)) {
+  const alreadyEnrolled = existing && (existing.status === ENROLLMENT_STATUS.ACTIVE || existing.status === ENROLLMENT_STATUS.COMPLETED);
+  const licenseType = (license as { licenseType?: string }).licenseType;
+  const targetMilestoneIds = (license as { targetMilestoneIds?: string[] }).targetMilestoneIds ?? [];
+  const isMilestoneKey = licenseType && licenseType !== LICENSE_KEY_TYPE.COURSE_ACCESS;
+
+  // If already enrolled and this is a course-level key, reject
+  if (alreadyEnrolled && !isMilestoneKey) {
     throw new AppError("You are already enrolled in this batch", 400);
   }
 
-  await createEnrollment({
-    studentId,
-    batchId,
-    createdBy: studentId,
-  });
+  // If not enrolled, create enrollment
+  if (!alreadyEnrolled) {
+    await createEnrollment({
+      studentId,
+      batchId,
+      createdBy: studentId,
+    });
+  }
 
   await LicenseKeyModel.updateOne(
     { _id: license._id },
@@ -297,13 +367,7 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
   ).exec();
 
   // ── Learning Plan: unlock milestones if this is a milestone-type license key ──
-  const licenseType = (license as { licenseType?: string }).licenseType;
-  const targetMilestoneIds = (license as { targetMilestoneIds?: string[] }).targetMilestoneIds ?? [];
-  if (
-    licenseType &&
-    licenseType !== LICENSE_KEY_TYPE.COURSE_ACCESS &&
-    license.courseId
-  ) {
+  if (isMilestoneKey && license.courseId) {
     try {
       await unlockMilestonesByLicenseKey(
         studentId,

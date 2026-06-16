@@ -288,7 +288,7 @@ export async function confirmRazorpayCoursePayment(input: {
 
   // ── Learning Plan milestone validation (same as UPI flow) ───────────────
   const milestoneIdTrimmed = input.milestoneId?.trim() || undefined;
-  if (milestoneIdTrimmed) {
+  if (milestoneIdTrimmed && milestoneIdTrimmed !== "FULL_PROGRAM") {
     const alreadyUnlocked = await MilestoneProgressModel.findOne({
       studentId: input.studentId,
       batchId: batchMongoId,
@@ -496,7 +496,7 @@ export async function submitStudentPayment(input: {
 
     // ── Learning Plan milestone validation ────────────────────────────────
     const milestoneIdTrimmed = input.milestoneId?.trim() || undefined;
-    if (milestoneIdTrimmed) {
+    if (milestoneIdTrimmed && milestoneIdTrimmed !== "FULL_PROGRAM") {
       // Check 1: Milestone already unlocked — no payment needed
       const alreadyUnlocked = await MilestoneProgressModel.findOne({
         studentId: input.studentId,
@@ -851,17 +851,23 @@ export async function verifyPaymentAndEnroll(
         const paymentMilestoneId = (doc as { milestoneId?: string }).milestoneId?.trim();
         if (paymentMilestoneId && courseId) {
           try {
-            await unlockMilestoneByPayment(
-              doc.studentId, batchId, courseId,
-              paymentMilestoneId, String(doc._id), adminId
-            );
+            if (paymentMilestoneId === "FULL_PROGRAM") {
+              // Unlock ALL milestones for the course
+              const { unlockAllMilestonesByPayment } = await import("./learningPlan.service.js");
+              await unlockAllMilestonesByPayment(
+                doc.studentId, batchId, courseId, String(doc._id), adminId
+              );
+            } else {
+              await unlockMilestoneByPayment(
+                doc.studentId, batchId, courseId,
+                paymentMilestoneId, String(doc._id), adminId
+              );
+            }
           } catch (unlockErr) {
-            // Log critical failure — payment verified but milestone not unlocked
             console.error(
               `[CRITICAL] Payment ${String(doc._id)} verified but milestone ${paymentMilestoneId} unlock failed:`,
               unlockErr instanceof Error ? unlockErr.message : unlockErr
             );
-            // Re-throw to roll back the transaction — payment should NOT be verified if unlock fails
             throw new AppError(
               "Payment recorded but milestone unlock failed. Contact support with your transaction ID.",
               500

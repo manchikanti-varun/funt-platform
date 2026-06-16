@@ -549,12 +549,13 @@ export async function listTickets(
   viewerRoles: string[]
 ) {
   const query: Record<string, unknown> = {};
+  const andClauses: Record<string, unknown>[] = [];
   const staff = isStaff(viewerRoles);
   const admin = isAdmin(viewerRoles);
 
   if (!staff) {
-    // Students/parents: own tickets only
-    query.$or = [{ createdBy: viewerId }, { studentId: viewerId }];
+    // Students/parents: own tickets only — always enforced
+    andClauses.push({ $or: [{ createdBy: viewerId }, { studentId: viewerId }] });
   } else if (!admin) {
     // Trainer: assigned tickets only
     query.assignedTo = viewerId;
@@ -568,12 +569,18 @@ export async function listTickets(
   if (filters.priority) query.priority = filters.priority;
   if (filters.category) query.category = filters.category;
   if (filters.search) {
-    query.$or = [
-      { subject: { $regex: filters.search, $options: "i" } },
-      { ticketNumber: { $regex: filters.search, $options: "i" } },
-      { description: { $regex: filters.search, $options: "i" } },
-    ];
+    const searchTerm = filters.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    andClauses.push({
+      $or: [
+        { subject: { $regex: searchTerm, $options: "i" } },
+        { ticketNumber: { $regex: searchTerm, $options: "i" } },
+        { description: { $regex: searchTerm, $options: "i" } },
+      ],
+    });
   }
+
+  if (andClauses.length === 1) Object.assign(query, andClauses[0]);
+  else if (andClauses.length > 1) query.$and = andClauses;
 
   const page = Math.max(1, filters.page ?? 1);
   const limit = Math.min(50, Math.max(1, filters.limit ?? 20));

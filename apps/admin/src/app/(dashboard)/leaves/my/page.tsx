@@ -276,8 +276,8 @@ export default function MyLeavesPage() {
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {l.leaveType === "CUSTOM" ? (l.customLeaveType ?? "Custom") : l.leaveType.replace(/_/g, " ")}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{new Date(l.startDate).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-slate-600">{new Date(l.endDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-slate-600">{l.startDate.split("-").reverse().join("/")}</td>
+                    <td className="px-4 py-3 text-slate-600">{l.endDate.split("-").reverse().join("/")}</td>
                     <td className="px-4 py-3 text-slate-700">{l.isHalfDay ? "½" : l.totalDays}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[l.status] ?? "bg-slate-100 text-slate-600"}`}>
