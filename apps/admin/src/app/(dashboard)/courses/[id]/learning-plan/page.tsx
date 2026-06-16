@@ -143,6 +143,7 @@ function MilestoneFormPanel({
   error,
   modules,
   isEdit,
+  assignedByOthers,
 }: {
   form: MilestoneForm;
   onChange: (f: MilestoneForm) => void;
@@ -152,6 +153,7 @@ function MilestoneFormPanel({
   error: string;
   modules: { order: number; title?: string }[];
   isEdit: boolean;
+  assignedByOthers: Set<number>;
 }) {
   const [chapterSearch, setChapterSearch] = useState("");
 
@@ -315,15 +317,18 @@ function MilestoneFormPanel({
                   .split(",")
                   .map((s) => parseInt(s.trim(), 10))
                   .includes(m.order);
+                const takenByOther = assignedByOthers.has(m.order);
                 return (
                   <label
                     key={m.order}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50"
+                    className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${takenByOther ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-slate-50"}`}
                   >
                     <input
                       type="checkbox"
                       checked={isAssigned}
+                      disabled={takenByOther}
                       onChange={() => {
+                        if (takenByOther) return;
                         const orders = form.chapterOrders
                           .split(",")
                           .map((s) => s.trim())
@@ -340,26 +345,66 @@ function MilestoneFormPanel({
                     <span className="text-sm text-slate-800">
                       {m.title ?? `Chapter ${m.order + 1}`}
                     </span>
+                    {takenByOther && <span className="text-[10px] text-slate-400 ml-auto">Assigned to another milestone</span>}
                   </label>
                 );
               })}
             </div>
           </>
         )}
-        {/* Selected chapters display */}
+        {/* Selected chapters display with reordering */}
         {form.chapterOrders.trim() && (
           <div className="mt-2">
             <p className="text-xs font-medium text-slate-600 mb-1">Selected ({form.chapterOrders.split(",").filter((s) => s.trim()).length})</p>
-            <div className="flex flex-wrap gap-1.5">
-              {form.chapterOrders.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)).map((order) => {
+            <ul className="space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              {form.chapterOrders.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)).map((order, idx, arr) => {
                 const mod = modules.find((m) => m.order === order);
                 return (
-                  <span key={order} className="rounded-full bg-teal-100 border border-teal-300 px-2 py-0.5 text-xs font-medium text-teal-800">
-                    {mod?.title ?? `Chapter ${order + 1}`}
-                  </span>
+                  <li key={order} className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 border border-slate-100">
+                    <span className="flex-1 text-sm text-slate-800">{mod?.title ?? `Chapter ${order + 1}`}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (idx === 0) return;
+                        const newArr = [...arr];
+                        [newArr[idx - 1], newArr[idx]] = [newArr[idx], newArr[idx - 1]];
+                        set("chapterOrders", newArr.join(", "));
+                      }}
+                      disabled={idx === 0}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Move up"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (idx === arr.length - 1) return;
+                        const newArr = [...arr];
+                        [newArr[idx], newArr[idx + 1]] = [newArr[idx + 1], newArr[idx]];
+                        set("chapterOrders", newArr.join(", "));
+                      }}
+                      disabled={idx === arr.length - 1}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Move down"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newArr = arr.filter((_, i) => i !== idx);
+                        set("chapterOrders", newArr.join(", "));
+                      }}
+                      className="inline-flex h-6 w-6 items-center justify-center rounded border border-red-200 bg-white text-red-500 hover:bg-red-50"
+                      title="Remove"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         )}
       </div>
@@ -695,6 +740,7 @@ export default function LearningPlanPage() {
                       error={formError}
                       modules={modules}
                       isEdit={false}
+                      assignedByOthers={new Set(milestones.flatMap((ms) => ms.chapterOrders))}
                     />
                   </div>
                 )}
@@ -725,6 +771,7 @@ export default function LearningPlanPage() {
                           error={formError}
                           modules={modules}
                           isEdit={true}
+                          assignedByOthers={new Set(milestones.filter((ms) => ms.milestoneId !== m.milestoneId).flatMap((ms) => ms.chapterOrders))}
                         />
                       ) : (
                         <MilestoneCard
@@ -784,16 +831,6 @@ export default function LearningPlanPage() {
             )}
 
             {/* ── Delivery mode info ───────────────────────────────────── */}
-            <section className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">How it works</h3>
-              <ul className="space-y-1.5 text-xs text-slate-600">
-                <li>• <strong>FULL_ACCESS</strong> — Students enroll and get immediate access to all chapters. Default for all existing courses.</li>
-                <li>• <strong>LEARNING_PLAN</strong> — Students unlock milestones one by one. Each milestone contains assigned chapters. Access to a chapter is gated by its milestone&apos;s unlock state.</li>
-                <li>• Unlock methods: Payment, License Key, Manual Admin Grant, Free (auto), Date-based, Relative days from enrollment.</li>
-                <li>• License keys bypass payment but not progression — students still need to complete prior milestones.</li>
-              </ul>
-            </section>
-
           </div>
         </div>
       </div>
