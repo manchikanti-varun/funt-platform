@@ -5,6 +5,7 @@ import { getEnv } from "../config/env.js";
 import { ACCOUNT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 import { resolveAuthToken } from "../utils/authTokenResolve.js";
+import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import {
   AUTH_COOKIE_ADMIN,
   AUTH_COOKIE_LMS,
@@ -32,21 +33,44 @@ export async function authMiddleware(
 
     const { jwtSecret, idleTimeoutMinutesAdmin, idleTimeoutMinutesLms, jwtExpiresInAdmin, jwtExpiresInLms } = getEnv();
     const payload = verifyToken(token, jwtSecret);
-    const user = await UserModel.findById(payload.userId).exec();
+
+    // Try cache first, fall back to DB
+    const cacheKey = CACHE_KEYS.user(payload.userId);
+    let user = await cacheGet<{
+      _id: string;
+      username?: string;
+      roles: string[];
+      status: string;
+      tokenVersion?: number;
+      passwordChangedAt?: string;
+    }>(cacheKey);
+
     if (!user) {
-      throw new AppError("User not found", 401);
+      const dbUser = await UserModel.findById(payload.userId).exec();
+      if (!dbUser) {
+        throw new AppError("User not found", 401);
+      }
+      user = {
+        _id: String(dbUser._id),
+        username: dbUser.username ?? "",
+        roles: dbUser.roles as string[],
+        status: dbUser.status as string,
+        tokenVersion: (dbUser as { tokenVersion?: number }).tokenVersion,
+        passwordChangedAt: (dbUser as { passwordChangedAt?: Date }).passwordChangedAt?.toISOString(),
+      };
+      await cacheSet(cacheKey, user, CACHE_TTL.USER);
     }
 
     if (user.status !== ACCOUNT_STATUS.ACTIVE) {
       throw new AppError("Account is suspended or archived", 403);
     }
-    const expectedTokenVersion = Number((user as { tokenVersion?: number }).tokenVersion ?? 0);
+    const expectedTokenVersion = Number(user.tokenVersion ?? 0);
     const payloadTokenVersion = Number(payload.tokenVersion ?? 0);
     if (payloadTokenVersion !== expectedTokenVersion) {
       clearAllAuthCookies(res);
       throw new AppError("Session expired. You logged in from another device.", 401);
     }
-    const passwordChangedAt = (user as { passwordChangedAt?: Date }).passwordChangedAt;
+    const passwordChangedAt = user.passwordChangedAt ? new Date(user.passwordChangedAt) : undefined;
     if (passwordChangedAt && payload.iat && payload.iat * 1000 < passwordChangedAt.getTime()) {
       throw new AppError("Session expired after password change. Please sign in again.", 401);
     }
@@ -70,7 +94,7 @@ export async function authMiddleware(
     }
 
     req.user = {
-      userId: String(user._id),
+      userId: user._id,
       username: user.username ?? "",
       roles: user.roles as typeof payload.roles,
     };

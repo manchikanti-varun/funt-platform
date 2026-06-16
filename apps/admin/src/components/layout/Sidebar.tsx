@@ -71,6 +71,9 @@ export function Sidebar({ roles }: SidebarProps) {
         <SidebarNavLink href="/dashboard" isActive={pathname === "/dashboard"}>
           Home
         </SidebarNavLink>
+        <SidebarNavLink href="/knowledge-center" isActive={pathname.startsWith("/knowledge-center")}>
+          Knowledge Center
+        </SidebarNavLink>
         {isAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>Team</p>

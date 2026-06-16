@@ -47,6 +47,7 @@ import { jwtExpiresInToMs } from "../utils/jwtExpires.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 import { OAuthNonceModel } from "../models/OAuthNonce.model.js";
+import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 
 const OAUTH_NONCE_COOKIE = "funt_oauth_nonce";
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
@@ -279,6 +280,8 @@ export function logout(req: Request, res: Response): void {
     try {
       const payload = verifyToken(token, jwtSecret);
       void UserModel.updateOne({ _id: payload.userId }, { $inc: { tokenVersion: 1 } }).exec();
+      // Invalidate cached user so next request with stale token fails immediately
+      void cacheDel(CACHE_KEYS.user(payload.userId));
     } catch {
       // Ignore token parsing failures on logout.
     }

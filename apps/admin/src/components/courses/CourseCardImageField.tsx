@@ -118,7 +118,9 @@ export function CourseCardImageField({ value, onChange, onError, required = true
       {localError ? <p className="mt-1 text-xs font-medium text-red-700">{localError}</p> : null}
       {previewSrc ? (
         <div className="mt-3 flex flex-wrap items-end gap-3">
-          <img src={previewSrc} alt="Course card preview" className="h-24 w-48 rounded-lg border border-slate-200 object-cover" />
+          <div className="h-32 w-64 overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
+            <img src={previewSrc} alt="Course card preview" className="h-full w-full object-cover" />
+          </div>
           <div className="text-xs text-slate-600">
             {sourceLabel ? <p className="font-medium text-slate-800">{sourceLabel}</p> : null}
             {!required ? (

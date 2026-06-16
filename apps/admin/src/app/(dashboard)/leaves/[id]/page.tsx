@@ -105,6 +105,8 @@ export default function LeaveDetailPage() {
   const canReview = isAdmin && leave.status === "PENDING" &&
     (leave.requestedByRole !== "ADMIN" || isSuperAdmin);
 
+  const canCancel = isSuperAdmin && leave.status === "APPROVED";
+
   const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</p>
@@ -198,6 +200,37 @@ export default function LeaveDetailPage() {
         {!canReview && success && (
           <div className="border-t border-slate-200 px-6 py-4">
             <p className="text-sm font-medium text-emerald-700">{success}</p>
+          </div>
+        )}
+        {canCancel && (
+          <div className="border-t border-slate-200 px-6 py-5 space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-700">Cancel Approved Leave</h2>
+            <p className="text-xs text-slate-500">Only super admins can cancel an already approved leave. This will revert the balance.</p>
+            {error && !canReview && <p className="text-sm font-medium text-red-600">{error}</p>}
+            {success && !canReview && <p className="text-sm font-medium text-emerald-700">{success}</p>}
+            <button
+              onClick={async () => {
+                setError("");
+                setActionLoading(true);
+                const res = await api(`/api/leaves/${id}/cancel`, {
+                  method: "PATCH",
+                  body: JSON.stringify({}),
+                });
+                setActionLoading(false);
+                if (res.success) {
+                  setSuccess("Leave cancelled successfully.");
+                  api<LeaveDetail>(`/api/leaves/${id}`).then((r) => {
+                    if (r.success && r.data) setLeave(r.data);
+                  });
+                } else {
+                  setError(res.message ?? "Failed to cancel leave.");
+                }
+              }}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+            >
+              {actionLoading ? "Processing…" : "Cancel This Leave"}
+            </button>
           </div>
         )}
       </div>

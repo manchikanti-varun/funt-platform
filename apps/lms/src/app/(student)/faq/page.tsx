@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { api } from "@/lib/api";
 import { AppPageShell, PageSection } from "@/components/ui";
 import {
   IconAssignment,
@@ -11,6 +13,8 @@ import {
   IconUser,
 } from "@/components/icons/NavIcons";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_DISPLAY, supportWhatsAppHref } from "@/lib/support";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type FaqItem = {
   question: string;
@@ -27,6 +31,37 @@ type FaqGroup = {
   Icon: typeof IconOverview;
   items: FaqItem[];
 };
+
+interface DynamicFaq {
+  id: string;
+  articleId: string;
+  slug: string;
+  title: string;
+  content: string;
+  category: string;
+  summary?: string;
+  tags?: string[];
+}
+
+// ─── Category Labels ──────────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, string> = {
+  "platform-overview": "Platform Overview",
+  courses: "Courses",
+  batches: "Batches",
+  students: "Students",
+  payments: "Payments",
+  "license-keys": "License Keys",
+  "learning-plans": "Learning Plans",
+  assignments: "Assignments",
+  attendance: "Attendance",
+  certificates: "Certificates",
+  shop: "Shop",
+  gamification: "XP & Rewards",
+  tickets: "Support",
+};
+
+// ─── Static FAQ Data ──────────────────────────────────────────────────────────
 
 const FAQ_GROUPS: FaqGroup[] = [
   {
@@ -64,7 +99,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         steps: [
           "Open Courses and pick the course you are actively studying.",
           "Work through chapters in order when your trainer recommends it, or jump to assigned topics if your batch allows.",
-          "Submit assignments before deadlines where shown; late submissions depend on your centre’s rules.",
+          "Submit assignments before deadlines where shown; late submissions depend on your centre's rules.",
           "Glance at Progress or Dashboard to see what is still pending.",
         ],
         actions: [
@@ -86,7 +121,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         intro: "Your enrolled courses appear under Courses. Each card usually shows the course title, batch, and how far you have progressed.",
         details: [
           "Tap a course to open its detail page. From there you can open the learning view, see payment or access notices, and continue chapters.",
-          "If you see “Continue learning” or similar on Dashboard, it shortcuts you to the last place you studied—useful when you have several active courses.",
+          "If you see \u201CContinue learning\u201D or similar on Dashboard, it shortcuts you to the last place you studied—useful when you have several active courses.",
           "Progress bars update as you finish lessons or approved activities. If a bar does not move after you finished a lesson, refresh once; if it still fails, contact support with the course name and chapter title.",
         ],
         steps: [
@@ -134,7 +169,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         intro: "Attendance records whether you were present for scheduled sessions your batch tracks on FUNT Learn.",
         details: [
           "Open Attendance to see your history. If you believe a session was marked wrong, speak to your batch trainer or coordinator first—they can correct records according to institute policy.",
-          "Repeated absences may affect batch standing or eligibility for certain events; your centre’s rules apply.",
+          "Repeated absences may affect batch standing or eligibility for certain events; your centre's rules apply.",
         ],
         actions: [{ label: "Attendance", href: "/attendance" }],
       },
@@ -188,7 +223,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         intro: "Coins are the in-platform balance your academy may use for the shop or rewards. Amounts and rules are configured by your centre.",
         details: [
           "Completion or bonus coins (for example after you finish a programme) are set per course inside your batch by your academy—next to the course fee—when they configure that cohort.",
-          "Each coin grant has its own expiry date. FUNT Learn uses a 30-day validity from the date a grant is credited—use Shop → “Coin credits” to see granted amount, what is left, and the expiry date.",
+          "Each coin grant has its own expiry date. FUNT Learn uses a 30-day validity from the date a grant is credited—use Shop \u2192 \u201CCoin credits\u201D to see granted amount, what is left, and the expiry date.",
           "Spend or plan purchases before tranches expire; expired amounts are removed from your spendable balance according to platform rules.",
         ],
         actions: [{ label: "Shop & coin history", href: "/shop" }],
@@ -236,7 +271,7 @@ const FAQ_GROUPS: FaqGroup[] = [
         details: [
           "Sign out on shared computers or school labs.",
           "Never share OTPs, passwords, or license keys in public group chats.",
-          "If someone asks for your “FUNT password” on Instagram or WhatsApp, assume it is a scam and report to a trusted adult and support.",
+          "If someone asks for your \u201CFUNT password\u201D on Instagram or WhatsApp, assume it is a scam and report to a trusted adult and support.",
         ],
         actions: [{ label: "Profile & security", href: "/profile" }],
       },
@@ -325,90 +360,246 @@ const FAQ_GROUPS: FaqGroup[] = [
   },
 ];
 
-function FaqAccordion({ item, groupKey }: { item: FaqItem; groupKey: string }) {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// ─── Static FAQ Accordion ─────────────────────────────────────────────────────
+
+function FaqAccordion({ item, isOpen, onToggle }: { item: FaqItem; isOpen: boolean; onToggle: () => void }) {
   return (
-    <details className="group rounded-2xl border border-[#e8dcc4] bg-white/90 shadow-sm transition hover:border-[#d4bc7a] open:border-[#c9a84a] open:bg-gradient-to-b open:from-[#fffdf8] open:to-[#fffaf0] open:shadow-md">
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-2xl px-4 py-4 pr-3 marker:content-none sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
-        <span className="text-left text-sm font-semibold leading-snug text-funt-ink sm:text-[0.95rem]">{item.question}</span>
+    <div
+      className={`rounded-2xl border bg-white/90 shadow-sm transition-all ${
+        isOpen
+          ? "border-[#c9a84a] bg-gradient-to-b from-[#fffdf8] to-[#fffaf0] shadow-md"
+          : "border-[#e8dcc4] hover:border-[#d4bc7a]"
+      }`}
+    >
+      <button
+        onClick={onToggle}
+        className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left sm:px-5"
+        aria-expanded={isOpen}
+      >
+        <span className="text-sm font-semibold leading-snug text-funt-ink sm:text-[0.95rem]">{item.question}</span>
         <svg
-          className="mt-0.5 h-5 w-5 shrink-0 text-[#a67c14] transition-transform duration-200 group-open:rotate-180"
+          className={`mt-0.5 h-5 w-5 shrink-0 text-[#a67c14] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
           strokeWidth={2}
-          aria-hidden
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
-      </summary>
-      <div className="border-t border-[#f0e6cc] px-4 pb-5 pt-1 sm:px-5">
-        {item.intro ? <p className="mt-3 text-sm font-medium leading-relaxed text-black/80">{item.intro}</p> : null}
-        <div className="mt-3 space-y-2.5">
-          {item.details.map((line, i) => (
-            <p key={`${groupKey}-${item.question}-d-${i}`} className="text-sm leading-relaxed text-black/70">
-              {line}
-            </p>
-          ))}
+      </button>
+      {isOpen && (
+        <div className="border-t border-[#f0e6cc] px-4 pb-5 pt-1 sm:px-5">
+          {item.intro && <p className="mt-3 text-sm font-medium leading-relaxed text-black/80">{item.intro}</p>}
+          <div className="mt-3 space-y-2.5">
+            {item.details.map((line, i) => (
+              <p key={i} className="text-sm leading-relaxed text-black/70">{line}</p>
+            ))}
+          </div>
+          {item.steps && item.steps.length > 0 && (
+            <div className="mt-4 rounded-xl border border-[#eee0bc] bg-[#fffbf0] p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#8f7318]">Step-by-step</p>
+              <ol className="mt-2 list-decimal space-y-2 pl-4 text-sm leading-relaxed text-black/75">
+                {item.steps.map((s, i) => <li key={i}>{s}</li>)}
+              </ol>
+            </div>
+          )}
+          {item.actions && item.actions.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {item.actions.map((action) =>
+                action.external ? (
+                  <a
+                    key={action.label}
+                    href={action.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c27a] bg-gradient-to-r from-[#f3e4b2] to-[#e8d48c] px-3.5 py-2 text-xs font-bold text-black shadow-sm transition hover:brightness-105"
+                  >
+                    {action.label}
+                    <span aria-hidden>↗</span>
+                  </a>
+                ) : (
+                  <Link
+                    key={action.label}
+                    href={action.href}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-[#e5d8b3] bg-white px-3.5 py-2 text-xs font-bold text-funt-ink shadow-sm transition hover:bg-[#fff8e8]"
+                  >
+                    {action.label}
+                    <span aria-hidden className="text-[#b8942a]">→</span>
+                  </Link>
+                )
+              )}
+            </div>
+          )}
         </div>
-        {item.steps && item.steps.length > 0 ? (
-          <div className="mt-4 rounded-xl border border-[#eee0bc] bg-[#fffbf0] p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#8f7318]">Step-by-step</p>
-            <ol className="mt-2 list-decimal space-y-2 pl-4 text-sm leading-relaxed text-black/75">
-              {item.steps.map((s, i) => (
-                <li key={`${groupKey}-${item.question}-s-${i}`}>{s}</li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-        {item.actions && item.actions.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {item.actions.map((action) =>
-              action.external ? (
-                <a
-                  key={`${item.question}-${action.label}`}
-                  href={action.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c27a] bg-gradient-to-r from-[#f3e4b2] to-[#e8d48c] px-3.5 py-2 text-xs font-bold text-black shadow-sm transition hover:brightness-105"
-                >
-                  {action.label}
-                  <span aria-hidden>↗</span>
-                </a>
-              ) : (
-                <Link
-                  key={`${item.question}-${action.label}`}
-                  href={action.href}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[#e5d8b3] bg-white px-3.5 py-2 text-xs font-bold text-funt-ink shadow-sm transition hover:bg-[#fff8e8]"
-                >
-                  {action.label}
-                  <span aria-hidden className="text-[#b8942a]">→</span>
-                </Link>
-              )
-            )}
-          </div>
-        ) : null}
-      </div>
-    </details>
+      )}
+    </div>
   );
 }
 
+// ─── Dynamic FAQ Accordion (from Knowledge Center API) ────────────────────────
+
+function DynamicFaqAccordion({ faq, isOpen, onToggle }: { faq: DynamicFaq; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <div
+      className={`rounded-2xl border bg-white/90 shadow-sm transition-all ${
+        isOpen
+          ? "border-[#c9a84a] bg-gradient-to-b from-[#fffdf8] to-[#fffaf0] shadow-md"
+          : "border-[#e8dcc4] hover:border-[#d4bc7a]"
+      }`}
+    >
+      <button
+        onClick={onToggle}
+        className="flex w-full items-start justify-between gap-3 px-4 py-4 text-left sm:px-5"
+        aria-expanded={isOpen}
+      >
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-semibold leading-snug text-funt-ink sm:text-[0.95rem]">{faq.title}</span>
+          {!isOpen && faq.summary && (
+            <p className="mt-0.5 line-clamp-1 text-xs text-black/40">{faq.summary}</p>
+          )}
+        </div>
+        <svg
+          className={`mt-0.5 h-5 w-5 shrink-0 text-[#a67c14] transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="border-t border-[#f0e6cc] px-4 pb-5 pt-3 sm:px-5">
+          <div
+            className="prose prose-sm max-w-none leading-relaxed text-black/70 prose-headings:text-sm prose-headings:font-bold prose-headings:text-funt-ink prose-p:text-black/70 prose-li:text-black/70 prose-strong:text-black/80 prose-code:rounded prose-code:bg-[#fff8e8] prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:text-[#7a5f0c]"
+            dangerouslySetInnerHTML={{ __html: faq.content }}
+          />
+          {faq.tags && faq.tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {faq.tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-[#fff8e8] px-2 py-0.5 text-[10px] font-medium text-[#8f7318]">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function StudentFaqPage() {
+  const [dynamicFaqs, setDynamicFaqs] = useState<DynamicFaq[]>([]);
+  const [dynamicLoading, setDynamicLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // Fetch dynamic FAQs from Knowledge Center
+  useEffect(() => {
+    api<DynamicFaq[]>("/api/knowledge/faqs")
+      .then((res) => {
+        if (res.success && res.data) {
+          setDynamicFaqs(Array.isArray(res.data) ? res.data : []);
+        }
+      })
+      .finally(() => setDynamicLoading(false));
+  }, []);
+
+  // Filter static FAQs by search
+  const filteredStaticGroups = useMemo(() => {
+    if (!debouncedSearch.trim()) return FAQ_GROUPS;
+    const q = debouncedSearch.toLowerCase();
+    return FAQ_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) =>
+          item.question.toLowerCase().includes(q) ||
+          (item.intro ?? "").toLowerCase().includes(q) ||
+          item.details.some((d) => d.toLowerCase().includes(q))
+      ),
+    })).filter((g) => g.items.length > 0);
+  }, [debouncedSearch]);
+
+  // Filter dynamic FAQs by search
+  const filteredDynamicFaqs = useMemo(() => {
+    if (!debouncedSearch.trim()) return dynamicFaqs;
+    const q = debouncedSearch.toLowerCase();
+    return dynamicFaqs.filter(
+      (faq) =>
+        faq.title.toLowerCase().includes(q) ||
+        stripHtml(faq.content).toLowerCase().includes(q) ||
+        (faq.summary ?? "").toLowerCase().includes(q) ||
+        (faq.tags ?? []).some((tag) => tag.toLowerCase().includes(q))
+    );
+  }, [dynamicFaqs, debouncedSearch]);
+
+  // Group dynamic FAQs by category
+  const groupedDynamic = useMemo(() => {
+    return filteredDynamicFaqs.reduce<Record<string, DynamicFaq[]>>((acc, faq) => {
+      const cat = faq.category;
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(faq);
+      return acc;
+    }, {});
+  }, [filteredDynamicFaqs]);
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function expandAllStatic() {
+    const allIds = new Set(expandedIds);
+    FAQ_GROUPS.forEach((g) => g.items.forEach((item) => allIds.add(`static-${g.id}-${item.question}`)));
+    setExpandedIds(allIds);
+  }
+
+  function collapseAll() {
+    setExpandedIds(new Set());
+  }
+
+  const totalStaticMatches = filteredStaticGroups.reduce((sum, g) => sum + g.items.length, 0);
+  const totalMatches = totalStaticMatches + filteredDynamicFaqs.length;
+
   return (
     <AppPageShell className="relative gap-8">
       <div
         className="pointer-events-none absolute inset-0 -z-10 opacity-40"
-        aria-hidden
+        aria-hidden="true"
         style={{
           background:
             "radial-gradient(900px 420px at 10% -10%, rgba(212, 175, 55, 0.22), transparent 55%), radial-gradient(700px 380px at 100% 20%, rgba(180, 150, 80, 0.12), transparent 50%)",
         }}
       />
 
+      {/* ── Header with Search ── */}
       <PageSection className="relative border-[#e3d4a8] bg-gradient-to-br from-[#fff9e8] via-[#fffdf6] to-white shadow-[0_12px_40px_rgba(150,120,40,0.12)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-2xl">
             <p className="inline-flex items-center gap-2 rounded-full border border-[#e8d9a8] bg-white/80 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[#8a6f12]">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
               Student help centre
             </p>
             <h1 className="mt-3 font-brand-learn text-3xl font-black tracking-tight text-black sm:text-[2rem]">
@@ -428,10 +619,97 @@ export default function StudentFaqPage() {
             </Link>
           </div>
         </div>
+
+        {/* Search */}
+        <div className="relative mt-5 max-w-lg">
+          <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#b8942a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search FAQs — try 'payment', 'certificate', 'attendance'…"
+            className="w-full rounded-xl border border-[#e8d9a8] bg-white py-2.5 pl-10 pr-10 text-sm text-black placeholder-black/40 shadow-sm transition focus:border-[#c9a84a] focus:outline-none focus:ring-2 focus:ring-[#d4af37]/20"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-0.5 text-black/40 hover:text-black/70"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Search result info + controls */}
+        {debouncedSearch.trim() && (
+          <p className="mt-3 text-sm text-black/60">
+            {totalMatches === 0
+              ? `No results for "${debouncedSearch}"`
+              : `${totalMatches} result${totalMatches !== 1 ? "s" : ""} for "${debouncedSearch}"`}
+          </p>
+        )}
+        {(filteredStaticGroups.length > 0 || filteredDynamicFaqs.length > 0) && (
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={expandAllStatic}
+              className="rounded-lg border border-[#e8d9a8] bg-white px-3 py-1.5 text-xs font-bold text-[#8a6f12] transition hover:bg-[#fff8e8]"
+            >
+              Expand all
+            </button>
+            <button
+              onClick={collapseAll}
+              className="rounded-lg border border-[#e8d9a8] bg-white px-3 py-1.5 text-xs font-bold text-[#8a6f12] transition hover:bg-[#fff8e8]"
+            >
+              Collapse all
+            </button>
+          </div>
+        )}
       </PageSection>
 
+      {/* ── Dynamic FAQs from Knowledge Center ── */}
+      {!dynamicLoading && filteredDynamicFaqs.length > 0 && (
+        <section className="rounded-3xl border border-[#ead9b4] bg-gradient-to-b from-white to-[#fffdf9] p-5 shadow-[0_10px_36px_rgba(120,90,30,0.08)] sm:p-6">
+          <div className="flex flex-wrap items-start gap-4 border-b border-[#f2e6cc] pb-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fff3cc] to-[#e8d49a] text-black shadow-inner ring-1 ring-[#dcc48a]/60">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold text-funt-ink sm:text-xl">Latest FAQs</h2>
+              <p className="mt-1 text-sm leading-relaxed text-black/60">
+                Updated answers from the FUNT Knowledge Center, filtered for students.
+              </p>
+            </div>
+          </div>
+
+          {Object.entries(groupedDynamic).map(([cat, catFaqs]) => (
+            <div key={cat} className="mt-5">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#8f7318]">
+                {CATEGORY_LABELS[cat] ?? cat}
+              </h3>
+              <div className="space-y-2.5">
+                {catFaqs.map((faq) => (
+                  <DynamicFaqAccordion
+                    key={faq.id}
+                    faq={faq}
+                    isOpen={expandedIds.has(`dynamic-${faq.id}`)}
+                    onToggle={() => toggleExpand(`dynamic-${faq.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {/* ── Static FAQ Groups ── */}
       <div className="grid gap-6 lg:gap-8">
-        {FAQ_GROUPS.map((group) => {
+        {filteredStaticGroups.map((group) => {
           const GIcon = group.Icon;
           return (
             <section
@@ -449,15 +727,43 @@ export default function StudentFaqPage() {
               </div>
 
               <div className="mt-5 space-y-3">
-                {group.items.map((item) => (
-                  <FaqAccordion key={`${group.id}-${item.question}`} item={item} groupKey={group.id} />
-                ))}
+                {group.items.map((item) => {
+                  const itemId = `static-${group.id}-${item.question}`;
+                  return (
+                    <FaqAccordion
+                      key={itemId}
+                      item={item}
+                      isOpen={expandedIds.has(itemId)}
+                      onToggle={() => toggleExpand(itemId)}
+                    />
+                  );
+                })}
               </div>
             </section>
           );
         })}
       </div>
 
+      {/* ── No results state ── */}
+      {debouncedSearch.trim() && totalMatches === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[#e3d4a8] bg-[#fffdf6] py-14 text-center">
+          <svg className="h-12 w-12 text-[#d4bc7a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="mt-4 text-base font-bold text-funt-ink">No matching FAQs</p>
+          <p className="mt-1 max-w-sm text-sm text-black/60">
+            Try different keywords, or contact support if you cannot find the answer you need.
+          </p>
+          <button
+            onClick={() => setSearchQuery("")}
+            className="mt-4 rounded-xl border border-[#d9c27a] bg-gradient-to-r from-[#f3e4b2] to-[#e8d48c] px-4 py-2 text-sm font-bold text-black shadow-sm transition hover:brightness-105"
+          >
+            Clear search
+          </button>
+        </div>
+      )}
+
+      {/* ── Support Footer ── */}
       <section className="rounded-3xl border-2 border-[#d4bc7a] bg-gradient-to-br from-[#fff6dc] via-[#fffef8] to-[#fff9e6] p-5 shadow-[0_14px_40px_rgba(100,75,20,0.15)] sm:p-7">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -511,6 +817,14 @@ export default function StudentFaqPage() {
             <span className="mt-1 font-semibold text-funt-ink">Write to us</span>
             <span className="mt-1 text-xs text-black/55">{SUPPORT_EMAIL}</span>
           </a>
+          <Link
+            href="/support"
+            className="group flex flex-col rounded-2xl border border-[#e0cf9e] bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#d4af37] hover:shadow-md"
+          >
+            <span className="text-xs font-bold uppercase tracking-wide text-[#9b7a13]">Tickets</span>
+            <span className="mt-1 font-semibold text-funt-ink">Support desk</span>
+            <span className="mt-1 text-xs text-black/55">Raise a ticket for detailed help</span>
+          </Link>
         </div>
       </section>
     </AppPageShell>

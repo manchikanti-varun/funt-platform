@@ -5,7 +5,8 @@ let redisReady = false;
 
 /**
  * Returns a shared Redis client if REDIS_URL is configured.
- * Falls back to null (in-memory rate limiting) when Redis is unavailable.
+ * Supports Upstash (rediss:// TLS URLs) and standard Redis.
+ * Falls back to null when Redis is unavailable — callers handle gracefully.
  */
 export function getRedisClient(): Redis | null {
   if (redisClient) return redisReady ? redisClient : null;
@@ -18,6 +19,8 @@ export function getRedisClient(): Redis | null {
       maxRetriesPerRequest: 1,
       enableReadyCheck: true,
       lazyConnect: false,
+      // Upstash uses TLS — ioredis handles rediss:// automatically
+      tls: url.startsWith("rediss://") ? {} : undefined,
       retryStrategy(times: number) {
         return Math.min(times * 500, 30_000);
       },
@@ -25,7 +28,7 @@ export function getRedisClient(): Redis | null {
 
     redisClient.on("ready", () => {
       redisReady = true;
-      console.log("[redis] Connected — rate limiting uses shared store.");
+      console.log("[redis] Connected — caching and rate limiting active.");
     });
 
     redisClient.on("error", (err: Error) => {

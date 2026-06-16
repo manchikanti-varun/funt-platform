@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -52,6 +52,12 @@ interface Course {
   deliveryMode?: string;
 }
 
+interface GlobalChapterOption {
+  id: string;
+  title: string;
+  status: string;
+}
+
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
@@ -83,6 +89,11 @@ export default function EditCoursePage() {
   const [globalAssignmentPreview, setGlobalAssignmentPreview] = useState<{ title: string; instructions: string; submissionType?: string; skillTags?: string[] } | null>(null);
   /** null = inherit global, true = force on, false = force off */
   const [enableWatermark, setEnableWatermark] = useState<boolean | null | "inherit">("inherit");
+  // Add Chapter picker state
+  const [showChapterPicker, setShowChapterPicker] = useState(false);
+  const [globalChapters, setGlobalChapters] = useState<GlobalChapterOption[]>([]);
+  const [chapterSearch, setChapterSearch] = useState("");
+  const [addingChapterId, setAddingChapterId] = useState<string | null>(null);
 
   const roleGuard = <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />;
 
@@ -111,6 +122,23 @@ export default function EditCoursePage() {
 
   // When editing a module with a linked assignment, fetch global assignment so we can show it when overrides are empty
   const linkedId = moduleEdit.linkedAssignmentId?.trim();
+
+  // Fetch available global chapters for the Add Chapter picker
+  useEffect(() => {
+    if (!showChapterPicker || globalChapters.length > 0) return;
+    api<GlobalChapterOption[]>("/api/global-chapters").then((r) => {
+      if (r.success && Array.isArray(r.data)) setGlobalChapters(r.data.filter((m) => m.status !== "ARCHIVED"));
+    });
+  }, [showChapterPicker]);
+
+  const filteredGlobalChapters = useMemo(() => {
+    const q = chapterSearch.trim().toLowerCase();
+    // Filter out chapters already in the course
+    const existingIds = new Set((course?.modules ?? []).map((m) => m.originalGlobalModuleId));
+    const available = globalChapters.filter((ch) => !existingIds.has(ch.id));
+    if (!q) return available;
+    return available.filter((m) => m.title.toLowerCase().includes(q));
+  }, [globalChapters, chapterSearch, course?.modules]);
   useEffect(() => {
     if (!linkedId || editingIndex === null) {
       setGlobalAssignmentPreview(null);
@@ -729,25 +757,75 @@ export default function EditCoursePage() {
             <div className="mt-3">
               <button
                 type="button"
-                onClick={async () => {
-                  const globalModuleId = prompt("Enter Global Chapter ID to add (from the Chapters page):");
-                  if (!globalModuleId?.trim()) return;
-                  setError("");
-                  const res = await api<Course>(`/api/courses/${id}/chapters`, {
-                    method: "POST",
-                    body: JSON.stringify({ globalModuleId: globalModuleId.trim() }),
-                  });
-                  if (res.success && res.data) {
-                    setCourse(res.data);
-                  } else {
-                    setError(res.message ?? "Failed to add chapter.");
-                  }
-                }}
+                onClick={() => setShowChapterPicker((v) => !v)}
                 className="inline-flex items-center gap-2 rounded-lg border border-teal-300 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                 Add Chapter
               </button>
+
+              {showChapterPicker && (
+                <div className="mt-3 rounded-xl border border-teal-200 bg-white p-4 shadow-md">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h4 className="text-sm font-semibold text-slate-800">Select a Global Chapter to add</h4>
+                    <button
+                      type="button"
+                      onClick={() => { setShowChapterPicker(false); setChapterSearch(""); }}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={chapterSearch}
+                    onChange={(e) => setChapterSearch(e.target.value)}
+                    placeholder="Search chapters by title…"
+                    className="mb-3 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                  <div className="min-h-0 max-h-64 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
+                    {filteredGlobalChapters.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-slate-500">
+                        {chapterSearch.trim() ? "No chapters match your search." : globalChapters.length === 0 ? "Loading chapters…" : "All available chapters are already in this course."}
+                      </p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {filteredGlobalChapters.map((ch) => (
+                          <li key={ch.id}>
+                            <button
+                              type="button"
+                              disabled={addingChapterId === ch.id}
+                              onClick={async () => {
+                                setAddingChapterId(ch.id);
+                                setError("");
+                                const res = await api<Course>(`/api/courses/${id}/chapters`, {
+                                  method: "POST",
+                                  body: JSON.stringify({ globalModuleId: ch.id }),
+                                });
+                                setAddingChapterId(null);
+                                if (res.success && res.data) {
+                                  setCourse(res.data);
+                                  setShowChapterPicker(false);
+                                  setChapterSearch("");
+                                } else {
+                                  setError(res.message ?? "Failed to add chapter.");
+                                }
+                              }}
+                              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-teal-50 disabled:opacity-50"
+                            >
+                              <svg className="h-4 w-4 shrink-0 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <span className="text-sm font-medium text-slate-800">{ch.title}</span>
+                              {addingChapterId === ch.id && (
+                                <span className="ml-auto h-4 w-4 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           {error && (

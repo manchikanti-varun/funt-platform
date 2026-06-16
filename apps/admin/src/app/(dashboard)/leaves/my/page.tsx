@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
+import { useAdminUser } from "@/contexts/AdminUserContext";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { BackLink } from "@/components/ui/BackLink";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -35,6 +36,8 @@ interface Balance { totalLeaves: number; usedLeaves: number; remainingLeaves: nu
 interface Policy { allowHalfDay: boolean; leaveTypes: string[]; customLeaveTypes: string[] }
 
 export default function MyLeavesPage() {
+  const { roles } = useAdminUser();
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
   const [leaves, setLeaves] = useState<LeaveRow[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [policy, setPolicy] = useState<Policy | null>(null);
@@ -287,7 +290,7 @@ export default function MyLeavesPage() {
                     <td className="px-4 py-3 text-slate-500 max-w-[200px] truncate">{l.reviewRemarks || "—"}</td>
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap">{new Date(l.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      {(l.status === "PENDING" || l.status === "APPROVED") && (
+                      {(l.status === "PENDING" || (l.status === "APPROVED" && isSuperAdmin)) && (
                         <button
                           onClick={() => void cancelLeave(l.id)}
                           disabled={cancellingId === l.id}

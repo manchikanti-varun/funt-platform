@@ -279,17 +279,23 @@ export async function rejectLeaveRequest(leaveId: string, reviewerId: string, re
   return formatLeave(leave.toObject());
 }
 
-export async function cancelLeaveRequest(leaveId: string, requesterId: string, _requesterRole: string) {
+export async function cancelLeaveRequest(leaveId: string, requesterId: string, requesterRole: string) {
   const leave = await LeaveRequestModel.findById(leaveId).exec();
   if (!leave) throw new AppError("Leave request not found", 404);
 
-  // Only requester can cancel their own leave
-  if (leave.requestedBy !== requesterId) {
+  // Only requester can cancel their own leave (or super admin can cancel any)
+  if (leave.requestedBy !== requesterId && requesterRole !== ROLE.SUPER_ADMIN) {
     throw new AppError("You can only cancel your own leave requests", 403);
   }
   if (![LEAVE_STATUS.PENDING, LEAVE_STATUS.APPROVED].includes(leave.status as LEAVE_STATUS)) {
     throw new AppError("Only pending or approved leaves can be cancelled", 400);
   }
+
+  // Once approved, only SUPER_ADMIN can cancel
+  if (leave.status === LEAVE_STATUS.APPROVED && requesterRole !== ROLE.SUPER_ADMIN) {
+    throw new AppError("Only a super admin can cancel an approved leave", 403);
+  }
+
   const wasApproved = leave.status === LEAVE_STATUS.APPROVED;
 
   leave.status = LEAVE_STATUS.CANCELLED;

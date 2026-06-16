@@ -17,6 +17,7 @@ import { findBatchByParam, getBatchCourseSnapshots } from "../services/batch.ser
 import { parseYoutubeVideoId } from "../utils/youtubeId.js";
 import { isEmbeddableHostedVideoUrl, isGoogleDriveUrl, toGoogleDrivePreviewUrl } from "../utils/googleDriveUrl.js";
 import { isR2VideoKey, r2KeyFromVideoUrl, generateSignedVideoUrl } from "../services/r2Video.service.js";
+import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 
 // ---------------------------------------------------------------------------
 // GET /api/student/media/stream  — stream an R2 video embedded in rich-text content
@@ -209,7 +210,13 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
 });
 
 export const getExploreCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const cached = await cacheGet(CACHE_KEYS.exploreCourses());
+  if (cached) {
+    successRes(res, cached);
+    return;
+  }
   const data = await listCoursesForExplore();
+  await cacheSet(CACHE_KEYS.exploreCourses(), data, CACHE_TTL.EXPLORE);
   successRes(res, data);
 });
 

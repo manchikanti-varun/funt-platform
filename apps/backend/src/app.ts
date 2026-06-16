@@ -43,6 +43,7 @@ import {
   learningPlanAnalyticsRouter,
 } from "./routes/learningPlan.routes.js";
 import { exportImportRoutes } from "./routes/exportImport.routes.js";
+import { knowledgeReaderRouter, knowledgeAdminRouter } from "./routes/knowledge.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -111,6 +112,8 @@ app.use("/api/student", studentMilestoneRouter);
 app.use("/api/admin", adminMilestoneRouter);
 app.use("/api/analytics", learningPlanAnalyticsRouter);
 app.use("/api/admin/data", exportImportRoutes);
+app.use("/api/knowledge", knowledgeReaderRouter);
+app.use("/api/admin/knowledge", knowledgeAdminRouter);
 app.use("/verify", verifyRoutes);
 
 app.use(errorHandler);
