@@ -16,7 +16,8 @@ const enrollmentSchema = new Schema(
     accessBlocked: { type: Boolean, required: false, default: false },
     /** Batch-scoped course access overrides: key=courseId in this batch snapshot, value=true means blocked */
     courseAccessBlocked: { type: Map, of: Boolean, required: false, default: {} },
-    progressTracking: { type: Schema.Types.Mixed, required: false },
+    /** @deprecated Legacy field — progress is tracked in ChapterProgress collection. Retained for migration only. */
+    progressTracking: { type: Schema.Types.Mixed, required: false, select: false },
 
     // ── Learning Plan fields ────────────────────────────────────────────
     /** true when this enrollment uses the Learning Plan delivery mode */
@@ -30,5 +31,7 @@ const enrollmentSchema = new Schema(
 );
 
 enrollmentSchema.index({ studentId: 1, batchId: 1 }, { unique: true });
+enrollmentSchema.index({ batchId: 1, status: 1 });
+enrollmentSchema.index({ status: 1 });
 
 export const EnrollmentModel = mongoose.model("Enrollment", enrollmentSchema);

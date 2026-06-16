@@ -96,5 +96,7 @@ const paymentSubmissionSchema = new Schema(
 paymentSubmissionSchema.index({ studentId: 1, batchId: 1, courseId: 1, status: 1 });
 paymentSubmissionSchema.index({ studentId: 1, productId: 1, status: 1 });
 paymentSubmissionSchema.index({ milestoneId: 1, status: 1 }, { sparse: true });
+paymentSubmissionSchema.index({ status: 1, createdAt: -1 });
+paymentSubmissionSchema.index({ createdAt: -1 });
 
 export const PaymentSubmissionModel = mongoose.model("PaymentSubmission", paymentSubmissionSchema);

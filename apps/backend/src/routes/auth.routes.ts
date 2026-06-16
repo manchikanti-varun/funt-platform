@@ -24,7 +24,7 @@ import {
   establishParentDelegateSession,
   parentDelegateLogout,
 } from "../controllers/auth.controller.js";
-import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter } from "../middleware/rateLimit.middleware.js";
+import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter, passwordChangeRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.post("/login", validateBody(loginSchema), login);
 router.post("/signup", validateBody(studentSignupSchema), signupStudent);
 router.get("/username-availability", checkUsernameAvailability);
 router.post("/forgot-username", forgotStudentUsername);
-router.post("/change-password", authMiddleware, validateBody(changePasswordSchema), changePassword);
+router.post("/change-password", authMiddleware, passwordChangeRateLimiter, validateBody(changePasswordSchema), changePassword);
 router.post("/set-password-google", authMiddleware, validateBody(setPasswordSchema), setPasswordWithGoogle);
 router.post("/parent-login", parentLogin);
 router.post("/parent-linked-students", parentMobileLookupRateLimiter, parentLinkedStudents);

@@ -246,10 +246,11 @@ export interface StudentAttendanceSummary {
 }
 
 export async function getAttendanceByStudentsForBatch(batchId: string): Promise<StudentAttendanceSummary[]> {
-  const [enrollments, sessions] = await Promise.all([
-    listEnrollmentsByBatch(batchId),
+  const [enrollmentResult, sessions] = await Promise.all([
+    listEnrollmentsByBatch(batchId, 1, 10000),
     getAttendanceForBatch(batchId),
   ]);
+  const enrollments = enrollmentResult.rows;
   const studentIds = enrollments.map((e) => e.studentId);
   const byStudent = new Map<
     string,

@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { getEnv } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { helmetMiddleware } from "./middleware/security.middleware.js";
+import { csrfProtection } from "./middleware/csrf.middleware.js";
 import { authRateLimiter, apiRateLimiter } from "./middleware/rateLimit.middleware.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
@@ -69,15 +70,20 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "10mb" }));
+app.use(csrfProtection);
 
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));
 app.use("/health", healthRouter);
 
+// CSRF token endpoint — frontends call this on boot to get their CSRF cookie
+app.get("/api/csrf-token", (_req, res) => {
+  // The csrfProtection middleware already sets the cookie on GET requests.
+  // This endpoint simply confirms the cookie was set.
+  res.status(200).json({ success: true });
+});
+
 app.options("/api/auth", (_, res) => res.sendStatus(204));
 app.use("/api/auth", authRateLimiter, authRoutes);
-// Compatibility mount for environments where the reverse proxy strips `/api`.
-app.options("/auth", (_, res) => res.sendStatus(204));
-app.use("/auth", authRateLimiter, authRoutes);
 app.use(apiRateLimiter);
 
 app.use("/api/public", publicRoutes);

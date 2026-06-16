@@ -8,6 +8,7 @@ import { UserModel } from "../models/User.model.js";
 import { grantCoinsWithExpiry } from "./coinBalance.service.js";
 import { ENROLLMENT_STATUS, CERTIFICATE_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { createNotification } from "./notification.service.js";
 import { generateCertificateId } from "../utils/funtIdGenerator.js";
 import { ensureFirstCourseCompletedBadge, awardBadge } from "./achievement.service.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
@@ -182,6 +183,19 @@ async function issueCertificateDocument(
   await ensureFirstCourseCompletedBadge(studentId, batchMongoId).catch(() => {});
   await UserModel.updateOne({ _id: studentId }, { $inc: { studentLevel: 1 } }).exec();
 
+  // Notify student that their certificate has been issued
+  const batchForNotif = await BatchModel.findById(batchMongoId).select("courseSnapshots courseSnapshot").lean().exec();
+  const courseName = batchForNotif
+    ? (getBatchCourseSnapshots(batchForNotif as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { title?: string } | undefined)?.title ?? "Course"
+    : "Course";
+  await createNotification({
+    userId: studentId,
+    title: "Certificate Issued! 🎉",
+    body: `Congratulations! Your certificate for ${courseName} has been issued. View it in your certificates section.`,
+    type: "CERTIFICATE_ISSUED",
+    referenceId: String(doc._id),
+  }).catch(() => {});
+
   return {
     id: String(doc._id),
     certificateId: doc.certificateId,
@@ -350,8 +364,8 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
   const modules = getFirstSnapshotModules(batch);
   const totalModules = modules.length;
   const { listEnrollmentsByBatch } = await import("./enrollment.service.js");
-  const [enrollments, certs, progressDocs] = await Promise.all([
-    listEnrollmentsByBatch(batchId),
+  const [enrollmentResult, certs, progressDocs] = await Promise.all([
+    listEnrollmentsByBatch(batchId, 1, 10000),
     CertificateModel.find({ batchId: batchMongoId, status: CERTIFICATE_STATUS.ISSUED })
       .select("studentId certificateId coinReward coinRewardGrantedAt")
       .lean()
@@ -361,6 +375,7 @@ export async function listStudentsWithCertificateStatus(batchId: string) {
       .lean()
       .exec(),
   ]);
+  const enrollments = enrollmentResult.rows;
   const completedByStudent = new Map<string, number>();
   for (const p of progressDocs) {
     if (p.completedAt != null) {

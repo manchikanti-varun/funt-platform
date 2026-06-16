@@ -77,7 +77,6 @@ router.get("/invoices/:id", getMyInvoiceById);
 router.get("/coin-grants", getMyCoinGrants);
 router.get("/assignments/general", getGeneralAssignments);
 router.get("/assignments/my-submissions", getMySubmissions);
-router.get("/assignments/my-chapter-submissions", getMySubmissions);
 router.get("/assignments/:assignmentId", getAssignmentForStudent);
 router.post("/assignments/general/submit", validateBody(submitAssignmentSchema), postSubmitGlobalAssignment);
 router.get("/trainers", getTrainers);

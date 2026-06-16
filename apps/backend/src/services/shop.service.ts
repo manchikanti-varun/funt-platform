@@ -2,6 +2,7 @@ import { ShopProductModel } from "../models/ShopProduct.model.js";
 import { ShopOrderModel } from "../models/ShopOrder.model.js";
 import { AppError } from "../utils/AppError.js";
 import { createAuditLog } from "./audit.service.js";
+import { createNotification } from "./notification.service.js";
 import { spendCoins, getSpendableBalance } from "./coinBalance.service.js";
 import { assertShopCouponForPurchase, recordCouponRedemption } from "./coupon.service.js";
 import mongoose from "mongoose";
@@ -369,13 +370,20 @@ export async function listMyOrders(studentId: string) {
   }));
 }
 
-export async function listShopOrdersAdmin() {
-  const orders = await ShopOrderModel.find({})
-    .sort({ createdAt: -1 })
-    .limit(300)
-    .lean()
-    .exec();
-  return orders.map((o) => ({
+export async function listShopOrdersAdmin(page = 1, limit = 50) {
+  const effectiveLimit = Math.min(200, Math.max(1, limit));
+  const skip = (Math.max(1, page) - 1) * effectiveLimit;
+
+  const [orders, total] = await Promise.all([
+    ShopOrderModel.find({})
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(effectiveLimit)
+      .lean()
+      .exec(),
+    ShopOrderModel.countDocuments({}).exec(),
+  ]);
+  const rows = orders.map((o) => ({
     id: String(o._id),
     studentId: o.studentId,
     items: (o as { items?: unknown[] }).items ?? [],
@@ -392,6 +400,7 @@ export async function listShopOrdersAdmin() {
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
   }));
+  return { rows, total, page, limit: effectiveLimit };
 }
 
 export async function updateShopOrderStatus(input: {
@@ -434,6 +443,23 @@ export async function updateShopOrderStatus(input: {
     reason,
     note,
   });
+
+  // Notify student about order status change
+  const statusLabel = input.status.toLowerCase().replace(/_/g, " ");
+  await createNotification({
+    userId: order.studentId,
+    title: `Order ${statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}`,
+    body: input.status === "DELIVERED"
+      ? "Your order has been delivered! Thank you for your purchase."
+      : input.status === "SHIPPED"
+        ? "Your order has been shipped and is on its way."
+        : input.status === "CANCELLED"
+          ? `Your order has been cancelled.${reason ? ` Reason: ${reason.slice(0, 100)}` : ""}`
+          : `Your order status has been updated to: ${statusLabel}.`,
+    type: "SHOP_ORDER_UPDATED",
+    referenceId: String(order._id),
+  }).catch(() => {});
+
   return { id: String(order._id), status: input.status };
 }
 

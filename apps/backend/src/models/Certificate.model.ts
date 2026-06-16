@@ -34,5 +34,7 @@ certificateSchema.index(
   { studentId: 1, batchId: 1 },
   { unique: true, partialFilterExpression: { milestoneId: { $exists: false } } }
 );
+// Course-level lookups
+certificateSchema.index({ courseId: 1 });
 
 export const CertificateModel = mongoose.model("Certificate", certificateSchema);

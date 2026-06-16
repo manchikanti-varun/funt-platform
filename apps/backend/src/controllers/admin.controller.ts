@@ -9,7 +9,9 @@ import {
   resetLoginAttemptsByUsername,
   updateUserIdentityByAdmin,
 } from "../services/auth.service.js";
+import { createAuditLog } from "../services/audit.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { successRes } from "../utils/response.js";
 import { AppError } from "../utils/AppError.js";
 import { UserModel } from "../models/User.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
@@ -199,7 +201,9 @@ export const createStudentHandler = asyncHandler(async (req: Request, res: Respo
     schoolName: schoolName != null ? String(schoolName) : undefined,
     city: city != null ? String(city) : undefined,
   });
-  res.status(201).json(result);
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "STUDENT", username: String(username) }).catch(() => {});
+  successRes(res, result, "Student created", 201);
 });
 
 export const createTrainerHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -214,21 +218,23 @@ export const createTrainerHandler = asyncHandler(async (req: Request, res: Respo
     mobile: String(mobile),
     password: String(password),
   });
-  res.status(201).json(result);
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "TRAINER", username: String(username) }).catch(() => {});
+  successRes(res, result, "Trainer created", 201);
 });
 
 export const createAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createAdmin({ name, email, mobile, password });
-  res.status(201).json(result);
+  successRes(res, result, "Admin created", 201);
 });
 
 export const createSuperAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createSuperAdmin({ name, email, mobile, password });
-  res.status(201).json(result);
+  successRes(res, result, "Super Admin created", 201);
 });
 
 export const resetLoginHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -237,21 +243,42 @@ export const resetLoginHandler = asyncHandler(async (req: Request, res: Response
   if (!username?.trim()) throw new AppError("username is required", 400);
   if (!newPassword?.trim()) throw new AppError("newPassword is required", 400);
   await resetLoginAttemptsByUsername(username, newPassword, req.user?.roles);
-  res.status(200).json({
-    message: "Login reset. Account lockout cleared and password updated.",
-  });
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_PASSWORD_RESET", performedBy, "User", username, { username }).catch(() => {});
+  successRes(res, null, "Login reset. Account lockout cleared and password updated.");
 });
 
 export const patchUserIdentityHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { userId } = req.params;
   if (!userId) throw new AppError("userId is required", 400);
-  const { username, email, mobile } = req.body as {
+  const { username, email, mobile, status } = req.body as {
     username?: string;
     email?: string;
     mobile?: string;
+    status?: string;
   };
-  await updateUserIdentityByAdmin(userId, { username, email, mobile }, req.user?.roles);
-  res.status(200).json({ message: "User identity updated" });
+
+  // Handle status change separately with audit logging
+  if (status && ["ACTIVE", "SUSPENDED", "ARCHIVED"].includes(status)) {
+    const user = await UserModel.findById(userId).select("status").lean().exec();
+    if (!user) throw new AppError("User not found", 404);
+    const oldStatus = (user as { status?: string }).status;
+    if (oldStatus !== status) {
+      await UserModel.updateOne({ _id: userId }, { $set: { status } }).exec();
+      const performedBy = req.user?.userId ?? "unknown";
+      const auditAction: "USER_SUSPENDED" | "USER_ARCHIVED" | "USER_ACTIVATED" =
+        status === "SUSPENDED" ? "USER_SUSPENDED" :
+        status === "ARCHIVED" ? "USER_ARCHIVED" : "USER_ACTIVATED";
+      await createAuditLog(auditAction, performedBy, "User", userId, { oldStatus, newStatus: status }).catch(() => {});
+    }
+  }
+
+  // Handle identity field changes
+  if (username || email || mobile) {
+    await updateUserIdentityByAdmin(userId, { username, email, mobile }, req.user?.roles);
+  }
+
+  successRes(res, null, "User identity updated");
 });
 
 export const listPeopleByRoleHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {

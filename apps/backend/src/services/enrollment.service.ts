@@ -127,16 +127,24 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
   };
 }
 
-export async function getMyEnrollments(studentId: string) {
-  const enrollments = await EnrollmentModel.find({ studentId })
-    .sort({ enrolledAt: -1 })
-    .lean()
-    .exec();
+export async function getMyEnrollments(studentId: string, page = 1, limit = 50) {
+  const skip = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit));
+  const effectiveLimit = Math.min(100, Math.max(1, limit));
+
+  const [enrollments, _total] = await Promise.all([
+    EnrollmentModel.find({ studentId })
+      .sort({ enrolledAt: -1 })
+      .skip(skip)
+      .limit(effectiveLimit)
+      .lean()
+      .exec(),
+    EnrollmentModel.countDocuments({ studentId }).exec(),
+  ]);
   const batchIds = enrollments.map((e) => e.batchId);
   const batches = await BatchModel.find({ _id: { $in: batchIds } }).lean().exec();
   const batchMap = new Map(batches.map((b) => [String(b._id), b]));
 
-  return enrollments
+  const items = enrollments
     .filter((e) => e.status === ENROLLMENT_STATUS.ACTIVE || e.status === ENROLLMENT_STATUS.COMPLETED)
     .map((e) => {
       const batch = batchMap.get(e.batchId);
@@ -167,6 +175,7 @@ export async function getMyEnrollments(studentId: string) {
           : null,
       };
     });
+  return items;
 }
 
 export async function setEnrollmentAccessBlocked(enrollmentId: string, blocked: boolean) {
@@ -246,21 +255,60 @@ export async function bulkEnroll(
   const seen = new Set<string>();
   const toCreate: string[] = [];
 
+  // ── Batch-resolve all usernames/IDs in 1–2 queries instead of N ──
+  const uniqueInputs: string[] = [];
   for (const raw of studentUsernamesOrIds) {
     const v = (raw && String(raw).trim()) || "";
     if (!v || seen.has(v)) continue;
     seen.add(v);
+    uniqueInputs.push(v);
+  }
 
-    try {
-      const studentId = await resolveStudentId(v);
-      const existing = await EnrollmentModel.findOne({ studentId, batchId: batchMongoId }).exec();
-      if (existing) {
-        result.skipped += 1;
-        continue;
-      }
-      toCreate.push(studentId);
-    } catch {
+  // Separate ObjectIds from usernames for batch lookup
+  const possibleIds = uniqueInputs.filter((v) => OBJECT_ID_REGEX.test(v));
+  const possibleUsernames = uniqueInputs.filter((v) => !OBJECT_ID_REGEX.test(v)).map((u) => u.toLowerCase());
+
+  const [usersByIds, usersByUsernames] = await Promise.all([
+    possibleIds.length > 0
+      ? UserModel.find({ _id: { $in: possibleIds } }).select("_id").lean().exec()
+      : [],
+    possibleUsernames.length > 0
+      ? UserModel.find({ username: { $in: possibleUsernames } }).select("_id username").lean().exec()
+      : [],
+  ]);
+
+  // Build a map: input → resolved userId
+  const resolvedMap = new Map<string, string>();
+  for (const u of usersByIds) resolvedMap.set(String(u._id), String(u._id));
+  for (const u of usersByUsernames) {
+    const username = (u as { username?: string }).username?.toLowerCase() ?? "";
+    resolvedMap.set(username, String(u._id));
+  }
+
+  // Identify found vs not-found
+  const resolvedStudentIds: string[] = [];
+  for (const v of uniqueInputs) {
+    const key = OBJECT_ID_REGEX.test(v) ? v : v.toLowerCase();
+    const resolved = resolvedMap.get(key);
+    if (resolved) {
+      resolvedStudentIds.push(resolved);
+    } else {
       result.notFound.push(v);
+    }
+  }
+
+  // Batch-check existing enrollments in one query
+  const existingEnrollments = await EnrollmentModel.find({
+    studentId: { $in: resolvedStudentIds },
+    batchId: batchMongoId,
+  }).select("studentId").lean().exec();
+  const alreadyEnrolledSet = new Set(existingEnrollments.map((e) => String(e.studentId)));
+
+  for (const studentId of resolvedStudentIds) {
+    if (alreadyEnrolledSet.has(studentId)) {
+      result.skipped += 1;
+    } else {
+      toCreate.push(studentId);
     }
   }
 
@@ -297,13 +345,15 @@ export async function bulkEnroll(
   return result;
 }
 
-export async function listEnrollmentsByBatch(batchId: string) {
+export async function listEnrollmentsByBatch(batchId: string, page = 1, limit = 100) {
   const batch = await findBatchByParam(batchId);
-  if (!batch) return [];
+  if (!batch) return { rows: [], total: 0, page: 1, limit };
   const batchMongoId = String((batch as { _id: unknown })._id);
   const humanBatchId = (batch as { batchId?: string }).batchId;
 
-  
+  const effectiveLimit = Math.min(500, Math.max(1, limit));
+  const skip = (Math.max(1, page) - 1) * effectiveLimit;
+
   const matchValues: unknown[] = [batchMongoId, batchId.trim()];
   if (humanBatchId && humanBatchId !== batchMongoId) matchValues.push(humanBatchId);
   if (OBJECT_ID_REGEX.test(batchMongoId)) {
@@ -315,12 +365,12 @@ export async function listEnrollmentsByBatch(batchId: string) {
     }
   }
 
-  
-  const cursor = EnrollmentModel.collection.find({
-    batchId: { $in: matchValues },
-  } as Record<string, unknown>);
-  const rawEnrollments = await cursor.sort({ enrolledAt: -1 }).toArray();
-  if (rawEnrollments.length === 0) return [];
+  const filter = { batchId: { $in: matchValues } } as Record<string, unknown>;
+  const total = await EnrollmentModel.collection.countDocuments(filter);
+
+  const cursor = EnrollmentModel.collection.find(filter);
+  const rawEnrollments = await cursor.sort({ enrolledAt: -1 }).skip(skip).limit(effectiveLimit).toArray();
+  if (rawEnrollments.length === 0) return { rows: [], total, page, limit: effectiveLimit };
 
   const enrollments = rawEnrollments.map((e) => ({
     enrollmentId: String((e as { _id: unknown })._id),
@@ -339,7 +389,7 @@ export async function listEnrollmentsByBatch(batchId: string) {
   const userIds = [...new Set(enrollments.map((e) => e.studentId))];
   const users = await UserModel.find({ _id: { $in: userIds } }).select("_id username name").lean().exec();
   const userMap = new Map(users.map((u) => [String(u._id), u]));
-  return enrollments.map((e) => {
+  const rows = enrollments.map((e) => {
     const u = userMap.get(e.studentId);
     return {
       enrollmentId: e.enrollmentId,
@@ -350,6 +400,7 @@ export async function listEnrollmentsByBatch(batchId: string) {
       accessBlocked: e.accessBlocked,
     };
   });
+  return { rows, total, page, limit: effectiveLimit };
 }
 
 /** Remove a student from a batch (delete enrollment). */

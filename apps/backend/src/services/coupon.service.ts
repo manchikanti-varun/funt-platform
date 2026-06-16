@@ -4,6 +4,7 @@ import { UserModel } from "../models/User.model.js";
 import { ShopOrderModel } from "../models/ShopOrder.model.js";
 import { BatchModel } from "../models/Batch.model.js";
 import { AppError } from "../utils/AppError.js";
+import { createAuditLog } from "./audit.service.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import type { ClientSession } from "mongoose";
 
@@ -175,6 +176,12 @@ export async function recordCouponRedemption(
     await CouponRedemptionModel.deleteOne({ couponId, studentId, context: redemptionContext }, session ? { session } : undefined).exec();
     throw new AppError("Coupon has reached its usage limit", 400);
   }
+
+  // Audit: coupon redeemed
+  await createAuditLog("COUPON_REDEEMED", studentId, "Coupon", couponId, {
+    code: coupon.code,
+    context: redemptionContext,
+  }, session).catch(() => {});
 }
 
 export async function listCouponAudit(input: { page: number; limit: number }): Promise<{

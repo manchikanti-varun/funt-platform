@@ -6,6 +6,17 @@
 import { NotificationModel } from "../models/Notification.model.js";
 
 export type NotificationType =
+  | "ENROLLMENT_APPROVED"
+  | "ENROLLMENT_REJECTED"
+  | "PAYMENT_APPROVED"
+  | "PAYMENT_REJECTED"
+  | "ASSIGNMENT_REVIEWED"
+  | "CERTIFICATE_ISSUED"
+  | "TICKET_UPDATED"
+  | "TICKET_RESOLVED"
+  | "TICKET_REPLIED"
+  | "SHOP_ORDER_UPDATED"
+  | "LICENSE_KEY_REDEEMED"
   | "LEAVE_APPLIED"
   | "LEAVE_APPROVED"
   | "LEAVE_REJECTED"

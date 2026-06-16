@@ -61,3 +61,18 @@ export const parentDelegateIssueRateLimiter = rateLimit({
   legacyHeaders: false,
   ...getStore("parent-delegate"),
 });
+
+
+/**
+ * Password change rate limiter.
+ * Per-user (IP-keyed since auth cookie identifies the user).
+ * Protects against brute-forcing the old password field.
+ */
+export const passwordChangeRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: getEnv().isProduction ? 5 : 50,
+  message: { success: false, message: "Too many password change attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...getStore("password-change"),
+});

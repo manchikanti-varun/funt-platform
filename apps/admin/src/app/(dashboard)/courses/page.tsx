@@ -125,13 +125,13 @@ export default function CoursesPage() {
           <BackLink href="/dashboard">Back to Dashboard</BackLink>
           {!readOnly && (
             <Link
-              href="/courses/new"
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
-            >
+                href="/courses/new"
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
+              >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              New Course
+              Create Course
             </Link>
           )}
         </div>
@@ -171,7 +171,7 @@ export default function CoursesPage() {
               href="/courses/new"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-teal-700"
             >
-              New Course
+              Create Course
             </Link>
           </div>
         ) : (

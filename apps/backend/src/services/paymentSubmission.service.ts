@@ -19,6 +19,7 @@ import { AppError } from "../utils/AppError.js";
 import { PAYMENT_VERIFIED_BY_RAZORPAY_AUTO } from "../constants/payment.js";
 import { normalizeAllowedPaymentMethods, type CoursePaymentMethodCode } from "../utils/coursePaymentMethods.js";
 import { createAuditLog } from "./audit.service.js";
+import { createNotification } from "./notification.service.js";
 import { issueInvoiceForPayment } from "./invoice.service.js";
 import { RazorpayOrderContextModel } from "../models/RazorpayOrderContext.model.js";
 import { ShopProductModel } from "../models/ShopProduct.model.js";
@@ -989,6 +990,25 @@ export async function verifyPaymentAndEnroll(
       };
     });
     if (!result) throw new AppError("Could not verify payment", 500);
+
+    // Notify student after successful payment verification (outside transaction — non-critical)
+    try {
+      const doc = await PaymentSubmissionModel.findById(paymentId).select("studentId kind").lean().exec();
+      if (doc) {
+        await createNotification({
+          userId: String(doc.studentId),
+          title: "Payment Approved ✅",
+          body: doc.kind === "SHOP"
+            ? "Your shop payment has been verified and your order is being processed."
+            : "Your payment has been verified and you now have access to the course.",
+          type: "PAYMENT_APPROVED",
+          referenceId: String(paymentId),
+        });
+      }
+    } catch {
+      // Non-critical — don't fail the response
+    }
+
     return result as
       | { message: string; enrollmentCreated: boolean; kind: "COURSE"; assignedLicenseKey?: string }
       | { message: string; enrollmentCreated: false; kind: "SHOP" };
@@ -1128,6 +1148,18 @@ export async function rejectPaymentSubmission(paymentId: string, adminId: string
     paymentMethod: doc.paymentMethod ?? "UPI_MANUAL",
     riskFlags: (doc as { riskFlags?: string[] }).riskFlags ?? [],
   });
+
+  // Notify student about payment rejection
+  await createNotification({
+    userId: doc.studentId,
+    title: "Payment Rejected",
+    body: r
+      ? `Your payment submission was not approved. Reason: ${r.slice(0, 150)}${r.length > 150 ? "…" : ""}. You may submit a new payment.`
+      : "Your payment submission was not approved. Please submit a new payment or contact support.",
+    type: "PAYMENT_REJECTED",
+    referenceId: String(doc._id),
+  }).catch(() => {});
+
   return { ok: true };
 }
 

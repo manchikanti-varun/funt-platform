@@ -138,7 +138,7 @@ export default function NewCoursePage() {
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
         <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">New Course</h2>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">Create Course</h2>
           <p className="mt-1 text-sm text-slate-600">Add a title, description, and select Global Chapters in the order they will appear in the course.</p>
         </div>
 

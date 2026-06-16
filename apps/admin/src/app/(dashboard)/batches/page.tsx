@@ -154,7 +154,7 @@ export default function BatchesPage() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                New Batch
+                Create Batch
               </Link>
             ) : null
           }
@@ -204,7 +204,7 @@ export default function BatchesPage() {
               href="/batches/new"
               className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-teal-700"
             >
-              New Batch
+              Create Batch
             </Link>
           </div>
         ) : (

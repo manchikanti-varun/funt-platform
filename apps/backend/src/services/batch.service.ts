@@ -11,6 +11,7 @@ import { AttendanceModel } from "../models/Attendance.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { BATCH_STATUS, COURSE_STATUS, COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
 import { batchHasDemoCourses, syncAllStudentsToDemoBatch } from "./demoEnrollment.service.js";
@@ -428,6 +429,7 @@ export async function createBatch(input: CreateBatchInput) {
   });
 
   await createAuditLog("BATCH_CREATED", input.createdBy, ENTITY_BATCH, String(doc._id));
+  await cacheDel(CACHE_KEYS.adminBatches());
   if (batchHasDemoCourses(doc as unknown as BatchDoc)) {
     await syncAllStudentsToDemoBatch(String(doc._id), input.createdBy);
   }
@@ -675,6 +677,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
 
   await doc.save();
   await createAuditLog("BATCH_UPDATED", performedBy, ENTITY_BATCH, String(doc._id));
+  await cacheDel(CACHE_KEYS.adminBatches());
   if (input.trainerId !== undefined && input.trainerId !== hadTrainer) {
     await createAuditLog("TRAINER_ASSIGNED", performedBy, ENTITY_BATCH, String(doc._id));
   }

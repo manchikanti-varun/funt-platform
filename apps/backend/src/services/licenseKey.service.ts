@@ -7,6 +7,8 @@ import { CourseModel } from "../models/Course.model.js";
 import { UserModel } from "../models/User.model.js";
 import { getBatchCourseSnapshots } from "./batch.service.js";
 import { createEnrollment } from "./enrollment.service.js";
+import { createAuditLog } from "./audit.service.js";
+import { createNotification } from "./notification.service.js";
 import { unlockMilestonesByLicenseKey } from "./learningPlan.service.js";
 import { ENROLLMENT_STATUS, LICENSE_KEY_TYPE } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
@@ -365,6 +367,23 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
     { _id: license._id },
     { $set: { usedByStudentId: studentId, usedAt: new Date() } }
   ).exec();
+
+  // Audit: license redeemed
+  await createAuditLog("LICENSE_KEY_REDEEMED", studentId, "LicenseKey", String(license._id), {
+    courseId: license.courseId,
+    batchId,
+    licenseType: licenseType ?? LICENSE_KEY_TYPE.COURSE_ACCESS,
+  }).catch(() => {});
+
+  // Notify student
+  const courseName = titleFromBatchSnapshot(batch as BatchLean | undefined, String(license.courseId)) ?? "Course";
+  await createNotification({
+    userId: studentId,
+    title: "License Key Redeemed ✅",
+    body: `You've been enrolled in ${courseName} using your license key.`,
+    type: "LICENSE_KEY_REDEEMED",
+    referenceId: String(license._id),
+  }).catch(() => {});
 
   // ── Learning Plan: unlock milestones if this is a milestone-type license key ──
   if (isMilestoneKey && license.courseId) {

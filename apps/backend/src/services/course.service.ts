@@ -5,6 +5,7 @@ import { GlobalModuleModel } from "../models/GlobalModule.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
 import { COURSE_STATUS, MODULE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
 import { generateCourseId } from "../utils/funtIdGenerator.js";
 import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
@@ -13,6 +14,15 @@ import { getBatchCourseSnapshots } from "./batch.service.js";
 
 const ENTITY_COURSE = "Course";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
+
+/** Invalidate course-related caches after any mutation. */
+async function invalidateCourseCaches(): Promise<void> {
+  await Promise.all([
+    cacheDel(CACHE_KEYS.adminCourses()),
+    cacheDel(CACHE_KEYS.exploreCourses()),
+    cacheDel(CACHE_KEYS.upcomingCourses()),
+  ]);
+}
 
 function decodeEncodedRichText(input: string | undefined | null): string {
   let out = (input ?? "").replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ");
@@ -331,6 +341,7 @@ export async function createCourse(input: CreateCourseInput) {
   });
 
   await createAuditLog("COURSE_CREATED", input.createdBy, ENTITY_COURSE, String(doc._id));
+  await invalidateCourseCaches();
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 
@@ -400,6 +411,7 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
     }
   }
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));
+  await invalidateCourseCaches();
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 
@@ -657,6 +669,7 @@ export async function archiveCourse(id: string, performedBy: string) {
   ).exec();
   if (!doc) throw new AppError("Course not found", 404);
   await createAuditLog("COURSE_ARCHIVED", performedBy, ENTITY_COURSE, String(doc._id));
+  await invalidateCourseCaches();
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 

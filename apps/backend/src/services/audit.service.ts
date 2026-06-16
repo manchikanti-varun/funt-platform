@@ -16,6 +16,17 @@ function isMongoId(s: string): boolean {
 }
 
 export type AuditAction =
+  | "USER_CREATED"
+  | "USER_SUSPENDED"
+  | "USER_ARCHIVED"
+  | "USER_ACTIVATED"
+  | "USER_ROLE_CHANGED"
+  | "USER_PASSWORD_RESET"
+  | "USER_USERNAME_CHANGED"
+  | "USER_LOGIN_SUCCESS"
+  | "USER_LOGIN_FAILED"
+  | "USER_SIGNUP"
+  | "USER_GOOGLE_SIGNUP"
   | "MODULE_CREATED"
   | "MODULE_UPDATED"
   | "MODULE_ARCHIVED"
@@ -110,7 +121,9 @@ export type AuditAction =
   | "IMPORT_STARTED"
   | "IMPORT_COMPLETED"
   | "RESTORE_STARTED"
-  | "RESTORE_COMPLETED";
+  | "RESTORE_COMPLETED"
+  | "COUPON_REDEEMED"
+  | "LICENSE_KEY_REDEEMED";
 
 export async function createAuditLog(
   action: AuditAction,
@@ -120,13 +133,40 @@ export async function createAuditLog(
   meta?: Record<string, unknown>,
   session?: ClientSession
 ): Promise<void> {
+  // Pre-compute display labels so listAuditLogs doesn't need to look them up
+  let performedByDisplay: string | undefined;
+  let targetIdDisplay: string | undefined;
+
+  try {
+    if (isMongoId(performedBy)) {
+      const user = await UserModel.findById(performedBy).select("username").lean().exec();
+      performedByDisplay = (user as { username?: string } | null)?.username ?? undefined;
+    } else {
+      performedByDisplay = performedBy; // e.g. "public", "system"
+    }
+  } catch {
+    // Non-critical — proceed without display name
+  }
+
+  try {
+    if (meta && typeof (meta as { username?: string }).username === "string") {
+      targetIdDisplay = (meta as { username: string }).username;
+    } else if (meta && typeof (meta as { ticketNumber?: string }).ticketNumber === "string") {
+      targetIdDisplay = (meta as { ticketNumber: string }).ticketNumber;
+    }
+  } catch {
+    // Non-critical
+  }
+
   await AuditLogModel.create(
     [
       {
         action,
         performedBy,
+        performedByDisplay,
         targetEntity,
         targetId,
+        targetIdDisplay,
         timestamp: new Date(),
         ...(meta ? { meta } : {}),
       },
@@ -182,10 +222,25 @@ export async function listAuditLogs(
     AuditLogModel.countDocuments(query).exec(),
   ]);
 
-  const performedByIds = [...new Set(logs.map((d) => d.performedBy).filter(isMongoId))] as string[];
+  // Separate logs that need lookups (legacy: missing pre-computed labels) from those that don't
+  const needsPerformerLookup: string[] = [];
+  const needsTargetLookup: Array<{ entity: string; targetId: string }> = [];
+
+  for (const d of logs) {
+    const doc = d as { performedByDisplay?: string; targetIdDisplay?: string; performedBy: string; targetEntity: string; targetId: string };
+    if (!doc.performedByDisplay && isMongoId(doc.performedBy)) {
+      needsPerformerLookup.push(doc.performedBy);
+    }
+    if (!doc.targetIdDisplay) {
+      needsTargetLookup.push({ entity: doc.targetEntity, targetId: doc.targetId });
+    }
+  }
+
+  // Only do legacy lookups if there are records missing pre-computed labels
   const userMap = new Map<string, string>();
-  if (performedByIds.length > 0) {
-    const users = await UserModel.find({ _id: { $in: performedByIds } }).select("_id username").lean().exec();
+  const uniquePerformerIds = [...new Set(needsPerformerLookup)];
+  if (uniquePerformerIds.length > 0) {
+    const users = await UserModel.find({ _id: { $in: uniquePerformerIds } }).select("_id username").lean().exec();
     for (const u of users) {
       const id = String((u as { _id: unknown })._id);
       const username = (u as { username?: string }).username;
@@ -193,108 +248,96 @@ export async function listAuditLogs(
     }
   }
 
-  const certIds = logs.filter((d) => d.targetEntity === "Certificate").map((d) => String(d.targetId ?? "").trim()).filter(Boolean);
-  const certMap = new Map<string, string>();
-  if (certIds.length > 0) {
-    const certMongoIds = certIds.filter((id) => isMongoId(id));
-    const certHumanIds = certIds.filter((id) => !isMongoId(id));
-    const certs = await CertificateModel.find({
-      $or: [
-        ...(certMongoIds.length > 0 ? [{ _id: { $in: certMongoIds } }] : []),
-        ...(certHumanIds.length > 0 ? [{ certificateId: { $in: certHumanIds } }] : []),
-      ],
-    })
-      .select("_id certificateId")
-      .lean()
-      .exec();
-    for (const c of certs) {
-      const mongoId = String((c as { _id: unknown })._id);
-      const humanId = String((c as { certificateId?: string }).certificateId ?? "").trim();
-      if (humanId) {
-        certMap.set(mongoId, humanId);
-        certMap.set(humanId, humanId);
+  // Group target lookups by entity type — only for records missing targetIdDisplay
+  const targetDisplayMap = new Map<string, string>();
+  const entitiesNeedingLookup = new Set(needsTargetLookup.map((t) => t.entity));
+
+  if (entitiesNeedingLookup.has("Certificate")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "Certificate").map((t) => t.targetId);
+    const certMongoIds = ids.filter(isMongoId);
+    const certHumanIds = ids.filter((id) => !isMongoId(id));
+    if (ids.length > 0) {
+      const certs = await CertificateModel.find({
+        $or: [
+          ...(certMongoIds.length > 0 ? [{ _id: { $in: certMongoIds } }] : []),
+          ...(certHumanIds.length > 0 ? [{ certificateId: { $in: certHumanIds } }] : []),
+        ],
+      }).select("_id certificateId").lean().exec();
+      for (const c of certs) {
+        const mongoId = String((c as { _id: unknown })._id);
+        const humanId = String((c as { certificateId?: string }).certificateId ?? "").trim();
+        if (humanId) { targetDisplayMap.set(`Certificate:${mongoId}`, humanId); targetDisplayMap.set(`Certificate:${humanId}`, humanId); }
       }
     }
   }
 
-  const batchIds = logs.filter((d) => d.targetEntity === "Batch").map((d) => d.targetId);
-  const batchMap = new Map<string, string>();
-  if (batchIds.length > 0) {
-    const batches = await BatchModel.find({ _id: { $in: batchIds } }).select("_id name batchId").lean().exec();
-    for (const b of batches) {
-      const id = String((b as { _id: unknown })._id);
-      const name = ((b as { name?: string }).name ?? "").trim();
-      const code = ((b as { batchId?: string }).batchId ?? "").trim();
-      const label = name && code ? `${name} (${code})` : name || code || id;
-      batchMap.set(id, label);
+  if (entitiesNeedingLookup.has("Batch")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "Batch").map((t) => t.targetId);
+    if (ids.length > 0) {
+      const batches = await BatchModel.find({ _id: { $in: ids } }).select("_id name batchId").lean().exec();
+      for (const b of batches) {
+        const id = String((b as { _id: unknown })._id);
+        const name = ((b as { name?: string }).name ?? "").trim();
+        const code = ((b as { batchId?: string }).batchId ?? "").trim();
+        targetDisplayMap.set(`Batch:${id}`, name && code ? `${name} (${code})` : name || code || id);
+      }
     }
   }
 
-  const courseIds = logs.filter((d) => d.targetEntity === "Course").map((d) => d.targetId);
-  const courseMap = new Map<string, string>();
-  if (courseIds.length > 0) {
-    const courses = await CourseModel.find({ _id: { $in: courseIds } }).select("_id courseId title").lean().exec();
-    for (const c of courses) {
-      const id = String((c as { _id: unknown })._id);
-      const title = ((c as { title?: string }).title ?? "").trim();
-      const cid = ((c as { courseId?: string }).courseId ?? "").trim();
-      const label = title && cid ? `${title} (${cid})` : title || cid || id;
-      courseMap.set(id, label);
+  if (entitiesNeedingLookup.has("Course")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "Course").map((t) => t.targetId);
+    if (ids.length > 0) {
+      const courses = await CourseModel.find({ _id: { $in: ids } }).select("_id courseId title").lean().exec();
+      for (const c of courses) {
+        const id = String((c as { _id: unknown })._id);
+        const title = ((c as { title?: string }).title ?? "").trim();
+        const cid = ((c as { courseId?: string }).courseId ?? "").trim();
+        targetDisplayMap.set(`Course:${id}`, title && cid ? `${title} (${cid})` : title || cid || id);
+      }
     }
   }
 
-  const assignmentIds = logs.filter((d) => d.targetEntity === "GlobalAssignment").map((d) => d.targetId);
-  const assignmentMap = new Map<string, string>();
-  if (assignmentIds.length > 0) {
-    const assignments = await GlobalAssignmentModel.find({ _id: { $in: assignmentIds } }).select("_id assignmentId").lean().exec();
-    for (const a of assignments) {
-      const aid = (a as { assignmentId?: string }).assignmentId;
-      if (aid) assignmentMap.set(String((a as { _id: unknown })._id), aid);
+  if (entitiesNeedingLookup.has("GlobalAssignment")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "GlobalAssignment").map((t) => t.targetId);
+    if (ids.length > 0) {
+      const assignments = await GlobalAssignmentModel.find({ _id: { $in: ids } }).select("_id assignmentId").lean().exec();
+      for (const a of assignments) { const aid = (a as { assignmentId?: string }).assignmentId; if (aid) targetDisplayMap.set(`GlobalAssignment:${String((a as { _id: unknown })._id)}`, aid); }
     }
   }
 
-  const moduleIds = logs.filter((d) => d.targetEntity === "GlobalModule").map((d) => d.targetId);
-  const moduleMap = new Map<string, string>();
-  if (moduleIds.length > 0) {
-    const modules = await GlobalModuleModel.find({ _id: { $in: moduleIds } }).select("_id moduleId").lean().exec();
-    for (const m of modules) {
-      const mid = (m as { moduleId?: string }).moduleId;
-      if (mid) moduleMap.set(String((m as { _id: unknown })._id), mid);
+  if (entitiesNeedingLookup.has("GlobalModule")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "GlobalModule").map((t) => t.targetId);
+    if (ids.length > 0) {
+      const modules = await GlobalModuleModel.find({ _id: { $in: ids } }).select("_id moduleId").lean().exec();
+      for (const m of modules) { const mid = (m as { moduleId?: string }).moduleId; if (mid) targetDisplayMap.set(`GlobalModule:${String((m as { _id: unknown })._id)}`, mid); }
     }
   }
 
-  const submissionIds = logs.filter((d) => d.targetEntity === "AssignmentSubmission").map((d) => d.targetId);
-  const submissionMap = new Map<string, string>();
-  if (submissionIds.length > 0) {
-    const submissions = await AssignmentSubmissionModel.find({ _id: { $in: submissionIds } }).select("_id submissionId").lean().exec();
-    for (const s of submissions) {
-      const sid = (s as { submissionId?: string }).submissionId;
-      if (sid) submissionMap.set(String((s as { _id: unknown })._id), sid);
+  if (entitiesNeedingLookup.has("AssignmentSubmission")) {
+    const ids = needsTargetLookup.filter((t) => t.entity === "AssignmentSubmission").map((t) => t.targetId);
+    if (ids.length > 0) {
+      const submissions = await AssignmentSubmissionModel.find({ _id: { $in: ids } }).select("_id submissionId").lean().exec();
+      for (const s of submissions) { const sid = (s as { submissionId?: string }).submissionId; if (sid) targetDisplayMap.set(`AssignmentSubmission:${String((s as { _id: unknown })._id)}`, sid); }
     }
-  }
-
-  function targetIdDisplay(entity: string, targetId: string): string {
-    if (entity === "Certificate") return certMap.get(targetId) ?? targetId;
-    if (entity === "Batch") return batchMap.get(targetId) ?? targetId;
-    if (entity === "Course") return courseMap.get(targetId) ?? targetId;
-    if (entity === "GlobalAssignment") return assignmentMap.get(targetId) ?? targetId;
-    if (entity === "GlobalModule") return moduleMap.get(targetId) ?? targetId;
-    if (entity === "AssignmentSubmission") return submissionMap.get(targetId) ?? targetId;
-    return targetId;
   }
 
   return {
-    logs: logs.map((d) => ({
-      id: String(d._id),
-      action: d.action,
-      performedBy: d.performedBy,
-      performedByDisplay: userMap.get(d.performedBy) ?? d.performedBy,
-      targetEntity: d.targetEntity,
-      targetId: d.targetId,
-      targetIdDisplay: targetIdDisplay(d.targetEntity, d.targetId),
-      timestamp: d.timestamp,
-      meta: d.meta,
-    })),
+    logs: logs.map((d) => {
+      const doc = d as { performedByDisplay?: string; targetIdDisplay?: string; performedBy: string; targetEntity: string; targetId: string };
+      const performerDisplay = doc.performedByDisplay ?? userMap.get(doc.performedBy) ?? doc.performedBy;
+      const targetDisplay = doc.targetIdDisplay ?? targetDisplayMap.get(`${doc.targetEntity}:${doc.targetId}`) ?? doc.targetId;
+      return {
+        id: String(d._id),
+        action: d.action,
+        performedBy: d.performedBy,
+        performedByDisplay: performerDisplay,
+        targetEntity: d.targetEntity,
+        targetId: d.targetId,
+        targetIdDisplay: targetDisplay,
+        timestamp: d.timestamp,
+        meta: d.meta,
+      };
+    }),
     total,
   };
 }

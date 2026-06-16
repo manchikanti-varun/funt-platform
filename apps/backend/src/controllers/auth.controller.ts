@@ -48,6 +48,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 import { OAuthNonceModel } from "../models/OAuthNonce.model.js";
 import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
+import { createAuditLog } from "../services/audit.service.js";
 
 const OAUTH_NONCE_COOKIE = "funt_oauth_nonce";
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
@@ -398,6 +399,7 @@ export const signupStudent = asyncHandler(async (req: Request, res: Response): P
       city: body.city?.trim() || undefined,
     });
     await ensureDemoEnrollmentsForStudent(result.id);
+    await createAuditLog("USER_SIGNUP", result.id, "User", result.id, { username: result.username, method: "password" }).catch(() => {});
     const token = signToken(
       { userId: result.id, username: result.username, roles: [ROLE.STUDENT], tokenVersion: 0 },
       jwtSecret,
@@ -755,6 +757,7 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     id = result.id;
     createdUsername = result.username;
     await ensureDemoEnrollmentsForStudent(id);
+    await createAuditLog("USER_GOOGLE_SIGNUP", id, "User", id, { username: createdUsername, method: "google" }).catch(() => {});
   } catch (err: unknown) {
     const mongoErr = err as { code?: number };
     if (mongoErr?.code === 11000) {

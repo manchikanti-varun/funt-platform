@@ -10,6 +10,29 @@ function resolveApiUrl(): string {
 
 export const API_URL = resolveApiUrl();
 
+const CSRF_COOKIE_NAME = "funt_csrf";
+
+/**
+ * Reads the CSRF token from the cookie jar.
+ */
+function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Ensures the CSRF cookie is set. Call once on app boot.
+ */
+export async function ensureCsrfToken(): Promise<void> {
+  if (getCsrfToken()) return;
+  try {
+    await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
+  } catch {
+    // Non-critical
+  }
+}
+
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_URL}${normalizedPath}`;
@@ -134,6 +157,13 @@ export async function api<T>(
   const legacy = getToken()?.trim();
   const headers: HeadersInit = { "Content-Type": "application/json", ...options.headers };
   if (legacy) (headers as Record<string, string>)["Authorization"] = `Bearer ${legacy}`;
+
+  // Attach CSRF token for state-changing requests
+  const method = (options.method ?? "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) (headers as Record<string, string>)["X-CSRF-Token"] = csrfToken;
+  }
 
   let res: Response;
   try {

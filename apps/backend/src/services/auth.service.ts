@@ -5,6 +5,7 @@ import { ROLE, ACCOUNT_STATUS } from "@funt-platform/constants";
 import { UserModel } from "../models/User.model.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
+import { createAuditLog } from "./audit.service.js";
 import {
   buildAdminUsernameBase,
   normalizeStudentUsername,
@@ -392,6 +393,11 @@ export async function login(
           : {}),
       }
     ).exec();
+    // Audit: failed login attempt (fire-and-forget, non-blocking)
+    createAuditLog("USER_LOGIN_FAILED", String(user._id), "User", String(user._id), {
+      username: user.username,
+      ip: meta?.ip,
+    }).catch(() => {});
     throw new AppError("Invalid username or password", 401);
   }
 
@@ -426,6 +432,11 @@ export async function login(
     jwtSecret,
     expiresIn
   );
+  // Audit: successful login (fire-and-forget, non-blocking)
+  createAuditLog("USER_LOGIN_SUCCESS", String(user._id), "User", String(user._id), {
+    username: user.username,
+    ip: meta?.ip,
+  }).catch(() => {});
   return { token, user: toSafeUser(user) };
 }
 

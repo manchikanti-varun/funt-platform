@@ -60,8 +60,10 @@ export const deleteShopProduct = asyncHandler(async (req: Request, res: Response
   successRes(res, { ok: true }, "Product deleted");
 });
 
-export const listShopOrdersAdmin = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  const data = await service.listShopOrdersAdmin();
+export const listShopOrdersAdmin = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const page = Math.max(1, Number(req.query.page ?? 1));
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit ?? 50)));
+  const data = await service.listShopOrdersAdmin(page, limit);
   successRes(res, data);
 });
 

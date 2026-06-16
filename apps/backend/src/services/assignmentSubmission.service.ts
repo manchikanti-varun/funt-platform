@@ -8,6 +8,7 @@ import { findBatchByParam, getBatchCourseSnapshots, getModuleAssignmentOverrides
 import { findAssignmentByParam } from "./globalAssignment.service.js";
 import { SUBMISSION_TYPE, SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
+import { createNotification } from "./notification.service.js";
 import { awardStudentXp } from "./studentCourse.service.js";
 import { requireActiveEnrollment } from "./enrollment.service.js";
 import { ensureFirstAssignmentBadge } from "./achievement.service.js";
@@ -140,6 +141,15 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
     await createAuditLog("ASSIGNMENT_APPROVED", input.reviewedBy, "AssignmentSubmission", String(sub._id));
     await awardStudentXp(sub.studentId, 50).catch(() => {});
     await ensureFirstAssignmentBadge(sub.studentId).catch(() => {});
+
+    // Notify student of approval
+    await createNotification({
+      userId: sub.studentId,
+      title: "Assignment Approved ✅",
+      body: `Your assignment submission has been approved. Great work!`,
+      type: "ASSIGNMENT_REVIEWED",
+      referenceId: String(sub._id),
+    }).catch(() => {});
     const now = new Date();
     const subCourseId = (sub as { courseId?: string }).courseId;
     const progressQuery =
@@ -201,6 +211,17 @@ export async function reviewSubmission(input: ReviewSubmissionInput) {
     }
   } else {
     await createAuditLog("ASSIGNMENT_REJECTED", input.reviewedBy, "AssignmentSubmission", String(sub._id));
+
+    // Notify student of rejection
+    await createNotification({
+      userId: sub.studentId,
+      title: "Assignment Needs Revision",
+      body: input.feedback
+        ? `Your assignment submission was returned for revision. Feedback: ${input.feedback.slice(0, 100)}${input.feedback.length > 100 ? "…" : ""}`
+        : "Your assignment submission was returned for revision. Please check the feedback and resubmit.",
+      type: "ASSIGNMENT_REVIEWED",
+      referenceId: String(sub._id),
+    }).catch(() => {});
   }
 
   return {

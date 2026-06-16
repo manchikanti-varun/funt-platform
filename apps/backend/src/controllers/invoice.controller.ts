@@ -77,7 +77,7 @@ export const getMyInvoiceById = asyncHandler(async (req: Request, res: Response)
   const id = req.params.id;
   if (!id) throw new AppError("Invoice ID is required", 400);
   const data = await invoiceService.getInvoiceById(id);
-  if (data.studentId !== studentId) throw new AppError("Invoice not found", 404);
+  if (String(data.studentId) !== String(studentId)) throw new AppError("Invoice not found", 404);
   successRes(res, data);
 });
 
@@ -114,7 +114,7 @@ export const downloadStudentInvoicePdf = asyncHandler(async (req: Request, res: 
   const id = req.params.id;
   if (!id) throw new AppError("Invoice ID is required", 400);
   const inv = await invoiceService.getInvoiceById(id);
-  if (inv.studentId !== studentId) throw new AppError("Invoice not found", 404);
+  if (String(inv.studentId) !== String(studentId)) throw new AppError("Invoice not found", 404);
   const buffer = await invoiceService.generateInvoicePdfBuffer(id);
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", invoicePdfContentDisposition(inv.invoiceNumber));

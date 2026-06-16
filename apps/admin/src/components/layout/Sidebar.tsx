@@ -71,12 +71,40 @@ export function Sidebar({ roles }: SidebarProps) {
         <SidebarNavLink href="/dashboard" isActive={pathname === "/dashboard"}>
           Home
         </SidebarNavLink>
-        <SidebarNavLink href="/knowledge-center" isActive={pathname.startsWith("/knowledge-center")}>
-          Knowledge Center
-        </SidebarNavLink>
+        {showContentAndBatches && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>Academic</p>
+            <SidebarNavLink href="/courses" isActive={pathname.startsWith("/courses")}>
+              Courses
+            </SidebarNavLink>
+            <SidebarNavLink href="/batches" isActive={pathname.startsWith("/batches")}>
+              Batches
+            </SidebarNavLink>
+            <SidebarNavLink href="/global-modules" isActive={pathname.startsWith("/global-modules")}>
+              Chapters
+            </SidebarNavLink>
+            <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
+              Assignments
+            </SidebarNavLink>
+            <SidebarNavLink href="/assignments" isActive={pathname.startsWith("/assignments")}>
+              Assignment reviews
+            </SidebarNavLink>
+            <SidebarNavLink
+              href="/attendance"
+              isActive={pathname === "/attendance" || (pathname.startsWith("/batches") && pathname.includes("/attendance"))}
+            >
+              Attendance
+            </SidebarNavLink>
+            {isAdmin && (
+              <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates")}>
+                Certificates
+              </SidebarNavLink>
+            )}
+          </>
+        )}
         {isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Team</p>
+            <p className={SECTION_LABEL_CLASS}>People</p>
             <SidebarNavLink href="/team-management" isActive={pathname.startsWith("/team-management") || pathname.startsWith("/admin-management")}>
               Team management
             </SidebarNavLink>
@@ -89,57 +117,23 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/badges" isActive={pathname.startsWith("/badges")}>
               Badges
             </SidebarNavLink>
-          </>
-        )}
-        {showContentAndBatches && (
-          <>
-            <p className={SECTION_LABEL_CLASS}>Content</p>
-            <SidebarNavLink href="/global-modules" isActive={pathname.startsWith("/global-modules")}>
-              Chapters
-            </SidebarNavLink>
-            <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
-              Assignments
-            </SidebarNavLink>
-            <SidebarNavLink href="/assignments" isActive={pathname.startsWith("/assignments")}>
-              Assignment reviews
-            </SidebarNavLink>
-            <SidebarNavLink href="/courses" isActive={pathname.startsWith("/courses")}>
-              Courses
-            </SidebarNavLink>
-            <SidebarNavLink href="/batches" isActive={pathname.startsWith("/batches")}>
-              Batches
-            </SidebarNavLink>
-          </>
-        )}
-        {isAdmin && (
-          <>
-            <p className={SECTION_LABEL_CLASS}>Operations</p>
-            <SidebarNavLink href="/enrollment-requests" isActive={pathname.startsWith("/enrollment-requests")}>
-              Enrollment requests
-            </SidebarNavLink>
             <SidebarNavLink href="/leaves" isActive={pathname.startsWith("/leaves")}>
               Leave management
-            </SidebarNavLink>
-            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
-              Support desk
             </SidebarNavLink>
           </>
         )}
         {/* Trainers get access to their own leaves and support desk (assigned tickets) */}
         {isTrainer && !isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <p className={SECTION_LABEL_CLASS}>People</p>
             <SidebarNavLink href="/leaves/my" isActive={pathname.startsWith("/leaves/my")}>
               My leaves
-            </SidebarNavLink>
-            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
-              Support desk
             </SidebarNavLink>
           </>
         )}
         {isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Payments & Commerce</p>
+            <p className={SECTION_LABEL_CLASS}>Commerce</p>
             <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
               Payment approvals
             </SidebarNavLink>
@@ -149,52 +143,61 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/finance" isActive={pathname.startsWith("/finance")}>
               Finance dashboard
             </SidebarNavLink>
-            <SidebarNavLink href="/payment-qr" isActive={pathname.startsWith("/payment-qr")}>
-              UPI QR center
-            </SidebarNavLink>
-            <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
-              Shop
-            </SidebarNavLink>
             {isSuperAdmin && (
               <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
                 Coupons
               </SidebarNavLink>
             )}
-            <SidebarNavLink
-              href="/attendance"
-              isActive={pathname === "/attendance" || (pathname.startsWith("/batches") && pathname.includes("/attendance"))}
-            >
-              Attendance
+            <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
+              Shop
+            </SidebarNavLink>
+            {isSuperAdmin && (
+              <SidebarNavLink href="/license-keys" isActive={pathname.startsWith("/license-keys")}>
+                License keys
+              </SidebarNavLink>
+            )}
+            <SidebarNavLink href="/payment-qr" isActive={pathname.startsWith("/payment-qr")}>
+              UPI QR center
             </SidebarNavLink>
           </>
         )}
+        {(isAdmin || (isTrainer && !isAdmin)) && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>Support</p>
+            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
+              Support desk
+            </SidebarNavLink>
+            {isAdmin && (
+              <SidebarNavLink href="/enrollment-requests" isActive={pathname.startsWith("/enrollment-requests")}>
+                Enrollment requests
+              </SidebarNavLink>
+            )}
+          </>
+        )}
+        <SidebarNavLink href="/knowledge-center" isActive={pathname.startsWith("/knowledge-center")}>
+          Knowledge Center
+        </SidebarNavLink>
         {isAdmin && (
           <>
-            <p className={SECTION_LABEL_CLASS}>Data</p>
+            <p className={SECTION_LABEL_CLASS}>System</p>
+            {isSuperAdmin && (
+              <>
+                <SidebarNavLink href="/analytics" isActive={pathname.startsWith("/analytics")}>
+                  Analytics
+                </SidebarNavLink>
+                <SidebarNavLink href="/audit-hub" isActive={pathname.startsWith("/audit-hub")}>
+                  Audit hub
+                </SidebarNavLink>
+              </>
+            )}
             <SidebarNavLink href="/import-export" isActive={pathname.startsWith("/import-export")}>
               Import / Export
             </SidebarNavLink>
-          </>
-        )}
-        {isSuperAdmin && (
-          <>
-            <p className={SECTION_LABEL_CLASS}>System</p>
-            <SidebarNavLink href="/analytics" isActive={pathname.startsWith("/analytics")}>
-              Analytics
-            </SidebarNavLink>
-            <SidebarNavLink href="/audit-hub" isActive={pathname.startsWith("/audit-hub")}>
-              Audit hub
-            </SidebarNavLink>
-            <SidebarNavLink href="/audit" isActive={pathname === "/audit"}>
-              Audit log
-            </SidebarNavLink>
-            <SidebarNavLink href="/coupon-audit" isActive={pathname.startsWith("/coupon-audit")}>
-              Coupon audit
-            </SidebarNavLink>
-            <p className={SECTION_LABEL_CLASS}>Config</p>
-            <SidebarNavLink href="/config/content-protection" isActive={pathname.startsWith("/config")}>
-              Content protection
-            </SidebarNavLink>
+            {isSuperAdmin && (
+              <SidebarNavLink href="/config/content-protection" isActive={pathname.startsWith("/config")}>
+                Content protection
+              </SidebarNavLink>
+            )}
           </>
         )}
       </nav>

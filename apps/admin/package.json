@@ -13,6 +13,7 @@
     "clean": "rimraf .next"
   },
   "dependencies": {
+    "@funt-platform/auth-utils": "*",
     "@funt-platform/constants": "*",
     "@funt-platform/rich-text-editor": "*",
     "@funt-platform/types": "*",

@@ -26,6 +26,7 @@ import { formatPaymentMethodsLabel } from "../utils/coursePaymentMethods.js";
 import { setEnrollmentAccessBlocked, setEnrollmentCourseAccessBlocked } from "../services/enrollment.service.js";
 import { setUsernameBySuperAdmin } from "../services/auth.service.js";
 import { successRes } from "../utils/response.js";
+import { createAuditLog } from "../services/audit.service.js";
 import { UserModel } from "../models/User.model.js";
 import { ShopProductModel } from "../models/ShopProduct.model.js";
 import { BatchModel } from "../models/Batch.model.js";
@@ -683,5 +684,7 @@ export const patchUserUsername = asyncHandler(async (req: Request, res: Response
   const { username } = req.body as { username?: string };
   if (!userId || !username?.trim()) throw new AppError("userId and username are required", 400);
   await setUsernameBySuperAdmin(userId, username);
+  const adminId = uid(req);
+  await createAuditLog("USER_USERNAME_CHANGED", adminId, "User", userId, { newUsername: username.trim() }).catch(() => {});
   successRes(res, { ok: true });
 });

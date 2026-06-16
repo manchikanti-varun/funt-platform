@@ -48,6 +48,8 @@ assignmentSubmissionSchema.set("toJSON", {
 });
 
 assignmentSubmissionSchema.index({ studentId: 1, batchId: 1, courseId: 1, moduleOrder: 1 });
+assignmentSubmissionSchema.index({ assignmentId: 1, status: 1 });
+assignmentSubmissionSchema.index({ batchId: 1, assignmentId: 1 });
 
 export const AssignmentSubmissionModel = mongoose.model(
   "AssignmentSubmission",
