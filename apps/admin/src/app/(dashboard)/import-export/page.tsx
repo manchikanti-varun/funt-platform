@@ -112,9 +112,9 @@ function ExportPanel() {
 
 function ImportPanel() {
   const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<unknown>(null);
+  const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"CREATE_NEW" | "MERGE" | "REPLACE">("CREATE_NEW");
 
@@ -146,13 +146,13 @@ function ImportPanel() {
       // Wait a tick for async forEach to complete
       await new Promise((r) => setTimeout(r, 200));
 
-      const res = await api<unknown>("/api/admin/data/import/preview", {
+      const res = await api<Record<string, unknown>>("/api/admin/data/import/preview", {
         method: "POST",
         body: JSON.stringify({ manifest, courses, batches: batchesArr }),
       });
 
       if (res.success) {
-        setPreview(res.data);
+        setPreview(res.data ?? null);
       } else {
         throw new Error(res.message ?? "Preview failed");
       }
@@ -199,7 +199,7 @@ function ImportPanel() {
       const shopProducts = await parseFolder("shop");
       const badgeDefinitions = await parseFolder("badges");
 
-      const res = await api<unknown>("/api/admin/data/import", {
+      const res = await api<Record<string, unknown>>("/api/admin/data/import", {
         method: "POST",
         body: JSON.stringify({
           mode,
@@ -216,7 +216,7 @@ function ImportPanel() {
       });
 
       if (res.success) {
-        setResult(res.data);
+        setResult(res.data ?? null);
       } else {
         throw new Error(res.message ?? "Import failed");
       }
