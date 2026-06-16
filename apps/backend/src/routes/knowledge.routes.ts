@@ -32,7 +32,7 @@ import {
 } from "../controllers/knowledge.controller.js";
 
 const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT] as const;
-const ADMIN_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN] as const;
+const ADMIN_ROLES = [ROLE.SUPER_ADMIN] as const;
 
 // ── Reader router (all authenticated users) ────────────────────────────────
 export const knowledgeReaderRouter = Router();

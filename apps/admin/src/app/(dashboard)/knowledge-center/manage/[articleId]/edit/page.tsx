@@ -84,7 +84,7 @@ export default function EditArticlePage() {
 
   return (
     <AppPageShell>
-      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} />
+      <RequireRoles roles={[ROLE.SUPER_ADMIN]} />
       <BackLink href="/knowledge-center/manage">Back to Manage</BackLink>
       <div className="mx-auto mt-6 max-w-4xl">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Edit Article</h1>

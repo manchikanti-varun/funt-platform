@@ -83,6 +83,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/people-insights" isActive={pathname.startsWith("/people-insights")}>
               People insights
             </SidebarNavLink>
+            <SidebarNavLink href="/profile-search" isActive={pathname.startsWith("/profile-search")}>
+              Profile search
+            </SidebarNavLink>
             <SidebarNavLink href="/badges" isActive={pathname.startsWith("/badges")}>
               Badges
             </SidebarNavLink>
@@ -97,6 +100,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
               Assignments
             </SidebarNavLink>
+            <SidebarNavLink href="/assignments" isActive={pathname.startsWith("/assignments")}>
+              Assignment reviews
+            </SidebarNavLink>
             <SidebarNavLink href="/courses" isActive={pathname.startsWith("/courses")}>
               Courses
             </SidebarNavLink>
@@ -108,6 +114,9 @@ export function Sidebar({ roles }: SidebarProps) {
         {isAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <SidebarNavLink href="/enrollment-requests" isActive={pathname.startsWith("/enrollment-requests")}>
+              Enrollment requests
+            </SidebarNavLink>
             <SidebarNavLink href="/leaves" isActive={pathname.startsWith("/leaves")}>
               Leave management
             </SidebarNavLink>
@@ -159,6 +168,14 @@ export function Sidebar({ roles }: SidebarProps) {
             </SidebarNavLink>
           </>
         )}
+        {isAdmin && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>Data</p>
+            <SidebarNavLink href="/import-export" isActive={pathname.startsWith("/import-export")}>
+              Import / Export
+            </SidebarNavLink>
+          </>
+        )}
         {isSuperAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>System</p>
@@ -167,6 +184,12 @@ export function Sidebar({ roles }: SidebarProps) {
             </SidebarNavLink>
             <SidebarNavLink href="/audit-hub" isActive={pathname.startsWith("/audit-hub")}>
               Audit hub
+            </SidebarNavLink>
+            <SidebarNavLink href="/audit" isActive={pathname === "/audit"}>
+              Audit log
+            </SidebarNavLink>
+            <SidebarNavLink href="/coupon-audit" isActive={pathname.startsWith("/coupon-audit")}>
+              Coupon audit
             </SidebarNavLink>
             <p className={SECTION_LABEL_CLASS}>Config</p>
             <SidebarNavLink href="/config/content-protection" isActive={pathname.startsWith("/config")}>

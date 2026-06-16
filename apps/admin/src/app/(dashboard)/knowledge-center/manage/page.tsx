@@ -110,7 +110,7 @@ export default function ManageKnowledgePage() {
 
   return (
     <AppPageShell className="flex h-full min-h-0 flex-1 flex-col">
-      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} />
+      <RequireRoles roles={[ROLE.SUPER_ADMIN]} />
       <div className="shrink-0 space-y-4 pb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <BackLink href="/knowledge-center">Back to Knowledge Center</BackLink>

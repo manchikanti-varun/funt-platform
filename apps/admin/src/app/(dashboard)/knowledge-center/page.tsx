@@ -78,7 +78,7 @@ export default function KnowledgeCenterPage() {
   const [faqs, setFaqs] = useState<ArticlePreview[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isAdmin = roles?.includes(ROLE.ADMIN) || roles?.includes(ROLE.SUPER_ADMIN);
+  const isSuperAdmin = roles?.includes(ROLE.SUPER_ADMIN);
 
   useEffect(() => {
     Promise.all([
@@ -151,7 +151,7 @@ export default function KnowledgeCenterPage() {
             </button>
           </form>
         </div>
-        {isAdmin && (
+        {isSuperAdmin && (
           <Link
             href="/knowledge-center/manage"
             className="absolute right-4 top-4 flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-white/30 sm:right-6 sm:top-6"
@@ -277,9 +277,9 @@ export default function KnowledgeCenterPage() {
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-800">Knowledge Center is empty</h2>
           <p className="mt-2 max-w-md text-sm text-slate-500">
-            No articles have been published yet. {isAdmin ? "Start by creating your first guide." : "Check back soon for helpful documentation."}
+            No articles have been published yet. {isSuperAdmin ? "Start by creating your first guide." : "Check back soon for helpful documentation."}
           </p>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Link
               href="/knowledge-center/manage/new"
               className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-700"
