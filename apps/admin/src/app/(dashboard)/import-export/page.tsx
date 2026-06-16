@@ -295,7 +295,7 @@ function ImportPanel() {
 
 export default function ImportExportPage() {
   return (
-    <RequireRoles roles={STAFF_ROLES}>
+    <RequireRoles roles={[...STAFF_ROLES]}>
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Import / Export</h1>
