@@ -9,6 +9,7 @@ import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { shouldShowChapterDescription } from "@funt-platform/rich-text-editor";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { useProtection } from "@/components/security/ProtectionContext";
+import { Check, CirclePlay, Lock, ShieldAlert, Award, CreditCard, AlertTriangle } from "lucide-react";
 
 interface ChapterItem {
   order: number;
@@ -69,6 +70,8 @@ interface LearningPlanStatus {
   autoLockPreviousMilestones: boolean;
   currentMilestoneId?: string;
   nextEligibleMilestoneId?: string;
+  totalProgramFeePaise?: number;
+  totalProgramFeeRupees?: number;
   milestones: MilestoneStatus[];
 }
 
@@ -681,6 +684,11 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                     {learningPlan && learningPlan.milestones.length > 0 && (
                       <div className="mb-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wider text-teal-700">Learning Plan</p>
+                        {learningPlan.totalProgramFeeRupees ? (
+                          <p className="mb-2 text-[11px] text-teal-600">
+                            Total program: ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
+                          </p>
+                        ) : null}
                         <ul className="space-y-1.5">
                           {learningPlan.milestones.map((ms) => (
                             <li key={ms.milestoneId} className={`rounded-lg border px-2.5 py-2 text-xs ${
@@ -691,7 +699,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                 : "border-slate-200 bg-white text-slate-500"
                             }`}>
                               <div className="flex items-center gap-1.5 font-semibold">
-                                <span>{ms.completed ? "✓" : ms.unlocked && !ms.locked ? "▶" : "🔒"}</span>
+                                <span>{ms.completed ? <Check className="h-3.5 w-3.5" /> : ms.unlocked && !ms.locked ? <CirclePlay className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}</span>
                                 <span className="flex-1 truncate">{ms.title}</span>
                                 {ms.unlocked && !ms.completed && ms.totalChapters > 0 && (
                                   <span className="shrink-0 font-normal text-teal-600">{ms.completionPct}%</span>
@@ -704,19 +712,22 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                     href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
                                     className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-indigo-500"
                                   >
-                                    Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock
+                                    <CreditCard className="h-3 w-3" />
+                                    {ms.order === 0 ? `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to start` : `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to unlock`}
                                   </Link>
                                 </div>
                               )}
                               {/* Overdue */}
                               {ms.paymentStatus === "OVERDUE" && (
-                                <div className="mt-1 text-[11px] font-semibold text-red-600">Payment overdue</div>
+                                <div className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                                  <AlertTriangle className="h-3 w-3" /> Payment overdue
+                                </div>
                               )}
                               {/* Certificate issued */}
                               {ms.milestoneCertificateId && (
                                 <div className="mt-1">
-                                  <Link href="/certificates" className="text-[11px] font-semibold text-amber-700 hover:underline">
-                                    🏅 View certificate
+                                  <Link href="/certificates" className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:underline">
+                                    <Award className="h-3 w-3" /> View certificate
                                   </Link>
                                 </div>
                               )}
@@ -743,7 +754,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                               }`}
                             >
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                                {m.milestoneLocked ? "🔐" : m.unlocked ? (m.completed ? "✓" : (m.order ?? 0) + 1) : "🔒"}
+                                {m.milestoneLocked ? <ShieldAlert className="h-4 w-4 text-slate-400" /> : m.unlocked ? (m.completed ? <Check className="h-4 w-4 text-emerald-600" /> : <span>{(m.order ?? 0) + 1}</span>) : <Lock className="h-4 w-4 text-slate-400" />}
                               </span>
                               <span className="min-w-0 flex-1 truncate">{m.title}</span>
                               <span className="shrink-0 text-[11px] font-semibold text-slate-55">

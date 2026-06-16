@@ -727,6 +727,12 @@ export async function initializeMilestoneProgress(
       source: MILESTONE_UNLOCK_SOURCE.FREE,
       actorId: "system",
     });
+  } else if (first) {
+    // First milestone requires payment — mark it as eligible so the payment button appears
+    await MilestoneProgressModel.updateOne(
+      { studentId, batchId, courseId, milestoneId: first.milestoneId },
+      { $set: { eligibleForNext: true, eligibleAt: new Date() } }
+    ).exec();
   }
 }
 
@@ -1019,10 +1025,15 @@ export async function getStudentMilestoneStatus(
     .lean()
     .exec();
 
+  // Calculate total program fee for display
+  const totalProgramFeePaise = ordered.reduce((sum, m) => sum + (m.feeInPaise ?? 0), 0);
+
   return {
     autoLockPreviousMilestones: !!(courseSnapshot as { learningPlan?: { autoLockPreviousMilestones?: boolean } })?.learningPlan?.autoLockPreviousMilestones,
     currentMilestoneId: (enrollment as { currentMilestoneId?: string } | null)?.currentMilestoneId,
     nextEligibleMilestoneId: (enrollment as { nextEligibleMilestoneId?: string } | null)?.nextEligibleMilestoneId,
+    totalProgramFeePaise,
+    totalProgramFeeRupees: totalProgramFeePaise / 100,
     milestones: ordered.map((m) => {
       const p = progressMap.get(m.milestoneId) as Record<string, unknown> | undefined;
       return {

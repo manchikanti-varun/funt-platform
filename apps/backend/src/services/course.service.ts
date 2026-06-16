@@ -157,6 +157,8 @@ function toCourseResponse(doc: {
     status: doc.status,
     createdBy: doc.createdBy,
     moderatorIds: doc.moderatorIds ?? [],
+    deliveryMode: (doc as { deliveryMode?: string }).deliveryMode ?? "FULL_ACCESS",
+    learningPlan: (doc as { learningPlan?: unknown }).learningPlan ?? undefined,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

@@ -11,6 +11,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { BackLink } from "@/components/ui/BackLink";
 import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles } from "@/components/auth/RequireRoles";
+import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 
 interface AssignmentOption {
@@ -149,14 +150,12 @@ export default function NewGlobalChapterPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-semibold text-slate-700">
-              Video URL (uploaded/hosted video)
-            </label>
-            <input
+            <VideoUploadField
+              label="Chapter Video (upload MP4)"
               value={videoUrl}
-              onChange={(e) => update("videoUrl", e.target.value)}
-              className="input"
-              placeholder="https://..."
+              onChange={(v) => update("videoUrl", v)}
+              courseId="global"
+              moduleId={tempModuleId.current}
             />
           </div>
           <div className="sm:col-span-2">
