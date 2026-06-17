@@ -51,7 +51,7 @@ const DEFAULT_POLICY: ContentProtectionPolicy = {
   screenshotProtection: true,
   screenRecordingProtection: false,
   screenShareProtection: false,
-  devToolsProtection: true,
+  devToolsProtection: false,  // Disabled by default — high false-positive rate on Windows with display scaling
 };
 
 const DEFAULT_WATERMARK: WatermarkConfig = {

@@ -56,7 +56,7 @@ router.get("/courses/explore", getExploreCourses);
 router.get("/courses/upcoming", getUpcomingCourses);
 router.get("/batches", getExploreBatches);
 
-router.use(authMiddleware, requireRoles(ROLE.STUDENT, ROLE.ADMIN, ROLE.SUPER_ADMIN));
+router.use(authMiddleware, requireRoles(ROLE.STUDENT));
 
 router.get("/batches/:batchId/course", getBatchCourse);
 router.get("/courses", getMyCourses);

@@ -3,33 +3,40 @@
 /**
  * DevToolsDetector
  *
- * Attempts to detect when browser DevTools are opened using the most
- * reliable browser-available technique: measuring the difference between
- * window.outerWidth/outerHeight and window.innerWidth/innerHeight.
+ * Attempts to detect when browser DevTools are opened using the
+ * window outer/inner size difference technique.
  *
  * When DevTools are docked to the side or bottom the outer/inner
- * difference grows significantly. A threshold of ~160px catches most cases.
+ * difference grows significantly beyond what the browser chrome
+ * (title bar, bookmarks bar, taskbar) normally accounts for.
  *
- * Also uses the debugger/toString trick (console.log timing) as a secondary
- * signal. This is best-effort — sophisticated users can defeat it.
+ * Threshold is set conservatively (200px) to avoid false positives
+ * from Windows taskbar, bookmarks bar, extensions panel, or
+ * display scaling > 100%.
  *
  * On detection:
  *   - Logs a CONTENT_PROTECTION_DEVTOOLS_DETECTED audit event
- *   - Shows an in-page warning banner (does not block content — too disruptive)
+ *   - Shows an in-page warning banner (does not block content)
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useProtection } from "./ProtectionContext";
 
-const DEVTOOLS_SIZE_THRESHOLD = 160; // px difference that indicates docked DevTools
-const POLL_INTERVAL_MS = 2000;
-// Debounce: fire the audit event at most once per session
-const MIN_EVENT_INTERVAL_MS = 30_000;
+// Conservative threshold: browser chrome is typically 80-150px.
+// DevTools docked adds 300-600px. Set to 200 to avoid false positives
+// from taskbar + bookmarks bar + extensions on high-DPI Windows displays.
+const DEVTOOLS_SIZE_THRESHOLD = 200;
+const POLL_INTERVAL_MS = 3000;
+// Debounce: fire the audit event at most once per 60 seconds
+const MIN_EVENT_INTERVAL_MS = 60_000;
+// Require multiple consecutive detections to confirm (avoids one-off false positives)
+const REQUIRED_CONSECUTIVE_DETECTIONS = 3;
 
 export function DevToolsDetector() {
   const { policy, logEvent, ready } = useProtection();
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const lastEventRef = useRef(0);
+  const consecutiveRef = useRef(0);
 
   useEffect(() => {
     if (!ready || !policy.devToolsProtection) return;
@@ -40,15 +47,20 @@ export function DevToolsDetector() {
       const detected = widthDiff > DEVTOOLS_SIZE_THRESHOLD || heightDiff > DEVTOOLS_SIZE_THRESHOLD;
 
       if (detected) {
-        setDevToolsOpen(true);
-        const now = Date.now();
-        if (now - lastEventRef.current > MIN_EVENT_INTERVAL_MS) {
-          lastEventRef.current = now;
-          logEvent("CONTENT_PROTECTION_DEVTOOLS_DETECTED", {
-            event: `widthDiff=${widthDiff},heightDiff=${heightDiff}`,
-          });
+        consecutiveRef.current += 1;
+        // Only flag as open after multiple consecutive detections
+        if (consecutiveRef.current >= REQUIRED_CONSECUTIVE_DETECTIONS) {
+          setDevToolsOpen(true);
+          const now = Date.now();
+          if (now - lastEventRef.current > MIN_EVENT_INTERVAL_MS) {
+            lastEventRef.current = now;
+            logEvent("CONTENT_PROTECTION_DEVTOOLS_DETECTED", {
+              event: `widthDiff=${widthDiff},heightDiff=${heightDiff}`,
+            });
+          }
         }
       } else {
+        consecutiveRef.current = 0;
         setDevToolsOpen(false);
       }
     }
