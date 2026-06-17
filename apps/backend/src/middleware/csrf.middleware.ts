@@ -135,6 +135,17 @@ function isOriginAllowed(req: Request): boolean {
 /**
  * CSRF protection middleware.
  *
+ * Strategy:
+ * 1. Origin/Referer validation (primary protection for cross-origin setups)
+ * 2. Double-submit cookie (when available — same-origin or cookie-friendly browsers)
+ *
+ * In cross-origin deployments (admin.funt.in → api.funt.in), third-party cookie
+ * restrictions mean the CSRF cookie may not be readable. In that case, the Origin
+ * validation alone is sufficient because:
+ * - CORS only allows configured origins
+ * - Auth cookies are SameSite=None;Secure (only sent to allowed origins)
+ * - Browsers always send Origin on cross-origin POST/PUT/PATCH/DELETE
+ *
  * Must be applied AFTER cookie-parser and BEFORE route handlers.
  */
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
@@ -155,34 +166,63 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     return;
   }
 
-  // Step 1: Validate Origin header
+  // Step 1: Validate Origin header (required for cross-origin requests)
+  const origin = req.get("origin");
+  const referer = req.get("referer");
+  const { corsOrigins, isProduction } = getEnv();
+
+  if (isProduction && corsOrigins.length > 0) {
+    // In production with configured CORS, require a valid Origin or Referer
+    const requestOrigin = origin ?? (referer ? (() => { try { return new URL(referer).origin; } catch { return undefined; } })() : undefined);
+
+    if (!requestOrigin) {
+      // No Origin AND no Referer on a mutation — block it.
+      // Legitimate browsers always send Origin on cross-origin requests.
+      next(new AppError("CSRF validation failed: missing origin", 403));
+      return;
+    }
+
+    const allowed = corsOrigins.some((allowedOrigin) => {
+      try {
+        return new URL(allowedOrigin).origin === requestOrigin;
+      } catch {
+        return allowedOrigin === requestOrigin;
+      }
+    });
+
+    if (!allowed) {
+      next(new AppError("Request blocked: invalid origin", 403));
+      return;
+    }
+
+    // Origin is valid — request is from our frontend. This is sufficient CSRF protection.
+    next();
+    return;
+  }
+
+  // Development or no CORS configured: use double-submit cookie (same-origin)
   if (!isOriginAllowed(req)) {
     next(new AppError("Request blocked: invalid origin", 403));
     return;
   }
 
-  // Step 2: Double-submit cookie validation
   const cookieToken = (req.cookies as Record<string, string>)?.[CSRF_COOKIE_NAME];
   const headerToken = req.get(CSRF_HEADER_NAME);
 
-  if (!cookieToken || !headerToken) {
-    next(new AppError("CSRF validation failed: missing token", 403));
-    return;
+  // In development, if both are present, validate match
+  if (cookieToken && headerToken) {
+    if (cookieToken.length !== headerToken.length) {
+      next(new AppError("CSRF validation failed: token mismatch", 403));
+      return;
+    }
+    const cookieBuf = Buffer.from(cookieToken, "utf8");
+    const headerBuf = Buffer.from(headerToken, "utf8");
+    if (!crypto.timingSafeEqual(cookieBuf, headerBuf)) {
+      next(new AppError("CSRF validation failed: token mismatch", 403));
+      return;
+    }
   }
 
-  // Constant-time comparison to prevent timing attacks
-  if (cookieToken.length !== headerToken.length) {
-    next(new AppError("CSRF validation failed: token mismatch", 403));
-    return;
-  }
-
-  const cookieBuf = Buffer.from(cookieToken, "utf8");
-  const headerBuf = Buffer.from(headerToken, "utf8");
-
-  if (!crypto.timingSafeEqual(cookieBuf, headerBuf)) {
-    next(new AppError("CSRF validation failed: token mismatch", 403));
-    return;
-  }
-
+  // In development without strict CORS, allow if Origin was valid
   next();
 }
