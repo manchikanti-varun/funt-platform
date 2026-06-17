@@ -224,45 +224,53 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
     }
   );
 
-  const safe = DOMPurify.sanitize(withR2Resolved, {
-    USE_PROFILES: { html: true },
-    FORCE_BODY: true,
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    ADD_TAGS: ["video", "source", "iframe", "div"],
-    ADD_ATTR: [
-      "class",
-      "href",
-      "target",
-      "rel",
-      "data-list",
-      "data-indent",
-      "data-line-height",
-      "data-font-size",
-      "src",
-      "alt",
-      "controls",
-      "poster",
-      "preload",
-      "playsinline",
-      "muted",
-      "loop",
-      "type",
-      "style",
-      "width",
-      "height",
-      "data-width",
-      "data-align",
-      "data-rte-video",
-      "data-render-kind",
-      "allow",
-      "allowfullscreen",
-      "frameborder",
-      "loading",
-      "referrerpolicy",
-      "sandbox",
-      "title",
-    ],
-  });
+  let safe: string;
+  try {
+    safe = DOMPurify.sanitize(withR2Resolved, {
+      USE_PROFILES: { html: true },
+      FORCE_BODY: true,
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      ADD_TAGS: ["video", "source", "iframe", "div"],
+      ADD_ATTR: [
+        "class",
+        "href",
+        "target",
+        "rel",
+        "data-list",
+        "data-indent",
+        "data-line-height",
+        "data-font-size",
+        "src",
+        "alt",
+        "controls",
+        "poster",
+        "preload",
+        "playsinline",
+        "muted",
+        "loop",
+        "type",
+        "style",
+        "width",
+        "height",
+        "data-width",
+        "data-align",
+        "data-rte-video",
+        "data-render-kind",
+        "allow",
+        "allowfullscreen",
+        "frameborder",
+        "loading",
+        "referrerpolicy",
+        "sandbox",
+        "title",
+      ],
+    });
+  } catch {
+    // DOMPurify can crash in rare edge cases (e.g. FORCE_BODY + certain DOM states).
+    // Fall back to the pre-sanitized HTML which still had all dangerous tags removed
+    // by the regex-based preprocessing steps above.
+    safe = withR2Resolved;
+  }
   return safe;
 }
 

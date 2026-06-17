@@ -291,7 +291,8 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    ensureCsrfToken();
+    // Fetch CSRF token in background (non-blocking, non-crashing)
+    try { ensureCsrfToken(); } catch { /* ignore */ }
     refreshUser()
       .catch(() => router.push("/login"))
       .finally(() => {
