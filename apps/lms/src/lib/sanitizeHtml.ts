@@ -228,7 +228,6 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
   try {
     safe = DOMPurify.sanitize(withR2Resolved, {
       USE_PROFILES: { html: true },
-      FORCE_BODY: true,
       ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
       ADD_TAGS: ["video", "source", "iframe", "div"],
       ADD_ATTR: [

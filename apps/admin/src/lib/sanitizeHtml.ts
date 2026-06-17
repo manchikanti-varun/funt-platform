@@ -211,44 +211,48 @@ export function sanitizeHtml(html: string | undefined | null): string {
     )
   );
   const withDriveImages = rewriteEmbeddedMediaInHtml(normalized);
-  const safe = DOMPurify.sanitize(withDriveImages, {
-    USE_PROFILES: { html: true },
-    FORCE_BODY: true,
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    ADD_TAGS: ["video", "source", "iframe", "div"],
-    ADD_ATTR: [
-      "class",
-      "href",
-      "target",
-      "rel",
-      "data-list",
-      "data-indent",
-      "data-line-height",
-      "data-font-size",
-      "src",
-      "alt",
-      "controls",
-      "poster",
-      "preload",
-      "playsinline",
-      "muted",
-      "loop",
-      "type",
-      "style",
-      "width",
-      "height",
-      "data-width",
-      "data-align",
-      "data-rte-video",
-      "data-render-kind",
-      "allow",
-      "allowfullscreen",
-      "frameborder",
-      "loading",
-      "referrerpolicy",
-      "sandbox",
-      "title",
-    ],
-  });
+  let safe: string;
+  try {
+    safe = DOMPurify.sanitize(withDriveImages, {
+      USE_PROFILES: { html: true },
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      ADD_TAGS: ["video", "source", "iframe", "div"],
+      ADD_ATTR: [
+        "class",
+        "href",
+        "target",
+        "rel",
+        "data-list",
+        "data-indent",
+        "data-line-height",
+        "data-font-size",
+        "src",
+        "alt",
+        "controls",
+        "poster",
+        "preload",
+        "playsinline",
+        "muted",
+        "loop",
+        "type",
+        "style",
+        "width",
+        "height",
+        "data-width",
+        "data-align",
+        "data-rte-video",
+        "data-render-kind",
+        "allow",
+        "allowfullscreen",
+        "frameborder",
+        "loading",
+        "referrerpolicy",
+        "sandbox",
+        "title",
+      ],
+    });
+  } catch {
+    safe = withDriveImages;
+  }
   return safe;
 }
