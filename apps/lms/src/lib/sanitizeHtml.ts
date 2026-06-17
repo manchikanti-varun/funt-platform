@@ -201,6 +201,23 @@ function plainTextToRichHtml(input: string): string {
 
 export function sanitizeHtml(html: string | undefined | null, apiBase?: string): string {
   const raw = decodeEncodedRichText(html);
+  if (!raw) return "";
+
+  // DOMPurify 3.4.x has a known crash (TypeError: Cannot read properties of undefined
+  // reading 'length') in certain DOM environments. Wrap the entire function in try-catch
+  // and fall back to basic regex sanitization if DOMPurify fails.
+  try {
+    return _sanitizeHtmlInner(raw, apiBase);
+  } catch {
+    // Fallback: strip <script> and event handlers, return the rest as-is
+    return raw
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+      .replace(/\s+on\w+\s*=\s*(['"])[^'"]*\1/gi, "")
+      .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "");
+  }
+}
+
+function _sanitizeHtmlInner(raw: string, apiBase?: string): string {
   const hasHtmlTag = /<[a-z][\s\S]*>/i.test(raw);
   const source = hasHtmlTag ? raw : plainTextToRichHtml(raw);
   const normalized = preserveEmptyParagraphs(
