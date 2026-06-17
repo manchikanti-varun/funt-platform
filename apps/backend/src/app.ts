@@ -74,7 +74,15 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "10mb" }));
-app.use(mongoSanitize());
+// Sanitize MongoDB operator injection from user inputs (defense-in-depth).
+// Note: we deliberately exclude req.headers — sanitizing headers breaks
+// Express's req.get() and our CSRF X-CSRF-Token header reading.
+app.use((req, _res, next) => {
+  if (req.body) req.body = mongoSanitize.sanitize(req.body);
+  if (req.query) req.query = mongoSanitize.sanitize(req.query) as typeof req.query;
+  if (req.params) req.params = mongoSanitize.sanitize(req.params) as typeof req.params;
+  next();
+});
 app.use(csrfProtection);
 
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));
