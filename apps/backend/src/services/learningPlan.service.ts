@@ -354,6 +354,102 @@ export async function canStudentAccessChapter(
   return { allowed: true, milestoneId: milestone.milestoneId };
 }
 
+/**
+ * Batch-check chapter access for ALL chapters in a course using pre-loaded data.
+ * Single DB round-trip instead of N per-chapter queries.
+ * Used by getBatchCourseForStudent when learning plan is active.
+ */
+export async function batchCheckChapterAccess(
+  studentId: string,
+  batchId: string,
+  courseId: string,
+  chapterOrders: number[],
+  courseSnapshot: unknown
+): Promise<Map<number, { allowed: boolean; reason?: string; milestoneId?: string }>> {
+  const result = new Map<number, { allowed: boolean; reason?: string; milestoneId?: string }>();
+
+  if (!isLearningPlanActive(courseSnapshot)) {
+    for (const order of chapterOrders) result.set(order, { allowed: true });
+    return result;
+  }
+
+  const milestones = getMilestonesFromSnapshot(courseSnapshot);
+
+  // Pre-load ALL milestone progress for this student+batch+course in one query
+  const allProgress = await MilestoneProgressModel.find({
+    studentId,
+    batchId,
+    courseId,
+  })
+    .select("milestoneId unlocked locked")
+    .lean()
+    .exec();
+  const progressByMilestoneId = new Map(
+    allProgress.map((p) => [
+      (p as { milestoneId: string }).milestoneId,
+      { unlocked: !!(p as { unlocked?: boolean }).unlocked, locked: !!(p as { locked?: boolean }).locked },
+    ])
+  );
+
+  // Pre-load enrollment for autoLock check (one query)
+  const lp = getLearningPlanFromSnapshot(courseSnapshot);
+  let currentMilestoneId: string | undefined;
+  let ordered: MilestoneLike[] | undefined;
+  if (lp?.autoLockPreviousMilestones) {
+    const enrollment = await EnrollmentModel.findOne({ studentId, batchId })
+      .select("currentMilestoneId")
+      .lean()
+      .exec();
+    currentMilestoneId = (enrollment as { currentMilestoneId?: string } | null)?.currentMilestoneId ?? undefined;
+    ordered = orderedActiveMilestones(milestones);
+  }
+
+  for (const chapterOrder of chapterOrders) {
+    const milestone = findMilestoneForChapter(milestones, chapterOrder);
+    if (!milestone) {
+      result.set(chapterOrder, { allowed: true });
+      continue;
+    }
+
+    const progress = progressByMilestoneId.get(milestone.milestoneId);
+    if (!progress || !progress.unlocked) {
+      result.set(chapterOrder, {
+        allowed: false,
+        reason: `Chapter is locked. Unlock "${milestone.title}" to access this content.`,
+        milestoneId: milestone.milestoneId,
+      });
+      continue;
+    }
+
+    if (progress.locked) {
+      result.set(chapterOrder, {
+        allowed: false,
+        reason: `Access to "${milestone.title}" has been revoked by an administrator.`,
+        milestoneId: milestone.milestoneId,
+      });
+      continue;
+    }
+
+    // autoLockPreviousMilestones check
+    if (lp?.autoLockPreviousMilestones && currentMilestoneId && currentMilestoneId !== milestone.milestoneId && ordered) {
+      const currentIdx = ordered.findIndex((m) => m.milestoneId === currentMilestoneId);
+      const thisIdx = ordered.findIndex((m) => m.milestoneId === milestone.milestoneId);
+      if (thisIdx < currentIdx) {
+        result.set(chapterOrder, {
+          allowed: false,
+          reason: `"${milestone.title}" is a previous milestone and is no longer accessible.`,
+          milestoneId: milestone.milestoneId,
+        });
+        continue;
+      }
+    }
+
+    result.set(chapterOrder, { allowed: true, milestoneId: milestone.milestoneId });
+  }
+
+  return result;
+}
+
 // ─── Milestone Progress recalculation ────────────────────────────────────────
 
 /**

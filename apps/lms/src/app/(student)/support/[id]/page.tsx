@@ -5,16 +5,27 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell } from "@/components/ui";
+import {
+  Circle,
+  UserCheck,
+  Cog,
+  Hourglass,
+  MessageCircle,
+  CheckCircle,
+  Lock,
+  AlertTriangle,
+  Paperclip,
+} from "lucide-react";
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string; icon: string }> = {
-  OPEN:                 { label: "Open",               color: "bg-indigo-100 text-indigo-700",  dot: "bg-indigo-500",  icon: "🔵" },
-  ASSIGNED:             { label: "Assigned",            color: "bg-blue-100 text-blue-700",     dot: "bg-blue-500",    icon: "👤" },
-  IN_PROGRESS:          { label: "In Progress",         color: "bg-cyan-100 text-cyan-700",     dot: "bg-cyan-500",    icon: "⚙️" },
-  WAITING_FOR_STUDENT:  { label: "Awaiting Your Reply", color: "bg-amber-100 text-amber-700",  dot: "bg-amber-500",   icon: "⏳" },
-  WAITING_FOR_SUPPORT:  { label: "Awaiting Support",    color: "bg-orange-100 text-orange-700", dot: "bg-orange-500",  icon: "💬" },
-  RESOLVED:             { label: "Resolved",            color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", icon: "✅" },
-  CLOSED:               { label: "Closed",              color: "bg-slate-100 text-slate-500",   dot: "bg-slate-400",   icon: "🔒" },
-  ESCALATED:            { label: "Escalated",           color: "bg-red-100 text-red-700",       dot: "bg-red-500",     icon: "🚨" },
+const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string; icon: React.ReactNode }> = {
+  OPEN:                 { label: "Open",               color: "bg-indigo-100 text-indigo-700",  dot: "bg-indigo-500",  icon: <Circle className="h-3.5 w-3.5" /> },
+  ASSIGNED:             { label: "Assigned",            color: "bg-blue-100 text-blue-700",     dot: "bg-blue-500",    icon: <UserCheck className="h-3.5 w-3.5" /> },
+  IN_PROGRESS:          { label: "In Progress",         color: "bg-cyan-100 text-cyan-700",     dot: "bg-cyan-500",    icon: <Cog className="h-3.5 w-3.5" /> },
+  WAITING_FOR_STUDENT:  { label: "Awaiting Your Reply", color: "bg-amber-100 text-amber-700",  dot: "bg-amber-500",   icon: <Hourglass className="h-3.5 w-3.5" /> },
+  WAITING_FOR_SUPPORT:  { label: "Awaiting Support",    color: "bg-orange-100 text-orange-700", dot: "bg-orange-500",  icon: <MessageCircle className="h-3.5 w-3.5" /> },
+  RESOLVED:             { label: "Resolved",            color: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500", icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  CLOSED:               { label: "Closed",              color: "bg-slate-100 text-slate-500",   dot: "bg-slate-400",   icon: <Lock className="h-3.5 w-3.5" /> },
+  ESCALATED:            { label: "Escalated",           color: "bg-red-100 text-red-700",       dot: "bg-red-500",     icon: <AlertTriangle className="h-3.5 w-3.5" /> },
 };
 
 const PRIORITY_CONFIG: Record<string, { color: string; dot: string }> = {
@@ -102,7 +113,7 @@ export default function StudentTicketDetailPage() {
   if (loading) return (
     <AppPageShell className="max-w-2xl pb-8">
       <div className="flex min-h-[300px] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+        <div className="spinner" />
       </div>
     </AppPageShell>
   );
@@ -117,7 +128,7 @@ export default function StudentTicketDetailPage() {
     </AppPageShell>
   );
 
-  const statusCfg = STATUS_CONFIG[ticket.status] ?? { label: ticket.status, color: "bg-slate-100 text-slate-500", dot: "bg-slate-400", icon: "•" };
+  const statusCfg = STATUS_CONFIG[ticket.status] ?? { label: ticket.status, color: "bg-slate-100 text-slate-500", dot: "bg-slate-400", icon: <Circle className="h-3.5 w-3.5" /> };
   const priorityCfg = PRIORITY_CONFIG[ticket.priority] ?? { color: "text-slate-500", dot: "bg-slate-400" };
   const isClosed = ticket.status === "CLOSED";
   const isResolved = ticket.status === "RESOLVED";
@@ -141,15 +152,15 @@ export default function StudentTicketDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <CopyButton text={ticket.ticketNumber} />
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${statusCfg.color}`}>
-              <span>{statusCfg.icon}</span>
+              <span className="inline-flex">{statusCfg.icon}</span>
               {statusCfg.label}
             </span>
           </div>
         </div>
         {isWaitingForStudent && (
           <div className="border-t border-amber-200 bg-amber-50 px-5 py-2.5">
-            <p className="text-xs font-semibold text-amber-700">
-              ⏳ The support team is waiting for your reply. Please respond below.
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-700">
+              <Hourglass className="h-3.5 w-3.5" /> The support team is waiting for your reply. Please respond below.
             </p>
           </div>
         )}
@@ -182,7 +193,7 @@ export default function StudentTicketDetailPage() {
               {ticket.attachments.map((url, i) => (
                 <a key={i} href={url} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100">
-                  📎 Attachment {i + 1}
+                  <Paperclip className="h-3 w-3" /> Attachment {i + 1}
                 </a>
               ))}
             </div>
@@ -195,8 +206,8 @@ export default function StudentTicketDetailPage() {
             <p className="label-overline mb-1 text-emerald-700">Resolution</p>
             <p className="text-sm leading-relaxed text-emerald-900">{ticket.resolution}</p>
             {ticket.resolvedAt && (
-              <p className="mt-1.5 text-xs text-emerald-600">
-                ✅ Resolved on {new Date(ticket.resolvedAt).toLocaleString()}
+              <p className="mt-1.5 flex items-center gap-1 text-xs text-emerald-600">
+                <CheckCircle className="h-3 w-3" /> Resolved on {new Date(ticket.resolvedAt).toLocaleString()}
               </p>
             )}
           </div>
@@ -298,7 +309,7 @@ export default function StudentTicketDetailPage() {
         ) : (
           <div className="border-t border-slate-100 bg-slate-50/40 px-6 py-4">
             <p className="flex items-center gap-2 text-sm text-slate-500">
-              <span className="text-base">🔒</span>
+              <Lock className="h-4 w-4" />
               This ticket is closed. <Link href="/support" className="font-semibold text-indigo-600 hover:underline">Open a new ticket</Link> if you need further help.
             </p>
           </div>

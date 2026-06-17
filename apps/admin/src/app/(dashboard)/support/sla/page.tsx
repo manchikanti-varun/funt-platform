@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
+import { AppPageShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { BackLink } from "@/components/ui/BackLink";
 
@@ -32,7 +33,7 @@ export default function SlaPage() {
 
   if (loading) return (
     <div className="flex min-h-[40vh] items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="spinner" />
     </div>
   );
   if (!data) return <p className="text-slate-600">Failed to load SLA data.</p>;
@@ -63,7 +64,7 @@ export default function SlaPage() {
                 <td className="px-4 py-3 text-xs text-slate-500">{new Date(t.createdAt).toLocaleDateString()}</td>
                 <td className="px-4 py-3 text-xs font-semibold text-red-600">{new Date(t.slaDueAt).toLocaleString()}</td>
                 <td className="px-4 py-3">
-                  <Link href={`/support/${t._id}`} className="text-xs font-medium text-teal-600 hover:text-teal-800">View</Link>
+                  <Link href={`/support/${t._id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-800">View</Link>
                 </td>
               </tr>
             ))}
@@ -74,7 +75,7 @@ export default function SlaPage() {
   );
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/support" />
       <BackLink href="/support">Back to Support Desk</BackLink>
       <div>
@@ -89,7 +90,7 @@ export default function SlaPage() {
           { label: "Opened Today",   value: data.openToday,              color: "border-l-violet-500 text-violet-700" },
           { label: "SLA Breached",   value: data.slaBreachCount,         color: "border-l-red-500 text-red-700" },
           { label: "Due in 3h",      value: data.dueSoonCount,           color: "border-l-amber-500 text-amber-700" },
-          { label: "Avg First Resp", value: `${data.avgFirstResponseHours}h`, color: "border-l-teal-500 text-teal-700" },
+          { label: "Avg First Resp", value: `${data.avgFirstResponseHours}h`, color: "border-l-indigo-500 text-indigo-700" },
         ].map((c) => (
           <div key={c.label} className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 ${c.color.split(" ")[0]}`}>
             <p className={`text-xs font-semibold uppercase tracking-wider ${c.color.split(" ")[1]}`}>{c.label}</p>
@@ -113,6 +114,6 @@ export default function SlaPage() {
         </div>
         <TicketTable tickets={data.dueSoonTickets} emptyMsg="No tickets due soon." />
       </div>
-    </div>
+    </AppPageShell>
   );
 }

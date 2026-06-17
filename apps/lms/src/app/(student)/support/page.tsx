@@ -4,6 +4,17 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell } from "@/components/ui";
+import {
+  Circle,
+  UserCheck,
+  Cog,
+  Hourglass,
+  MessageCircle,
+  CheckCircle,
+  Lock,
+  AlertTriangle,
+  Ticket,
+} from "lucide-react";
 
 const STATUS_COLORS: Record<string, string> = {
   OPEN:                 "bg-indigo-100 text-indigo-700",
@@ -16,10 +27,15 @@ const STATUS_COLORS: Record<string, string> = {
   ESCALATED:            "bg-red-100 text-red-700",
 };
 
-const STATUS_ICONS: Record<string, string> = {
-  OPEN: "🔵", ASSIGNED: "👤", IN_PROGRESS: "⚙️",
-  WAITING_FOR_STUDENT: "⏳", WAITING_FOR_SUPPORT: "💬",
-  RESOLVED: "✅", CLOSED: "🔒", ESCALATED: "🚨",
+const STATUS_ICONS: Record<string, React.ReactNode> = {
+  OPEN: <Circle className="h-3.5 w-3.5" />,
+  ASSIGNED: <UserCheck className="h-3.5 w-3.5" />,
+  IN_PROGRESS: <Cog className="h-3.5 w-3.5" />,
+  WAITING_FOR_STUDENT: <Hourglass className="h-3.5 w-3.5" />,
+  WAITING_FOR_SUPPORT: <MessageCircle className="h-3.5 w-3.5" />,
+  RESOLVED: <CheckCircle className="h-3.5 w-3.5" />,
+  CLOSED: <Lock className="h-3.5 w-3.5" />,
+  ESCALATED: <AlertTriangle className="h-3.5 w-3.5" />,
 };
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -255,11 +271,13 @@ export default function StudentSupportPage() {
       {/* ── Ticket list ─────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex min-h-[160px] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+          <div className="spinner spinner--inline" />
         </div>
       ) : !result?.tickets.length ? (
         <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-slate-200/90 bg-white/80 text-center shadow-sm ring-1 ring-slate-100/80">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">🎫</div>
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">
+            <Ticket className="h-7 w-7 text-indigo-400" />
+          </div>
           <p className="text-sm font-semibold text-slate-700">No support tickets yet</p>
           <p className="mt-1 text-xs text-slate-500">Need help? Create a new ticket and we&apos;ll assist you.</p>
           <button
@@ -299,7 +317,7 @@ export default function StudentSupportPage() {
                 {/* Priority + Status */}
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[t.status] ?? "bg-slate-100 text-slate-500"}`}>
-                    <span>{STATUS_ICONS[t.status] ?? "•"}</span>
+                    <span className="inline-flex">{STATUS_ICONS[t.status] ?? "•"}</span>
                     {t.status.replace(/_/g," ")}
                   </span>
                   <span className={`inline-flex items-center gap-1 text-xs font-semibold ${PRIORITY_COLORS[t.priority] ?? "text-slate-500"}`}>

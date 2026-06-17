@@ -60,7 +60,7 @@ export function AdminSpinner({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center py-16 ${className}`.trim()}>
       <div
-        className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600"
+        className="spinner"
         role="status"
         aria-label="Loading"
       />

@@ -117,7 +117,7 @@ export default function ParentSupportPage() {
 
       {loading ? (
         <div className="flex min-h-[120px] items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+          <div className="spinner spinner--inline" />
         </div>
       ) : !result?.tickets.length ? (
         <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">

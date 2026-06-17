@@ -64,7 +64,7 @@ export default function BatchEnrollmentRequestsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
         <p className="mt-4 text-sm text-slate-500">Loading…</p>
       </div>
     );
@@ -98,7 +98,7 @@ export default function BatchEnrollmentRequestsPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Enrollment requests</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
           <p className="mt-2 text-sm text-slate-500">
@@ -109,7 +109,7 @@ export default function BatchEnrollmentRequestsPage() {
         <div className="p-6">
           {requestsLoading ? (
             <div className="flex justify-center py-6">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+              <div className="spinner spinner--inline" />
             </div>
           ) : requests.length === 0 ? (
             <p className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">No pending requests for this batch.</p>
@@ -139,7 +139,7 @@ export default function BatchEnrollmentRequestsPage() {
                             type="button"
                             onClick={() => respondToRequest(r.id, "APPROVE")}
                             disabled={actingRequestId === r.id}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                            className="btn-approve text-sm"
                           >
                             {actingRequestId === r.id ? "…" : "Approve"}
                           </button>
@@ -147,7 +147,7 @@ export default function BatchEnrollmentRequestsPage() {
                             type="button"
                             onClick={() => respondToRequest(r.id, "REJECT")}
                             disabled={actingRequestId === r.id}
-                            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                            className="btn-reject text-sm"
                           >
                             Reject
                           </button>

@@ -170,13 +170,13 @@ function MilestoneFormPanel({
   const showFee = form.unlockType === MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION;
 
   return (
-    <div className="rounded-xl border border-teal-200 bg-teal-50/40 p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-teal-800">
+    <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-5 space-y-4">
+      <h3 className="text-sm font-semibold text-indigo-800">
         {isEdit ? "Edit Milestone" : "New Milestone"}
       </h3>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="alert--error">
           {error}
         </div>
       )}
@@ -340,7 +340,7 @@ function MilestoneFormPanel({
                           set("chapterOrders", [...orders, orderStr].join(", "));
                         }
                       }}
-                      className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-slate-800">
                       {m.title ?? `Chapter ${m.order + 1}`}
@@ -416,7 +416,7 @@ function MilestoneFormPanel({
             type="checkbox"
             checked={form.certificateEligible}
             onChange={(e) => set("certificateEligible", e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
           <span>Issue milestone certificate on completion</span>
         </label>
@@ -425,7 +425,7 @@ function MilestoneFormPanel({
             type="checkbox"
             checked={form.active}
             onChange={(e) => set("active", e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
           />
           <span>Active</span>
         </label>
@@ -437,14 +437,14 @@ function MilestoneFormPanel({
           type="button"
           onClick={onSave}
           disabled={saving || !form.title.trim()}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+          className="btn-primary text-sm"
         >
           {saving ? "Saving…" : isEdit ? "Update Milestone" : "Add Milestone"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="btn-secondary text-sm"
         >
           Cancel
         </button>
@@ -635,7 +635,7 @@ export default function LearningPlanPage() {
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900">Learning Plan</h1>
                   {isLearningPlan ? (
-                    <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800 ring-1 ring-teal-200">
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
                       Active
                     </span>
                   ) : (
@@ -664,7 +664,7 @@ export default function LearningPlanPage() {
                     type="checkbox"
                     checked={enabled}
                     onChange={(e) => setEnabled(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <span className="text-sm text-slate-800">
                     <span className="font-semibold">Enable Learning Plan</span>
@@ -692,7 +692,7 @@ export default function LearningPlanPage() {
                 )}
 
                 {planError && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <div className="alert--error">
                     {planError}
                   </div>
                 )}
@@ -702,7 +702,7 @@ export default function LearningPlanPage() {
                     type="button"
                     onClick={savePlanSettings}
                     disabled={planSaving}
-                    className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+                    className="btn-primary text-sm"
                   >
                     {planSaving ? "Saving…" : "Save Settings"}
                   </button>
@@ -721,7 +721,7 @@ export default function LearningPlanPage() {
                     <button
                       type="button"
                       onClick={startNew}
-                      className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 transition"
+                      className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
                     >
                       + Add Milestone
                     </button>
@@ -751,7 +751,7 @@ export default function LearningPlanPage() {
                     <button
                       type="button"
                       onClick={startNew}
-                      className="mt-3 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700"
+                      className="btn-primary mt-3 text-sm"
                     >
                       Add First Milestone
                     </button>
@@ -814,7 +814,7 @@ export default function LearningPlanPage() {
                             </td>
                             <td className="px-4 py-2.5">
                               {assigned ? (
-                                <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-medium text-teal-800">
+                                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
                                   {assigned.title}
                                 </span>
                               ) : (
@@ -861,7 +861,7 @@ function MilestoneCard({
       {/* Row */}
       <div className="flex items-start gap-4 px-4 py-4">
         {/* Order badge */}
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
           {index + 1}
         </div>
 
@@ -920,7 +920,7 @@ function MilestoneCard({
           <button
             type="button"
             onClick={onEdit}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-100 transition"
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
             title="Edit milestone"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

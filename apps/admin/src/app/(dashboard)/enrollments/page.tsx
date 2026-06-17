@@ -60,9 +60,9 @@ export default function EnrollmentsPage() {
           </select>
         </div>
         {message ? (
-          <p className={message.type === "success" ? "text-sm text-emerald-600" : "text-sm text-red-600"}>
+          <div className={message.type === "success" ? "alert--success" : "alert--error"}>
             {message.text}
-          </p>
+          </div>
         ) : null}
         <button type="submit" disabled={loading} className="btn-primary">
           {loading ? "Saving…" : "Enroll"}

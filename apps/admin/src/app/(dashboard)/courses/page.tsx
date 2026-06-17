@@ -126,7 +126,7 @@ export default function CoursesPage() {
           {!readOnly && (
             <Link
                 href="/courses/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
+                className="btn-primary inline-flex items-center gap-2 text-sm"
               >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -138,7 +138,7 @@ export default function CoursesPage() {
       </div>
 
       <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-5">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Courses</h2>
           <p className="mt-1 text-sm text-slate-600">
             Create courses from Global Chapters. Add courses to batches to give students access.
@@ -149,18 +149,18 @@ export default function CoursesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search courses by title or description…"
-              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="input max-w-md"
             />
           </div>
         </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="spinner" />
             <p className="mt-4 text-sm text-slate-500">Loading courses…</p>
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 text-teal-600">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
@@ -169,7 +169,7 @@ export default function CoursesPage() {
             <p className="mt-1 text-sm text-slate-500">Create your first course by adding Global Chapters in order.</p>
             <Link
               href="/courses/new"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-teal-700"
+              className="btn-primary mt-6 inline-flex items-center gap-2 text-sm"
             >
               Create Course
             </Link>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { SUBMISSION_REVIEW_STATUS } from "@funt-platform/constants";
+import { AppPageShell } from "@/components/ui";
 
 interface BatchOption {
   id: string;
@@ -107,7 +108,7 @@ export default function AssignmentsReviewPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <AppPageShell>
       <h1 className="text-2xl font-bold text-slate-800">Assignment Review</h1>
       <div className="flex flex-wrap items-end gap-4">
         <div>
@@ -128,7 +129,7 @@ export default function AssignmentsReviewPage() {
                   type="checkbox"
                   checked={pendingIds.length > 0 && selectedIds.size === pendingIds.length}
                   onChange={toggleSelectAll}
-                  className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 Select all pending
               </label>
@@ -154,7 +155,7 @@ export default function AssignmentsReviewPage() {
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Optional feedback for all"
-                className="max-w-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="max-w-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           )}
@@ -179,7 +180,7 @@ export default function AssignmentsReviewPage() {
                           type="checkbox"
                           checked={selectedIds.has(s.id)}
                           onChange={() => toggleSelect(s.id)}
-                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                         />
                       ) : null}
                     </td>
@@ -192,7 +193,7 @@ export default function AssignmentsReviewPage() {
                   <td className="px-4 py-3 text-sm text-slate-600">{s.submittedAt ? new Date(s.submittedAt).toLocaleDateString() : ""}</td>
                   <td className="px-4 py-3 text-right">
                     {s.status === SUBMISSION_REVIEW_STATUS.PENDING && (
-                      <button type="button" onClick={() => setReviewingId(s.id)} className="text-sm font-medium text-teal-600 hover:text-teal-700">Review</button>
+                      <button type="button" onClick={() => setReviewingId(s.id)} className="text-sm font-medium text-indigo-600 hover:text-teal-700">Review</button>
                     )}
                   </td>
                 </tr>
@@ -241,6 +242,6 @@ export default function AssignmentsReviewPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

@@ -38,7 +38,7 @@ export async function createGeneralAttendance(input: CreateGeneralAttendanceInpu
 }
 
 export async function listGeneralAttendance() {
-  const list = await GeneralAttendanceModel.find({}).sort({ eventDate: -1 }).lean().exec();
+  const list = await GeneralAttendanceModel.find({}).sort({ eventDate: -1 }).limit(500).lean().exec();
   return list.map((d) => ({
     id: String(d._id),
     eventDate: d.eventDate,

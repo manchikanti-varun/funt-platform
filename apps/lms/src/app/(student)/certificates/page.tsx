@@ -68,7 +68,7 @@ export default function CertificatesPage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-funt-gold/30 border-t-funt-gold-deep" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -84,9 +84,9 @@ export default function CertificatesPage() {
       <div className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           href="/verify"
-          className="inline-flex items-center gap-3 rounded-2xl border border-[#d8c28a] bg-gradient-to-r from-[#fff8df] to-white px-5 py-4 shadow-md shadow-amber-900/10 transition hover:border-funt-gold"
+          className="inline-flex items-center gap-3 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white px-5 py-4 shadow-md shadow-indigo-900/10 transition hover:border-indigo-300"
         >
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-funt-honey text-funt-gold-deep">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
@@ -100,8 +100,8 @@ export default function CertificatesPage() {
           </svg>
         </Link>
         {list.length > 0 && (
-          <div className="shrink-0 rounded-2xl border border-[#d8c28a] bg-gradient-to-br from-[#fff5d1] to-[#fff0bf] px-6 py-4 shadow-md shadow-amber-900/10">
-            <p className="text-2xl font-bold tabular-nums text-funt-gold-deep">{list.length}</p>
+          <div className="shrink-0 rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-4 shadow-md shadow-indigo-900/10">
+            <p className="text-2xl font-bold tabular-nums text-indigo-700">{list.length}</p>
             <p className="text-sm font-medium text-funt-ink">certificate{list.length !== 1 ? "s" : ""}</p>
           </div>
         )}
@@ -115,8 +115,8 @@ export default function CertificatesPage() {
 
       <div>
         {list.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d9c58d] bg-gradient-to-b from-[#fffdf6] to-[#fff7de] px-6 py-16 text-center shadow-md shadow-amber-900/10">
-            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-funt-honey text-funt-gold-deep/50 shadow-inner ring-1 ring-funt-gold/30">
+          <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-gradient-to-b from-slate-50 to-white px-6 py-16 text-center shadow-md shadow-indigo-900/10">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-indigo-400 shadow-inner ring-1 ring-indigo-200/50">
               <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
@@ -124,7 +124,7 @@ export default function CertificatesPage() {
             <h2 className="mt-5 text-lg font-semibold text-black">No certificates yet</h2>
             <Link
               href="/courses"
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-bold text-black shadow-lg shadow-amber-900/20 ring-1 ring-funt-gold-deep/30 transition duration-200 hover:bg-funt-gold-hover"
+              className="mt-6 inline-flex items-center gap-2 btn-primary text-sm font-bold shadow-lg shadow-indigo-900/15 ring-1 ring-indigo-300/30 transition duration-200"
             >
               Go to courses
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -137,11 +137,11 @@ export default function CertificatesPage() {
             {list.map((c) => (
               <article
                 key={c.certificateId}
-                className="flex flex-col rounded-2xl border border-[#d8c28a] bg-gradient-to-br from-white via-[#fffdf7] to-[#fff6dd] shadow-md shadow-amber-900/10 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-funt-gold/50"
+                className="flex flex-col rounded-2xl border border-indigo-200 bg-gradient-to-br from-white via-slate-50 to-indigo-50/40 shadow-md shadow-indigo-900/10 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-indigo-300"
               >
                 <div className="flex min-h-0 flex-1 flex-col p-5">
                   <div className="flex items-start gap-4">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-funt-honey text-funt-gold-deep shadow-inner ring-1 ring-funt-gold/40">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shadow-inner ring-1 ring-indigo-200/60">
                       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
@@ -151,7 +151,7 @@ export default function CertificatesPage() {
                       <p className="mt-1 text-sm text-black/55">{formatDate(c.issuedAt)}</p>
                       <p className="mt-2 rounded-lg border border-black/10 bg-white/80 px-2 py-1 font-mono text-xs text-black/50">{c.certificateId}</p>
                       {c.coinReward > 0 && (
-                        <p className="mt-2 rounded-lg bg-[#fff2cd] px-2 py-1.5 text-xs font-semibold text-[#8d6f14]">
+                        <p className="mt-2 rounded-lg bg-indigo-50 px-2 py-1.5 text-xs font-semibold text-indigo-700">
                           {c.coinRewardPending
                             ? `${c.coinReward} FUNT coins pending instructor approval`
                             : `You received ${c.coinReward} FUNT coins`}
@@ -164,7 +164,7 @@ export default function CertificatesPage() {
                       type="button"
                       onClick={() => downloadPdf(c.certificateId)}
                       disabled={downloadingId === c.certificateId}
-                      className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-bold text-black shadow-md ring-1 ring-funt-gold-deep/25 transition duration-200 hover:bg-funt-gold-hover disabled:opacity-60"
+                      className="btn-primary text-sm inline-flex items-center gap-2 disabled:opacity-60"
                     >
                       {downloadingId === c.certificateId ? (
                         <>
@@ -182,7 +182,7 @@ export default function CertificatesPage() {
                     </button>
                     <Link
                       href={`/verify?id=${encodeURIComponent(c.certificateId)}`}
-                      className="text-sm font-medium text-funt-gold-deep hover:underline"
+                      className="text-sm font-medium text-indigo-600 hover:underline"
                     >
                       Verify
                     </Link>

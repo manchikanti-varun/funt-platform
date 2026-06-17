@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
+import { AppPageShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { BackLink } from "@/components/ui/BackLink";
 
@@ -20,8 +21,6 @@ interface BadgeDef {
   autoTrigger?: string;
 }
 
-const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
 
 export default function BadgesPage() {
   const [rows, setRows] = useState<BadgeDef[]>([]);
@@ -144,42 +143,43 @@ export default function BadgesPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col">
-      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
+    <AppPageShell>
+      <div className="flex h-full min-h-0 flex-1 flex-col">
+        <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="shrink-0 pb-4">
         <BackLink href="/dashboard">Back to Dashboard</BackLink>
       </div>
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Badges</h1>
           <p className="mt-1 text-sm text-slate-600">Create global badges once; all admins and super admins can use them.</p>
         </div>
         <div className="p-6 space-y-8">
-          {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
-          {msg ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{msg}</div> : null}
+          {error ? <div className="alert--error">{error}</div> : null}
+          {msg ? <div className="alert--success">{msg}</div> : null}
 
           <section className="rounded-xl border border-slate-200 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Create badge</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Create badge</h2>
             <form onSubmit={createBadge} className="mt-3 grid gap-3 sm:grid-cols-2">
-              <input className={INPUT_CLASS} placeholder="Badge key (e.g. TOP_PERFORMER)" value={badgeType} onChange={(e) => setBadgeType(e.target.value)} required />
-              <input className={INPUT_CLASS} placeholder="Display title" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
-              <input className={INPUT_CLASS} placeholder="Icon name (e.g. award)" value={icon} onChange={(e) => setIcon(e.target.value)} />
-              <input className={INPUT_CLASS} placeholder="Image URL (optional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+              <input className="input text-sm" placeholder="Badge key (e.g. TOP_PERFORMER)" value={badgeType} onChange={(e) => setBadgeType(e.target.value)} required />
+              <input className="input text-sm" placeholder="Display title" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+              <input className="input text-sm" placeholder="Icon name (e.g. award)" value={icon} onChange={(e) => setIcon(e.target.value)} />
+              <input className="input text-sm" placeholder="Image URL (optional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
               <div className="sm:col-span-2">
-                <textarea className={`${INPUT_CLASS} min-h-24`} placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+                <textarea className="input text-sm min-h-24" placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
-              <select className={INPUT_CLASS} value={awardMode} onChange={(e) => setAwardMode(e.target.value as AwardMode)}>
+              <select className="input text-sm" value={awardMode} onChange={(e) => setAwardMode(e.target.value as AwardMode)}>
                 <option value="MANUAL">Manual only</option>
                 <option value="AUTO">Automatic only</option>
                 <option value="BOTH">Both manual and automatic</option>
               </select>
-              <select className={INPUT_CLASS} value={autoTrigger} onChange={(e) => setAutoTrigger(e.target.value as AutoTrigger)}>
+              <select className="input text-sm" value={autoTrigger} onChange={(e) => setAutoTrigger(e.target.value as AutoTrigger)}>
                 {autoTriggerOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>{opt.label}</option>
                 ))}
               </select>
               <div className="sm:col-span-2">
-                <button disabled={loading} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
+                <button disabled={loading} className="btn-primary">
                   Create badge
                 </button>
               </div>
@@ -187,7 +187,7 @@ export default function BadgesPage() {
           </section>
 
           <section className="rounded-xl border border-slate-200 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Manual award</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Manual award</h2>
             <p className="mt-1 text-xs text-slate-500">
               Only active badges with mode <strong>MANUAL</strong> or <strong>BOTH</strong> can be awarded here.
             </p>
@@ -195,7 +195,7 @@ export default function BadgesPage() {
               <label className="space-y-1.5">
                 <span className="text-xs font-medium text-slate-600">Student user ID</span>
                 <input
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                   placeholder="Paste student userId"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
@@ -205,7 +205,7 @@ export default function BadgesPage() {
               <label className="space-y-1.5">
                 <span className="text-xs font-medium text-slate-600">Badge</span>
                 <select
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                   value={awardBadgeType}
                   onChange={(e) => setAwardBadgeType(e.target.value)}
                   required
@@ -223,13 +223,13 @@ export default function BadgesPage() {
               <div className="md:col-span-2 flex flex-wrap items-center gap-3">
                 <button
                   disabled={loading || manualAwardOptions.length === 0}
-                  className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-primary text-sm disabled:cursor-not-allowed"
                 >
                   Award badge
                 </button>
                 <a
                   href="/profile-search"
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:border-teal-200 hover:text-teal-700"
+                  className="btn-secondary text-xs"
                 >
                   Open profile search (to get user ID)
                 </a>
@@ -238,7 +238,7 @@ export default function BadgesPage() {
           </section>
 
           <section className="rounded-xl border border-slate-200 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Global badges</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Global badges</h2>
             <div className="mt-3 overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
@@ -282,7 +282,8 @@ export default function BadgesPage() {
           </section>
         </div>
       </div>
-    </div>
+      </div>
+    </AppPageShell>
   );
 }
 

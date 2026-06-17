@@ -49,7 +49,7 @@ function SetPasswordPrompt() {
       <button
         type="button"
         onClick={handleStart}
-        className="mt-4 w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-black shadow-sm hover:bg-funt-gold-hover"
+        className="mt-4 w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-funt-gold-hover"
       >
         Verify with Google to set password
       </button>
@@ -150,7 +150,7 @@ function ChangePasswordSection() {
         <button
           type="submit"
           disabled={loading}
-          className="w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-black shadow-sm hover:bg-funt-gold-hover disabled:opacity-60"
+          className="w-fit rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-funt-gold-hover disabled:opacity-60"
         >
           {loading ? "Updating…" : "Update password"}
         </button>
@@ -172,7 +172,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-funt-gold-deep" />
+        <div className="spinner" />
       </div>
     );
   }

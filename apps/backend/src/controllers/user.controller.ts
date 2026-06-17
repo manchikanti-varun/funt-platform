@@ -84,7 +84,11 @@ export const patchMe = asyncHandler(async (req: Request, res: Response): Promise
     throw new AppError("Username, email, and mobile can only be changed by Admin or Super Admin", 403);
   }
   const allowed: Record<string, unknown> = {};
-  if (body.name != null) allowed.name = String(body.name).trim();
+  if (body.name != null) {
+    const n = String(body.name).trim();
+    if (!n) throw new AppError("Name cannot be empty", 400);
+    allowed.name = n;
+  }
   if (body.address != null) allowed.address = String(body.address).trim();
   if (body.city != null) allowed.city = String(body.city).trim();
   if (body.schoolName != null) allowed.schoolName = String(body.schoolName).trim();

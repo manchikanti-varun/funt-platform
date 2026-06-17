@@ -377,7 +377,7 @@ export default function EditCoursePage() {
               <button
                 type="button"
                 onClick={archive}
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
+                className="btn-danger text-sm"
               >
                 Archive
               </button>
@@ -396,7 +396,7 @@ export default function EditCoursePage() {
             </Link>
             <Link
               href={`/courses/${id}/learning-plan`}
-              className="rounded-lg border border-teal-300 bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 transition"
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
             >
               🗺 Learning Plan
             </Link>
@@ -410,7 +410,7 @@ export default function EditCoursePage() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="input max-w-xl"
             />
           </div>
           <div>
@@ -422,7 +422,7 @@ export default function EditCoursePage() {
             <input
               value={durationText}
               onChange={(e) => setDurationText(e.target.value)}
-              className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="input max-w-xl"
               placeholder="e.g. 45 days, 3 months, 12 weeks"
             />
             <p className="mt-1 text-xs text-slate-500">Used in certificates for this course.</p>
@@ -441,7 +441,7 @@ export default function EditCoursePage() {
                 type="checkbox"
                 checked={isDemo}
                 onChange={(e) => setIsDemo(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
               <span className="text-sm text-slate-800">
                 <span className="font-semibold">Demo course</span>
@@ -452,7 +452,7 @@ export default function EditCoursePage() {
             </label>
           </div>
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-indigo-700">Marketing & Catalog Details</h3>
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-600">Marketing & Catalog Details</h3>
             <p className="mb-4 text-sm text-slate-600">These fields appear on the explore/catalog pages and the marketing website.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -486,19 +486,19 @@ export default function EditCoursePage() {
                   <button type="button" onClick={() => setPricingTiers(pricingTiers.filter((_, i) => i !== idx))} className="mt-2 text-sm text-red-600 hover:text-red-800">Remove</button>
                 </div>
               ))}
-              <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-teal-700 hover:text-teal-900">+ Add pricing tier</button>
+              <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-indigo-700 hover:text-indigo-900">+ Add pricing tier</button>
             </div>
           </div>
           {/* ── Security settings ── */}
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-700">Security</h3>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-600">Security</h3>
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
               <p className="mb-3 text-xs text-slate-500">
                 Watermark setting for this course. Choose <strong>Inherit</strong> to follow the global config, or override for this course only.
               </p>
               <div className="flex flex-wrap gap-3">
                 {(["inherit", true, false] as const).map((val) => (
-                  <label key={String(val)} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${enableWatermark === val ? "border-teal-500 bg-teal-50 text-teal-800" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}>
+                  <label key={String(val)} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${enableWatermark === val ? "border-indigo-500 bg-indigo-50 text-indigo-800" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}>
                     <input
                       type="radio"
                       name="enableWatermark"
@@ -514,7 +514,7 @@ export default function EditCoursePage() {
             </div>
           </div>
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Chapters in this course</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Chapters in this course</h3>
             <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can edit the chapter copy (title, content, video, etc.) here, or reorder with Up/Down.</p>
             <ul className="mt-3 space-y-2">
               {sortedModules.map((m, i) => (
@@ -529,7 +529,7 @@ export default function EditCoursePage() {
                       <button
                         type="button"
                         onClick={() => startEditModule(m, i)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-300 bg-teal-50 text-teal-700 transition hover:bg-teal-100"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 transition hover:bg-indigo-100"
                         title="Edit chapter"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -568,7 +568,7 @@ export default function EditCoursePage() {
                         <input
                           value={moduleEdit.title ?? ""}
                           onChange={(e) => setModuleEdit((p) => ({ ...p, title: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="input text-sm"
                         />
                       </div>
                       <div>
@@ -580,7 +580,7 @@ export default function EditCoursePage() {
                           step={1}
                           value={moduleEdit.xpReward ?? 40}
                           onChange={(e) => setModuleEdit((p) => ({ ...p, xpReward: Math.floor(Number(e.target.value)) || 0 }))}
-                          className="w-full max-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="input max-w-[200px] text-sm"
                         />
                         <p className="mt-1 text-xs text-slate-500">Awarded when the learner finishes this chapter in a batch. New batches copy values from this course snapshot.</p>
                       </div>
@@ -589,7 +589,7 @@ export default function EditCoursePage() {
                         <input
                           value={moduleEdit.description ?? ""}
                           onChange={(e) => setModuleEdit((p) => ({ ...p, description: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="input text-sm"
                         />
                       </div>
                       <div>
@@ -610,7 +610,7 @@ export default function EditCoursePage() {
                           <input
                             value={moduleEdit.youtubeUrl ?? ""}
                             onChange={(e) => setModuleEdit((p) => ({ ...p, youtubeUrl: e.target.value }))}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="input text-sm"
                             placeholder="https://..."
                           />
                         </div>
@@ -631,7 +631,7 @@ export default function EditCoursePage() {
                             <input
                               value={moduleEdit.videoUrl ?? ""}
                               onChange={(e) => setModuleEdit((p) => ({ ...p, videoUrl: e.target.value }))}
-                              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs"
+                              className="input mt-2 text-xs"
                               placeholder="Or paste an external video URL (e.g. Vimeo)"
                             />
                           )}
@@ -641,7 +641,7 @@ export default function EditCoursePage() {
                           <input
                             value={moduleEdit.resourceLinkUrl ?? ""}
                             onChange={(e) => setModuleEdit((p) => ({ ...p, resourceLinkUrl: e.target.value }))}
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                            className="input text-sm"
                             placeholder="e.g. Google Drive, slides, docs, or any other URL"
                           />
                           <p className="mt-1 text-xs text-slate-500">Share Drive folders, slides, or other resources. Students see this as a link in the chapter.</p>
@@ -652,7 +652,7 @@ export default function EditCoursePage() {
                         <input
                           value={moduleEdit.linkedAssignmentId ?? ""}
                           onChange={(e) => setModuleEdit((p) => ({ ...p, linkedAssignmentId: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          className="input text-sm"
                           placeholder="Global assignment ID"
                         />
                       </div>
@@ -669,7 +669,7 @@ export default function EditCoursePage() {
                                   : (globalAssignmentPreview?.title ?? "")
                               }
                               onChange={(e) => setModuleEdit((p) => ({ ...p, linkedAssignmentTitleOverride: e.target.value }))}
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="input text-sm"
                               placeholder="Filled from global when linked"
                             />
                           </div>
@@ -694,7 +694,7 @@ export default function EditCoursePage() {
                                   : (globalAssignmentPreview?.submissionType ?? "")
                               }
                               onChange={(e) => setModuleEdit((p) => ({ ...p, linkedAssignmentSubmissionTypeOverride: e.target.value || undefined }))}
-                              className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                              className="input max-w-xs text-sm"
                             >
                               <option value="">Use global</option>
                               {Object.values(SUBMISSION_TYPE).map((t) => (
@@ -721,7 +721,7 @@ export default function EditCoursePage() {
                                           : [...effectiveTags, tag];
                                         setModuleEdit((p) => ({ ...p, linkedAssignmentSkillTagsOverride: next }));
                                       }}
-                                      className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                     />
                                     <span className="text-slate-700">{tag}</span>
                                   </label>
@@ -737,14 +737,14 @@ export default function EditCoursePage() {
                           type="button"
                           onClick={saveModuleSnapshot}
                           disabled={savingModule}
-                          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                          className="btn-primary text-sm"
                         >
                           {savingModule ? "Saving…" : "Save chapter"}
                         </button>
                         <button
                           type="button"
                           onClick={cancelEditModule}
-                          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="btn-secondary text-sm"
                         >
                           Cancel
                         </button>
@@ -758,14 +758,14 @@ export default function EditCoursePage() {
               <button
                 type="button"
                 onClick={() => setShowChapterPicker((v) => !v)}
-                className="inline-flex items-center gap-2 rounded-lg border border-teal-300 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-100"
+                className="btn-secondary inline-flex items-center gap-2 text-sm"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                 Add Chapter
               </button>
 
               {showChapterPicker && (
-                <div className="mt-3 rounded-xl border border-teal-200 bg-white p-4 shadow-md">
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-md">
                   <div className="mb-3 flex items-center justify-between">
                     <h4 className="text-sm font-semibold text-slate-800">Select a Global Chapter to add</h4>
                     <button
@@ -781,7 +781,7 @@ export default function EditCoursePage() {
                     value={chapterSearch}
                     onChange={(e) => setChapterSearch(e.target.value)}
                     placeholder="Search chapters by title…"
-                    className="mb-3 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                    className="input mb-3 max-w-md text-sm"
                   />
                   <div className="min-h-0 max-h-64 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
                     {filteredGlobalChapters.length === 0 ? (
@@ -811,12 +811,12 @@ export default function EditCoursePage() {
                                   setError(res.message ?? "Failed to add chapter.");
                                 }
                               }}
-                              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-teal-50 disabled:opacity-50"
+                              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-indigo-50 disabled:opacity-50"
                             >
-                              <svg className="h-4 w-4 shrink-0 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <svg className="h-4 w-4 shrink-0 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                               <span className="text-sm font-medium text-slate-800">{ch.title}</span>
                               {addingChapterId === ch.id && (
-                                <span className="ml-auto h-4 w-4 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+                                <span className="ml-auto h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
                               )}
                             </button>
                           </li>
@@ -829,7 +829,7 @@ export default function EditCoursePage() {
             </div>
           </div>
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+            <div className="alert--error">
               {error}
             </div>
           )}
@@ -837,7 +837,7 @@ export default function EditCoursePage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-50"
+              className="btn-primary inline-flex items-center gap-2 text-sm"
             >
               {loading ? (
                 <>
@@ -850,7 +850,7 @@ export default function EditCoursePage() {
             </button>
             <Link
               href="/courses"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="btn-secondary inline-flex items-center gap-2 text-sm"
             >
               Cancel
             </Link>

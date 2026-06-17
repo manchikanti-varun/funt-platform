@@ -12,14 +12,14 @@ function ParentRootRedirect() {
 
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+      <div className="spinner" />
     </div>
   );
 }
 
 export default function ParentDashboardPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" /></div>}>
+    <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><div className="spinner" /></div>}>
       <ParentRootRedirect />
     </Suspense>
   );

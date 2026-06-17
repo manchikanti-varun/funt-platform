@@ -68,5 +68,5 @@ export const rejectRequest = asyncHandler(async (req: Request, res: Response): P
   if (!requestId) throw new AppError("requestId is required", 400);
   const reason = (req.body ?? {}).reason;
   await service.rejectRequest(requestId, userId, typeof reason === "string" ? reason : undefined);
-  res.json({ message: "Request rejected" });
+  successRes(res, null, "Request rejected");
 });

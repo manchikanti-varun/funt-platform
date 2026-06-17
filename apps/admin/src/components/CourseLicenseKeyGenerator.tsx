@@ -306,7 +306,7 @@ export function CourseLicenseKeyGenerator({
               {generatedKeys.map((key, i) => (
                 <li
                   key={`modal-${key}-${i}`}
-                  className="rounded-xl border border-teal-100 bg-teal-50/60 p-3"
+                  className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3"
                 >
                   <code className="block break-all font-mono text-base font-semibold text-slate-900">{key}</code>
                   <button
@@ -359,7 +359,7 @@ export function CourseLicenseKeyGenerator({
       {courseTitle ? <p className="text-muted mt-1 font-medium text-slate-700">{courseTitle}</p> : null}
       <p className="text-muted mt-2 max-w-xl">One student, one batch. Same outcome as adding them on the batch’s Student access.</p>
       {lockedBatch && (
-        <p className="mt-3 rounded-xl border border-teal-100 bg-teal-50/50 px-3 py-2 text-sm text-teal-900">
+        <p className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-sm text-indigo-900">
           <span className="font-medium">Cohort</span> · {lockedBatch.name}
           {lockedBatch.batchId ? ` (${lockedBatch.batchId})` : ""}
         </p>
@@ -380,8 +380,8 @@ export function CourseLicenseKeyGenerator({
       )}
 
       {generatedKeys && generatedKeys.length > 0 && (
-        <div className="mb-6 rounded-xl border border-teal-100 bg-teal-50/40 p-4 ring-1 ring-teal-50">
-          <p className="text-sm font-medium text-teal-900">
+        <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4 ring-1 ring-indigo-50">
+          <p className="text-sm font-medium text-indigo-900">
             {generatedKeys.length === 1
               ? "Copy before leaving this page."
               : `${generatedKeys.length} keys · random order · copy before leaving.`}
@@ -392,7 +392,7 @@ export function CourseLicenseKeyGenerator({
                 key={`${key}-${i}`}
                 className="flex flex-wrap items-center gap-2 rounded-md border border-slate-100 bg-slate-50/80 px-2 py-2 sm:flex-nowrap"
               >
-                <span className="w-2 shrink-0 rounded-full bg-teal-400/80" aria-hidden />
+                <span className="w-2 shrink-0 rounded-full bg-indigo-400/80" aria-hidden />
                 <code className="min-w-0 flex-1 break-all font-mono text-sm font-medium text-slate-900">{key}</code>
                 <button type="button" onClick={() => copyOneKey(key, i)} className="btn-secondary shrink-0 px-3 py-1.5 text-xs font-semibold">
                   {copiedKeyIndex === i ? "Copied" : "Copy"}
@@ -422,7 +422,7 @@ export function CourseLicenseKeyGenerator({
 
       {loading ? (
         <div className="flex min-h-[120px] items-center justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner spinner--inline" />
         </div>
       ) : (
       <form onSubmit={generate} className="mt-4 space-y-3">

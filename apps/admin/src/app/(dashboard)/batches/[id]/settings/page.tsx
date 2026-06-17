@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { BackLink } from "@/components/ui/BackLink";
 
 const ACTION_CARD_CLASS =
-  "block w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-teal-200 hover:shadow-md";
+  "block w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-indigo-200 hover:shadow-md";
 
 export default function BatchSettingsHubPage() {
   const params = useParams();
@@ -28,7 +28,7 @@ export default function BatchSettingsHubPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Batch settings</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
           <p className="mt-2 text-sm text-slate-500">Choose an action below.</p>
@@ -37,7 +37,7 @@ export default function BatchSettingsHubPage() {
         <div className="p-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Link href={`/batches/${id}/student-access`} className={ACTION_CARD_CLASS}>
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>

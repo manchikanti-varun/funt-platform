@@ -17,6 +17,26 @@ import {
   ExternalLink,
   Filter,
   X,
+  Home,
+  Lock,
+  Package,
+  GraduationCap,
+  UserCheck,
+  Users,
+  CreditCard,
+  KeyRound,
+  Map,
+  ClipboardList,
+  CheckCircle,
+  Award,
+  ShoppingBag,
+  Gamepad2,
+  Ticket,
+  CalendarDays,
+  BarChart3,
+  Upload,
+  ShieldCheck,
+  FileText,
 } from "lucide-react";
 
 interface FAQ {
@@ -56,27 +76,27 @@ const CATEGORY_LABELS: Record<string, string> = {
   "content-protection": "Content Protection",
 };
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "platform-overview": "🏠",
-  authentication: "🔐",
-  courses: "📚",
-  batches: "📦",
-  students: "🎓",
-  trainers: "👨‍🏫",
-  parents: "👪",
-  payments: "💳",
-  "license-keys": "🔑",
-  "learning-plans": "🗺️",
-  assignments: "📝",
-  attendance: "✅",
-  certificates: "🏆",
-  shop: "🛍️",
-  gamification: "🎮",
-  tickets: "🎫",
-  "leave-management": "📅",
-  analytics: "📊",
-  "import-export": "📤",
-  "content-protection": "🛡️",
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  "platform-overview": <Home className="h-4 w-4" />,
+  authentication: <Lock className="h-4 w-4" />,
+  courses: <BookOpen className="h-4 w-4" />,
+  batches: <Package className="h-4 w-4" />,
+  students: <GraduationCap className="h-4 w-4" />,
+  trainers: <UserCheck className="h-4 w-4" />,
+  parents: <Users className="h-4 w-4" />,
+  payments: <CreditCard className="h-4 w-4" />,
+  "license-keys": <KeyRound className="h-4 w-4" />,
+  "learning-plans": <Map className="h-4 w-4" />,
+  assignments: <ClipboardList className="h-4 w-4" />,
+  attendance: <CheckCircle className="h-4 w-4" />,
+  certificates: <Award className="h-4 w-4" />,
+  shop: <ShoppingBag className="h-4 w-4" />,
+  gamification: <Gamepad2 className="h-4 w-4" />,
+  tickets: <Ticket className="h-4 w-4" />,
+  "leave-management": <CalendarDays className="h-4 w-4" />,
+  analytics: <BarChart3 className="h-4 w-4" />,
+  "import-export": <Upload className="h-4 w-4" />,
+  "content-protection": <ShieldCheck className="h-4 w-4" />,
 };
 
 /** Strips HTML tags for plain-text search matching */
@@ -262,7 +282,7 @@ export default function FAQsPage() {
                     : "border border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                 }`}
               >
-                <span className="mr-1">{CATEGORY_ICONS[cat] ?? "📄"}</span>
+                <span className="mr-1 inline-flex">{CATEGORY_ICONS[cat] ?? <FileText className="h-4 w-4" />}</span>
                 {CATEGORY_LABELS[cat] ?? cat}
               </button>
             ))}
@@ -336,7 +356,7 @@ export default function FAQsPage() {
               <section key={cat}>
                 {/* Category Header */}
                 <div className="mb-3 flex items-center gap-2.5">
-                  <span className="text-lg">{CATEGORY_ICONS[cat] ?? "📄"}</span>
+                  <span className="text-lg inline-flex items-center">{CATEGORY_ICONS[cat] ?? <FileText className="h-5 w-5" />}</span>
                   <h2 className="text-base font-bold text-slate-800">
                     {CATEGORY_LABELS[cat] ?? cat}
                   </h2>

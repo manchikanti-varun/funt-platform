@@ -70,11 +70,7 @@ export default function OnboardingPage() {
             <button
               key={role}
               onClick={() => setSelectedRole(role)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                selectedRole === role
-                  ? "bg-indigo-600 text-white shadow-md"
-                  : "border border-slate-200 bg-white text-slate-700 hover:border-indigo-200 hover:bg-indigo-50"
-              }`}
+              className={`tab-btn ${selectedRole === role ? "tab-btn--active" : ""}`}
             >
               {ROLE_LABELS[role] ?? role}
             </button>

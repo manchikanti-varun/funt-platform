@@ -6,6 +6,7 @@ import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { UserModel } from "../models/User.model.js";
 import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
 import { LicenseKeyModel } from "../models/LicenseKey.model.js";
+import { PaymentSubmissionModel } from "../models/PaymentSubmission.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
 import { normalizeAllowedPaymentMethods, formatPaymentMethodsLabel } from "../utils/coursePaymentMethods.js";
 import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
@@ -13,6 +14,7 @@ import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
 import { resolveHeaderImageDisplayUrl } from "../utils/headerImageUrl.js";
 import { ensureFirstModuleCompletedBadge } from "./achievement.service.js";
+import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import {
   isLearningPlanActive,
   getMilestonesFromSnapshot,
@@ -20,6 +22,7 @@ import {
   recalculateMilestoneProgress,
   processScheduledUnlocks,
   canStudentAccessChapter,
+  batchCheckChapterAccess,
 } from "./learningPlan.service.js";
 
 function isDuplicateKeyError(err: unknown): boolean {
@@ -225,27 +228,25 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
       };
     });
 
-    // ── Learning Plan: apply milestone-level access gate ─────────────
+    // ── Learning Plan: apply milestone-level access gate (single DB round-trip) ──
     if (isLearningPlanActive(snapshot)) {
-      modules = await Promise.all(
-        modules.map(async (m) => {
-          const { allowed } = await canStudentAccessChapter(
-            studentId, batchMongoId, snapshotCourseId,
-            m.order as number, snapshot
-          );
-          if (!allowed) {
-            // Return locked stub — never expose content for locked milestones
-            return {
-              order: m.order,
-              title: m.title,
-              unlocked: false,
-              completed: false,
-              milestoneLocked: true,
-            } as typeof m;
-          }
-          return m;
-        })
+      const chapterOrders = modules.map((m) => m.order as number);
+      const accessMap = await batchCheckChapterAccess(
+        studentId, batchMongoId, snapshotCourseId, chapterOrders, snapshot
       );
+      modules = modules.map((m) => {
+        const access = accessMap.get(m.order as number);
+        if (access && !access.allowed) {
+          return {
+            order: m.order,
+            title: m.title,
+            unlocked: false,
+            completed: false,
+            milestoneLocked: true,
+          } as typeof m;
+        }
+        return m;
+      });
     }
   } else {
     modules = rawModules.map((m, idx) => ({
@@ -313,24 +314,15 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   };
 }
 
-async function computeProgressPercent(
-  studentId: string,
-  batchMongoId: string,
-  snapshotCourseId: string,
+/** In-memory progress computation using pre-loaded progress documents (avoids per-course DB query). */
+function computeProgressPercentFromDocs(
   rawModules: ModuleSnapshot[],
-  snapshotsLength: number
-): Promise<number> {
+  progressDocs: Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null }>
+): number {
   if (rawModules.length === 0) return 0;
-  const progressList = await ChapterProgressModel.find(
-    snapshotsLength > 1
-      ? { studentId, batchId: batchMongoId, courseId: snapshotCourseId }
-      : { studentId, batchId: batchMongoId, $or: [{ courseId: snapshotCourseId }, { courseId: null }, { courseId: { $exists: false } }] }
-  )
-    .lean()
-    .exec();
   const progressByOrder = new Map<number, ProgressDoc>();
-  for (const p of progressList) {
-    progressByOrder.set((p as { moduleOrder: number }).moduleOrder, p as ProgressDoc);
+  for (const p of progressDocs) {
+    progressByOrder.set(p.moduleOrder, p as ProgressDoc);
   }
   let completed = 0;
   rawModules.forEach((m, idx) => {
@@ -367,6 +359,10 @@ export async function awardStudentXp(studentId: string, amount: number) {
 
 /** List courses the student is enrolled in (one entry per course in each batch; batch can have multiple courses). */
 export async function getMyCoursesForStudent(studentId: string) {
+  // ── Cache layer (3D-01 fix) ────────────────────────────────────────────────
+  const cached = await cacheGet<Array<Record<string, unknown>>>(CACHE_KEYS.studentCourses(studentId));
+  if (cached) return cached;
+
   const enrollments = await EnrollmentModel.find({
     studentId,
     status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
@@ -377,6 +373,41 @@ export async function getMyCoursesForStudent(studentId: string) {
   const batchIds = enrollments.map((e) => e.batchId);
   const batches = await BatchModel.find({ _id: { $in: batchIds } }).lean().exec();
   const batchById = new Map(batches.map((b) => [String(b._id), b]));
+
+  // ── Batch-load payment states and license keys to avoid N+1 (3A-01 fix) ──
+  const [verifiedPayments, licenseKeys, allProgress] = await Promise.all([
+    PaymentSubmissionModel.find({
+      studentId,
+      batchId: { $in: batchIds },
+      status: "VERIFIED",
+      $or: [{ kind: "COURSE" }, { kind: { $exists: false } }],
+    }).select("batchId courseId status").lean().exec(),
+    LicenseKeyModel.find({
+      usedByStudentId: studentId,
+      batchId: { $in: batchIds },
+    }).select("batchId").lean().exec(),
+    ChapterProgressModel.find({
+      studentId,
+      batchId: { $in: batchIds },
+    }).lean().exec(),
+  ]);
+
+  // Build lookup maps for O(1) access checks
+  const verifiedPaymentSet = new Set(
+    verifiedPayments.map((p) => `${p.batchId}::${(p as { courseId?: string }).courseId ?? ""}`)
+  );
+  const licenseKeyBatchSet = new Set(
+    licenseKeys.map((k) => String((k as { batchId?: string }).batchId ?? ""))
+  );
+  // Group progress by batchId+courseId for percent computation
+  const progressByBatchCourse = new Map<string, Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null }>>();
+  for (const p of allProgress) {
+    const key = `${p.batchId}::${(p as { courseId?: string }).courseId ?? ""}`;
+    let arr = progressByBatchCourse.get(key);
+    if (!arr) { arr = []; progressByBatchCourse.set(key, arr); }
+    arr.push(p as typeof arr[0]);
+  }
+
   const result: Array<{
     courseId: string;
     courseTitle: string;
@@ -408,20 +439,24 @@ export async function getMyCoursesForStudent(studentId: string) {
       const courseBlocked = !!courseBlockMap.get(courseId);
       const modules = Array.isArray(s?.modules) ? s.modules : [];
       const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((s as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
-      const payState =
-        !blocked && !courseBlocked && enrollmentPriceInPaise >= 100
-          ? await getLatestCoursePaymentState(studentId, String(batch._id), courseId)
-          : null;
-      // License key enrollment bypasses the payment gate
-      const licenseAccess =
-        enrollmentPriceInPaise >= 100 && !payState
-          ? await hasLicenseKeyEnrollment(studentId, String(batch._id))
-          : false;
-      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || payState?.status === "VERIFIED" || licenseAccess);
+
+      // Use pre-loaded data instead of per-iteration DB calls
+      const hasVerifiedPayment = verifiedPaymentSet.has(`${e.batchId}::${courseId}`);
+      const hasLicenseKey = licenseKeyBatchSet.has(e.batchId);
+      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedPayment || hasLicenseKey);
       if (!hasCourseAccess) continue;
 
       const isAdminBlocked = blocked || courseBlocked;
-      const pct = await computeProgressPercent(studentId, String(batch._id), courseId, modules, snapshots.length);
+
+      // Compute progress from pre-loaded data instead of per-iteration DB query
+      const progressKey = `${e.batchId}::${courseId}`;
+      // Also check records with no courseId (legacy data)
+      const legacyKey = `${e.batchId}::`;
+      const progressDocs = snapshots.length > 1
+        ? (progressByBatchCourse.get(progressKey) ?? [])
+        : [...(progressByBatchCourse.get(progressKey) ?? []), ...(progressByBatchCourse.get(legacyKey) ?? [])];
+      const pct = computeProgressPercentFromDocs(modules, progressDocs);
+
       result.push({
         courseId,
         courseTitle: s?.title ?? "Course",
@@ -437,7 +472,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     }
   }
   const catalog = await loadCourseHeaderImageMap(result.map((r) => r.courseId));
-  return result.map((r) => ({
+  const final = result.map((r) => ({
     ...r,
     courseHeaderImageUrl: resolveCourseHeaderImageUrl(
       r.courseId,
@@ -445,6 +480,10 @@ export async function getMyCoursesForStudent(studentId: string) {
       catalog
     ),
   }));
+
+  // Cache the result for subsequent dashboard loads
+  await cacheSet(CACHE_KEYS.studentCourses(studentId), final, CACHE_TTL.STUDENT);
+  return final;
 }
 
 export async function getCourseForStudentByCourseId(studentId: string, courseId: string, batchId?: string) {
@@ -528,6 +567,7 @@ export async function listCoursesForExplore() {
     status: { $ne: BATCH_STATUS.ARCHIVED },
     $or: [{ visibility: "PUBLIC" }, { visibility: { $exists: false } }],
   })
+    .select("-courseSnapshots.modules.content -courseSnapshot.modules.content")
     .sort({ createdAt: -1 })
     .lean()
     .exec();

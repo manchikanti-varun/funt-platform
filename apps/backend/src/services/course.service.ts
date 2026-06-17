@@ -5,7 +5,7 @@ import { GlobalModuleModel } from "../models/GlobalModule.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
 import { COURSE_STATUS, MODULE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
-import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
+import { cacheDel, cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
 import { generateCourseId } from "../utils/funtIdGenerator.js";
 import { resolveStaffUserIds } from "../utils/resolveStaffUserIds.js";
@@ -346,14 +346,26 @@ export async function createCourse(input: CreateCourseInput) {
 }
 
 export async function listCourses(filters?: { status?: string; search?: string }) {
+  // Cache unfiltered course list (most common admin dashboard call)
+  const isUnfiltered = !filters || (!filters.status && !filters.search);
+  if (isUnfiltered) {
+    const cached = await cacheGet<unknown[]>(CACHE_KEYS.adminCourses());
+    if (cached) return cached;
+  }
+
   const query: Record<string, unknown> = {};
   if (filters?.status) query.status = filters.status;
   if (filters?.search?.trim()) {
     const term = String(filters.search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     query.$or = [{ title: { $regex: term, $options: "i" } }, { description: { $regex: term, $options: "i" } }];
   }
-  const list = await CourseModel.find(query).sort({ updatedAt: -1 }).lean().exec();
-  return list.map((d) => toCourseResponse(d as unknown as Parameters<typeof toCourseResponse>[0]));
+  const list = await CourseModel.find(query).sort({ updatedAt: -1 }).limit(500).lean().exec();
+  const result = list.map((d) => toCourseResponse(d as unknown as Parameters<typeof toCourseResponse>[0]));
+
+  if (isUnfiltered) {
+    await cacheSet(CACHE_KEYS.adminCourses(), result, CACHE_TTL.ADMIN_LIST);
+  }
+  return result;
 }
 
 export async function getCourseById(id: string) {

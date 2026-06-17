@@ -259,7 +259,7 @@ export default function AdminShopPage() {
   if (loading && products.length === 0) {
     return (
       <div className="flex min-h-[240px] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
       </div>
     );
   }

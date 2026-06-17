@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ROLE } from "@funt-platform/constants";
 import { useAdminUser } from "@/contexts/AdminUserContext";
+import { AppPageShell } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 const AUDIT_ITEMS = [
@@ -54,44 +55,44 @@ export default function AuditHubPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="w-full space-y-6">
+      <AppPageShell>
         <PageHeader title="Audit hub" subtitle="Super Admin only." />
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
           Access is restricted to Super Admin accounts.
         </p>
-      </div>
+      </AppPageShell>
     );
   }
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <PageHeader
         title="Audit hub"
         subtitle="One place to access all audit and history views."
       />
       <div className="flex flex-wrap gap-2">
-        <Link href="/audit-hub" className="rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">
+        <Link href="/audit-hub" className="nav-pills nav-pills--active">
           Audit hub
         </Link>
-        <Link href="/audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/audit" className="nav-pills">
           System
         </Link>
-        <Link href="/license-key-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/license-key-audit" className="nav-pills">
           License keys
         </Link>
-        <Link href="/coupon-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/coupon-audit" className="nav-pills">
           Coupons
         </Link>
-        <Link href="/audit?action=PAYMENT_UPI_UPDATED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/audit?action=PAYMENT_UPI_UPDATED" className="nav-pills">
           Payment UPI config
         </Link>
-        <Link href="/payment-qr?section=HISTORY" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/payment-qr?section=HISTORY" className="nav-pills">
           QR history
         </Link>
-        <Link href="/audit?action=CONTENT_PROTECTION_DEVTOOLS_DETECTED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/audit?action=CONTENT_PROTECTION_DEVTOOLS_DETECTED" className="nav-pills">
           DevTools
         </Link>
-        <Link href="/audit?action=CONTENT_PROTECTION_COPY_BLOCKED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/audit?action=CONTENT_PROTECTION_COPY_BLOCKED" className="nav-pills">
           Copy attempts
         </Link>
       </div>
@@ -100,13 +101,13 @@ export default function AuditHubPage() {
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100/80 transition hover:-translate-y-0.5 hover:border-teal-200 hover:bg-teal-50/40"
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ring-1 ring-slate-100/80 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50/40"
           >
             <p className="text-base font-semibold text-slate-900">{item.title}</p>
             <p className="mt-1 text-sm text-slate-600">{item.description}</p>
           </Link>
         ))}
       </div>
-    </div>
+    </AppPageShell>
   );
 }

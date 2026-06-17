@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppPageShell } from "@/components/ui";
 import { CourseLicenseKeyGenerator } from "@/components/CourseLicenseKeyGenerator";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -13,7 +14,7 @@ export default async function LicenseKeysPage({
 
   if (!batchId) {
     return (
-      <div className="w-full space-y-6">
+      <AppPageShell>
         <PageHeader
           title="License keys"
           subtitle="Keys belong to a batch (cohort). Open a batch from the list, then generate keys for a course in that cohort."
@@ -30,12 +31,12 @@ export default async function LicenseKeysPage({
             License key audit
           </Link>
         </p>
-      </div>
+      </AppPageShell>
     );
   }
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <PageHeader
         title="License keys"
         subtitle="This cohort only. One key enrolls one student into this batch."
@@ -56,6 +57,6 @@ export default async function LicenseKeysPage({
           Batch overview
         </Link>
       </p>
-    </div>
+    </AppPageShell>
   );
 }

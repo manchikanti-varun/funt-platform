@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 import { useAdminUser } from "@/contexts/AdminUserContext";
+import { AppPageShell } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
 interface ContentProtectionPolicy {
@@ -219,17 +220,17 @@ export default function ContentProtectionPage() {
 
   if (!settings) {
     return (
-      <div className="w-full space-y-6">
+      <AppPageShell>
         <PageHeader title="Content Protection" subtitle="Loading settings…" />
         <div className="flex min-h-[30vh] items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
         </div>
-      </div>
+      </AppPageShell>
     );
   }
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <PageHeader
         title="Content Protection"
         subtitle="Control security behaviours for the student portal and admin portal independently."
@@ -359,6 +360,6 @@ export default function ContentProtectionPage() {
           )}
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

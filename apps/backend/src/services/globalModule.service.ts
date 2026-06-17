@@ -5,6 +5,7 @@ import { createAuditLog } from "./audit.service.js";
 import { findCourseByParam } from "./course.service.js";
 import { AppError } from "../utils/AppError.js";
 import { generateModuleId } from "../utils/funtIdGenerator.js";
+import { sanitizeRichText } from "../utils/sanitizeHtml.js";
 
 const ENTITY = "GlobalModule";
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
@@ -82,7 +83,7 @@ export async function createModule(input: CreateModuleInput) {
     moduleId,
     title: input.title.trim(),
     description: input.description.trim(),
-    content: input.content ?? "",
+    content: sanitizeRichText(input.content),
     youtubeUrl: input.youtubeUrl?.trim() || undefined,
     videoUrl: input.videoUrl?.trim() || undefined,
     resourceLinkUrl: input.resourceLinkUrl?.trim() || undefined,
@@ -241,7 +242,7 @@ export async function updateModule(
 
   existing.title = input.title !== undefined ? input.title.trim() : existing.title;
   existing.description = input.description !== undefined ? input.description.trim() : existing.description;
-  existing.content = input.content !== undefined ? input.content : (existing.content ?? "");
+  existing.content = input.content !== undefined ? sanitizeRichText(input.content) : (existing.content ?? "");
   existing.youtubeUrl = input.youtubeUrl !== undefined ? input.youtubeUrl.trim() || undefined : existing.youtubeUrl;
   (existing as { videoUrl?: string }).videoUrl = input.videoUrl !== undefined ? input.videoUrl.trim() || undefined : (existing as { videoUrl?: string }).videoUrl;
   (existing as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl !== undefined ? input.resourceLinkUrl.trim() || undefined : (existing as { resourceLinkUrl?: string }).resourceLinkUrl;

@@ -12,6 +12,7 @@ import {
 } from "./demoEnrollment.service.js";
 import { issueInvoiceForEnrollment } from "./invoice.service.js";
 import { AppError } from "../utils/AppError.js";
+import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import {
   isLearningPlanActive,
   getMilestonesFromSnapshot,
@@ -63,14 +64,26 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
   }).exec();
   if (existing) throw new AppError("Student is already enrolled in this batch", 400);
 
-  const doc = await EnrollmentModel.create({
-    studentId,
-    batchId: batchMongoId,
-    status: ENROLLMENT_STATUS.ACTIVE,
-  });
+  let doc;
+  try {
+    doc = await EnrollmentModel.create({
+      studentId,
+      batchId: batchMongoId,
+      status: ENROLLMENT_STATUS.ACTIVE,
+    });
+  } catch (err) {
+    // Handle race condition: concurrent requests may both pass the findOne check above
+    if ((err as { code?: number })?.code === 11000) {
+      throw new AppError("Student is already enrolled in this batch", 400);
+    }
+    throw err;
+  }
 
   await clearBatchEnrollmentExclusion(studentId, batchMongoId);
   await createAuditLog("ENROLLMENT_CREATED", input.createdBy, "Enrollment", String(doc._id));
+
+  // Invalidate the student's cached course list so they see the new enrollment immediately
+  await cacheDel(CACHE_KEYS.studentCourses(studentId));
 
   const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
   const courseId =
@@ -212,6 +225,7 @@ export async function setEnrollmentCourseAccessBlocked(
   if (blocked) next.set(cId, true);
   else next.delete(cId);
   (enrollment as { courseAccessBlocked: Map<string, boolean> }).courseAccessBlocked = next;
+  enrollment.markModified("courseAccessBlocked");
   await enrollment.save();
   return enrollment;
 }
@@ -322,23 +336,33 @@ export async function bulkEnroll(
         batchId: batchMongoId,
         status: ENROLLMENT_STATUS.ACTIVE,
       });
-      await clearBatchEnrollmentExclusion(studentId, batchMongoId);
-      await createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId);
-      if (!(await shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId))) {
-        await issueInvoiceForEnrollment({
-          enrollmentId: String(doc._id),
-          studentId,
-          batchId: batchMongoId,
-          courseId: defaultCourseId,
-          createdBy,
-        });
-      }
+      // Fire secondary operations in parallel — they're non-critical for enrollment success
+      await Promise.allSettled([
+        clearBatchEnrollmentExclusion(studentId, batchMongoId),
+        createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId),
+        cacheDel(CACHE_KEYS.studentCourses(studentId)),
+        shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId).then((skip) => {
+          if (!skip) {
+            return issueInvoiceForEnrollment({
+              enrollmentId: String(doc._id),
+              studentId,
+              batchId: batchMongoId,
+              courseId: defaultCourseId,
+              createdBy,
+            });
+          }
+        }),
+      ]);
       result.enrolled += 1;
     } catch (err) {
-      result.errors.push({
-        identifier: studentId,
-        message: err instanceof Error ? err.message : "Failed to enroll",
-      });
+      if ((err as { code?: number })?.code === 11000) {
+        result.skipped += 1;
+      } else {
+        result.errors.push({
+          identifier: studentId,
+          message: err instanceof Error ? err.message : "Failed to enroll",
+        });
+      }
     }
   }
 
@@ -413,6 +437,8 @@ export async function removeEnrollment(batchId: string, studentId: string, perfo
   await EnrollmentModel.deleteOne({ _id: doc._id }).exec();
   await recordBatchEnrollmentExclusion(studentId, batchMongoId, performedBy);
   await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
+  // Invalidate student's cached course list
+  await cacheDel(CACHE_KEYS.studentCourses(studentId));
   return { removed: true };
 }
 
@@ -436,26 +462,78 @@ export async function bulkRemoveEnrollment(
   const result: BulkRemovalResult = { removed: 0, skipped: 0, notFound: [] };
   const seen = new Set<string>();
 
+  // ── Batch-resolve all usernames/IDs in 1–2 queries instead of N ──
+  const uniqueInputs: string[] = [];
   for (const raw of studentUsernamesOrIds) {
     const v = (raw && String(raw).trim()) || "";
     if (!v || seen.has(v)) continue;
     seen.add(v);
+    uniqueInputs.push(v);
+  }
 
-    try {
-      const studentId = await resolveStudentId(v);
-      const doc = await EnrollmentModel.findOne({ studentId, batchId: batchMongoId }).exec();
-      if (!doc) {
-        result.skipped += 1;
-        continue;
-      }
-      await EnrollmentModel.deleteOne({ _id: doc._id }).exec();
-      await recordBatchEnrollmentExclusion(studentId, batchMongoId, performedBy);
-      await createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", String(doc._id));
-      result.removed += 1;
-    } catch {
+  const possibleIds = uniqueInputs.filter((v) => OBJECT_ID_REGEX.test(v));
+  const possibleUsernames = uniqueInputs.filter((v) => !OBJECT_ID_REGEX.test(v)).map((u) => u.toLowerCase());
+
+  const [usersByIds, usersByUsernames] = await Promise.all([
+    possibleIds.length > 0
+      ? UserModel.find({ _id: { $in: possibleIds } }).select("_id").lean().exec()
+      : [],
+    possibleUsernames.length > 0
+      ? UserModel.find({ username: { $in: possibleUsernames } }).select("_id username").lean().exec()
+      : [],
+  ]);
+
+  const resolvedMap = new Map<string, string>();
+  for (const u of usersByIds) resolvedMap.set(String(u._id), String(u._id));
+  for (const u of usersByUsernames) {
+    const username = (u as { username?: string }).username?.toLowerCase() ?? "";
+    resolvedMap.set(username, String(u._id));
+  }
+
+  const resolvedStudentIds: string[] = [];
+  for (const v of uniqueInputs) {
+    const key = OBJECT_ID_REGEX.test(v) ? v : v.toLowerCase();
+    const resolved = resolvedMap.get(key);
+    if (resolved) {
+      resolvedStudentIds.push(resolved);
+    } else {
       result.notFound.push(v);
     }
   }
 
+  // Batch-find enrollments to remove
+  const enrollments = await EnrollmentModel.find({
+    studentId: { $in: resolvedStudentIds },
+    batchId: batchMongoId,
+  }).select("_id studentId").lean().exec();
+  const enrolledStudentIds = new Set(enrollments.map((e) => String(e.studentId)));
+  const enrollmentIdsByStudent = new Map(
+    enrollments.map((e) => [String(e.studentId), String(e._id)])
+  );
+
+  // Identify which students are not enrolled (skip them)
+  for (const studentId of resolvedStudentIds) {
+    if (!enrolledStudentIds.has(studentId)) {
+      result.skipped += 1;
+    }
+  }
+
+  // Batch-delete all found enrollments
+  const idsToDelete = enrollments.map((e) => e._id);
+  if (idsToDelete.length > 0) {
+    await EnrollmentModel.deleteMany({ _id: { $in: idsToDelete } }).exec();
+  }
+
+  // Fire secondary operations in parallel for all removed students
+  const removedStudentIds = [...enrolledStudentIds];
+  await Promise.allSettled(
+    removedStudentIds.flatMap((studentId) => [
+      recordBatchEnrollmentExclusion(studentId, batchMongoId, performedBy),
+      createAuditLog("ENROLLMENT_REMOVED", performedBy, "Enrollment", enrollmentIdsByStudent.get(studentId) ?? ""),
+      cacheDel(CACHE_KEYS.studentCourses(studentId)),
+    ])
+  );
+
+  result.removed = removedStudentIds.length;
   return result;
 }

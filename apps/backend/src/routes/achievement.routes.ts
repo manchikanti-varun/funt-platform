@@ -1,14 +1,12 @@
 
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
-import { requireRoles } from "../middleware/role.middleware.js";
-import { ROLE } from "@funt-platform/constants";
 import { getMyAchievements, getBadgeTypes } from "../controllers/achievement.controller.js";
 
 const router = Router();
 
 router.get("/badge-types", authMiddleware, getBadgeTypes);
-router.get("/me", authMiddleware, requireRoles(ROLE.STUDENT), getMyAchievements);
-router.get("/my", authMiddleware, getMyAchievements);
+// Any authenticated user can view their own achievements (students see badges, staff see awarded badges)
+router.get("/me", authMiddleware, getMyAchievements);
 
 export const achievementRoutes = router;

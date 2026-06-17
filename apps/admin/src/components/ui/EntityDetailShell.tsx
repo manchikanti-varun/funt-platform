@@ -19,7 +19,7 @@ export const ENTITY_SECTION_TITLE =
 export function EntityDetailLoading({ label = "Loading…" }: { label?: string }) {
   return (
     <>
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="spinner" />
       <p className="mt-4 text-sm text-slate-500">{label}</p>
     </>
   );

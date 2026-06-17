@@ -36,6 +36,7 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getR2Client, getR2Bucket } from "../config/r2.js";
 import { AppError } from "../utils/AppError.js";
+import { getEnv } from "../config/env.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -125,7 +126,9 @@ export async function generatePresignedUploadUrl(
     expiresIn: PRESIGNED_PUT_TTL_SECONDS,
   });
 
-  console.log(`[r2] Presigned PUT issued: ${key} (expires in ${PRESIGNED_PUT_TTL_SECONDS}s)`);
+  if (!getEnv().isProduction) {
+    console.log(`[r2] Presigned PUT issued: ${key} (expires in ${PRESIGNED_PUT_TTL_SECONDS}s)`);
+  }
 
   return {
     uploadUrl,
@@ -178,7 +181,9 @@ export async function confirmVideoUpload(
     throw new AppError("Upload appears to be empty (0 bytes). Please re-upload the file.", 400);
   }
 
-  console.log(`[r2] Confirmed upload: ${key} (${size} bytes, ${contentType})`);
+  if (!getEnv().isProduction) {
+    console.log(`[r2] Confirmed upload: ${key} (${size} bytes, ${contentType})`);
+  }
   return { size, contentType };
 }
 
@@ -195,7 +200,9 @@ export async function deleteVideoFromR2(key: string): Promise<void> {
   const bucket = getR2Bucket();
 
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
-  console.log(`[r2] Deleted video: ${key}`);
+  if (!getEnv().isProduction) {
+    console.log(`[r2] Deleted video: ${key}`);
+  }
 }
 
 // ---------------------------------------------------------------------------

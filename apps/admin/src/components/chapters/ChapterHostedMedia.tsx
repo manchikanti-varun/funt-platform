@@ -103,7 +103,7 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
           {isR2 ? (
             r2Loading ? (
               <div className="flex aspect-video items-center justify-center rounded-xl border border-slate-200 bg-slate-100">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+                <div className="spinner spinner--inline" />
               </div>
             ) : r2PreviewUrl ? (
               <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm">

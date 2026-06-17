@@ -69,36 +69,36 @@ export default function FinanceDashboardPage() {
       />
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/payments" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/payments" className="nav-pills">
           Payment approvals
         </Link>
-        <Link href="/finance" className="rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">
+        <Link href="/finance" className="nav-pills nav-pills--active">
           Finance dashboard
         </Link>
-        <Link href="/payment-qr" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/payment-qr" className="nav-pills">
           UPI QR center
         </Link>
-        <Link href="/coupons" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+        <Link href="/coupons" className="nav-pills">
           Coupons
         </Link>
       </div>
 
       <PageSection>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input value={batchId} onChange={(e) => setBatchId(e.target.value)} placeholder="Filter by batchId" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input value={courseId} onChange={(e) => setCourseId(e.target.value)} placeholder="Filter by courseId" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-          <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Filter by coupon code" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input text-sm" />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input text-sm" />
+          <input value={batchId} onChange={(e) => setBatchId(e.target.value)} placeholder="Filter by batchId" className="input text-sm" />
+          <input value={courseId} onChange={(e) => setCourseId(e.target.value)} placeholder="Filter by courseId" className="input text-sm" />
+          <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Filter by coupon code" className="input text-sm" />
         </div>
       </PageSection>
 
       {loading ? (
         <div className="flex min-h-[220px] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       ) : error ? (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>
+        <p className="alert--error">{error}</p>
       ) : data ? (
         <>
           <div className="flex justify-end">
@@ -115,7 +115,7 @@ export default function FinanceDashboardPage() {
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Attempts</p><p className="text-xl font-bold text-slate-900">{data.funnel.totalAttempts}</p></div>
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Verified</p><p className="text-xl font-bold text-emerald-700">{data.funnel.verifiedCount}</p></div>
             <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Rejected</p><p className="text-xl font-bold text-rose-700">{data.funnel.rejectedCount}</p></div>
-            <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Conversion</p><p className="text-xl font-bold text-teal-700">{data.funnel.conversionRatePercent}%</p></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-xs text-slate-500">Conversion</p><p className="text-xl font-bold text-indigo-700">{data.funnel.conversionRatePercent}%</p></div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">

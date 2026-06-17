@@ -6,8 +6,14 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 
 const STATUS_COLORS: Record<string, string> = {
-  OPEN: "bg-indigo-100 text-indigo-800", RESOLVED: "bg-emerald-100 text-emerald-800",
-  CLOSED: "bg-slate-100 text-slate-600", ESCALATED: "bg-red-100 text-red-800",
+  OPEN: "bg-indigo-100 text-indigo-800",
+  ASSIGNED: "bg-blue-100 text-blue-700",
+  IN_PROGRESS: "bg-cyan-100 text-cyan-800",
+  WAITING_FOR_STUDENT: "bg-amber-100 text-amber-800",
+  WAITING_FOR_SUPPORT: "bg-orange-100 text-orange-700",
+  RESOLVED: "bg-emerald-100 text-emerald-800",
+  CLOSED: "bg-slate-100 text-slate-600",
+  ESCALATED: "bg-red-100 text-red-800",
 };
 
 interface TicketMessage { id: string; senderRole: string; message: string; isInternalNote: boolean; createdAt: string }
@@ -46,7 +52,7 @@ export default function ParentTicketDetailPage() {
 
   if (loading) return (
     <div className="flex min-h-[200px] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
     </div>
   );
   if (!ticket) return (
@@ -56,7 +62,10 @@ export default function ParentTicketDetailPage() {
   const isClosed = ticket.status === "CLOSED";
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6">
-      <Link href="/parent/support" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900">← Back to Support</Link>
+      <Link href="/parent/support" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-slate-900">
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        Back to Support
+      </Link>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">

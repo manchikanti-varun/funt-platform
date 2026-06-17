@@ -68,14 +68,19 @@ function getTemplatePath(): string {
   return join(backendRoot, "templates", "certificate.json");
 }
 
+// ─── Cached template (loaded once on first call, avoids sync fs on every request) ───
+let _cachedTemplate: CertificateLayoutTemplate | null = null;
+let _cachedImagePath: string | null | undefined = undefined;
+
 export function loadCertificateTemplate(): CertificateLayoutTemplate {
+  if (_cachedTemplate) return _cachedTemplate;
   const path = getTemplatePath();
   if (existsSync(path)) {
     try {
       const raw = readFileSync(path, "utf-8");
       const parsed = JSON.parse(raw) as Partial<CertificateLayoutTemplate>;
       if (parsed && Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-        return {
+        _cachedTemplate = {
           size: parsed.size ?? DEFAULT_TEMPLATE.size,
           margin: parsed.margin ?? DEFAULT_TEMPLATE.margin,
           organization: parsed.organization ?? DEFAULT_TEMPLATE.organization,
@@ -83,12 +88,14 @@ export function loadCertificateTemplate(): CertificateLayoutTemplate {
           blocks: parsed.blocks,
           footer: parsed.footer ?? DEFAULT_TEMPLATE.footer,
         };
+        return _cachedTemplate;
       }
     } catch {
       
     }
   }
-  return DEFAULT_TEMPLATE;
+  _cachedTemplate = DEFAULT_TEMPLATE;
+  return _cachedTemplate;
 }
 
 function substitute(str: string, data: Record<string, string>): string {
@@ -100,9 +107,11 @@ function substitute(str: string, data: Record<string, string>): string {
 }
 
 function getTemplateImagePath(): string | null {
+  if (_cachedImagePath !== undefined) return _cachedImagePath;
   const backendRoot = join(__dirname, "..", "..");
   const templatePath = join(backendRoot, "templates", "certificate-template.png");
-  return existsSync(templatePath) ? templatePath : null;
+  _cachedImagePath = existsSync(templatePath) ? templatePath : null;
+  return _cachedImagePath;
 }
 
 function generateImageTemplateCertificatePdf(data: CertificatePdfData): Promise<Buffer> {

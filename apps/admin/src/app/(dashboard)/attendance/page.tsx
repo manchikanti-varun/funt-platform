@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AppPageShell } from "@/components/ui";
 import { api } from "@/lib/api";
 
 interface EventSummary {
@@ -132,11 +133,11 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="space-y-10">
+    <AppPageShell>
       {}
-      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-teal-50 via-white to-slate-50 px-6 py-8 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-indigo-50 via-white to-slate-50 px-6 py-8 shadow-sm">
         <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-600">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
             <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
@@ -152,7 +153,7 @@ export default function AttendancePage() {
 
       {}
       <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-white px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Create event</h2>
           <p className="mt-1 text-sm text-slate-600">Date, optional title, and usernames (comma or newline).</p>
         </div>
@@ -164,7 +165,7 @@ export default function AttendancePage() {
                 type="date"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm shadow-sm transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                className="input w-full text-sm"
               />
             </div>
             <div>
@@ -174,7 +175,7 @@ export default function AttendancePage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Bootcamp Day 1, Workshop Q1"
-                className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                className="input w-full text-sm"
               />
             </div>
           </div>
@@ -185,14 +186,12 @@ export default function AttendancePage() {
               onChange={(e) => { setUsernamesPaste(e.target.value); setCreateMessage(null); }}
               placeholder="Paste CSV or one per line: student.one, student.two"
               rows={5}
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-mono placeholder:text-slate-400 shadow-sm transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+              className="input w-full text-sm font-mono"
             />
           </div>
           {createMessage && (
             <div
-              className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${
-                createMessage.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"
-              }`}
+              className={createMessage.type === "success" ? "alert--success" : "alert--error"}
             >
               {createMessage.type === "success" ? (
                 <svg className="h-5 w-5 shrink-0 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -209,7 +208,7 @@ export default function AttendancePage() {
           <button
             type="submit"
             disabled={createLoading || !usernamesPaste.trim()}
-            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50 disabled:pointer-events-none"
+            className="btn-primary inline-flex items-center gap-2 text-sm"
           >
             {createLoading ? (
               <>
@@ -240,11 +239,11 @@ export default function AttendancePage() {
         <div className="p-6">
           {eventsLoading ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-500" />
+              <div className="spinner" />
               <p className="mt-4 text-sm text-slate-500">Loading events…</p>
             </div>
           ) : events.length === 0 ? (
-            <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -261,7 +260,7 @@ export default function AttendancePage() {
                   <li
                     key={ev.id}
                     className={`rounded-xl border transition-all ${
-                      isOpen ? "border-teal-200 bg-teal-50/30 shadow-md" : "border-slate-200 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50"
+                      isOpen ? "border-indigo-200 bg-indigo-50/30 shadow-md" : "border-slate-200 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/50"
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-5">
@@ -282,7 +281,7 @@ export default function AttendancePage() {
                         onClick={() => setDetailId(isOpen ? null : ev.id)}
                         className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition ${
                           isOpen
-                            ? "border border-teal-200 bg-teal-100 text-teal-800 hover:bg-teal-200/80"
+                            ? "border border-indigo-200 bg-indigo-100 text-indigo-800 hover:bg-indigo-200/80"
                             : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                         }`}
                       >
@@ -314,7 +313,7 @@ export default function AttendancePage() {
       {}
       {detail && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100 overflow-hidden">
-          <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-5 flex flex-wrap items-center justify-between gap-4">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-white px-6 py-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">{detail.title || "Event"}</h2>
               <p className="mt-1 text-sm text-slate-600">
@@ -371,13 +370,11 @@ export default function AttendancePage() {
                   onChange={(e) => { setAddPresentPaste(e.target.value); setAddPresentMessage(null); }}
                   placeholder="FS-26-00003, FS-26-00004"
                   rows={3}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-mono shadow-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                  className="input w-full text-sm font-mono"
                 />
                 {addPresentMessage && (
                   <div
-                    className={`flex items-start gap-3 rounded-lg border px-3 py-2 ${
-                      addPresentMessage.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"
-                    }`}
+                    className={addPresentMessage.type === "success" ? "alert--success" : "alert--error"}
                   >
                     <p className="text-sm font-medium">{addPresentMessage.text}</p>
                   </div>
@@ -385,7 +382,7 @@ export default function AttendancePage() {
                 <button
                   type="submit"
                   disabled={addPresentLoading || !addPresentPaste.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-700 disabled:opacity-50"
+                  className="btn-primary inline-flex items-center gap-2 text-sm"
                 >
                   {addPresentLoading ? (
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -397,6 +394,6 @@ export default function AttendancePage() {
           </div>
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

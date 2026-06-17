@@ -7,6 +7,7 @@
 
 import { KnowledgeArticleModel } from "../models/KnowledgeArticle.model.js";
 import { AppError } from "../utils/AppError.js";
+import { sanitizeRichText } from "../utils/sanitizeHtml.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ export async function createArticle(input: CreateArticleInput) {
     subcategory: input.subcategory?.trim() ?? "",
     type: input.type,
     roles: input.roles,
-    content: input.content,
+    content: sanitizeRichText(input.content),
     summary: input.summary?.trim() ?? input.content.slice(0, 200),
     tags: input.tags ?? [],
     relatedArticleIds: input.relatedArticleIds ?? [],
@@ -101,7 +102,7 @@ export async function updateArticle(
   if (input.subcategory !== undefined) (doc as unknown as Record<string, unknown>).subcategory = input.subcategory;
   if (input.type !== undefined) (doc as unknown as Record<string, unknown>).type = input.type;
   if (input.roles !== undefined) (doc as unknown as Record<string, unknown>).roles = input.roles;
-  if (input.content !== undefined) doc.content = input.content;
+  if (input.content !== undefined) doc.content = sanitizeRichText(input.content);
   if (input.summary !== undefined) (doc as unknown as Record<string, unknown>).summary = input.summary;
   if (input.tags !== undefined) (doc as unknown as Record<string, unknown>).tags = input.tags;
   if (input.relatedArticleIds !== undefined) (doc as unknown as Record<string, unknown>).relatedArticleIds = input.relatedArticleIds;

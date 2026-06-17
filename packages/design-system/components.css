@@ -1,0 +1,722 @@
+/**
+ * FUNT Platform — Shared Component Styles
+ * ═══════════════════════════════════════════════════════
+ * All values reference ONLY --lms-* tokens from tokens.css.
+ * Zero hardcoded hex values in this file.
+ *
+ * ICON RULES (enforced by this system):
+ * - Library: Lucide ONLY. No emojis. No custom inline SVG for standard actions.
+ * - Stroke-width: 1.5 everywhere.
+ * - Sizes: 14px inline text, 16px buttons, 20px navigation, 24px empty states/heroes.
+ *
+ * ⚠ funt-gold = #4f46e5 (INDIGO). Never bg-funt-gold text-black.
+ */
+
+/* ═══════════════════════════════════════════════════════
+   1. BUTTONS
+   Variants: primary, secondary, ghost, danger, approve, reject
+   Sizes: sm, md (default), lg
+   States: hover, active, disabled, loading
+   ═══════════════════════════════════════════════════════ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-text-inverse);
+  background: var(--lms-admin-accent);
+  border: none;
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.25);
+  transition: all var(--lms-duration-slow) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background: var(--lms-admin-accent-hover);
+  box-shadow: 0 6px 16px -2px rgba(79, 70, 229, 0.30);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:disabled {
+  opacity: 0.50;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn-primary:disabled:hover {
+  background: var(--lms-admin-accent);
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.25);
+}
+.btn-primary.is-loading {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-text-primary);
+  background: var(--lms-surface-primary);
+  border: 1px solid var(--lms-border-default);
+  box-shadow: var(--lms-shadow-sm);
+  transition: all var(--lms-duration-slow) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  border-color: var(--lms-admin-accent);
+  background: var(--lms-admin-accent-surface);
+  color: var(--lms-admin-accent);
+  box-shadow: var(--lms-shadow-md);
+}
+.btn-secondary:active { transform: scale(0.98); }
+.btn-secondary:disabled { opacity: 0.50; cursor: not-allowed; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-text-secondary);
+  background: transparent;
+  border: none;
+  transition: all var(--lms-duration-base) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-ghost:hover { background: var(--lms-surface-tertiary); color: var(--lms-text-primary); }
+.btn-ghost:active { transform: scale(0.98); }
+.btn-ghost:disabled { opacity: 0.50; cursor: not-allowed; }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-error-text);
+  background: var(--lms-error-bg);
+  border: 1px solid var(--lms-error-border);
+  box-shadow: var(--lms-shadow-sm);
+  transition: all var(--lms-duration-slow) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-danger:hover { background: var(--lms-error-border); border-color: var(--lms-error-icon); }
+.btn-danger:active { transform: scale(0.98); }
+.btn-danger:disabled { opacity: 0.50; cursor: not-allowed; }
+
+/* Fix #10: Approve/Reject buttons — same height as btn-primary, proper sizing */
+.btn-approve {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-text-inverse);
+  background: var(--lms-success-icon);
+  border: none;
+  box-shadow: var(--lms-shadow-sm);
+  transition: all var(--lms-duration-slow) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-approve:hover { background: var(--lms-success-text); box-shadow: var(--lms-shadow-md); }
+.btn-approve:active { transform: scale(0.98); }
+.btn-approve:disabled { opacity: 0.50; cursor: not-allowed; }
+
+.btn-reject {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lms-space-2);
+  height: var(--lms-btn-height-md);
+  padding: 0 var(--lms-btn-padding-x-md);
+  border-radius: var(--lms-btn-radius);
+  font-size: var(--lms-btn-font-size);
+  font-weight: var(--lms-btn-font-weight);
+  color: var(--lms-text-secondary);
+  background: var(--lms-surface-primary);
+  border: 1px solid var(--lms-border-default);
+  box-shadow: var(--lms-shadow-sm);
+  transition: all var(--lms-duration-slow) var(--lms-easing-default);
+  cursor: pointer;
+}
+.btn-reject:hover { background: var(--lms-surface-tertiary); }
+.btn-reject:active { transform: scale(0.98); }
+.btn-reject:disabled { opacity: 0.50; cursor: not-allowed; }
+
+/* Size modifiers */
+.btn-sm { height: var(--lms-btn-height-sm); padding: 0 var(--lms-btn-padding-x-sm); font-size: var(--lms-text-sm); }
+.btn-lg { height: var(--lms-btn-height-lg); padding: 0 var(--lms-btn-padding-x-lg); font-size: var(--lms-text-lg); }
+
+/* ═══════════════════════════════════════════════════════
+   2. INPUTS
+   Fix #1: This single .input class replaces ALL 9 INPUT_CLASS variants.
+   All pages must use className="input" — delete local constants.
+   ═══════════════════════════════════════════════════════ */
+
+.input {
+  width: 100%;
+  min-height: var(--lms-input-height);
+  padding: var(--lms-input-padding-y) var(--lms-input-padding-x);
+  border-radius: var(--lms-input-radius);
+  border: 1px solid var(--lms-input-border);
+  background: var(--lms-surface-primary);
+  color: var(--lms-text-primary);
+  font-size: var(--lms-input-font-size);
+  box-shadow: var(--lms-shadow-sm);
+  outline: none;
+  transition: border-color var(--lms-duration-slow) var(--lms-easing-default),
+              box-shadow var(--lms-duration-slow) var(--lms-easing-default);
+}
+.input::placeholder { color: var(--lms-text-tertiary); }
+.input:focus {
+  border-color: var(--lms-admin-accent);
+  box-shadow: 0 0 0 3px var(--lms-admin-accent-ring);
+}
+.input:disabled {
+  background: var(--lms-surface-tertiary);
+  color: var(--lms-text-disabled);
+  cursor: not-allowed;
+}
+.input--error {
+  border-color: var(--lms-error-icon);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+.input--error:focus {
+  border-color: var(--lms-error-icon);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+/* Textarea variant */
+textarea.input {
+  min-height: 80px;
+  resize: vertical;
+  padding-top: var(--lms-space-3);
+  padding-bottom: var(--lms-space-3);
+}
+
+/* Select with chevron */
+select.input {
+  appearance: none;
+  padding-right: var(--lms-space-10);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--lms-space-3) center;
+  background-size: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   3. CHECKBOXES / RADIOS / TOGGLES
+   All use var(--lms-admin-accent). Never teal, never violet.
+   ═══════════════════════════════════════════════════════ */
+
+.checkbox,
+.radio {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--lms-radius-sm);
+  border: 1px solid var(--lms-border-strong);
+  accent-color: var(--lms-admin-accent);
+  cursor: pointer;
+}
+.radio { border-radius: var(--lms-radius-pill); }
+.checkbox:focus, .radio:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--lms-admin-accent-ring);
+}
+
+.toggle {
+  position: relative;
+  display: inline-flex;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--lms-radius-pill);
+  background: var(--lms-border-default);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: background var(--lms-duration-slow) var(--lms-easing-default);
+}
+.toggle[aria-checked="true"] { background: var(--lms-admin-accent); }
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--lms-radius-pill);
+  background: var(--lms-surface-primary);
+  box-shadow: var(--lms-shadow-sm);
+  transition: transform var(--lms-duration-slow) var(--lms-easing-default);
+}
+.toggle[aria-checked="true"]::after { transform: translateX(20px); }
+.toggle:disabled { opacity: 0.50; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════════
+   4. CARDS
+   .card — standard interactive card
+   .card-section — page section panel (non-interactive)
+   .card-metric — stat/KPI card with colored left border
+   ═══════════════════════════════════════════════════════ */
+
+.card {
+  border-radius: var(--lms-radius-2xl);
+  border: 1px solid var(--lms-border-subtle);
+  background: var(--lms-surface-primary);
+  padding: var(--lms-space-6);
+  box-shadow: var(--lms-shadow-lg);
+  transition: box-shadow var(--lms-duration-slow) var(--lms-easing-default);
+}
+.card:hover { box-shadow: var(--lms-shadow-xl); }
+
+.card-section {
+  border-radius: var(--lms-radius-2xl);
+  border: 1px solid var(--lms-border-subtle);
+  background: var(--lms-surface-primary);
+  padding: var(--lms-space-5);
+  box-shadow: var(--lms-shadow-sm);
+}
+
+.card-metric {
+  border-radius: var(--lms-radius-2xl);
+  border: 1px solid var(--lms-border-default);
+  border-left: 4px solid var(--lms-admin-accent);
+  background: var(--lms-surface-primary);
+  padding: var(--lms-space-5);
+  box-shadow: var(--lms-shadow-sm);
+}
+.card-metric__label {
+  font-size: var(--lms-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.card-metric__value {
+  margin-top: var(--lms-space-1);
+  font-size: var(--lms-text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════
+   5. TABLES
+   .table-th — standard header (uppercase, tracking)
+   .table-th--compact — dense tables (sub-pages)
+   .table-td — cell
+   .table-tr — row with hover
+   ═══════════════════════════════════════════════════════ */
+
+.table-th {
+  padding: var(--lms-space-4) var(--lms-space-5);
+  font-size: var(--lms-table-header-font-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lms-table-header-color);
+  background: var(--lms-table-header-bg);
+  text-align: left;
+}
+.table-th--compact {
+  padding: var(--lms-space-3) var(--lms-space-4);
+  font-size: var(--lms-table-header-font-size);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--lms-table-header-color);
+  background: var(--lms-table-header-bg);
+  text-align: left;
+}
+.table-td {
+  padding: var(--lms-space-4) var(--lms-space-5);
+  font-size: var(--lms-text-base);
+  color: var(--lms-text-primary);
+}
+.table-tr { transition: background var(--lms-duration-fast) var(--lms-easing-default); }
+.table-tr:hover { background: var(--lms-table-row-hover); }
+
+/* ═══════════════════════════════════════════════════════
+   6. BADGES
+   .badge — standalone (rounded-full, px-3 py-1)
+   .badge-inline — table/compact (rounded-full, px-2.5 py-0.5)
+   Status variant classes use shared --lms-status-* tokens
+   ═══════════════════════════════════════════════════════ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lms-space-1);
+  padding: var(--lms-space-1) var(--lms-space-3);
+  border-radius: var(--lms-badge-radius);
+  font-size: var(--lms-badge-font-size);
+  font-weight: var(--lms-badge-font-weight);
+  white-space: nowrap;
+}
+.badge-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lms-space-1);
+  padding: var(--lms-badge-padding-y) var(--lms-badge-padding-x);
+  border-radius: var(--lms-badge-radius);
+  font-size: var(--lms-badge-font-size);
+  font-weight: var(--lms-badge-font-weight);
+  white-space: nowrap;
+}
+
+/* Status badge variants — shared across ALL 3 portals (Fix #7) */
+.badge--open { background: var(--lms-status-open-bg); color: var(--lms-status-open-text); }
+.badge--assigned { background: var(--lms-status-assigned-bg); color: var(--lms-status-assigned-text); }
+.badge--in-progress { background: var(--lms-status-in-progress-bg); color: var(--lms-status-in-progress-text); }
+.badge--waiting-student { background: var(--lms-status-waiting-student-bg); color: var(--lms-status-waiting-student-text); }
+.badge--waiting-support { background: var(--lms-status-waiting-support-bg); color: var(--lms-status-waiting-support-text); }
+.badge--resolved { background: var(--lms-status-resolved-bg); color: var(--lms-status-resolved-text); }
+.badge--closed { background: var(--lms-status-closed-bg); color: var(--lms-status-closed-text); }
+.badge--escalated { background: var(--lms-status-escalated-bg); color: var(--lms-status-escalated-text); }
+.badge--pending { background: var(--lms-status-pending-bg); color: var(--lms-status-pending-text); }
+.badge--approved { background: var(--lms-status-approved-bg); color: var(--lms-status-approved-text); }
+.badge--rejected { background: var(--lms-status-rejected-bg); color: var(--lms-status-rejected-text); }
+.badge--cancelled { background: var(--lms-status-cancelled-bg); color: var(--lms-status-cancelled-text); }
+.badge--active { background: var(--lms-status-active-bg); color: var(--lms-status-active-text); }
+.badge--archived { background: var(--lms-status-archived-bg); color: var(--lms-status-archived-text); }
+
+/* Priority badge variants */
+.badge--priority-low { background: var(--lms-priority-low-bg); color: var(--lms-priority-low-text); }
+.badge--priority-medium { background: var(--lms-priority-medium-bg); color: var(--lms-priority-medium-text); }
+.badge--priority-high { background: var(--lms-priority-high-bg); color: var(--lms-priority-high-text); }
+.badge--priority-urgent { background: var(--lms-priority-urgent-bg); color: var(--lms-priority-urgent-text); }
+
+/* ═══════════════════════════════════════════════════════
+   7. ALERTS (Fix #4)
+   Replaces all 5 error/message patterns across ~25 pages.
+   Hard rule: No plain `text-red-600` feedback anywhere.
+   ═══════════════════════════════════════════════════════ */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--lms-space-3);
+  padding: var(--lms-space-3) var(--lms-space-4);
+  border-radius: var(--lms-radius-xl);
+  border-width: 1px;
+  border-style: solid;
+  font-size: var(--lms-text-base);
+  font-weight: var(--lms-weight-heading);
+}
+.alert--error {
+  background: var(--lms-error-bg);
+  border-color: var(--lms-error-border);
+  color: var(--lms-error-text);
+}
+.alert--success {
+  background: var(--lms-success-bg);
+  border-color: var(--lms-success-border);
+  color: var(--lms-success-text);
+}
+.alert--warning {
+  background: var(--lms-warning-bg);
+  border-color: var(--lms-warning-border);
+  color: var(--lms-warning-text);
+}
+.alert--info {
+  background: var(--lms-info-bg);
+  border-color: var(--lms-info-border);
+  color: var(--lms-info-text);
+}
+
+/* ═══════════════════════════════════════════════════════
+   8. MODALS
+   Sizes: sm, md (default), lg
+   Structure: backdrop + card (header / body / footer)
+   ═══════════════════════════════════════════════════════ */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--lms-z-modal);
+  background: var(--lms-surface-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--lms-space-4);
+  animation: lms-fade-in var(--lms-duration-modal) var(--lms-easing-default);
+}
+.modal-card {
+  width: 100%;
+  max-width: var(--lms-modal-width-md);
+  border-radius: var(--lms-radius-2xl);
+  background: var(--lms-surface-primary);
+  box-shadow: var(--lms-shadow-modal);
+  animation: lms-slide-up var(--lms-duration-modal) var(--lms-easing-default);
+  overflow: hidden;
+}
+.modal-card--sm { max-width: var(--lms-modal-width-sm); }
+.modal-card--lg { max-width: var(--lms-modal-width-lg); }
+.modal-header {
+  padding: var(--lms-space-5) var(--lms-space-6);
+  border-bottom: 1px solid var(--lms-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header__title {
+  font-size: var(--lms-text-xl);
+  font-weight: 600;
+  color: var(--lms-text-primary);
+}
+.modal-body { padding: var(--lms-space-6); }
+.modal-footer {
+  padding: var(--lms-space-4) var(--lms-space-6);
+  border-top: 1px solid var(--lms-border-default);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--lms-space-3);
+}
+
+@keyframes lms-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lms-slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   9. NAVIGATION (Fix #8)
+   3 patterns — exactly 3, no more:
+   .sidebar-item — existing admin sidebar (indigo active)
+   .tab-btn — tabbed interfaces (indigo active, rounded-xl)
+   .nav-pills — sub-module navigation (rounded-full, indigo active)
+   ═══════════════════════════════════════════════════════ */
+
+/* Sidebar (keep existing pattern, document token usage) */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--lms-space-3);
+  padding: 10px var(--lms-space-3);
+  border-radius: var(--lms-radius-xl);
+  font-size: var(--lms-text-base);
+  font-weight: var(--lms-weight-heading);
+  color: var(--lms-text-secondary);
+  transition: all var(--lms-duration-base) var(--lms-easing-default);
+  cursor: pointer;
+}
+.sidebar-item:hover {
+  background: var(--lms-admin-accent-soft);
+  color: var(--lms-text-primary);
+}
+.sidebar-item.is-active {
+  background: var(--lms-admin-accent);
+  color: var(--lms-text-inverse);
+  box-shadow: 0 4px 12px -2px rgba(79, 70, 229, 0.20);
+}
+
+/* Tab buttons — used on Admin Management, KC Onboarding, etc. */
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lms-space-2);
+  padding: 10px var(--lms-space-4);
+  border-radius: var(--lms-radius-xl);
+  font-size: var(--lms-text-base);
+  font-weight: var(--lms-weight-heading);
+  color: var(--lms-text-secondary);
+  background: var(--lms-surface-primary);
+  border: 1px solid var(--lms-border-default);
+  transition: all var(--lms-duration-base) var(--lms-easing-default);
+  cursor: pointer;
+}
+.tab-btn:hover {
+  border-color: var(--lms-admin-accent);
+  background: var(--lms-admin-accent-surface);
+  color: var(--lms-admin-accent);
+}
+.tab-btn.is-active {
+  background: var(--lms-admin-accent);
+  color: var(--lms-text-inverse);
+  border-color: var(--lms-admin-accent);
+  box-shadow: var(--lms-shadow-md);
+}
+
+/* Pill nav — sub-module navigation (Finance, Audit Hub, etc.) (Fix #8) */
+.nav-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lms-space-2);
+  padding: 6px var(--lms-space-3);
+  border-radius: var(--lms-radius-pill);
+  font-size: var(--lms-text-xs);
+  font-weight: 600;
+  color: var(--lms-text-secondary);
+  background: var(--lms-surface-tertiary);
+  transition: all var(--lms-duration-fast) var(--lms-easing-default);
+  cursor: pointer;
+}
+.nav-pills:hover { background: var(--lms-border-default); }
+.nav-pills.is-active {
+  background: var(--lms-admin-accent);
+  color: var(--lms-text-inverse);
+}
+
+/* ═══════════════════════════════════════════════════════
+   10. SPINNERS (Fix #6)
+   Exactly 2 spinners + 1 size modifier.
+   7 previous variants → 2 canonical styles.
+   .spinner — admin portal (border accent = indigo)
+   .spinner-lms — student/parent portal (border accent = funt-gold/indigo)
+   .spinner--sm — inline/compact (20px)
+   ═══════════════════════════════════════════════════════ */
+
+.spinner {
+  width: var(--lms-spinner-size-page);
+  height: var(--lms-spinner-size-page);
+  border-radius: var(--lms-radius-pill);
+  border: var(--lms-spinner-width) solid var(--lms-border-default);
+  border-top-color: var(--lms-admin-accent);
+  animation: lms-spin 0.75s linear infinite;
+}
+
+.spinner-lms {
+  width: var(--lms-spinner-size-page);
+  height: var(--lms-spinner-size-page);
+  border-radius: var(--lms-radius-pill);
+  border: var(--lms-spinner-width) solid var(--lms-student-spinner-border);
+  border-top-color: var(--lms-student-spinner-accent);
+  animation: lms-spin 0.75s linear infinite;
+}
+
+/* Size modifier — for inline/table contexts */
+.spinner--sm,
+.spinner-lms--sm {
+  width: var(--lms-spinner-size-sm);
+  height: var(--lms-spinner-size-sm);
+  border-width: 2px;
+}
+.spinner--inline,
+.spinner-lms--inline {
+  width: var(--lms-spinner-size-inline);
+  height: var(--lms-spinner-size-inline);
+  border-width: 3px;
+}
+
+@keyframes lms-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   11. EMPTY STATES
+   Required on all list/table/grid pages. No dashed borders.
+   Structure: icon (64px circle) + title + description + optional CTA
+   ═══════════════════════════════════════════════════════ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--lms-space-12) var(--lms-space-6);
+  text-align: center;
+}
+.empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--lms-radius-pill);
+  background: var(--lms-admin-accent-surface);
+  color: var(--lms-admin-accent);
+}
+.empty-state__icon svg { width: 24px; height: 24px; }
+.empty-state__title {
+  margin-top: var(--lms-space-4);
+  font-size: var(--lms-text-lg);
+  font-weight: var(--lms-weight-heading);
+  color: var(--lms-text-primary);
+}
+.empty-state__desc {
+  margin-top: var(--lms-space-1);
+  font-size: var(--lms-text-base);
+  color: var(--lms-text-secondary);
+  max-width: 360px;
+}
+.empty-state__cta { margin-top: var(--lms-space-6); }
+
+/* ═══════════════════════════════════════════════════════
+   12. ICON RULES (documentation + enforcement)
+   ═══════════════════════════════════════════════════════
+   Library: Lucide React ONLY.
+   Stroke-width: 1.5 on all icons.
+   Zero emojis anywhere in the UI (fixes #74, #100, #101).
+   
+   Sizing scale:
+   - 14px: inline with text (e.g. helper text indicators)
+   - 16px: inside buttons, table actions
+   - 20px: navigation items, section headers
+   - 24px: empty states, page heroes
+   
+   Color: Always use currentColor (inherited) or a --lms-* token.
+   Vertical alignment: Use `align-middle` or flex containers.
+   
+   BANNED:
+   - Emoji characters as icons
+   - Inline SVG for icons that exist in Lucide
+   - strokeWidth !== 1.5 (the support StatusIcon uses 2.5 — must fix)
+   - Hardcoded hex colors on icons
+   ═══════════════════════════════════════════════════════ */
+
+/* Icon size utility classes (optional — can use Tailwind equivalents) */
+.icon-xs { width: 14px; height: 14px; }
+.icon-sm { width: 16px; height: 16px; }
+.icon-md { width: 20px; height: 20px; }
+.icon-lg { width: 24px; height: 24px; }
+
+/* ═══════════════════════════════════════════════════════
+   REDUCED MOTION
+   ═══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .spinner-lms,
+  .spinner--sm,
+  .spinner-lms--sm {
+    animation: none !important;
+  }
+  .modal-card,
+  .modal-backdrop {
+    animation: none !important;
+  }
+  .btn-primary:active,
+  .btn-secondary:active,
+  .btn-ghost:active,
+  .btn-danger:active,
+  .btn-approve:active,
+  .btn-reject:active {
+    transform: none !important;
+  }
+}

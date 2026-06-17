@@ -121,7 +121,7 @@ export default function CouponAuditPage() {
 
       {loading ? (
         <div className="flex min-h-[200px] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       ) : data && data.rows.length === 0 ? (
         <EmptyState title="No redemptions yet" description="When students use coupons at checkout, entries appear here." />

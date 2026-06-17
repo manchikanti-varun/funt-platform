@@ -135,20 +135,20 @@ function AdminSignupForm() {
   if (!token) return null;
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
+        <div className="spinner" />
       </div>
     );
   }
   if (previewError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft text-center">
           <p className="mb-4 text-slate-600">{previewError}</p>
           <button
             type="button"
             onClick={() => router.replace("/login")}
-            className="text-teal-600 font-semibold hover:underline"
+            className="text-indigo-600 font-semibold hover:underline"
           >
             Back to Sign In
           </button>
@@ -159,7 +159,7 @@ function AdminSignupForm() {
 
   if (submittedMessage) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4">
         <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft text-center">
           <h2 className="text-lg font-semibold text-slate-800">Request Submitted</h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-600">{submittedMessage}</p>
@@ -177,7 +177,7 @@ function AdminSignupForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-teal-50/40 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
         <div className="mb-6 flex flex-col items-center justify-center">
           <img
@@ -366,7 +366,7 @@ export default function AdminSignupPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-50">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       }
     >

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Coins, ShoppingCart, Truck } from "lucide-react";
 import { api } from "@/lib/api";
 import { AppPageShell, PageSection } from "@/components/ui";
 
@@ -56,32 +57,15 @@ function coinGrantSourceLabel(source: string): string {
 }
 
 function IconCoin() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="9" className="fill-[#f7e9b9] stroke-[#c89e2c]" strokeWidth="1.5" />
-      <path d="M9.5 9.5h4.5a1.5 1.5 0 010 3H11a1.5 1.5 0 000 3h4.5" className="stroke-[#7c5e10]" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
+  return <Coins className="h-4 w-4" aria-hidden />;
 }
 
 function IconCart() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M3 5h2l2.4 9.2a1 1 0 001 .8h7.9a1 1 0 001-.76L19 8H7" className="stroke-current" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="10" cy="19" r="1.4" className="fill-current" />
-      <circle cx="17" cy="19" r="1.4" className="fill-current" />
-    </svg>
-  );
+  return <ShoppingCart className="h-4 w-4" aria-hidden />;
 }
 
 function IconTruck() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" className="stroke-current" strokeWidth="1.7" strokeLinejoin="round" />
-      <circle cx="7" cy="18" r="1.5" className="fill-current" />
-      <circle cx="17" cy="18" r="1.5" className="fill-current" />
-    </svg>
-  );
+  return <Truck className="h-4 w-4" aria-hidden />;
 }
 
 function ShopInner() {
@@ -228,7 +212,7 @@ function ShopInner() {
   if (loading && products.length === 0) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -237,7 +221,7 @@ function ShopInner() {
     <AppPageShell className="max-w-6xl gap-10">
       <header className="page-hero py-8">
         <div className="relative z-10 max-w-2xl">
-          <p className="text-xs font-black uppercase tracking-[0.26em] text-[#8d6f14]">Store</p>
+          <p className="text-xs font-black uppercase tracking-[0.26em] text-funt-gold-deep">Store</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-black">Kits &amp; Components</h1>
           <p className="mt-3 text-sm leading-relaxed text-black/65">
             Premium robotics accessories with smart checkout, coupons, coin redemption, and delivery tracking.
@@ -248,8 +232,8 @@ function ShopInner() {
             href="/shop?shelf=KITS"
             className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
               shelf === "KITS"
-                ? "bg-gradient-to-r from-[#e2c25b] to-[#cfa62e] text-black shadow-md"
-                : "border border-[#dcc894] bg-white/90 text-black hover:bg-[#fff4d4]"
+                ? "btn-primary shadow-md"
+                : "border border-indigo-200 bg-white/90 text-black hover:bg-indigo-50"
             }`}
           >
             Kits
@@ -258,24 +242,24 @@ function ShopInner() {
             href="/shop?shelf=COMPONENTS"
             className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${
               shelf === "COMPONENTS"
-                ? "bg-gradient-to-r from-[#e2c25b] to-[#cfa62e] text-black shadow-md"
-                : "border border-[#dcc894] bg-white/90 text-black hover:bg-[#fff4d4]"
+                ? "btn-primary shadow-md"
+                : "border border-indigo-200 bg-white/90 text-black hover:bg-indigo-50"
             }`}
           >
             Components
           </Link>
         </div>
         {balance != null && (
-          <div className="relative z-10 mt-6 inline-flex items-center gap-3 rounded-2xl border border-[#dcc894] bg-white px-5 py-3 shadow-sm">
+          <div className="relative z-10 mt-6 inline-flex items-center gap-3 rounded-2xl border border-indigo-200 bg-white px-5 py-3 shadow-sm">
             <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-black/50"><IconCoin />Coin balance</span>
             <span className="text-2xl font-black tabular-nums text-black">{balance}</span>
           </div>
         )}
       </header>
 
-      {msg && <div className="rounded-2xl border-2 border-black/10 bg-funt-honey/50 px-4 py-3 text-sm font-semibold text-black">{msg}</div>}
+      {msg && <div className="rounded-2xl border-2 border-black/10 bg-indigo-50/50 px-4 py-3 text-sm font-semibold text-black">{msg}</div>}
 
-      <PageSection className="border border-[#dcc894] bg-gradient-to-b from-white to-[#fff9ea]">
+      <PageSection className="border border-indigo-200 bg-gradient-to-b from-white to-indigo-50/40">
         <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">{shelf === "KITS" ? "Kits" : "Components"}</h2>
         <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {products.length === 0 ? (
@@ -286,9 +270,9 @@ function ShopInner() {
             products.map((p) => (
               <article
                 key={p.id}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-[#dcc894] bg-gradient-to-b from-white to-[#fff7e1] shadow-sm transition hover:-translate-y-1 hover:border-funt-gold hover:shadow-lg"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-b from-white to-indigo-50/40 shadow-sm transition hover:-translate-y-1 hover:border-indigo-300 hover:shadow-lg"
               >
-                <div className="aspect-[4/3] bg-gradient-to-br from-[#fff4d2] to-[#f2e4b7]">
+                <div className="aspect-[4/3] bg-gradient-to-br from-indigo-50 to-slate-100">
                   {p.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.imageUrl} alt="" className="h-full w-full object-cover" />
@@ -300,7 +284,7 @@ function ShopInner() {
                   <h3 className="text-lg font-bold text-black">{p.name}</h3>
                   {p.description && <p className="mt-2 line-clamp-3 text-sm text-black/60">{p.description}</p>}
                   <div className="mt-auto flex flex-col gap-3 border-t border-black/10 pt-4">
-                    <p className="inline-flex items-center gap-2 text-lg font-black tabular-nums text-funt-gold-deep"><IconCoin />{p.priceCoins} coins</p>
+                    <p className="inline-flex items-center gap-2 text-lg font-black tabular-nums text-indigo-700"><IconCoin />{p.priceCoins} coins</p>
                     {p.inStock ? (
                       <>
                         <div className="flex items-center gap-2">
@@ -333,10 +317,10 @@ function ShopInner() {
         </div>
       </PageSection>
 
-      <PageSection className="border border-[#dcc894] bg-white p-6 shadow-sm">
+      <PageSection className="border border-indigo-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-black"><IconCart />Cart & checkout</h2>
-          <span className="rounded-full border border-black/10 bg-[#fff8df] px-3 py-1 text-xs font-semibold text-black/80">
+          <span className="rounded-full border border-black/10 bg-indigo-50 px-3 py-1 text-xs font-semibold text-black/80">
             {cartCount} item(s) · {cartValueCoins} coins
           </span>
         </div>
@@ -350,7 +334,7 @@ function ShopInner() {
         </div>
         {quote && (
           <div className="mt-4 space-y-3 rounded-xl border border-black/10 bg-white p-4">
-            <div className="grid gap-2 rounded-xl border border-[#e7d3a0] bg-[#fffbee] p-3 sm:grid-cols-2">
+            <div className="grid gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 sm:grid-cols-2">
               <p className="text-sm font-semibold">Subtotal: {quote.subtotalCoins} coins</p>
               <p className="text-sm font-semibold">Coupon discount: -{quote.couponDiscountCoins} coins</p>
               <p className="text-sm font-semibold">Coins redeemed: -{quote.coinsToRedeem} coins</p>
@@ -396,7 +380,7 @@ function ShopInner() {
       </PageSection>
 
       {coinGrants.length > 0 && (
-        <PageSection className="border border-[#dcc894] bg-white p-6 shadow-sm">
+        <PageSection className="border border-indigo-200 bg-white p-6 shadow-sm">
           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-black">Coin credits</h2>
           <p className="mt-1 text-sm text-black/55">Grants and rewards that added coins to your wallet (remaining may decrease as you spend or as tranches expire).</p>
           <ul className="mt-4 divide-y divide-black/10">
@@ -406,7 +390,7 @@ function ShopInner() {
                   <p className="font-semibold text-black">{coinGrantSourceLabel(g.source)}</p>
                   {g.sourceRef ? <p className="mt-0.5 font-mono text-[11px] text-black/45">{g.sourceRef}</p> : null}
                 </div>
-                <span className="font-black tabular-nums text-funt-gold-deep">+{g.amountOriginal}</span>
+                <span className="font-black tabular-nums text-indigo-700">+{g.amountOriginal}</span>
                 <span className="w-full text-xs text-black/45 sm:w-auto">
                   {new Date(g.grantedAt).toLocaleString()} · {g.amountRemaining} left · expires {new Date(g.expiresAt).toLocaleDateString()}
                 </span>
@@ -417,7 +401,7 @@ function ShopInner() {
       )}
 
       {orders.length > 0 && (
-        <PageSection className="border border-[#dcc894] bg-gradient-to-b from-white to-[#fff7e1] p-6 shadow-sm">
+        <PageSection className="border border-indigo-200 bg-gradient-to-b from-white to-indigo-50/40 p-6 shadow-sm">
           <h2 className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-black"><IconTruck />Your orders</h2>
           <ul className="mt-4 divide-y divide-black/10">
             {orders.map((o) => (
@@ -444,7 +428,7 @@ export default function ShopPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+          <div className="spinner" />
         </div>
       }
     >

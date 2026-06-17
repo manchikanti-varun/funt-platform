@@ -300,7 +300,7 @@ function SignupForm() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-funt-paper">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -647,7 +647,7 @@ export default function SignupPage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen items-center justify-center bg-funt-paper">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="spinner" />
       </div>
     }>
       <SignupForm />

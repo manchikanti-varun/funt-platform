@@ -192,7 +192,7 @@ export default function BatchSubmissionsPage() {
   if (!batch) {
     return (
       <div className="flex min-h-[320px] flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
         <p className="mt-4 text-sm text-slate-500">Loading batch…</p>
       </div>
     );
@@ -227,7 +227,7 @@ export default function BatchSubmissionsPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-5">
           <p className="text-sm text-slate-600">Select a chapter to see and review submissions for that chapter.</p>
           <div className="mt-4">
             <label className="mb-1.5 block text-sm font-semibold text-slate-700">Chapter</label>
@@ -238,7 +238,7 @@ export default function BatchSubmissionsPage() {
                 const opt = chapterOptions.find((o) => `${o.courseId}-${o.chapterOrder}` === val);
                 if (opt) setSelectedChapter(opt);
               }}
-              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             >
               {chapterOptions.map((opt) => (
                 <option key={`${opt.courseId}-${opt.chapterOrder}`} value={`${opt.courseId}-${opt.chapterOrder}`}>
@@ -257,7 +257,7 @@ export default function BatchSubmissionsPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="spinner" />
             <p className="mt-4 text-sm text-slate-500">Loading submissions…</p>
           </div>
         ) : submissions.length === 0 ? (
@@ -274,7 +274,7 @@ export default function BatchSubmissionsPage() {
                     type="checkbox"
                     checked={pendingIds.length > 0 && selectedIds.size === pendingIds.length}
                     onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   Select all pending
                 </label>
@@ -300,7 +300,7 @@ export default function BatchSubmissionsPage() {
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
                   placeholder="Optional feedback for all"
-                  className="max-w-xs rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  className="input"
                 />
               </div>
             )}
@@ -326,7 +326,7 @@ export default function BatchSubmissionsPage() {
                               type="checkbox"
                               checked={selectedIds.has(s.id)}
                               onChange={() => toggleSelect(s.id)}
-                              className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                             />
                           ) : null}
                         </td>
@@ -357,7 +357,7 @@ export default function BatchSubmissionsPage() {
                           <button
                             type="button"
                             onClick={() => setReviewingId(s.id)}
-                            className="text-sm font-medium text-teal-600 hover:text-teal-700"
+                            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
                           >
                             Review
                           </button>
@@ -424,7 +424,7 @@ export default function BatchSubmissionsPage() {
                 type="button"
                 onClick={() => submitReview(reviewingId)}
                 disabled={submitting}
-                className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
+                className="btn-primary"
               >
                 {submitting ? "Submitting…" : "Submit review"}
               </button>

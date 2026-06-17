@@ -46,6 +46,7 @@ import { inferPortalFromRoles, portalFromRequestOrigin, resolveAuthToken } from 
 import { jwtExpiresInToMs } from "../utils/jwtExpires.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
+import { successRes } from "../utils/response.js";
 import { OAuthNonceModel } from "../models/OAuthNonce.model.js";
 import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import { createAuditLog } from "../services/audit.service.js";
@@ -82,7 +83,7 @@ export const forgotStudentUsername = asyncHandler(async (req: Request, res: Resp
   const { email } = req.body as { email?: string };
   if (!email?.trim()) throw new AppError("Email is required", 400);
   const data = await lookupStudentUsernameByEmail(email);
-  res.status(200).json({ success: true, data });
+  successRes(res, data);
 });
 
 export const checkUsernameAvailability = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -102,7 +103,7 @@ export const checkUsernameAvailability = asyncHandler(async (req: Request, res: 
     ? validateAdminUsername(usernameRaw)
     : validateStudentUsername(usernameRaw);
   if (validationError) {
-    res.status(200).json({ success: true, available: false, message: validationError });
+    successRes(res, { available: false, message: validationError });
     return;
   }
   const username = isManagementRole ? usernameRaw.trim().toLowerCase() : normalizeStudentUsername(usernameRaw);
@@ -130,8 +131,7 @@ export const checkUsernameAvailability = asyncHandler(async (req: Request, res: 
     .lean()
     .exec();
   const available = !existing;
-  res.status(200).json({
-    success: true,
+  successRes(res, {
     available,
     message: available ? "Username available" : "Username already taken",
   });
@@ -161,7 +161,7 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
   setAuthCookie(res, token, maxAgeMs, portal);
   setIdleCookie(res, portal, maxAgeMs);
   clearLegacyAuthCookie(res);
-  res.status(200).json({ message: "Password updated", data: { sessionRotated: true } });
+  successRes(res, { sessionRotated: true }, "Password updated");
 });
 
 /**
@@ -220,7 +220,7 @@ export const setPasswordWithGoogle = asyncHandler(async (req: Request, res: Resp
   setAuthCookie(res, token, maxAgeMs, portal);
   setIdleCookie(res, portal, maxAgeMs);
   clearLegacyAuthCookie(res);
-  res.status(200).json({ message: "Password set", data: { sessionRotated: true } });
+  successRes(res, { sessionRotated: true }, "Password set");
 });
 
 /** One-time: exchange a Bearer JWT (e.g. from OAuth redirect URL) for an httpOnly session cookie. */
@@ -261,30 +261,30 @@ export const establishSession = asyncHandler(async (req: Request, res: Response)
   setAuthCookie(res, raw, maxAgeMs, portal);
   setIdleCookie(res, portal, maxAgeMs);
   clearLegacyAuthCookie(res);
-  res.status(200).json({
-    data: {
-      user: {
-        id: String(user._id),
-        username: user.username?.trim() ?? "",
-        name: user.name,
-        roles: user.roles,
-        status: user.status,
-      },
+  successRes(res, {
+    user: {
+      id: String(user._id),
+      username: user.username?.trim() ?? "",
+      name: user.name,
+      roles: user.roles,
+      status: user.status,
     },
   });
 });
 
-export function logout(req: Request, res: Response): void {
+export const logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { jwtSecret } = getEnv();
   const token = resolveAuthToken(req);
   if (token) {
     try {
       const payload = verifyToken(token, jwtSecret);
-      void UserModel.updateOne({ _id: payload.userId }, { $inc: { tokenVersion: 1 } }).exec();
+      await UserModel.updateOne({ _id: payload.userId }, { $inc: { tokenVersion: 1 } }).exec();
       // Invalidate cached user so next request with stale token fails immediately
-      void cacheDel(CACHE_KEYS.user(payload.userId));
-    } catch {
-      // Ignore token parsing failures on logout.
+      await cacheDel(CACHE_KEYS.user(payload.userId));
+    } catch (err) {
+      // Log but don't block the logout response — user still gets their cookies cleared.
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn("[logout] Failed to invalidate session:", msg);
     }
   }
   const portal = portalFromRequestOrigin(req);
@@ -295,8 +295,8 @@ export function logout(req: Request, res: Response): void {
     clearAllAuthCookies(res);
   }
   clearParentDelegateCookie(res);
-  res.status(200).json({ success: true });
-}
+  successRes(res);
+});
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { username, password, portal } = req.body as { username?: string; password: string; portal?: string };
@@ -340,7 +340,7 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       console.error("[demo] auto-enroll on login:", err instanceof Error ? err.message : err)
     );
   }
-  res.status(200).json({ data: { user: result.user } });
+  successRes(res, { user: result.user });
 });
 
 export const signupStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -409,6 +409,7 @@ export const signupStudent = asyncHandler(async (req: Request, res: Response): P
     setIdleCookie(res, "lms", maxAgeMs);
     clearLegacyAuthCookie(res);
     res.status(201).json({
+      success: true,
       data: {
         user: {
           id: result.id,
@@ -452,13 +453,13 @@ export const parentLogin = asyncHandler(async (req: Request, res: Response): Pro
   setAuthCookie(res, result.token, maxAgeMs, "lms");
   setIdleCookie(res, "lms", maxAgeMs);
   clearLegacyAuthCookie(res);
-  res.status(200).json({ data: { user: result.user } });
+  successRes(res, { user: result.user });
 });
 
 export const parentLinkedStudents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { mobile } = req.body as { mobile?: string };
   const data = await getParentLinkedStudentsByMobile(mobile ?? "");
-  res.status(200).json({ data });
+  successRes(res, data);
 });
 
 export const establishParentDelegateSession = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -482,18 +483,18 @@ export const establishParentDelegateSession = asyncHandler(async (req: Request, 
   const { jwtSecret } = getEnv();
   const token = signParentDelegateToken(String(student._id), jwtSecret, "8h");
   setParentDelegateCookie(res, token, 8 * 60 * 60 * 1000);
-  res.status(200).json({ success: true });
+  successRes(res);
 });
 
 export function parentDelegateLogout(_req: Request, res: Response): void {
   clearParentDelegateCookie(res);
-  res.status(200).json({ success: true });
+  successRes(res);
 }
 
 export const googleRedirectUri = (req: Request, res: Response): void => {
   const baseUrl = resolveOauthBackendBaseUrl(req);
   const redirectUri = `${baseUrl.replace(/\/$/, "")}/api/auth/google/callback`;
-  res.status(200).json({
+  successRes(res, {
     redirectUri,
     hint: "Add this EXACT value in Google Cloud Console → Credentials → your OAuth client → Authorized redirect URIs. If it differs (e.g. 127.0.0.1 vs localhost), set BACKEND_PUBLIC_URL in .env to the base URL you want (e.g. http://localhost:38472) and restart the backend.",
   });
@@ -502,8 +503,7 @@ export const googleRedirectUri = (req: Request, res: Response): void => {
 export const googleRedirect = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { googleClientId, jwtSecret, isProduction } = getEnv();
   if (!googleClientId) {
-    res.status(501).json({ success: false, message: "Google login is not configured" });
-    return;
+    throw new AppError("Google login is not configured", 501);
   }
   const app = (req.query.app as string) === "lms" ? "lms" : "admin";
   const redirect = (req.query.redirect as string) || undefined;
@@ -660,7 +660,7 @@ export const googleSignupPreview = (req: Request, res: Response): void => {
   }
   try {
     const payload = verifyGoogleSignupToken(token, jwtSecret);
-    res.status(200).json({ email: payload.email, name: payload.name ?? "" });
+    successRes(res, { email: payload.email, name: payload.name ?? "" });
   } catch {
     res.status(400).json({ success: false, message: "Invalid or expired signup link. Please sign in with Google again." });
   }
@@ -781,7 +781,7 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
   setAuthCookie(res, token, maxAgeMs, "lms");
   setIdleCookie(res, "lms", maxAgeMs);
   clearLegacyAuthCookie(res);
-  res.status(201).json({ data: { user } });
+  successRes(res, { user }, undefined, 201);
 });
 
 export const googleAdminSignupPreview = (req: Request, res: Response): void => {
@@ -793,7 +793,7 @@ export const googleAdminSignupPreview = (req: Request, res: Response): void => {
   }
   try {
     const payload = verifyGoogleSignupToken(token, jwtSecret);
-    res.status(200).json({ email: payload.email, name: payload.name ?? "" });
+    successRes(res, { email: payload.email, name: payload.name ?? "" });
   } catch {
     res.status(400).json({ success: false, message: "Invalid or expired signup link. Please sign in with Google again." });
   }
@@ -855,6 +855,7 @@ export const googleAdminSignupComplete = asyncHandler(async (req: Request, res: 
       setIdleCookie(res, "admin", maxAgeMs);
       clearLegacyAuthCookie(res);
       res.status(201).json({
+        success: true,
         data: {
           user: {
             id: result.id,
@@ -877,6 +878,7 @@ export const googleAdminSignupComplete = asyncHandler(async (req: Request, res: 
       city: cityNorm,
     });
     res.status(201).json({
+      success: true,
       message:
         "Super Admin profile submitted for approval. An existing Super Admin must approve this request before you can access Admin.",
     });
@@ -895,6 +897,7 @@ export const googleAdminSignupComplete = asyncHandler(async (req: Request, res: 
   });
 
   res.status(201).json({
+    success: true,
     message:
       "Admin profile submitted for approval. A Super Admin will review and approve before you can access Admin.",
   });

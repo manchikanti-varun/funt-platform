@@ -60,26 +60,26 @@ function VerifyCertificateContent() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-[#fffdf7] via-[#fffaf0] to-[#fff7e6] px-4 py-10 sm:px-6 sm:py-14">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4 py-10 sm:px-6 sm:py-14">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.4]"
         aria-hidden
         style={{
           background:
-            "radial-gradient(640px 320px at 12% -5%, rgba(212, 175, 55, 0.28), transparent 58%), radial-gradient(520px 260px at 100% 8%, rgba(244, 223, 149, 0.2), transparent 55%)",
+            "radial-gradient(640px 320px at 12% -5%, rgba(99, 102, 241, 0.12), transparent 58%), radial-gradient(520px 260px at 100% 8%, rgba(129, 140, 248, 0.1), transparent 55%)",
         }}
       />
       <div
-        className="pointer-events-none absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-funt-gold/10 blur-3xl"
+        className="pointer-events-none absolute -right-24 top-1/4 h-72 w-72 rounded-full bg-indigo-100/30 blur-3xl"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -left-16 bottom-1/4 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl"
+        className="pointer-events-none absolute -left-16 bottom-1/4 h-56 w-56 rounded-full bg-indigo-100/20 blur-3xl"
         aria-hidden
       />
 
       <div className="relative mx-auto w-full max-w-lg">
-        <section className="rounded-3xl border border-funt-gold/25 bg-white/95 px-6 py-7 shadow-xl shadow-funt-gold/12 backdrop-blur-sm sm:px-8 sm:py-8">
+        <section className="rounded-3xl border border-indigo-200 bg-white/95 px-6 py-7 shadow-xl shadow-indigo-900/10 backdrop-blur-sm sm:px-8 sm:py-8">
           <header className="mb-7 text-center">
             <div className="mx-auto flex flex-col items-center gap-3">
               <img src="/funt-logo.png" alt="FUNT Learn" className="h-11 w-auto max-w-full object-contain sm:h-[3.25rem]" />
@@ -136,7 +136,7 @@ function VerifyCertificateContent() {
                     aria-hidden
                   />
                   <div className="relative flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-600/25">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-600/25">
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -188,7 +188,7 @@ function VerifyCertificateContent() {
         </section>
 
         <p className="mt-6 text-center text-sm text-black/60">
-          <Link href="/login" className="font-semibold text-funt-gold-deep underline decoration-funt-gold/40 underline-offset-2 transition hover:text-black hover:decoration-funt-gold">
+          <Link href="/login" className="font-semibold text-indigo-600 underline decoration-indigo-300/40 underline-offset-2 transition hover:text-black hover:decoration-indigo-400">
             Sign in
           </Link>{" "}
           to view and download your own certificates.
@@ -200,16 +200,16 @@ function VerifyCertificateContent() {
 
 function VerifyFallback() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-[#fffdf7] via-[#fffaf0] to-[#fff7e6] px-4">
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         aria-hidden
         style={{
-          background: "radial-gradient(520px 280px at 50% -8%, rgba(212, 175, 55, 0.22), transparent 70%)",
+          background: "radial-gradient(520px 280px at 50% -8%, rgba(99, 102, 241, 0.12), transparent 70%)",
         }}
       />
       <div className="relative flex flex-col items-center gap-4">
-        <div className="h-11 w-11 animate-spin rounded-full border-[3px] border-funt-gold/25 border-t-funt-gold-deep" />
+        <div className="spinner" />
         <p className="text-sm font-medium text-black/60">Loading…</p>
       </div>
     </div>

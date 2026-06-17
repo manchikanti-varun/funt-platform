@@ -1,8 +1,11 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import cookieParser from "cookie-parser";
+import mongoSanitize from "express-mongo-sanitize";
 import { getEnv } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { AppError } from "./utils/AppError.js";
 import { helmetMiddleware } from "./middleware/security.middleware.js";
 import { csrfProtection } from "./middleware/csrf.middleware.js";
 import { authRateLimiter, apiRateLimiter } from "./middleware/rateLimit.middleware.js";
@@ -54,6 +57,7 @@ if (isProduction) {
 }
 
 app.use(helmetMiddleware());
+app.use(compression());
 app.use((req, _res, next) => {
   // Be tolerant of accidental double slashes from clients/proxies (e.g. //api/auth/google).
   if (req.url.includes("//")) {
@@ -70,6 +74,7 @@ app.use(cors({
 }));
 app.use(cookieParser());
 app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "10mb" }));
+app.use(mongoSanitize());
 app.use(csrfProtection);
 
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));
@@ -98,7 +103,13 @@ app.use("/api/attendance", attendanceRoutes);
 app.use("/api/general-attendance", generalAttendanceRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/global-modules", globalModuleRoutes);
-app.use("/api/global-chapters", globalModuleRoutes);
+// Legacy alias — prefer /api/global-modules. Will be removed in a future version.
+app.use("/api/global-chapters", (_req, res, next) => {
+  res.setHeader("Deprecation", "true");
+  res.setHeader("Sunset", "2025-12-31");
+  res.setHeader("Link", '</api/global-modules>; rel="successor-version"');
+  next();
+}, globalModuleRoutes);
 app.use("/api/global-assignments", globalAssignmentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/progress", progressRoutes);
@@ -121,6 +132,11 @@ app.use("/api/admin/data", exportImportRoutes);
 app.use("/api/knowledge", knowledgeReaderRouter);
 app.use("/api/admin/knowledge", knowledgeAdminRouter);
 app.use("/verify", verifyRoutes);
+
+// 404 catch-all — must be after all routes and before error handler
+app.use((_req, _res, next) => {
+  next(new AppError("Endpoint not found", 404));
+});
 
 app.use(errorHandler);
 

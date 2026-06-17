@@ -175,7 +175,7 @@ export default function SetPasswordPage() {
     <Suspense
       fallback={
         <div className="flex h-full min-h-0 items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-funt-gold-deep" />
+          <div className="spinner" />
         </div>
       }
     >

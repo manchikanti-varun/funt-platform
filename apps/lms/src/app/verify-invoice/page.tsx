@@ -84,8 +84,8 @@ function VerifyInvoiceContent() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#fffdf7] to-[#fff7e6] px-4 py-10">
-      <div className="mx-auto w-full max-w-lg rounded-2xl border border-funt-gold/25 bg-white p-6 shadow-lg sm:p-8">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4 py-10">
+      <div className="mx-auto w-full max-w-lg rounded-2xl border border-indigo-200 bg-white p-6 shadow-lg sm:p-8">
         <header className="mb-6 text-center">
           <img src="/funt-logo.png" alt="FUNT" className="mx-auto h-10 w-auto" />
           <h1 className="mt-3 text-xl font-bold text-black">Verify invoice</h1>
@@ -162,7 +162,7 @@ function VerifyInvoiceContent() {
         ) : null}
 
         <p className="mt-6 text-center text-xs text-black/50">
-          <Link href="/login" className="text-teal-800 underline">
+          <Link href="/login" className="text-indigo-700 underline">
             Sign in
           </Link>{" "}
           to view your invoices in the student portal.

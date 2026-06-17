@@ -32,7 +32,7 @@ export function StateScreen({
 
         <div className={`lms-state-icon ${isLoading ? "lms-state-icon--loading" : "lms-state-icon--error"}`}>
           {isLoading ? (
-            <span className="h-10 w-10 animate-spin rounded-full border-[3px] border-[#d6be74] border-t-[#9f7a12]" />
+            <span className="spinner border-[3px]" />
           ) : (
             <svg className="h-10 w-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.1 14.04A1 1 0 003.05 20h17.9a1 1 0 00.86-1.5l-8.1-14.04a1 1 0 00-1.72 0z" />

@@ -163,4 +163,10 @@ const batchSchema = new Schema(
   { timestamps: true }
 );
 
+// ─── Indexes ─────────────────────────────────────────────────────────────────
+batchSchema.index({ status: 1, createdAt: -1 });
+batchSchema.index({ trainerId: 1, status: 1 });
+batchSchema.index({ "courseSnapshots.courseId": 1 });
+batchSchema.index({ visibility: 1, status: 1 });
+
 export const BatchModel = mongoose.model("Batch", batchSchema);

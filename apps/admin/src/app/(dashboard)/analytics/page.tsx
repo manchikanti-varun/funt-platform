@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AppPageShell } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
@@ -72,17 +73,17 @@ export default function AnalyticsPage() {
 
   if (!allowed) {
     return (
-      <div className="w-full space-y-6">
+      <AppPageShell>
         <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
-        <p className="text-amber-600">Access restricted to Super Admin.</p>
-      </div>
+        <p className="alert--warning">Access restricted to Super Admin.</p>
+      </AppPageShell>
     );
   }
 
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -138,7 +139,7 @@ export default function AnalyticsPage() {
   if (courseModuleCounts.length === 0) courseModuleCounts.push({ name: "—", modules: 0 });
 
   return (
-    <div className="w-full space-y-8">
+    <AppPageShell>
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Analytics</h1>
         <p className="mt-1 text-sm text-slate-600">Overview of content and batches. Data from existing APIs.</p>
@@ -146,9 +147,9 @@ export default function AnalyticsPage() {
 
       {}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-teal-500">
-          <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Courses</p>
-          <p className="mt-1 text-2xl font-bold tabular-nums text-teal-700">{courses.length}</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-indigo-500">
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">Courses</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-indigo-700">{courses.length}</p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm border-l-4 border-l-violet-500">
           <p className="text-xs font-semibold uppercase tracking-wider text-violet-600">Batches</p>
@@ -293,6 +294,6 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
       </section>
-    </div>
+    </AppPageShell>
   );
 }

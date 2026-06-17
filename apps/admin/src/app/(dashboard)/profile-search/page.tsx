@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
+import { AppPageShell } from "@/components/ui";
 import Link from "next/link";
 
 interface ProfileUser {
@@ -137,7 +138,7 @@ export default function ProfileSearchPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Profile search</h1>
         <p className="mt-1 text-sm text-slate-600">
@@ -447,6 +448,6 @@ export default function ProfileSearchPage() {
           )}
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

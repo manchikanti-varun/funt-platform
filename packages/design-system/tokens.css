@@ -1,0 +1,330 @@
+/**
+ * FUNT Platform — Shared Design Tokens
+ * ═══════════════════════════════════════════════════════
+ * Every component in the system references ONLY --lms-* variables.
+ * Zero hardcoded hex values in components.css.
+ *
+ * RESOLVED: Admin accent = indigo-600 (#4f46e5).
+ * Reason: btn-primary, sidebar, focus rings, and all correctly-built pages use indigo.
+ *
+ * ⚠ funt-gold = #4f46e5 (INDIGO, not gold). Legacy misnomer.
+ *   NEVER use bg-funt-gold text-black — contrast failure.
+ *   Always pair with text-white.
+ */
+
+:root {
+  /* ═══════════════════════════════════════════════════════
+     TYPOGRAPHY SCALE
+     ═══════════════════════════════════════════════════════ */
+  --lms-text-xs: 11px;
+  --lms-text-sm: 13px;
+  --lms-text-base: 14px;
+  --lms-text-md: 15px;
+  --lms-text-lg: 16px;
+  --lms-text-xl: 18px;
+  --lms-text-2xl: 22px;
+  --lms-text-3xl: 28px;
+
+  /* Font weights — NEVER use 600 or 700 in component definitions.
+     Page headings may use 700/800 via Tailwind but component tokens stay ≤500. */
+  --lms-weight-body: 400;
+  --lms-weight-heading: 500;
+
+  /* ═══════════════════════════════════════════════════════
+     SPACING SCALE (4px grid)
+     ═══════════════════════════════════════════════════════ */
+  --lms-space-0: 0px;
+  --lms-space-0_5: 2px;
+  --lms-space-1: 4px;
+  --lms-space-1_5: 6px;
+  --lms-space-2: 8px;
+  --lms-space-3: 12px;
+  --lms-space-4: 16px;
+  --lms-space-5: 20px;
+  --lms-space-6: 24px;
+  --lms-space-8: 32px;
+  --lms-space-10: 40px;
+  --lms-space-12: 48px;
+  --lms-space-16: 64px;
+
+  /* ═══════════════════════════════════════════════════════
+     BORDER RADII
+     ═══════════════════════════════════════════════════════ */
+  --lms-radius-sm: 4px;
+  --lms-radius-md: 6px;
+  --lms-radius-lg: 8px;
+  --lms-radius-xl: 12px;
+  --lms-radius-2xl: 16px;
+  --lms-radius-3xl: 24px;
+  --lms-radius-pill: 9999px;
+
+  /* ═══════════════════════════════════════════════════════
+     SHADOWS
+     ═══════════════════════════════════════════════════════ */
+  --lms-shadow-none: none;
+  --lms-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --lms-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --lms-shadow-lg: 0 8px 16px -4px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --lms-shadow-xl: 0 16px 32px -8px rgba(0, 0, 0, 0.10), 0 8px 16px -8px rgba(0, 0, 0, 0.06);
+  --lms-shadow-modal: 0 20px 60px -12px rgba(0, 0, 0, 0.18), 0 8px 24px -8px rgba(0, 0, 0, 0.10);
+
+  /* ═══════════════════════════════════════════════════════
+     Z-INDEX SCALE
+     ═══════════════════════════════════════════════════════ */
+  --lms-z-base: 0;
+  --lms-z-dropdown: 100;
+  --lms-z-sticky: 200;
+  --lms-z-modal: 300;
+  --lms-z-toast: 400;
+  --lms-z-tooltip: 500;
+
+  /* ═══════════════════════════════════════════════════════
+     TRANSITIONS
+     ═══════════════════════════════════════════════════════ */
+  --lms-duration-fast: 100ms;
+  --lms-duration-base: 150ms;
+  --lms-duration-slow: 250ms;
+  --lms-duration-modal: 200ms;
+  --lms-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ═══════════════════════════════════════════════════════
+     ADMIN ACCENT (INDIGO) — resolved from Phase 2 audit
+     Used by: buttons, sidebar, focus rings, tabs, toggles, checkboxes
+     ═══════════════════════════════════════════════════════ */
+  --lms-admin-accent: #4f46e5;
+  --lms-admin-accent-hover: #4338ca;
+  --lms-admin-accent-active: #3730a3;
+  --lms-admin-accent-ring: rgba(79, 70, 229, 0.25);
+  --lms-admin-accent-soft: rgba(79, 70, 229, 0.08);
+  --lms-admin-accent-surface: #eef2ff;
+
+  /* ═══════════════════════════════════════════════════════
+     STUDENT ACCENT — warm indigo (via funt-gold token)
+     Note: funt-gold = #4f46e5. We use same accent but with different
+     spinner/border styling for visual separation between portals.
+     ═══════════════════════════════════════════════════════ */
+  --lms-student-accent: #4f46e5;
+  --lms-student-accent-hover: #4338ca;
+  --lms-student-spinner-border: rgba(0, 0, 0, 0.10);
+  --lms-student-spinner-accent: #4f46e5;
+
+  /* ═══════════════════════════════════════════════════════
+     SURFACE & BACKGROUND TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-surface-primary: #ffffff;
+  --lms-surface-secondary: #f8fafc;
+  --lms-surface-tertiary: #f1f5f9;
+  --lms-surface-elevated: #ffffff;
+  --lms-surface-overlay: rgba(0, 0, 0, 0.45);
+
+  /* ═══════════════════════════════════════════════════════
+     BORDER TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-border-default: #e2e8f0;
+  --lms-border-strong: #cbd5e1;
+  --lms-border-subtle: rgba(226, 232, 240, 0.9);
+  --lms-border-accent: var(--lms-admin-accent);
+  --lms-border-ring: rgba(241, 245, 249, 0.8);
+
+  /* ═══════════════════════════════════════════════════════
+     TEXT TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-text-primary: #0f172a;
+  --lms-text-secondary: #475569;
+  --lms-text-tertiary: #94a3b8;
+  --lms-text-disabled: #cbd5e1;
+  --lms-text-inverse: #ffffff;
+  --lms-text-link: var(--lms-admin-accent);
+  --lms-text-link-hover: var(--lms-admin-accent-hover);
+
+  /* ═══════════════════════════════════════════════════════
+     STATUS SEMANTIC TOKENS
+     Used by .alert, .badge, and status indicators across ALL portals
+     ═══════════════════════════════════════════════════════ */
+  --lms-success-bg: #f0fdf4;
+  --lms-success-border: #bbf7d0;
+  --lms-success-text: #166534;
+  --lms-success-icon: #059669;
+
+  --lms-warning-bg: #fffbeb;
+  --lms-warning-border: #fde68a;
+  --lms-warning-text: #92400e;
+  --lms-warning-icon: #d97706;
+
+  --lms-error-bg: #fef2f2;
+  --lms-error-border: #fecaca;
+  --lms-error-text: #991b1b;
+  --lms-error-icon: #dc2626;
+
+  --lms-info-bg: #eff6ff;
+  --lms-info-border: #bfdbfe;
+  --lms-info-text: #1e40af;
+  --lms-info-icon: #2563eb;
+
+  /* ═══════════════════════════════════════════════════════
+     CHART COLORS (shared across ALL analytics pages)
+     Reference these in recharts config instead of hardcoded hex.
+     ═══════════════════════════════════════════════════════ */
+  --lms-chart-1: #0d9488;
+  --lms-chart-2: #7c3aed;
+  --lms-chart-3: #d97706;
+  --lms-chart-4: #dc2626;
+  --lms-chart-5: #059669;
+  --lms-chart-6: #6366f1;
+  --lms-chart-7: #f97316;
+  --lms-chart-8: #0ea5e9;
+
+  /* ═══════════════════════════════════════════════════════
+     BRAND GOLD TOKENS (for warm/premium themed pages: #7, #89, #91, #99, #111)
+     These replace ALL hardcoded hex gold values.
+     ═══════════════════════════════════════════════════════ */
+  --lms-brand-gold-tint-1: #fffdf7;
+  --lms-brand-gold-tint-2: #fff7e6;
+  --lms-brand-gold-tint-3: #fff2ca;
+  --lms-brand-gold-surface: #fff9ea;
+  --lms-brand-gold-border: #d8c28a;
+  --lms-brand-gold-border-soft: #dfcb93;
+  --lms-brand-gold-text: #8d6f14;
+  --lms-brand-gold-accent: #c39a1f;
+  --lms-brand-gold-deep: #7c5e10;
+  --lms-brand-gold-highlight: #f5dfa0;
+  --lms-brand-gold-shadow: rgba(140, 110, 28, 0.2);
+
+  /* ═══════════════════════════════════════════════════════
+     COMPONENT SIZE TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-input-height: 40px;
+  --lms-input-padding-x: var(--lms-space-4);
+  --lms-input-padding-y: 10px;
+  --lms-input-font-size: var(--lms-text-base);
+  --lms-input-radius: var(--lms-radius-xl);
+  --lms-input-border: var(--lms-border-default);
+
+  --lms-btn-height-sm: 32px;
+  --lms-btn-height-md: 40px;
+  --lms-btn-height-lg: 48px;
+  --lms-btn-padding-x-sm: var(--lms-space-3);
+  --lms-btn-padding-x-md: var(--lms-space-4);
+  --lms-btn-padding-x-lg: var(--lms-space-6);
+  --lms-btn-radius: var(--lms-radius-xl);
+  --lms-btn-font-size: var(--lms-text-base);
+  --lms-btn-font-weight: var(--lms-weight-heading);
+
+  --lms-spinner-size-page: 40px;
+  --lms-spinner-size-inline: 32px;
+  --lms-spinner-size-sm: 20px;
+  --lms-spinner-width: 4px;
+
+  /* ═══════════════════════════════════════════════════════
+     LAYOUT TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-sidebar-width: 256px;
+  --lms-topbar-height: 56px;
+  --lms-page-max-width: 1280px;
+  --lms-page-padding-x: var(--lms-space-6);
+  --lms-page-padding-y: var(--lms-space-8);
+
+  /* ═══════════════════════════════════════════════════════
+     MODAL WIDTHS
+     ═══════════════════════════════════════════════════════ */
+  --lms-modal-width-sm: 400px;
+  --lms-modal-width-md: 520px;
+  --lms-modal-width-lg: 640px;
+
+  /* ═══════════════════════════════════════════════════════
+     TABLE TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-table-header-height: 48px;
+  --lms-table-header-bg: var(--lms-surface-secondary);
+  --lms-table-header-font-size: var(--lms-text-xs);
+  --lms-table-header-color: var(--lms-text-secondary);
+  --lms-table-row-height: 52px;
+  --lms-table-row-hover: var(--lms-surface-secondary);
+
+  /* ═══════════════════════════════════════════════════════
+     BADGE TOKENS
+     ═══════════════════════════════════════════════════════ */
+  --lms-badge-font-size: var(--lms-text-xs);
+  --lms-badge-font-weight: var(--lms-weight-heading);
+  --lms-badge-padding-x: 10px;
+  --lms-badge-padding-y: 2px;
+  --lms-badge-radius: var(--lms-radius-pill);
+
+  /* ═══════════════════════════════════════════════════════
+     SHARED STATUS COLORS — used across Admin, Student, Parent portals
+     Each status has bg / text / border (optional ring).
+     These tokens resolve Fix #7 (cross-portal status consistency).
+     ═══════════════════════════════════════════════════════ */
+  --lms-status-open-bg: #eef2ff;
+  --lms-status-open-text: #4338ca;
+  --lms-status-open-border: #c7d2fe;
+
+  --lms-status-assigned-bg: #eff6ff;
+  --lms-status-assigned-text: #1d4ed8;
+  --lms-status-assigned-border: #bfdbfe;
+
+  --lms-status-in-progress-bg: #ecfeff;
+  --lms-status-in-progress-text: #0e7490;
+  --lms-status-in-progress-border: #a5f3fc;
+
+  --lms-status-waiting-student-bg: #fffbeb;
+  --lms-status-waiting-student-text: #92400e;
+  --lms-status-waiting-student-border: #fde68a;
+
+  --lms-status-waiting-support-bg: #fff7ed;
+  --lms-status-waiting-support-text: #9a3412;
+  --lms-status-waiting-support-border: #fed7aa;
+
+  --lms-status-resolved-bg: #f0fdf4;
+  --lms-status-resolved-text: #166534;
+  --lms-status-resolved-border: #bbf7d0;
+
+  --lms-status-closed-bg: #f8fafc;
+  --lms-status-closed-text: #64748b;
+  --lms-status-closed-border: #e2e8f0;
+
+  --lms-status-escalated-bg: #fef2f2;
+  --lms-status-escalated-text: #b91c1c;
+  --lms-status-escalated-border: #fecaca;
+
+  --lms-status-pending-bg: #fffbeb;
+  --lms-status-pending-text: #92400e;
+  --lms-status-pending-border: #fde68a;
+
+  --lms-status-approved-bg: #f0fdf4;
+  --lms-status-approved-text: #166534;
+  --lms-status-approved-border: #bbf7d0;
+
+  --lms-status-rejected-bg: #fef2f2;
+  --lms-status-rejected-text: #991b1b;
+  --lms-status-rejected-border: #fecaca;
+
+  --lms-status-cancelled-bg: #f8fafc;
+  --lms-status-cancelled-text: #64748b;
+  --lms-status-cancelled-border: #e2e8f0;
+
+  --lms-status-active-bg: #f0fdf4;
+  --lms-status-active-text: #166534;
+  --lms-status-active-border: #bbf7d0;
+
+  --lms-status-archived-bg: #f8fafc;
+  --lms-status-archived-text: #475569;
+  --lms-status-archived-border: #e2e8f0;
+
+  /* Priority badges */
+  --lms-priority-low-bg: #f8fafc;
+  --lms-priority-low-text: #64748b;
+  --lms-priority-low-dot: #94a3b8;
+
+  --lms-priority-medium-bg: #eff6ff;
+  --lms-priority-medium-text: #1d4ed8;
+  --lms-priority-medium-dot: #3b82f6;
+
+  --lms-priority-high-bg: #fffbeb;
+  --lms-priority-high-text: #92400e;
+  --lms-priority-high-dot: #f59e0b;
+
+  --lms-priority-urgent-bg: #fef2f2;
+  --lms-priority-urgent-text: #991b1b;
+  --lms-priority-urgent-dot: #ef4444;
+}

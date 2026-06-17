@@ -81,7 +81,7 @@ export default function BatchModeratorsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
         <p className="mt-4 text-sm text-slate-500">Loading…</p>
       </div>
     );
@@ -115,7 +115,7 @@ export default function BatchModeratorsPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 to-white px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-white px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Moderators</h1>
           <p className="mt-1 text-sm text-slate-600">{batchName}</p>
           <p className="mt-2 text-sm text-slate-500">Add usernames or user IDs below.</p>
@@ -130,7 +130,7 @@ export default function BatchModeratorsPage() {
               placeholder="Username or user id (comma-separated to add multiple)"
               className="flex-1 min-w-[200px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <button type="button" onClick={addModerators} disabled={actionLoading || !moderatorIdsText.trim()} className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50">
+            <button type="button" onClick={addModerators} disabled={actionLoading || !moderatorIdsText.trim()} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
               {actionLoading ? "Adding…" : "Add"}
             </button>
           </div>

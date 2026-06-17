@@ -23,8 +23,6 @@ interface RegistrationRequestRow {
   requestedBy?: string;
 }
 
-const INPUT_CLASS =
-  "w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 const USERNAME_MIN_LENGTH = 4;
 const USERNAME_MAX_LENGTH = 32;
@@ -124,7 +122,7 @@ export default function AdminManagementPage() {
         </p>
         <Link
           href="/profile-search"
-          className="mt-3 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-teal-200 hover:bg-teal-50/50 hover:text-teal-700"
+          className="mt-3 inline-flex items-center gap-2 btn-secondary text-sm"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -136,11 +134,7 @@ export default function AdminManagementPage() {
       {message && (
         <div
           role="alert"
-          className={`rounded-xl border px-4 py-3 text-sm font-medium ${
-            message.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
+          className={message.type === "success" ? "alert--success" : "alert--error"}
         >
           {message.text}
         </div>
@@ -152,11 +146,7 @@ export default function AdminManagementPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-              tab === t.id
-                ? "bg-teal-600 text-white shadow-md"
-                : "border border-slate-200 bg-white text-slate-600 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700"
-            }`}
+            className={`tab-btn ${tab === t.id ? "tab-btn--active" : ""}`}
           >
             {t.label}
           </button>
@@ -294,7 +284,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+            className="input text-sm"
           >
             <option value="PENDING">Pending</option>
             <option value="APPROVED">Approved</option>
@@ -313,14 +303,14 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
       </div>
 
       {error && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="alert--warning">
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="flex w-full items-center justify-center gap-2 py-8 text-slate-500">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" />
+          <span className="spinner spinner--sm" />
           Loading requests…
         </div>
       ) : requests.length === 0 ? (
@@ -374,7 +364,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
                         type="button"
                         onClick={() => approve(r.id)}
                         disabled={actingId === r.id}
-                        className="mr-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                        className="btn-approve btn-sm mr-2"
                       >
                         Approve
                       </button>
@@ -382,7 +372,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
                         type="button"
                         onClick={() => reject(r.id)}
                         disabled={actingId === r.id}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        className="btn-reject btn-sm"
                       >
                         Reject
                       </button>
@@ -434,7 +424,7 @@ function PasswordInput({
         id={id}
         required
         type={show ? "text" : "password"}
-        className={`${INPUT_CLASS} pr-10`}
+        className="input text-sm pr-10"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -609,7 +599,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
           <input
             id="student-username"
             required
-            className={INPUT_CLASS}
+            className="input text-sm"
             placeholder="e.g. srikar.ch"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -634,11 +624,11 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         </div>
         <div>
           <Label htmlFor="student-name">Name</Label>
-          <input id="student-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="student-name" required className="input text-sm" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="student-email">Email</Label>
-          <input id="student-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="student-email" required type="email" className="input text-sm" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           {email.trim() && !isValidEmailFormat(email) ? (
             <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
           ) : null}
@@ -651,7 +641,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
                 id="student-country-code"
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className={`${INPUT_CLASS} appearance-none pr-9`}
+                className="input text-sm appearance-none pr-9"
               >
                 {COUNTRY_CODES.map((code) => (
                   <option key={code} value={code}>
@@ -666,7 +656,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             <input
               id="student-mobile"
               required
-              className={INPUT_CLASS}
+              className="input text-sm"
               placeholder="9876543210"
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
@@ -681,7 +671,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             type="number"
             min={7}
             max={120}
-            className={INPUT_CLASS}
+            className="input text-sm"
             value={age}
             onChange={(e) => setAge(e.target.value)}
           />
@@ -696,7 +686,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
           <PasswordInput id="student-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Creating…" : "Create Student"}
       </button>
     </form>
@@ -846,7 +836,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
           <input
             id="trainer-username"
             required
-            className={INPUT_CLASS}
+            className="input text-sm"
             placeholder="e.g. trainer.user@funt"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -871,11 +861,11 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         </div>
         <div>
           <Label htmlFor="trainer-name">Name</Label>
-          <input id="trainer-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="trainer-name" required className="input text-sm" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="trainer-email">Email</Label>
-          <input id="trainer-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="trainer-email" required type="email" className="input text-sm" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           {email.trim() && !isValidEmailFormat(email) ? (
             <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
           ) : null}
@@ -888,7 +878,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
                 id="trainer-country-code"
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className={`${INPUT_CLASS} appearance-none pr-9`}
+                className="input text-sm appearance-none pr-9"
               >
                 {COUNTRY_CODES.map((code) => (
                   <option key={code} value={code}>
@@ -903,7 +893,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             <input
               id="trainer-mobile"
               required
-              className={INPUT_CLASS}
+              className="input text-sm"
               placeholder="9876543210"
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
@@ -920,7 +910,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
           <PasswordInput id="trainer-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Creating…" : "Create Trainer"}
       </button>
     </form>
@@ -978,11 +968,11 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="admin-name">Name</Label>
-          <input id="admin-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="admin-name" required className="input text-sm" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="admin-email">Email</Label>
-          <input id="admin-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="admin-email" required type="email" className="input text-sm" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           {email.trim() && !isValidEmailFormat(email) ? (
             <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
           ) : null}
@@ -995,7 +985,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
                 id="admin-country-code"
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className={`${INPUT_CLASS} appearance-none pr-9`}
+                className="input text-sm appearance-none pr-9"
               >
                 {COUNTRY_CODES.map((code) => (
                   <option key={code} value={code}>
@@ -1010,7 +1000,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
             <input
               id="admin-mobile"
               required
-              className={INPUT_CLASS}
+              className="input text-sm"
               placeholder="9876543210"
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
@@ -1027,7 +1017,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
           <PasswordInput id="admin-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Creating…" : "Create Admin"}
       </button>
     </form>
@@ -1085,11 +1075,11 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="super-admin-name">Name</Label>
-          <input id="super-admin-name" required className={INPUT_CLASS} placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input id="super-admin-name" required className="input text-sm" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
           <Label htmlFor="super-admin-email">Email</Label>
-          <input id="super-admin-email" required type="email" className={INPUT_CLASS} placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input id="super-admin-email" required type="email" className="input text-sm" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           {email.trim() && !isValidEmailFormat(email) ? (
             <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p>
           ) : null}
@@ -1102,7 +1092,7 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
                 id="super-admin-country-code"
                 value={countryCode}
                 onChange={(e) => setCountryCode(e.target.value)}
-                className={`${INPUT_CLASS} appearance-none pr-9`}
+                className="input text-sm appearance-none pr-9"
               >
                 {COUNTRY_CODES.map((code) => (
                   <option key={code} value={code}>
@@ -1117,7 +1107,7 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
             <input
               id="super-admin-mobile"
               required
-              className={INPUT_CLASS}
+              className="input text-sm"
               placeholder="9876543210"
               value={mobileNumber}
               onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
@@ -1134,7 +1124,7 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
           <PasswordInput id="super-admin-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
         </div>
       </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-teal-700 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Creating…" : "Create Super Admin"}
       </button>
     </form>
@@ -1188,7 +1178,7 @@ function ResetLoginForm({
         <input
           id="reset-user"
           required
-          className={INPUT_CLASS}
+          className="input text-sm"
           placeholder="e.g. name@funt"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -1203,7 +1193,7 @@ function ResetLoginForm({
         <Label htmlFor="reset-confirm-password">Confirm new password</Label>
         <PasswordInput id="reset-confirm-password" value={confirmPassword} onChange={setConfirmPassword} />
       </div>
-      <button type="submit" disabled={loading} className="rounded-xl bg-amber-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-amber-700 disabled:opacity-60">
+      <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Resetting…" : "Reset Login"}
       </button>
     </form>

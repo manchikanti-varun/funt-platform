@@ -450,7 +450,7 @@ function PaymentForm() {
 
         {checking ? (
           <div className="mt-8 flex justify-center py-6">
-            <div className="h-9 w-9 animate-spin rounded-full border-4 border-funt-gold/30 border-t-funt-gold-deep" />
+            <div className="spinner" />
           </div>
         ) : waiting ? (
           <div className="mt-6 space-y-3">
@@ -736,7 +736,7 @@ export default function PaymentPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-funt-gold/30 border-t-funt-gold-deep" />
+          <div className="spinner" />
         </div>
       }
     >

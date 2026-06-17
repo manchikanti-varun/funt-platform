@@ -133,7 +133,7 @@ export default function CoursesPage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold-deep" />
+        <div className="spinner" />
       </div>
     );
   }

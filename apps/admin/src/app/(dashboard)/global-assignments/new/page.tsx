@@ -92,7 +92,7 @@ export default function NewGlobalAssignmentPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">New Global Assignment</h1>
           <p className="mt-1 text-sm text-slate-600">Create a new assignment template for courses and batches.</p>
         </div>
@@ -106,11 +106,11 @@ export default function NewGlobalAssignmentPage() {
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Type</label>
               <div className="flex gap-6">
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="type" checked={type === "chapter"} onChange={() => update("type", "chapter")} className="text-teal-600" />
+                  <input type="radio" name="type" checked={type === "chapter"} onChange={() => update("type", "chapter")} className="text-indigo-600" />
                   <span className="text-sm text-slate-700">Chapter</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="type" checked={type === "general"} onChange={() => update("type", "general")} className="text-teal-600" />
+                  <input type="radio" name="type" checked={type === "general"} onChange={() => update("type", "general")} className="text-indigo-600" />
                   <span className="text-sm text-slate-700">General</span>
                 </label>
               </div>
@@ -122,7 +122,7 @@ export default function NewGlobalAssignmentPage() {
                 required
                 value={title}
                 onChange={(e) => update("title", e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="input"
                 placeholder="Assignment title"
               />
             </div>
@@ -136,7 +136,7 @@ export default function NewGlobalAssignmentPage() {
               <select
                 value={submissionType}
                 onChange={(e) => update("submissionType", e.target.value as SUBMISSION_TYPE)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="input"
               >
                 {SUBMISSION_TYPES.map((t) => (
                   <option key={t} value={t}>{t}</option>
@@ -154,18 +154,18 @@ export default function NewGlobalAssignmentPage() {
               </p>
               <ModeratorCheckboxes selectedIds={moderatorIds} onChange={(v) => update("moderatorIds", v)} />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="alert--error">{error}</p>}
             <div className="flex flex-wrap gap-3 pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-60"
+                className="btn-primary"
               >
                 {loading ? "Creating…" : "Create Assignment"}
               </button>
               <Link
                 href="/global-assignments"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                className="btn-secondary"
               >
                 Cancel
               </Link>

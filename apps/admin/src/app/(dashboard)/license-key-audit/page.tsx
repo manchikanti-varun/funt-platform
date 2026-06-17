@@ -170,7 +170,7 @@ export default function LicenseKeyAuditPage() {
 
       {loading ? (
         <div className="flex min-h-[200px] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       ) : data && data.rows.length === 0 ? (
         <EmptyState title="No license keys yet" description="Generate keys from a batch or verify a course payment to create records." />

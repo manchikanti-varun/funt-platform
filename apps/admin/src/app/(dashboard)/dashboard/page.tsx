@@ -26,7 +26,7 @@ interface FinanceSummary {
 }
 
 const STAT_STYLES = [
-  { border: "border-l-teal-500", bg: "bg-teal-50", text: "text-teal-700", label: "text-teal-600" },
+  { border: "border-l-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700", label: "text-indigo-600" },
   { border: "border-l-slate-500", bg: "bg-slate-50", text: "text-slate-700", label: "text-slate-600" },
   { border: "border-l-amber-500", bg: "bg-amber-50", text: "text-amber-700", label: "text-amber-600" },
   { border: "border-l-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", label: "text-emerald-600" },
@@ -156,7 +156,7 @@ export default function DashboardPage() {
     return (
       <div className="flex min-h-[40vh] w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
           <p className="text-sm text-slate-500">Loading…</p>
         </div>
       </div>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
     <div className="w-full space-y-8">
       <header className="admin-hero">
         <div className="relative">
-          <p className="label-overline text-teal-700/90">Overview</p>
+          <p className="label-overline text-indigo-700/90">Overview</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{getGreeting()}</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-600">Counts and shortcuts—jump to content or batches in one tap.</p>
         </div>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
           {statCards.map((c) => (
             <div
               key={c.title}
-              className={`rounded-2xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-300/25 hover:ring-slate-200/80 border-l-4 ${c.style.border} ${c.style.bg}`}
+              className={`rounded-2xl border border-slate-200/90 bg-white p-5 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-300/25 hover:ring-slate-200/80 border-l-4 ${c.style.border} ${c.style.bg}`}
             >
               <p className={`text-xs font-semibold uppercase tracking-wider ${c.style.label}`}>{c.title}</p>
               <p className={`mt-2 text-2xl font-bold tabular-nums sm:text-3xl ${c.style.text}`}>{c.value}</p>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
       )}
 
       {showQuickLinks && (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
           <h2 className="mb-1 text-lg font-semibold text-slate-900">Shortcuts</h2>
           <p className="mb-5 text-xs text-slate-500">Frequent destinations</p>
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -212,7 +212,7 @@ export default function DashboardPage() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 px-4 py-3.5 text-left ring-1 ring-slate-100/80 transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:bg-teal-50/70 hover:shadow-lg hover:shadow-teal-900/5 hover:ring-teal-100"
+                className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 px-4 py-3.5 text-left ring-1 ring-slate-100/80 transition duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50/70 hover:shadow-lg hover:shadow-slate-300/25 hover:ring-indigo-100"
               >
                 <QuickLinkIcon icon={link.icon} />
                 <span className="text-sm font-medium text-slate-700">{link.label}</span>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
       )}
 
       {(isAdmin || isSuperAdmin) && finance ? (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-slate-900">Finance visibility (30 days)</h2>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Revenue</span><p className="text-lg font-bold text-slate-900">₹{finance.revenue.verifiedRevenueRupees.toFixed(2)}</p></div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Attempts</span><p className="text-lg font-bold text-slate-900">{finance.funnel.totalAttempts}</p></div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Verified</span><p className="text-lg font-bold text-emerald-700">{finance.funnel.verifiedCount}</p></div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Conversion</span><p className="text-lg font-bold text-teal-700">{finance.funnel.conversionRatePercent}%</p></div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"><span className="text-slate-500">Conversion</span><p className="text-lg font-bold text-indigo-700">{finance.funnel.conversionRatePercent}%</p></div>
           </div>
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Top failed reasons</p>
@@ -254,10 +254,10 @@ export default function DashboardPage() {
       ) : null}
 
       {recentBatches.length > 0 && (isAdmin || isSuperAdmin || isTrainer) && (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Recent batches</h2>
-            <Link href="/batches" className="text-sm font-medium text-teal-600 transition hover:text-teal-800 hover:underline">
+            <Link href="/batches" className="text-sm font-medium text-indigo-600 transition hover:text-indigo-800 hover:underline">
               All batches
             </Link>
           </div>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
               <li key={b.id}>
                 <Link
                   href={`/batches/${b.id}/view`}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3.5 text-sm ring-1 ring-slate-100/60 transition duration-200 hover:border-teal-100 hover:bg-teal-50/50 hover:ring-teal-100/80"
+                  className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3.5 text-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-indigo-100 hover:bg-indigo-50/50 hover:ring-indigo-100/80"
                 >
                   <span className="font-medium text-slate-800">{b.name}</span>
                   <span className="text-xs text-slate-500">
@@ -280,17 +280,17 @@ export default function DashboardPage() {
       )}
 
       {isSuperAdmin && (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/60">
+        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-lg shadow-slate-200/20 ring-1 ring-slate-100/80">
           <h2 className="mb-1 text-lg font-semibold text-slate-900">System</h2>
           <p className="mb-5 text-sm text-slate-500">Admin controls and grouped audit access</p>
           <div className="flex flex-wrap gap-3">
-            <Link href="/team-management" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
+            <Link href="/team-management" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:shadow-md">
               Team management
             </Link>
-            <Link href="/analytics" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
+            <Link href="/analytics" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:shadow-md">
               Analytics
             </Link>
-            <Link href="/audit-hub" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 hover:shadow-md">
+            <Link href="/audit-hub" className="rounded-xl border border-slate-200/80 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-100/80 transition duration-200 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 hover:shadow-md">
               Audit hub
             </Link>
           </div>

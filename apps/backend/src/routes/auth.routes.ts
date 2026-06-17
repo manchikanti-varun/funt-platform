@@ -24,14 +24,14 @@ import {
   establishParentDelegateSession,
   parentDelegateLogout,
 } from "../controllers/auth.controller.js";
-import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter, passwordChangeRateLimiter } from "../middleware/rateLimit.middleware.js";
+import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter, passwordChangeRateLimiter, signupRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = Router();
 
 router.post("/logout", logout);
 router.post("/session", establishSession);
 router.post("/login", validateBody(loginSchema), login);
-router.post("/signup", validateBody(studentSignupSchema), signupStudent);
+router.post("/signup", signupRateLimiter, validateBody(studentSignupSchema), signupStudent);
 router.get("/username-availability", checkUsernameAvailability);
 router.post("/forgot-username", forgotStudentUsername);
 router.post("/change-password", authMiddleware, passwordChangeRateLimiter, validateBody(changePasswordSchema), changePassword);

@@ -57,9 +57,6 @@ interface BadgeOption {
   awardMode?: "MANUAL" | "AUTO" | "BOTH";
 }
 
-const INPUT_CLASS =
-  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20";
-
 const MAX_UPLOAD_IMAGE_BYTES = 1_500_000;
 
 function readImageFileAsDataUrl(file: File): Promise<string> {
@@ -326,7 +323,7 @@ export default function EditBatchPage() {
           <>
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                batch.status === BATCH_STATUS.ARCHIVED ? "bg-slate-100 text-slate-600" : "bg-teal-100 text-teal-700"
+                batch.status === BATCH_STATUS.ARCHIVED ? "bg-slate-100 text-slate-600" : "bg-indigo-100 text-indigo-700"
               }`}
             >
               {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
@@ -338,7 +335,7 @@ export default function EditBatchPage() {
         }
         topBar={<>          <Link
             href={`/batches/${id}/submissions`}
-            className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100"
+            className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm transition hover:bg-indigo-100"
           >
             Assignment submissions
           </Link>
@@ -385,13 +382,13 @@ export default function EditBatchPage() {
       >
         <form onSubmit={submit} className="space-y-8">
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="alert--error">
               {error}
             </div>
           )}
 
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Basic info</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Basic info</h2>
             <div className="mt-3 space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-slate-700">Batch name</label>
@@ -400,7 +397,7 @@ export default function EditBatchPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Q1 2025 – Full stack"
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                 />
               </div>
               <div>
@@ -417,7 +414,7 @@ export default function EditBatchPage() {
                 <select
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "PRIVATE")}
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                 >
                   <option value="PUBLIC">Public (visible in Explore courses)</option>
                   <option value="PRIVATE">Private (hidden from Explore courses)</option>
@@ -427,11 +424,11 @@ export default function EditBatchPage() {
           </section>
 
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Courses & payment setup</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Courses & payment setup</h2>
             <p className="mt-1 text-sm text-slate-500">Select one or more courses included in this batch. Order is preserved.</p>
             <p className="mt-1 text-xs text-slate-500">
               Student access and license keys:{" "}
-              <Link href={`/batches/${id}/view`} className="font-medium text-teal-700 hover:underline">
+              <Link href={`/batches/${id}/view`} className="font-medium text-indigo-700 hover:underline">
                 batch view → Courses
               </Link>
               .
@@ -442,7 +439,7 @@ export default function EditBatchPage() {
                 value={courseSearch}
                 onChange={(e) => setCourseSearch(e.target.value)}
                 placeholder="Search courses…"
-                className={`${INPUT_CLASS} mb-2 max-w-md`}
+                className="input text-sm mb-2 max-w-md"
               />
               <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
                 {courses
@@ -495,7 +492,7 @@ export default function EditBatchPage() {
                             return [...prev, c.id];
                           });
                         }}
-                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-sm font-medium text-slate-800">
                         {c.title}
@@ -520,7 +517,7 @@ export default function EditBatchPage() {
               )}
             </div>
             {selectedCourseIds.length > 0 && (
-              <div className="mt-4 space-y-3 rounded-xl border border-teal-100 bg-teal-50/40 p-4">
+              <div className="mt-4 space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
                 <p className="text-sm font-semibold text-slate-800">Per course in this batch: fee &amp; completion coins</p>
                 <p className="text-xs text-slate-600">
                   List price (INR) is shown at student checkout. From <strong>₹1</strong> upward, choose manual UPI and/or Razorpay. Separately, set FUNT coins credited when a student earns a certificate for that course in this cohort (0 = none). Certificate <em>price</em> in coins (if any) is still batch-level:{" "}
@@ -570,7 +567,7 @@ export default function EditBatchPage() {
                                         [sid]: { ...(m[sid] ?? pm), upiManual: e.target.checked },
                                       }))
                                     }
-                                    className="rounded border-slate-300 text-teal-600"
+                                    className="rounded border-slate-300 text-indigo-600"
                                   />
                                   Manual UPI
                                 </label>
@@ -584,7 +581,7 @@ export default function EditBatchPage() {
                                         [sid]: { ...(m[sid] ?? pm), razorpay: e.target.checked },
                                       }))
                                     }
-                                    className="rounded border-slate-300 text-teal-600"
+                                    className="rounded border-slate-300 text-indigo-600"
                                   />
                                   Razorpay
                                 </label>
@@ -621,7 +618,7 @@ export default function EditBatchPage() {
                                     key={b.badgeType}
                                     className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
                                       selected
-                                        ? "border-teal-300 bg-teal-50 text-teal-800"
+                                        ? "border-indigo-300 bg-indigo-50 text-indigo-800"
                                         : "border-slate-300 bg-white text-slate-600"
                                     }`}
                                   >
@@ -637,7 +634,7 @@ export default function EditBatchPage() {
                                           return { ...m, [sid]: next };
                                         })
                                       }
-                                      className="rounded border-slate-300 text-teal-600"
+                                      className="rounded border-slate-300 text-indigo-600"
                                     />
                                     {b.displayName}
                                   </label>
@@ -656,7 +653,7 @@ export default function EditBatchPage() {
           </section>
 
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Schedule, meeting & optional batch QR (fallback)</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Schedule, meeting & optional batch QR (fallback)</h2>
             <p className="mt-1 text-sm text-slate-500">
               Start/end dates and meeting URL. The batch QR is optional: students normally use an auto-refreshing QR; this image is used only if that path fails or you prefer a fixed graphic.
             </p>
@@ -668,7 +665,7 @@ export default function EditBatchPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                 />
               </div>
               <div>
@@ -677,7 +674,7 @@ export default function EditBatchPage() {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                 />
               </div>
               <div className="sm:col-span-2">
@@ -687,7 +684,7 @@ export default function EditBatchPage() {
                   value={zoomLink}
                   onChange={(e) => setZoomLink(e.target.value)}
                   placeholder="https://zoom.us/j/…"
-                  className={INPUT_CLASS}
+                  className="input text-sm"
                 />
               </div>
               <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
@@ -707,7 +704,7 @@ export default function EditBatchPage() {
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-                    className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700"
+                    className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
@@ -753,7 +750,7 @@ export default function EditBatchPage() {
                 })()}
               </div>
               {needsPlatformUpiInfo ? (
-                <div className="sm:col-span-2 mt-4 rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <div className="sm:col-span-2 mt-4 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-700 shadow-sm">
                   <p className="font-semibold text-slate-900">Receiving UPI details</p>
                   <p className="mt-2 text-xs leading-relaxed text-slate-600">
                     Paid courses with <strong>QR + UTR</strong> use a direct static QR with this UPI and payee. If auto generation fails, students see the optional fallback QR image above.
@@ -771,13 +768,13 @@ export default function EditBatchPage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-50"
+              className="btn-primary"
             >
               {loading ? "Saving…" : "Save changes"}
             </button>
             <Link
               href="/batches"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="btn-secondary"
             >
               Cancel
             </Link>

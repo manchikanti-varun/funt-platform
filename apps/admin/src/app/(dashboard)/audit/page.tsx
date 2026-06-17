@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { SortableTh } from "@/components/ui/SortableTh";
 import { PageSizeSelect } from "@/components/ui/PageSizeSelect";
 import { useClientTableSort } from "@/lib/useClientTableSort";
+import { AppPageShell } from "@/components/ui";
 
 interface AuditEntry {
   id: string;
@@ -108,12 +109,12 @@ export default function AuditLogPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="w-full space-y-6">
+      <AppPageShell>
         <PageHeader title="Audit logs" subtitle="Super Admin only." />
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">
           Access is restricted to Super Admin accounts.
         </p>
-      </div>
+      </AppPageShell>
     );
   }
 
@@ -128,14 +129,14 @@ export default function AuditLogPage() {
   })();
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <PageHeader
         title="Audit logs"
         subtitle="Immutable history of important actions. Batches and courses show readable names where possible."
       />
       <div className="flex flex-wrap gap-2">
         <Link href="/audit-hub" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Audit hub</Link>
-        <Link href="/audit" className="rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white">System</Link>
+        <Link href="/audit" className="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white">System</Link>
         <Link href="/license-key-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">License keys</Link>
         <Link href="/coupon-audit" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Coupons</Link>
         <Link href="/audit?action=PAYMENT_UPI_UPDATED" className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200">Payment UPI config</Link>
@@ -180,7 +181,7 @@ export default function AuditLogPage() {
 
       {loading ? (
         <div className="flex min-h-[200px] items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       ) : data && data.logs.length === 0 ? (
         <EmptyState title="No matching entries" description="Try widening the date range or clearing filters." />
@@ -268,7 +269,7 @@ export default function AuditLogPage() {
                   type="button"
                   onClick={() => setPage(1)}
                   className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                    page === 1 ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    page === 1 ? "bg-indigo-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   1
@@ -282,7 +283,7 @@ export default function AuditLogPage() {
                 type="button"
                 onClick={() => setPage(p)}
                 className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                  page === p ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  page === p ? "bg-indigo-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 {p}
@@ -295,7 +296,7 @@ export default function AuditLogPage() {
                   type="button"
                   onClick={() => setPage(totalPages)}
                   className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
-                    page === totalPages ? "bg-teal-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    page === totalPages ? "bg-indigo-600 text-white" : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
                   {totalPages}
@@ -314,6 +315,6 @@ export default function AuditLogPage() {
           </div>
         </>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }

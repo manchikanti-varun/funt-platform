@@ -353,7 +353,7 @@ export default function NewBatchPage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Create batch</h2>
           <p className="mt-1 text-sm text-slate-600">
             Build one batch with one or more courses, set per-course fee/payment options, and (optional) batch UPI QR.
@@ -365,7 +365,7 @@ export default function NewBatchPage() {
             <DraftRestoredBanner savedAt={draftSavedAt} onDiscard={discardDraft} />
           )}
           <section>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Basic info</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Basic info</h3>
             <div className="mt-3 grid gap-6 sm:grid-cols-1 w-full">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-slate-700">Batch Name</label>
@@ -373,7 +373,7 @@ export default function NewBatchPage() {
                 required
                 value={name}
                 onChange={(e) => update("name", e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input w-full"
                 placeholder="e.g. Robotics Jan 2025"
               />
             </div>
@@ -389,7 +389,7 @@ export default function NewBatchPage() {
                   type="date"
                   value={startDate}
                   onChange={(e) => update("startDate", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="input w-full"
                 />
               </div>
               <div>
@@ -398,7 +398,7 @@ export default function NewBatchPage() {
                   type="date"
                   value={endDate}
                   onChange={(e) => update("endDate", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  className="input w-full"
                 />
               </div>
             </div>
@@ -407,7 +407,7 @@ export default function NewBatchPage() {
               <input
                 value={zoomLink}
                 onChange={(e) => update("zoomLink", e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input w-full"
                 placeholder="https://..."
               />
             </div>
@@ -416,7 +416,7 @@ export default function NewBatchPage() {
               <select
                 value={visibility}
                 onChange={(e) => update("visibility", e.target.value as "PUBLIC" | "PRIVATE")}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input w-full"
               >
                 <option value="PUBLIC">Public (visible in Explore courses)</option>
                 <option value="PRIVATE">Private (hidden from Explore courses)</option>
@@ -426,14 +426,14 @@ export default function NewBatchPage() {
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Schedule & meeting</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Schedule & meeting</h3>
             <div className="mt-3 grid gap-6 sm:grid-cols-1 w-full">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">Fallback QR image (optional)</label>
               <p className="mb-2 text-xs text-slate-600">
                 For <strong className="font-semibold text-slate-700">QR + UTR</strong> checkout, students get a direct static QR generated from the active platform UPI and exact course amount.
                 Keep upload disabled unless you need a fallback image for emergency/manual override. Platform payee UPI is set in the panel below and in{" "}
-                <Link href="/payment-qr" className="font-semibold text-teal-700 hover:underline">
+                <Link href="/payment-qr" className="font-semibold text-indigo-700 hover:underline">
                   UPI &amp; QR center
                 </Link>
                 .
@@ -450,7 +450,7 @@ export default function NewBatchPage() {
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-                  className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700"
+                  className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-700"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (!f) return;
@@ -483,7 +483,7 @@ export default function NewBatchPage() {
                 </div>
               ) : null}
               {needsPlatformUpiInfo ? (
-                <div className="mt-4 rounded-xl border border-teal-100 bg-teal-50/70 px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-slate-700 shadow-sm">
                   <p className="font-semibold text-slate-900">UPI ID &amp; payee name (what learners pay into)</p>
                   <p className="mt-2 text-xs leading-relaxed text-slate-600">
                     When <strong>QR + UTR</strong> is on for a paid course, the LMS builds a static QR for students
@@ -505,13 +505,13 @@ export default function NewBatchPage() {
           <section className="border-t border-slate-200 pt-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Courses &amp; pricing</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Courses &amp; pricing</h3>
                 <p className="mt-1 max-w-3xl text-sm text-slate-600">
                   Tick courses for this cohort; expand below each title for fee (INR) and checkout behaviour. Fee blank or below ₹1 means no paid enrollment flow.
                 </p>
               </div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Included: <span className="text-teal-700">{selectedCourseIds.length}</span>
+                Included: <span className="text-indigo-700">{selectedCourseIds.length}</span>
               </p>
             </div>
             <div className="mt-4">
@@ -520,7 +520,7 @@ export default function NewBatchPage() {
                 value={courseSearch}
                 onChange={(e) => setCourseSearch(e.target.value)}
                 placeholder="Search courses…"
-                className="mb-4 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input mb-4 w-full max-w-md text-sm"
               />
               <div className="space-y-3 overflow-x-hidden rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                 {filteredCourses.length === 0 ? (
@@ -545,7 +545,7 @@ export default function NewBatchPage() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => toggleCourse(c.id)}
-                            className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <div className="flex-1 space-y-3">
                             <div className="flex flex-wrap justify-between gap-3">
@@ -577,9 +577,9 @@ export default function NewBatchPage() {
                             {checked ? (
                               <div className="border-t border-slate-100 pt-3 space-y-3">
                                 {isLP ? (
-                                  <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3">
-                                    <p className="text-xs font-semibold text-teal-800">Learning Plan Course</p>
-                                    <p className="mt-1 text-xs text-teal-700">Students pay per milestone. Enrollment is free. Fee is configured in the Learning Plan settings.</p>
+                                  <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
+                                    <p className="text-xs font-semibold text-indigo-800">Learning Plan Course</p>
+                                    <p className="mt-1 text-xs text-indigo-700">Students pay per milestone. Enrollment is free. Fee is configured in the Learning Plan settings.</p>
                                   </div>
                                 ) : (
                                   <>
@@ -628,7 +628,7 @@ export default function NewBatchPage() {
                                             key={b.badgeType}
                                             className={`inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
                                               selected
-                                                ? "border-teal-300 bg-teal-50 text-teal-800"
+                                                ? "border-indigo-300 bg-indigo-50 text-indigo-800"
                                                 : "border-slate-300 bg-white text-slate-600"
                                             }`}
                                           >
@@ -642,7 +642,7 @@ export default function NewBatchPage() {
                                                     : prev.filter((x) => x !== b.badgeType)
                                                 )
                                               }
-                                              className="rounded border-slate-300 text-teal-600"
+                                              className="rounded border-slate-300 text-indigo-600"
                                             />
                                             {b.displayName}
                                           </label>
@@ -665,7 +665,7 @@ export default function NewBatchPage() {
                                           type="checkbox"
                                           checked={pm.upiManual}
                                           onChange={(e) => updatePayment(c.id, { upiManual: e.target.checked })}
-                                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                         />
                                         QR scan + manual payment proof (UTR)
                                       </label>
@@ -674,7 +674,7 @@ export default function NewBatchPage() {
                                           type="checkbox"
                                           checked={pm.razorpay}
                                           onChange={(e) => updatePayment(c.id, { razorpay: e.target.checked })}
-                                          className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                                         />
                                         Hosted online checkout
                                       </label>
@@ -709,7 +709,7 @@ export default function NewBatchPage() {
           </section>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+            <div className="alert--error">
               {error}
             </div>
           )}
@@ -718,7 +718,7 @@ export default function NewBatchPage() {
             <button
               type="submit"
               disabled={loading || selectedCourseIds.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-50"
+              className="btn-primary"
             >
               {loading ? (
                 <>
@@ -731,7 +731,7 @@ export default function NewBatchPage() {
             </button>
             <Link
               href="/batches"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="btn-secondary"
             >
               Cancel
             </Link>

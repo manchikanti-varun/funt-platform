@@ -515,7 +515,7 @@ export default function SupportDeskPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="flex min-h-[260px] items-center justify-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="spinner" />
           </div>
         ) : !result?.tickets.length ? (
           <EmptyState hasFilters={hasFilters} />

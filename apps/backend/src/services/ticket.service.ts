@@ -658,58 +658,67 @@ export async function getTicketAnalytics() {
   const yearStart = new Date(now.getFullYear(), 0, 1);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const [allYear, todayNew, breached] = await Promise.all([
-    TicketModel.find({ createdAt: { $gte: yearStart } }).lean().exec(),
+  // Use aggregation pipeline instead of loading all documents into memory
+  const [facetResult, todayNew, breached, openCount] = await Promise.all([
+    TicketModel.aggregate([
+      { $match: { createdAt: { $gte: yearStart } } },
+      {
+        $facet: {
+          byStatus: [{ $group: { _id: "$status", count: { $sum: 1 } } }],
+          byCategory: [{ $group: { _id: "$category", count: { $sum: 1 } } }],
+          byPriority: [{ $group: { _id: "$priority", count: { $sum: 1 } } }],
+          byMonth: [
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+          resolution: [
+            { $match: { status: TICKET_STATUS.RESOLVED, resolvedAt: { $exists: true } } },
+            {
+              $group: {
+                _id: null,
+                count: { $sum: 1 },
+                totalMs: { $sum: { $subtract: ["$resolvedAt", "$createdAt"] } },
+              },
+            },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
+    ]).exec(),
     TicketModel.countDocuments({ createdAt: { $gte: todayStart } }).exec(),
     TicketModel.countDocuments({
       status: { $nin: [TICKET_STATUS.RESOLVED, TICKET_STATUS.CLOSED] },
       slaDueAt: { $lt: now },
     }).exec(),
+    TicketModel.countDocuments({
+      status: { $nin: [TICKET_STATUS.RESOLVED, TICKET_STATUS.CLOSED] },
+    }).exec(),
   ]);
 
-  // Status summary
-  const statusMap: Record<string, number> = {};
-  const categoryMap: Record<string, number> = {};
-  const priorityMap: Record<string, number> = {};
-  const monthMap: Record<string, number> = {};
-  let totalResolutionMs = 0;
-  let resolvedCount = 0;
-
-  for (const t of allYear) {
-    const tt = t as {
-      status: string; category: string; priority: string;
-      createdAt: Date; resolvedAt?: Date;
-    };
-    statusMap[tt.status] = (statusMap[tt.status] ?? 0) + 1;
-    categoryMap[tt.category] = (categoryMap[tt.category] ?? 0) + 1;
-    priorityMap[tt.priority] = (priorityMap[tt.priority] ?? 0) + 1;
-    const monthKey = new Date(tt.createdAt).toISOString().slice(0, 7);
-    monthMap[monthKey] = (monthMap[monthKey] ?? 0) + 1;
-    if (tt.status === TICKET_STATUS.RESOLVED && tt.resolvedAt) {
-      totalResolutionMs += new Date(tt.resolvedAt).getTime() - new Date(tt.createdAt).getTime();
-      resolvedCount++;
-    }
-  }
-
-  const avgResolutionHours = resolvedCount > 0
-    ? Math.round(totalResolutionMs / resolvedCount / 3600000 * 10) / 10
+  const facets = facetResult[0] ?? { byStatus: [], byCategory: [], byPriority: [], byMonth: [], resolution: [], total: [] };
+  const total = (facets.total as Array<{ count: number }>)[0]?.count ?? 0;
+  const resolutionAgg = (facets.resolution as Array<{ count: number; totalMs: number }>)[0];
+  const avgResolutionHours = resolutionAgg && resolutionAgg.count > 0
+    ? Math.round(resolutionAgg.totalMs / resolutionAgg.count / 3600000 * 10) / 10
     : 0;
 
-  const openCount = await TicketModel.countDocuments({
-    status: { $nin: [TICKET_STATUS.RESOLVED, TICKET_STATUS.CLOSED] },
-  }).exec();
-
-  const monthlyTrend = Object.entries(monthMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, count]) => ({ month, count }));
-
-  const byStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
-  const byCategory = Object.entries(categoryMap).map(([category, count]) => ({ category, count }));
-  const byPriority = Object.entries(priorityMap).map(([priority, count]) => ({ priority, count }));
+  const monthlyTrend = (facets.byMonth as Array<{ _id: string; count: number }>)
+    .map((m) => ({ month: m._id, count: m.count }));
+  const byStatus = (facets.byStatus as Array<{ _id: string; count: number }>)
+    .map((s) => ({ status: s._id, count: s.count }));
+  const byCategory = (facets.byCategory as Array<{ _id: string; count: number }>)
+    .map((c) => ({ category: c._id, count: c.count }));
+  const byPriority = (facets.byPriority as Array<{ _id: string; count: number }>)
+    .map((p) => ({ priority: p._id, count: p.count }));
 
   return {
     summary: {
-      total: allYear.length,
+      total,
       open: openCount,
       openToday: todayNew,
       slaBreaches: breached,

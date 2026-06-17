@@ -54,7 +54,7 @@ export default function AttendancePage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-funt-gold-deep" />
+        <div className="spinner" />
         <p className="text-sm text-slate-500">Loading attendance…</p>
       </div>
     );
@@ -64,7 +64,7 @@ export default function AttendancePage() {
     <AppPageShell className="max-w-4xl gap-8">
       {}
       <header className="page-hero shrink-0 py-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8f7217]">Attendance</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-funt-gold-deep">Attendance</p>
         <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-black sm:text-3xl">Attendance</h1>
       </header>
 

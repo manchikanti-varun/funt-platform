@@ -11,7 +11,7 @@ import { AttendanceModel } from "../models/Attendance.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
 import { BATCH_STATUS, COURSE_STATUS, COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
-import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
+import { cacheDel, cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
 import { generateBatchId } from "../utils/funtIdGenerator.js";
 import { batchHasDemoCourses, syncAllStudentsToDemoBatch } from "./demoEnrollment.service.js";
@@ -438,6 +438,13 @@ export async function createBatch(input: CreateBatchInput) {
 }
 
 export async function listBatches(filters?: { status?: string; trainerId?: string; search?: string; assignedToUserId?: string }) {
+  // Cache unfiltered admin batch list (most common call from admin dashboard)
+  const isUnfiltered = !filters || (!filters.status && !filters.trainerId && !filters.search && !filters.assignedToUserId);
+  if (isUnfiltered) {
+    const cached = await cacheGet<unknown[]>(CACHE_KEYS.adminBatches());
+    if (cached) return cached;
+  }
+
   const main: Record<string, unknown> = {};
   if (filters?.status) main.status = filters.status;
   if (filters?.assignedToUserId) {
@@ -458,9 +465,16 @@ export async function listBatches(filters?: { status?: string; trainerId?: strin
       ],
     };
   }
-  const list = await BatchModel.find(query).sort({ createdAt: -1 }).lean().exec();
+  const list = await BatchModel.find(query)
+    .select("-courseSnapshots.modules.content -courseSnapshot.modules.content")
+    .sort({ createdAt: -1 }).lean().exec();
   const staff = await staffDisplayByMongoIds(list.map((d) => String((d as BatchDoc).trainerId ?? "")));
-  return list.map((d) => toBatchResponse(d as unknown as Parameters<typeof toBatchResponse>[0], true, staff));
+  const result = list.map((d) => toBatchResponse(d as unknown as Parameters<typeof toBatchResponse>[0], true, staff));
+
+  if (isUnfiltered) {
+    await cacheSet(CACHE_KEYS.adminBatches(), result, CACHE_TTL.ADMIN_LIST);
+  }
+  return result;
 }
 
 export async function listAllBatchesForExplore() {
@@ -468,6 +482,7 @@ export async function listAllBatchesForExplore() {
     status: { $ne: BATCH_STATUS.ARCHIVED },
     $or: [{ visibility: "PUBLIC" }, { visibility: { $exists: false } }],
   })
+    .select("-courseSnapshots.modules.content -courseSnapshot.modules.content")
     .sort({ createdAt: -1 })
     .lean()
     .exec();
@@ -812,6 +827,7 @@ export async function archiveBatch(id: string, performedBy: string) {
   ).exec();
   if (!doc) throw new AppError("Batch not found", 404);
   await createAuditLog("BATCH_ARCHIVED", performedBy, ENTITY_BATCH, String(doc._id));
+  await cacheDel(CACHE_KEYS.adminBatches());
   const staff = await staffDisplayByMongoIds([String((doc as BatchDoc).trainerId ?? "")]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
 }
@@ -830,6 +846,7 @@ export async function unarchiveBatch(id: string, performedBy: string) {
   ).exec();
   if (!doc) throw new AppError("Batch not found", 404);
   await createAuditLog("BATCH_UNARCHIVED", performedBy, ENTITY_BATCH, String(doc._id));
+  await cacheDel(CACHE_KEYS.adminBatches());
   const staff = await staffDisplayByMongoIds([String((doc as BatchDoc).trainerId ?? "")]);
   return toBatchResponse(doc as unknown as BatchDoc, false, staff);
 }
@@ -887,5 +904,6 @@ export async function deleteBatch(id: string, performedBy: string) {
     batchId: humanId,
     name: (existing as { name?: string }).name,
   });
+  await cacheDel(CACHE_KEYS.adminBatches());
   return { id: mongoId, batchId: humanId, name: (existing as { name?: string }).name, deleted: true };
 }

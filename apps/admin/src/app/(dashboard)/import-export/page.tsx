@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { AppPageShell } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
 type ExportLevel = 1 | 2 | 3 | 4;
@@ -295,7 +296,7 @@ function ImportPanel() {
 
 export default function ImportExportPage() {
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-6">
+    <AppPageShell>
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Import / Export</h1>
@@ -304,6 +305,6 @@ export default function ImportExportPage() {
 
       <ExportPanel />
       <ImportPanel />
-    </div>
+    </AppPageShell>
   );
 }

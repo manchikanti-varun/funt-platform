@@ -72,7 +72,7 @@ export default function AccountPage() {
   if (!user) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="spinner" />
       </div>
     );
   }

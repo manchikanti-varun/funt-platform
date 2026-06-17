@@ -153,4 +153,8 @@ courseSchema.set("toJSON", {
   },
 });
 
+// ─── Indexes ─────────────────────────────────────────────────────────────────
+courseSchema.index({ status: 1, updatedAt: -1 });
+courseSchema.index({ title: "text", description: "text" });
+
 export const CourseModel = mongoose.model("Course", courseSchema);

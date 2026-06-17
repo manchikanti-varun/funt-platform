@@ -30,7 +30,7 @@ export default function AchievementsPage() {
   if (loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function AchievementsPage() {
   return (
     <AppPageShell className="max-w-5xl gap-8">
       <header className="page-hero py-6">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#8d6f14]">Growth</p>
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-funt-gold-deep">Growth</p>
         <h1 className="mt-1 text-3xl font-black tracking-tight text-black">Achievements & medals</h1>
         <p className="mt-2 text-sm text-black/65">Badges you have earned so far.</p>
       </header>

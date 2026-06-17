@@ -76,3 +76,16 @@ export const passwordChangeRateLimiter = rateLimit({
   legacyHeaders: false,
   ...getStore("password-change"),
 });
+
+/**
+ * Signup rate limiter.
+ * Tighter than general auth limiter to prevent junk account creation.
+ */
+export const signupRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: getEnv().isProduction ? 5 : 50,
+  message: { success: false, message: "Too many signup attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...getStore("signup"),
+});

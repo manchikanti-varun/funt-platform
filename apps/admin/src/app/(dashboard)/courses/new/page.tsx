@@ -137,7 +137,7 @@ export default function NewCoursePage() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-100">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-6">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h2 className="text-xl font-bold tracking-tight text-slate-900">Create Course</h2>
           <p className="mt-1 text-sm text-slate-600">Add a title, description, and select Global Chapters in the order they will appear in the course.</p>
         </div>
@@ -153,7 +153,7 @@ export default function NewCoursePage() {
                 required
                 value={title}
                 onChange={(e) => update("title", e.target.value)}
-                className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input max-w-xl"
                 placeholder="Course title"
               />
             </div>
@@ -167,7 +167,7 @@ export default function NewCoursePage() {
               <input
                 value={durationText}
                 onChange={(e) => update("durationText", e.target.value)}
-                className="w-full max-w-xl rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input max-w-xl"
                 placeholder="e.g. 45 days, 3 months, 12 weeks"
               />
               <p className="mt-1 text-xs text-slate-500">This value will be used on the student certificate.</p>
@@ -183,7 +183,7 @@ export default function NewCoursePage() {
                   type="checkbox"
                   checked={isDemo}
                   onChange={(e) => setIsDemo(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-slate-800">
                   <span className="font-semibold">Demo course</span>
@@ -196,7 +196,7 @@ export default function NewCoursePage() {
           </div>
 
           <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-teal-700">Add Global Chapters</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Add Global Chapters</h3>
             <p className="mt-1 text-sm text-slate-600">
               Search and select chapters. When you have many chapters, use the search box to find them quickly. Order the selected list with Up/Down.
             </p>
@@ -206,7 +206,7 @@ export default function NewCoursePage() {
                 value={chapterSearch}
                 onChange={(e) => setChapterSearch(e.target.value)}
                 placeholder="Search chapters by title…"
-                className="mb-3 w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input mb-3 max-w-md text-sm"
               />
               <div className="min-h-0 max-h-72 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">
                 {filteredChapters.length === 0 ? (
@@ -222,7 +222,7 @@ export default function NewCoursePage() {
                             type="checkbox"
                             checked={selectedIds.includes(m.id)}
                             onChange={() => toggle(m.id)}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                           />
                           <span className="text-sm font-medium text-slate-800">{m.title}</span>
                         </label>
@@ -276,7 +276,7 @@ export default function NewCoursePage() {
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+            <div className="alert--error">
               {error}
             </div>
           )}
@@ -285,7 +285,7 @@ export default function NewCoursePage() {
             <button
               type="submit"
               disabled={loading || selectedIds.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-50"
+              className="btn-primary inline-flex items-center gap-2 text-sm"
             >
               {loading ? (
                 <>
@@ -298,7 +298,7 @@ export default function NewCoursePage() {
             </button>
             <Link
               href="/courses"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="btn-secondary inline-flex items-center gap-2 text-sm"
             >
               Cancel
             </Link>

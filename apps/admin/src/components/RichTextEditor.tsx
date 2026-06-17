@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { RichTextEditor as RichTextEditorCore, type RichTextEditorApi } from "@funt-platform/rich-text-editor";
 
 const EDITOR_BASE =
-  "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-teal-400 focus-within:shadow-md focus-within:shadow-teal-100/60";
+  "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-indigo-400 focus-within:shadow-md focus-within:shadow-indigo-100/60";
 
 export interface RichTextEditorProps {
   value: string;

@@ -48,7 +48,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-teal-50/40 p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 p-4">
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.35]"
         aria-hidden
@@ -172,7 +172,7 @@ function LoginForm() {
 
           <p className="mt-4 text-center text-xs text-slate-600">
             New to Admin?{" "}
-            <a href={apiUrl("/api/auth/google?app=admin")} className="font-semibold text-teal-700 hover:underline">
+            <a href={apiUrl("/api/auth/google?app=admin")} className="font-semibold text-indigo-700 hover:underline">
               Request admin access
             </a>
             {" "}— a Super Admin must approve before you can sign in.
@@ -185,7 +185,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#fffaf0]"><div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="spinner" /></div>}>
       <LoginForm />
     </Suspense>
   );

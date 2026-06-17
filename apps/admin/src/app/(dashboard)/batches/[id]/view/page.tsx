@@ -187,7 +187,7 @@ export default function ViewBatchPage() {
                   href={batch.zoomLink.startsWith("http") ? batch.zoomLink : `https://${batch.zoomLink}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-teal-600 hover:underline"
+                  className="text-indigo-600 hover:underline"
                 >
                   {batch.zoomLink}
                 </a>
@@ -201,7 +201,7 @@ export default function ViewBatchPage() {
         <p className="mb-3 text-sm text-slate-600">
           <Link
             href={`/batches/${id}/student-access`}
-            className="font-medium text-teal-700 underline decoration-teal-200 underline-offset-2 hover:text-teal-800"
+            className="font-medium text-indigo-700 underline decoration-indigo-200 underline-offset-2 hover:text-indigo-800"
           >
             Batch access
           </Link>
@@ -229,7 +229,7 @@ export default function ViewBatchPage() {
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/courses/${c.courseId}/view`}
-                          className="text-sm font-medium text-slate-800 transition hover:text-teal-600"
+                          className="text-sm font-medium text-slate-800 transition hover:text-indigo-600"
                         >
                           {c.title ?? "Course"}
                         </Link>
@@ -286,7 +286,7 @@ export default function ViewBatchPage() {
                         setSyncMessage(res.success ? `${c.title ?? "Course"} synced!` : (res.message ?? "Sync failed"));
                         if (res.success) setTimeout(() => setSyncMessage(""), 3000);
                       }}
-                      className="shrink-0 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-semibold text-teal-900 transition hover:bg-teal-100 disabled:opacity-50"
+                      className="shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-900 transition hover:bg-indigo-100 disabled:opacity-50"
                     >
                       {syncingCourseId === c.courseId ? "Syncing..." : "Sync Content"}
                     </button>

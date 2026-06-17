@@ -5,10 +5,10 @@ import QRCode from "qrcode";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
+import { AppPageShell, useAppDialog } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useSearchParams } from "next/navigation";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
-import { useAppDialog } from "@/components/ui";
 import type { PaymentUpiConfigApiResponse } from "@/components/admin/PlatformUpiCheckoutSummary";
 
 interface GenerateResponse {
@@ -273,7 +273,7 @@ export default function PaymentQrPage() {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
       <PageHeader
         title="Generate Payment QR"
@@ -577,6 +577,6 @@ export default function PaymentQrPage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }

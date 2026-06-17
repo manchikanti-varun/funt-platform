@@ -88,7 +88,7 @@ export default function LeaveDetailPage() {
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function LeaveDetailPage() {
           {leave.attachment && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Attachment</p>
-              <a href={leave.attachment} target="_blank" rel="noopener noreferrer" className="mt-1 text-sm text-teal-600 hover:underline">
+              <a href={leave.attachment} target="_blank" rel="noopener noreferrer" className="mt-1 text-sm text-indigo-600 hover:underline">
                 View attachment
               </a>
             </div>
@@ -173,7 +173,7 @@ export default function LeaveDetailPage() {
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
                 rows={3}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none"
+                className="input w-full"
                 placeholder="Add review remarks…"
               />
             </div>
@@ -183,14 +183,14 @@ export default function LeaveDetailPage() {
               <button
                 onClick={() => void doAction("approve")}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+                className="btn-approve"
               >
                 {actionLoading ? "Processing…" : "Approve"}
               </button>
               <button
                 onClick={() => void doAction("reject")}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                className="btn-reject"
               >
                 {actionLoading ? "Processing…" : "Reject"}
               </button>

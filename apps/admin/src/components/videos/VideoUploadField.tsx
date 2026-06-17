@@ -278,7 +278,7 @@ export function VideoUploadField({
           {uploading ? (
             /* ── Upload in progress ── */
             <>
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-200 border-t-teal-600" aria-hidden />
+              <div className="spinner spinner--inline" aria-hidden />
               <p className="text-sm font-medium text-slate-700">{phaseLabel[phase]}</p>
               {phase === "upload" && (
                 <>

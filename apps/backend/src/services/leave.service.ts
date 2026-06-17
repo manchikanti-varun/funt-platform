@@ -415,43 +415,61 @@ export async function getLeaveAnalytics(viewerRoles: string[]) {
   const now = new Date();
   const yearStart = new Date(now.getFullYear(), 0, 1);
 
-  const [allThisYear, todayLeaves] = await Promise.all([
-    LeaveRequestModel.find({ createdAt: { $gte: yearStart } }).lean().exec(),
+  // Use aggregation pipeline instead of loading all documents into memory
+  const [facetResult, todayLeaves, totalTrainers, totalAdmins] = await Promise.all([
+    LeaveRequestModel.aggregate([
+      { $match: { createdAt: { $gte: yearStart } } },
+      {
+        $facet: {
+          byMonth: [
+            {
+              $group: {
+                _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+                applied: { $sum: 1 },
+                approved: { $sum: { $cond: [{ $eq: ["$status", LEAVE_STATUS.APPROVED] }, 1, 0] } },
+                rejected: { $sum: { $cond: [{ $eq: ["$status", LEAVE_STATUS.REJECTED] }, 1, 0] } },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ],
+          byType: [{ $group: { _id: "$leaveType", count: { $sum: 1 } } }],
+          byStatus: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                approved: { $sum: { $cond: [{ $eq: ["$status", LEAVE_STATUS.APPROVED] }, 1, 0] } },
+                rejected: { $sum: { $cond: [{ $eq: ["$status", LEAVE_STATUS.REJECTED] }, 1, 0] } },
+                pending: { $sum: { $cond: [{ $eq: ["$status", LEAVE_STATUS.PENDING] }, 1, 0] } },
+              },
+            },
+          ],
+        },
+      },
+    ]).exec(),
     LeaveRequestModel.find({
       status: LEAVE_STATUS.APPROVED,
       startDate: { $lte: now },
       endDate: { $gte: now },
-    }).lean().exec(),
+    }).select("requestedBy requestedByRole").lean().exec(),
+    UserModel.countDocuments({ roles: ROLE.TRAINER, status: "ACTIVE" }).exec(),
+    UserModel.countDocuments({ roles: ROLE.ADMIN, status: "ACTIVE" }).exec(),
   ]);
 
-  // Monthly trend
-  const monthlyMap: Record<string, { applied: number; approved: number; rejected: number }> = {};
-  for (const l of allThisYear) {
-    const key = new Date((l as { createdAt: Date }).createdAt).toISOString().slice(0, 7);
-    if (!monthlyMap[key]) monthlyMap[key] = { applied: 0, approved: 0, rejected: 0 };
-    monthlyMap[key].applied++;
-    if ((l as { status: string }).status === LEAVE_STATUS.APPROVED) monthlyMap[key].approved++;
-    if ((l as { status: string }).status === LEAVE_STATUS.REJECTED) monthlyMap[key].rejected++;
-  }
-  const monthlyTrend = Object.entries(monthlyMap)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, v]) => ({ month, ...v }));
+  const facets = facetResult[0] ?? { byMonth: [], byType: [], byStatus: [] };
+  const statusAgg = (facets.byStatus as Array<{ total: number; approved: number; rejected: number; pending: number }>)[0];
+  const total = statusAgg?.total ?? 0;
+  const approved = statusAgg?.approved ?? 0;
+  const rejected = statusAgg?.rejected ?? 0;
+  const pending = statusAgg?.pending ?? 0;
 
-  // Leave type distribution
-  const typeMap: Record<string, number> = {};
-  for (const l of allThisYear) {
-    const t = (l as unknown as { leaveType: string }).leaveType;
-    typeMap[t] = (typeMap[t] ?? 0) + 1;
-  }
-  const leaveTypeDistribution = Object.entries(typeMap).map(([type, count]) => ({ type, count }));
+  const monthlyTrend = (facets.byMonth as Array<{ _id: string; applied: number; approved: number; rejected: number }>)
+    .map((m) => ({ month: m._id, applied: m.applied, approved: m.approved, rejected: m.rejected }));
 
-  // Approval rate
-  const total = allThisYear.length;
-  const approved = allThisYear.filter((l) => (l as { status: string }).status === LEAVE_STATUS.APPROVED).length;
-  const rejected = allThisYear.filter((l) => (l as { status: string }).status === LEAVE_STATUS.REJECTED).length;
-  const pending = allThisYear.filter((l) => (l as { status: string }).status === LEAVE_STATUS.PENDING).length;
+  const leaveTypeDistribution = (facets.byType as Array<{ _id: string; count: number }>)
+    .map((t) => ({ type: t._id, count: t.count }));
 
-  // Team availability today
+  // Team availability today (small result set — fine to keep in-memory)
   const todayTrainerIds = new Set(
     todayLeaves
       .filter((l) => (l as { requestedByRole: string }).requestedByRole === ROLE.TRAINER)
@@ -462,11 +480,6 @@ export async function getLeaveAnalytics(viewerRoles: string[]) {
       .filter((l) => (l as { requestedByRole: string }).requestedByRole === ROLE.ADMIN)
       .map((l) => (l as { requestedBy: string }).requestedBy)
   );
-
-  const [totalTrainers, totalAdmins] = await Promise.all([
-    UserModel.countDocuments({ roles: ROLE.TRAINER, status: "ACTIVE" }).exec(),
-    UserModel.countDocuments({ roles: ROLE.ADMIN, status: "ACTIVE" }).exec(),
-  ]);
 
   return {
     summary: { total, approved, rejected, pending },

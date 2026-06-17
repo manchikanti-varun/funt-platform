@@ -149,7 +149,7 @@ export default function BatchesPage() {
             !trainerOnly ? (
               <Link
                 href="/batches/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-teal-700 hover:shadow-lg"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -162,22 +162,22 @@ export default function BatchesPage() {
       </div>
 
       <DataPanel className="min-h-0 flex-1 overflow-auto shadow-xl">
-        <div className="border-b border-slate-200 bg-gradient-to-r from-teal-50 via-white to-slate-50 px-6 py-5">
-          <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">Search</p>
+        <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-5">
+          <p className="text-sm font-semibold uppercase tracking-wider text-indigo-700">Search</p>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search batches by name or batch ID…"
-              className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+              className="input w-full max-w-md"
             />
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
               Visibility
               <select
                 value={visibilityFilter}
                 onChange={(e) => setVisibilityFilter(e.target.value as "ALL" | "PUBLIC" | "PRIVATE")}
-                className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                className="input ml-2"
               >
                 <option value="ALL">All</option>
                 <option value="PUBLIC">Public</option>
@@ -188,12 +188,12 @@ export default function BatchesPage() {
         </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="spinner" />
             <p className="mt-4 text-sm text-slate-500">Loading batches…</p>
           </div>
         ) : list.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100 text-teal-600">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
               <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
               </svg>
@@ -202,7 +202,7 @@ export default function BatchesPage() {
             <p className="mt-1 text-sm text-slate-500">Create a batch and assign a course to get started.</p>
             <Link
               href="/batches/new"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-teal-700"
+              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-indigo-700"
             >
               Create Batch
             </Link>

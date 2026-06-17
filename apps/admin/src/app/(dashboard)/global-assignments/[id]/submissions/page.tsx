@@ -190,7 +190,7 @@ export default function AssignmentSubmissionsPage() {
   if (loading) {
     return (
       <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+        <div className="spinner" />
         <p className="mt-4 text-sm text-slate-500">Loading submissions…</p>
       </div>
     );

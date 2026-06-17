@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
+import { AppPageShell } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 
@@ -68,7 +69,7 @@ export default function LeaveManagementPage() {
   const totalPages = result ? Math.ceil(result.total / (result.limit || 20)) : 1;
 
   return (
-    <div className="w-full space-y-6">
+    <AppPageShell>
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader
@@ -78,26 +79,26 @@ export default function LeaveManagementPage() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/leaves/my"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
           >
             My Leaves
           </Link>
           <Link
             href="/leaves/calendar"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
           >
             Calendar
           </Link>
           <Link
             href="/leaves/analytics"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="btn-secondary inline-flex items-center gap-2 text-sm"
           >
             Analytics
           </Link>
           {isSuperAdmin && (
             <Link
               href="/leaves/policy"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="btn-secondary inline-flex items-center gap-2 text-sm"
             >
               Leave Policy
             </Link>
@@ -110,7 +111,7 @@ export default function LeaveManagementPage() {
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="">All Statuses</option>
           {["PENDING", "APPROVED", "REJECTED", "CANCELLED"].map((s) => (
@@ -120,7 +121,7 @@ export default function LeaveManagementPage() {
         <select
           value={roleFilter}
           onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none"
+          className="input text-sm"
         >
           <option value="">All Roles</option>
           <option value="TRAINER">Trainer</option>
@@ -139,7 +140,7 @@ export default function LeaveManagementPage() {
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
           <div className="flex min-h-[200px] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+            <div className="spinner spinner--inline" />
           </div>
         ) : !result?.leaves.length ? (
           <div className="flex min-h-[200px] items-center justify-center text-sm text-slate-500">
@@ -181,7 +182,7 @@ export default function LeaveManagementPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/leaves/${leave.id}`}
-                        className="text-sm font-medium text-teal-600 hover:text-teal-800"
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800"
                       >
                         View
                       </Link>
@@ -217,6 +218,6 @@ export default function LeaveManagementPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

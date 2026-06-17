@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
+import { AppPageShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { BackLink } from "@/components/ui/BackLink";
 import {
@@ -33,13 +34,13 @@ export default function SupportAnalyticsPage() {
 
   if (loading) return (
     <div className="flex min-h-[40vh] items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+      <div className="spinner" />
     </div>
   );
   if (!data) return <p className="text-slate-600">Failed to load analytics.</p>;
 
   return (
-    <div className="w-full space-y-8">
+    <AppPageShell>
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/support" />
       <BackLink href="/support">Back to Support Desk</BackLink>
       <div>
@@ -138,6 +139,6 @@ export default function SupportAnalyticsPage() {
           </div>
         </section>
       </div>
-    </div>
+    </AppPageShell>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import { AppPageShell } from "@/components/ui";
 
 interface EnrollmentRequest {
   id: string;
@@ -49,7 +50,7 @@ export default function EnrollmentRequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <AppPageShell>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Enrollment Requests</h1>
@@ -59,21 +60,21 @@ export default function EnrollmentRequestsPage() {
         </div>
         <Link
           href="/batches"
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+          className="btn-secondary"
         >
           Batches
         </Link>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="alert--warning">
           {error}
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-teal-600" />
+          <div className="spinner" />
         </div>
       ) : requests.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
@@ -88,19 +89,19 @@ export default function EnrollmentRequestsPage() {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Course
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Batch
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Student
                   </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Requested
                   </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">
+                  <th className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Actions
                   </th>
                 </tr>
@@ -134,7 +135,7 @@ export default function EnrollmentRequestsPage() {
                           type="button"
                           onClick={() => respond(r.id, "APPROVE")}
                           disabled={actingId === r.id}
-                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                          className="btn-approve"
                         >
                           {actingId === r.id ? "…" : "Approve"}
                         </button>
@@ -142,7 +143,7 @@ export default function EnrollmentRequestsPage() {
                           type="button"
                           onClick={() => respond(r.id, "REJECT")}
                           disabled={actingId === r.id}
-                          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                          className="btn-reject"
                         >
                           Reject
                         </button>
@@ -155,6 +156,6 @@ export default function EnrollmentRequestsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppPageShell>
   );
 }

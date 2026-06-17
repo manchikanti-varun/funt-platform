@@ -178,7 +178,7 @@ function LoginForm() {
               <div className="w-full border-t border-black/[0.08]" />
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-gradient-to-b from-white to-[#fffdf6] px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-black/40">
+              <span className="bg-gradient-to-b from-white to-slate-50 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-black/40">
                 or continue with
               </span>
             </div>
@@ -186,7 +186,7 @@ function LoginForm() {
 
           <a
             href={apiUrl("/api/auth/google?app=lms")}
-            className="btn-secondary flex w-full items-center justify-center gap-2.5 border-funt-gold/25 bg-white/90 py-2.5 font-semibold hover:bg-funt-honey/30"
+            className="btn-secondary flex w-full items-center justify-center gap-2.5 bg-white/90 py-2.5 font-semibold hover:bg-slate-50"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden>
               <path
@@ -241,7 +241,7 @@ function LoginForm() {
 function LoginFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold" />
+      <div className="spinner" />
       <p className="text-sm font-medium text-black/50">Loading…</p>
     </div>
   );

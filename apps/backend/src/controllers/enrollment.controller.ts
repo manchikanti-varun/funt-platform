@@ -163,7 +163,9 @@ export const getStudentMediaPlaybackRedirect = asyncHandler(async (req: Request,
   const token = typeof req.query.token === "string" ? req.query.token.trim() : "";
   if (!token) throw new AppError("token is required", 400);
   const decoded = verifyMediaToken(token);
-  const studentId = req.user?.userId?.trim() || decoded.uid;
+  // Require authenticated session — the media token alone is not sufficient.
+  // This prevents leaked/shared URLs from granting unauthenticated access.
+  const studentId = req.user?.userId?.trim();
   if (!studentId || decoded.uid !== studentId) throw new AppError("Invalid media token", 403);
   const enrollmentData = await getCourseForStudentByCourseId(studentId, decoded.cid, decoded.bid);
   if (!enrollmentData.hasAccess || enrollmentData.accessBlocked) {
@@ -275,8 +277,6 @@ export const postMarkChapterComplete = asyncHandler(async (req: Request, res: Re
   const data = await markChapterComplete(studentId, batchId, chapterOrder, courseId);
   successRes(res, { ...data, chapterOrder: data.moduleOrder }, "Chapter marked as complete");
 });
-
-export const postMarkModuleComplete = postMarkChapterComplete;
 
 export const getTrainers = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const list = await UserModel.find({ roles: ROLE.TRAINER }).select("username name").lean().exec();
