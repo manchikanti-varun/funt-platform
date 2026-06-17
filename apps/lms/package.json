@@ -15,7 +15,6 @@
   "dependencies": {
     "@funt-platform/auth-utils": "*",
     "@funt-platform/constants": "*",
-    "@funt-platform/rich-text-editor": "*",
     "@funt-platform/types": "*",
 
     "lucide-react": "^1.14.0",

@@ -2,8 +2,27 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { resolveImageEmbedUrl } from "@funt-platform/rich-text-editor";
 import { IconBook } from "@/components/icons/NavIcons";
+
+// Inlined from @funt-platform/rich-text-editor to avoid pulling the full editor bundle
+function resolveImageEmbedUrl(input: string, size: 220 | 400 | 800 = 800): string {
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
+  try {
+    const url = new URL(trimmed);
+    const isDrive = url.hostname === "drive.google.com" || url.hostname === "docs.google.com";
+    if (!isDrive) return trimmed;
+    const byQuery = url.searchParams.get("id");
+    let id = byQuery;
+    if (!id) {
+      const parts = url.pathname.split("/").filter(Boolean);
+      const dIndex = parts.indexOf("d");
+      id = dIndex >= 0 && parts[dIndex + 1] ? parts[dIndex + 1] : null;
+    }
+    if (!id) return trimmed;
+    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
+  } catch { return trimmed; }
+}
 
 interface CourseCardProps {
   href: string;
