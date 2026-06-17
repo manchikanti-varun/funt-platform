@@ -38,6 +38,7 @@ export const createCourseSchema = z.object({
   learningOutcomes: z.array(z.string().max(300)).max(20).optional().default([]),
   overview: z.string().max(100_000).optional().default(""),
   pricingTiers: z.array(pricingTierSchema).max(10).optional().default([]),
+  globalChapterIds: z.array(z.string().min(1)).optional(),
   modules: z.array(chapterSnapshotSchema).optional().default([]),
   chapters: z.array(chapterSnapshotSchema).optional().default([]),
   status: z.string().optional(),

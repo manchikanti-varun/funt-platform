@@ -96,7 +96,7 @@ export function Sidebar({ roles }: SidebarProps) {
               Attendance
             </SidebarNavLink>
             {isAdmin && (
-              <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates")}>
+              <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates") || (pathname.startsWith("/batches") && pathname.includes("/certificates"))}>
                 Certificates
               </SidebarNavLink>
             )}

@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { titleField, urlField } from "./common.schema.js";
 
-export const createBatchSchema = z.object({
+const createBatchBaseSchema = z.object({
   name: titleField,
-  courseId: z.string().min(1, "courseId is required"),
+  courseId: z.string().min(1).optional(),
+  courseIds: z.array(z.string().min(1)).optional(),
   trainerId: z.string().min(1, "trainerId is required"),
   startDate: z.string().min(1, "startDate is required"),
   endDate: z.string().optional(),
@@ -17,7 +18,12 @@ export const createBatchSchema = z.object({
   moderatorIds: z.array(z.string()).max(20).optional().default([]),
 });
 
-export const updateBatchSchema = createBatchSchema.partial().extend({
+export const createBatchSchema = createBatchBaseSchema.refine(
+  (data) => (data.courseId && data.courseId.length > 0) || (data.courseIds && data.courseIds.length > 0),
+  { message: "courseId or courseIds is required", path: ["courseId"] }
+);
+
+export const updateBatchSchema = createBatchBaseSchema.partial().extend({
   /** Allow updating course snapshots */
   courseSnapshots: z.array(z.any()).optional(),
   courseSnapshot: z.any().optional(),

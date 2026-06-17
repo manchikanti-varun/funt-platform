@@ -7,10 +7,24 @@
  */
 
 import { ContentProtectionModel } from "../models/ContentProtection.model.js";
+import { UserModel } from "../models/User.model.js";
 import { createAuditLog } from "./audit.service.js";
 import { AppError } from "../utils/AppError.js";
 
 const SINGLETON_KEY = "ACTIVE";
+const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
+
+/** Resolve a user ID to a display name (name + username), or return the raw value if not an ID. */
+async function resolveUserDisplayName(idOrName: string): Promise<string> {
+  if (!idOrName) return "";
+  if (!OBJECT_ID_REGEX.test(idOrName)) return idOrName; // Already a name
+  const user = await UserModel.findById(idOrName).select("name username").lean().exec();
+  if (!user) return idOrName;
+  const name = (user as { name?: string }).name?.trim() ?? "";
+  const username = (user as { username?: string }).username?.trim() ?? "";
+  if (name && username) return `${name} (${username})`;
+  return name || username || idOrName;
+}
 
 export interface ContentProtectionPolicy {
   disableRightClick: boolean;
@@ -74,7 +88,7 @@ export async function getContentProtectionSettings(): Promise<ContentProtectionS
     lmsProtection: { ...DEFAULT_POLICY, ...(d.lmsProtection ?? {}) },
     adminProtection: { ...DEFAULT_POLICY, ...(d.adminProtection ?? {}) },
     watermark: { ...DEFAULT_WATERMARK, ...(d.watermark ?? {}) },
-    updatedBy: d.updatedBy ?? "",
+    updatedBy: await resolveUserDisplayName(d.updatedBy ?? ""),
     updatedAt: (d as { updatedAt?: Date }).updatedAt ?? new Date(),
   };
 }
@@ -145,7 +159,7 @@ export async function updateContentProtectionSettings(
     lmsProtection: { ...DEFAULT_POLICY, ...(d?.lmsProtection ?? {}) },
     adminProtection: { ...DEFAULT_POLICY, ...(d?.adminProtection ?? {}) },
     watermark: { ...DEFAULT_WATERMARK, ...(d?.watermark ?? {}) },
-    updatedBy: d?.updatedBy ?? "",
+    updatedBy: await resolveUserDisplayName(d?.updatedBy ?? ""),
     updatedAt: (d as { updatedAt?: Date })?.updatedAt ?? new Date(),
   };
 }
