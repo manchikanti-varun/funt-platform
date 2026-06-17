@@ -6,7 +6,9 @@ import { getMyAchievements, getBadgeTypes } from "../controllers/achievement.con
 const router = Router();
 
 router.get("/badge-types", authMiddleware, getBadgeTypes);
-// Any authenticated user can view their own achievements (students see badges, staff see awarded badges)
+// Any authenticated user can view their own achievements
 router.get("/me", authMiddleware, getMyAchievements);
+// Legacy alias — LMS frontend uses /my
+router.get("/my", authMiddleware, getMyAchievements);
 
 export const achievementRoutes = router;
