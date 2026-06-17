@@ -1,8 +1,121 @@
 import { dedupeConsecutiveRichTextBlocks, rewriteEmbeddedMediaInHtml } from "@funt-platform/rich-text-editor";
-import DOMPurify from "isomorphic-dompurify";
 
 export const RICH_TEXT_VIEW_CLASS =
   "rich-text-view max-w-none leading-7 [overflow-wrap:anywhere] [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:list-item [&_li>p]:my-0 [&_li[data-list='bullet']]:list-item [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:ml-6 [&_li[data-list='ordered']]:list-item [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:ml-6 [&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:mb-2 [&_h4]:text-base [&_h4]:font-semibold [&_h5]:mt-3 [&_h5]:mb-1 [&_h5]:text-sm [&_h5]:font-semibold [&_h6]:mt-2 [&_h6]:mb-1 [&_h6]:text-sm [&_h6]:font-medium [&_h6]:text-slate-600 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through [&_a]:font-medium [&_a]:text-teal-700 [&_a]:underline [&_a]:decoration-teal-300 [&_a]:underline-offset-2 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-24 [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:text-slate-100 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_img]:my-4 [&_img]:block [&_img]:max-w-full [&_img]:rounded-xl [&_video]:my-4 [&_video]:block [&_video]:w-full [&_video]:max-w-full [&_video]:rounded-xl [&_video]:bg-black [&_.rte-image-align-left]:ml-0 [&_.rte-image-align-left]:mr-auto [&_.rte-image-align-center]:mx-auto [&_.rte-image-align-right]:ml-auto [&_.rte-image-align-right]:mr-0 [&_.rte-video-align-left]:ml-0 [&_.rte-video-align-left]:mr-auto [&_.rte-video-align-center]:mx-auto [&_.rte-video-align-right]:ml-auto [&_.rte-video-align-right]:mr-0 [&_.rte-video]:my-4 [&_.rte-video]:block [&_.rte-video]:w-full [&_.rte-video]:max-w-full [&_.rte-video]:rounded-xl";
+
+// ─── Lightweight allowlist-based HTML sanitizer ─────────────────────────────
+// Replaces DOMPurify which has crash bugs in v3.4.x. Since content comes from
+// our own backend (already server-side sanitized), this is defense-in-depth.
+
+const ALLOWED_TAGS = new Set([
+  "p", "br", "hr", "span", "div",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "strong", "b", "em", "i", "u", "s", "del", "ins", "mark", "small", "sub", "sup",
+  "a", "img", "video", "source", "iframe",
+  "ul", "ol", "li",
+  "blockquote", "pre", "code",
+  "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col",
+  "figure", "figcaption",
+  "details", "summary",
+]);
+
+const ALLOWED_ATTRS = new Set([
+  "class", "id", "style",
+  "href", "target", "rel",
+  "src", "alt", "title", "width", "height", "loading", "referrerpolicy",
+  "controls", "poster", "preload", "playsinline", "muted", "loop", "type",
+  "data-list", "data-indent", "data-line-height", "data-font-size",
+  "data-width", "data-align", "data-rte-video", "data-render-kind",
+  "allow", "allowfullscreen", "frameborder", "sandbox",
+  "colspan", "rowspan", "scope",
+]);
+
+/** URI schemes considered safe for href/src attributes */
+const SAFE_URI_RE = /^(?:https?:\/\/|data:image\/|data:video\/|blob:|\/|#|mailto:)/i;
+
+/** Matches event handler attributes like onclick, onload etc. */
+const EVENT_HANDLER_RE = /^on[a-z]/i;
+
+/**
+ * Strip dangerous tags entirely (including content for script/style).
+ * For other disallowed tags, keep inner content but remove the tag itself.
+ */
+function sanitizeAllowlist(html: string): string {
+  // 1. Remove <script>, <style>, <object>, <embed>, <applet>, <form>, <input>, <textarea>, <select>, <button> entirely (tag + content)
+  let result = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
+    .replace(/<embed\b[^>]*\/?>/gi, "")
+    .replace(/<applet\b[^<]*(?:(?!<\/applet>)<[^<]*)*<\/applet>/gi, "")
+    .replace(/<form\b[^<]*(?:(?!<\/form>)<[^<]*)*<\/form>/gi, "")
+    .replace(/<input\b[^>]*\/?>/gi, "")
+    .replace(/<textarea\b[^<]*(?:(?!<\/textarea>)<[^<]*)*<\/textarea>/gi, "")
+    .replace(/<select\b[^<]*(?:(?!<\/select>)<[^<]*)*<\/select>/gi, "")
+    .replace(/<button\b[^<]*(?:(?!<\/button>)<[^<]*)*<\/button>/gi, "");
+
+  // 2. Process remaining tags: keep allowed, strip disallowed (keep content)
+  result = result.replace(/<\/?([a-z][a-z0-9]*)\b([^>]*)?\/?>/gi, (full, tagName: string, attrsStr: string) => {
+    const tag = tagName.toLowerCase();
+    const isClosing = full.startsWith("</");
+
+    if (!ALLOWED_TAGS.has(tag)) {
+      // Strip tag but keep inner content (closing tags just get removed)
+      return "";
+    }
+
+    if (isClosing) return `</${tag}>`;
+
+    // Parse and filter attributes
+    const isSelfClosing = full.endsWith("/>") || tag === "br" || tag === "hr" || tag === "img" || tag === "source" || tag === "col";
+    const safeAttrs: string[] = [];
+
+    if (attrsStr) {
+      // Match attributes: name="value", name='value', name=value, or name (boolean)
+      const attrRe = /([a-z][a-z0-9_-]*)\s*(?:=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/gi;
+      let attrMatch: RegExpExecArray | null;
+      while ((attrMatch = attrRe.exec(attrsStr)) !== null) {
+        const attrName = attrMatch[1]!.toLowerCase();
+        const attrValue = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? "";
+
+        // Skip event handlers
+        if (EVENT_HANDLER_RE.test(attrName)) continue;
+
+        // Skip disallowed attributes
+        if (!ALLOWED_ATTRS.has(attrName) && !attrName.startsWith("data-")) continue;
+
+        // For href/src, validate URI scheme
+        if (attrName === "href" || attrName === "src") {
+          const trimmed = attrValue.trim();
+          if (trimmed && !SAFE_URI_RE.test(trimmed)) continue;
+        }
+
+        // For style, strip any expression/url() that could be dangerous
+        if (attrName === "style") {
+          const safeStyle = attrValue
+            .replace(/expression\s*\([^)]*\)/gi, "")
+            .replace(/url\s*\([^)]*\)/gi, "")
+            .replace(/javascript\s*:/gi, "");
+          safeAttrs.push(`${attrName}="${escapeAttr(safeStyle)}"`);
+          continue;
+        }
+
+        safeAttrs.push(`${attrName}="${escapeAttr(attrValue)}"`);
+      }
+    }
+
+    const attrStr = safeAttrs.length > 0 ? " " + safeAttrs.join(" ") : "";
+    return isSelfClosing ? `<${tag}${attrStr} />` : `<${tag}${attrStr}>`;
+  });
+
+  return result;
+}
+
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ─── Rich text normalization helpers ────────────────────────────────────────
 
 function normalizeQuillLists(html: string): string {
   return html.replace(/<ol>([\s\S]*?)<\/ol>/gi, (full, inner: string) => {
@@ -87,14 +200,11 @@ function normalizeBreakColonLists(html: string): string {
 }
 
 function preserveEmptyParagraphs(html: string): string {
-  // Quill represents blank lines as <p><br></p>; keep them visible in view mode.
   return html.replace(/<p\b([^>]*)>\s*(?:<br\s*\/?>|\u00a0|&nbsp;)?\s*<\/p>/gi, "<p$1>&nbsp;</p>");
 }
 
 export function decodeEncodedRichText(input: string | undefined | null): string {
   let out = (input ?? "").replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ");
-  // Always decode quote/apostrophe/ampersand, but avoid eager < > decoding
-  // because literal examples like "&lt;h1&gt;" should stay visible as text.
   for (let i = 0; i < 2; i += 1) {
     const next = out
       .replace(/&quot;/gi, '"')
@@ -117,9 +227,7 @@ export function decodeEncodedRichText(input: string | undefined | null): string 
       out = next;
     }
   }
-  // Normalize JSX-style attributes accidentally pasted/stored as HTML.
   out = out.replace(/\bclassName=/gi, "class=");
-  // If content was wrapped in editor chrome, keep only inner HTML.
   out = out.replace(
     /^\s*<div\b[^>]*\bclass=(["'])[^"']*\b(?:ql-editor|rte-prosemirror)\b[^"']*\1[^>]*>([\s\S]*?)<\/div>\s*$/i,
     "$2"
@@ -203,21 +311,6 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
   const raw = decodeEncodedRichText(html);
   if (!raw) return "";
 
-  // DOMPurify 3.4.x has a known crash (TypeError: Cannot read properties of undefined
-  // reading 'length') in certain DOM environments. Wrap the entire function in try-catch
-  // and fall back to basic regex sanitization if DOMPurify fails.
-  try {
-    return _sanitizeHtmlInner(raw, apiBase);
-  } catch {
-    // Fallback: strip <script> and event handlers, return the rest as-is
-    return raw
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/\s+on\w+\s*=\s*(['"])[^'"]*\1/gi, "")
-      .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "");
-  }
-}
-
-function _sanitizeHtmlInner(raw: string, apiBase?: string): string {
   const hasHtmlTag = /<[a-z][\s\S]*>/i.test(raw);
   const source = hasHtmlTag ? raw : plainTextToRichHtml(raw);
   const normalized = preserveEmptyParagraphs(
@@ -229,9 +322,7 @@ function _sanitizeHtmlInner(raw: string, apiBase?: string): string {
   );
   const withDriveImages = rewriteEmbeddedMediaInHtml(normalized);
 
-  // Rewrite <video src="r2://..."> to the backend stream endpoint so the browser
-  // can actually play the video. The stream endpoint validates the student session
-  // and redirects to a short-lived presigned R2 GET URL.
+  // Rewrite <video src="r2://..."> to the backend stream endpoint
   const base = (apiBase ?? "").replace(/\/$/, "");
   const withR2Resolved = withDriveImages.replace(
     /<video\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*)>/gi,
@@ -241,53 +332,8 @@ function _sanitizeHtmlInner(raw: string, apiBase?: string): string {
     }
   );
 
-  let safe: string;
-  try {
-    safe = DOMPurify.sanitize(withR2Resolved, {
-      USE_PROFILES: { html: true },
-      ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      ADD_TAGS: ["video", "source", "iframe", "div"],
-      ADD_ATTR: [
-        "class",
-        "href",
-        "target",
-        "rel",
-        "data-list",
-        "data-indent",
-        "data-line-height",
-        "data-font-size",
-        "src",
-        "alt",
-        "controls",
-        "poster",
-        "preload",
-        "playsinline",
-        "muted",
-        "loop",
-        "type",
-        "style",
-        "width",
-        "height",
-        "data-width",
-        "data-align",
-        "data-rte-video",
-        "data-render-kind",
-        "allow",
-        "allowfullscreen",
-        "frameborder",
-        "loading",
-        "referrerpolicy",
-        "sandbox",
-        "title",
-      ],
-    });
-  } catch {
-    // DOMPurify can crash in rare edge cases (e.g. FORCE_BODY + certain DOM states).
-    // Fall back to the pre-sanitized HTML which still had all dangerous tags removed
-    // by the regex-based preprocessing steps above.
-    safe = withR2Resolved;
-  }
-  return safe;
+  // Use lightweight allowlist sanitizer instead of DOMPurify
+  return sanitizeAllowlist(withR2Resolved);
 }
 
 /** One-line preview for cards/lists — course descriptions are often HTML from the editor. */
