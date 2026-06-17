@@ -80,14 +80,31 @@ export function generateCsrfToken(): string {
  * and include its value in the X-CSRF-Token header.
  */
 export function setCsrfCookie(res: Response, token?: string): void {
-  const { isProduction } = getEnv();
+  const { isProduction, corsOrigins } = getEnv();
   const csrfToken = token ?? generateCsrfToken();
+
+  // Derive the shared cookie domain from CORS origins so that all subdomains
+  // (admin.funt.in, learn.funt.in) can read the CSRF cookie set by api.funt.in.
+  let domain: string | undefined;
+  if (isProduction && corsOrigins.length > 0) {
+    try {
+      const firstOrigin = new URL(corsOrigins[0]);
+      const parts = firstOrigin.hostname.split(".");
+      if (parts.length >= 2) {
+        domain = `.${parts.slice(-2).join(".")}`;
+      }
+    } catch {
+      // Fall back to no explicit domain
+    }
+  }
+
   res.cookie(CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false, // Frontend must read this
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
     path: "/",
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    ...(domain ? { domain } : {}),
   });
 }
 
