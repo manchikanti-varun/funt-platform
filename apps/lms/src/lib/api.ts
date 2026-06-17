@@ -13,21 +13,34 @@ export const API_URL = resolveApiUrl();
 const CSRF_COOKIE_NAME = "funt_csrf";
 
 /**
- * Reads the CSRF token from the cookie jar.
+ * In-memory CSRF token storage.
+ * Cross-origin cookies (api.funt.in → learn.funt.in) can't be read via document.cookie.
+ */
+let _csrfToken: string | null = null;
+
+/**
+ * Reads the CSRF token — first from in-memory store, then falls back to cookie.
  */
 function getCsrfToken(): string | null {
+  if (_csrfToken) return _csrfToken;
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 /**
- * Ensures the CSRF cookie is set. Call once on app boot.
+ * Fetches the CSRF token from the backend and stores it in memory.
  */
 export async function ensureCsrfToken(): Promise<void> {
-  if (getCsrfToken()) return;
+  if (_csrfToken) return;
+  const fromCookie = getCsrfToken();
+  if (fromCookie) { _csrfToken = fromCookie; return; }
   try {
-    await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
+    const res = await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.csrfToken) _csrfToken = json.csrfToken;
+    }
   } catch {
     // Non-critical
   }

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import { api, clearToken } from "@/lib/api";
+import { api, clearToken, ensureCsrfToken } from "@/lib/api";
 import { STUDENT_ME_REFRESH_EVENT } from "@/lib/studentMeEvents";
 import { ROLE } from "@funt-platform/constants";
 import {
@@ -291,6 +291,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    ensureCsrfToken();
     refreshUser()
       .catch(() => router.push("/login"))
       .finally(() => {

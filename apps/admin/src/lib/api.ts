@@ -15,24 +15,39 @@ const LEGACY_TOKEN_KEY = "funt_admin_token";
 const CSRF_COOKIE_NAME = "funt_csrf";
 
 /**
- * Reads the CSRF token from the cookie jar.
- * The backend sets this cookie on every GET response and expects it
- * back as the X-CSRF-Token header on state-changing requests.
+ * In-memory CSRF token storage.
+ * Cross-origin cookies (api.funt.in → admin.funt.in) can't be read via document.cookie
+ * in modern browsers with third-party cookie restrictions. So we fetch the token
+ * from the /api/csrf-token endpoint and store it in memory.
+ */
+let _csrfToken: string | null = null;
+
+/**
+ * Reads the CSRF token — first from in-memory store, then falls back to cookie.
  */
 function getCsrfToken(): string | null {
+  if (_csrfToken) return _csrfToken;
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 /**
- * Ensures the CSRF cookie is set. Call once on app boot.
- * The backend will set the cookie on any GET request — we hit /api/csrf-token.
+ * Fetches the CSRF token from the backend and stores it in memory.
+ * Call once on app boot. The backend returns the token in the response body
+ * so we don't need to read cross-origin cookies.
  */
 export async function ensureCsrfToken(): Promise<void> {
-  if (getCsrfToken()) return;
+  if (_csrfToken) return;
+  // Try cookie first (works in same-origin / non-restricted browsers)
+  const fromCookie = getCsrfToken();
+  if (fromCookie) { _csrfToken = fromCookie; return; }
   try {
-    await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
+    const res = await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.csrfToken) _csrfToken = json.csrfToken;
+    }
   } catch {
     // Non-critical — the next mutation will fail with a clear CSRF error
   }

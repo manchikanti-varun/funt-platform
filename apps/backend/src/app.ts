@@ -7,7 +7,7 @@ import { getEnv } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { AppError } from "./utils/AppError.js";
 import { helmetMiddleware } from "./middleware/security.middleware.js";
-import { csrfProtection } from "./middleware/csrf.middleware.js";
+import { csrfProtection, CSRF_COOKIE_NAME } from "./middleware/csrf.middleware.js";
 import { authRateLimiter, apiRateLimiter } from "./middleware/rateLimit.middleware.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
@@ -88,11 +88,14 @@ app.use(csrfProtection);
 app.get("/", (_req, res) => res.status(200).json({ status: "ok", service: "funt-platform-api" }));
 app.use("/health", healthRouter);
 
-// CSRF token endpoint — frontends call this on boot to get their CSRF cookie
-app.get("/api/csrf-token", (_req, res) => {
+// CSRF token endpoint — frontends call this on boot to get their CSRF token.
+// The token is returned in BOTH the cookie AND the response body.
+// This handles the cross-origin case where admin.funt.in can't read cookies set by api.funt.in.
+app.get("/api/csrf-token", (req, res) => {
   // The csrfProtection middleware already sets the cookie on GET requests.
-  // This endpoint simply confirms the cookie was set.
-  res.status(200).json({ success: true });
+  // Also return the token in the body so frontends can store it in memory.
+  const cookieToken = (req.cookies as Record<string, string>)?.[CSRF_COOKIE_NAME];
+  res.status(200).json({ success: true, csrfToken: cookieToken ?? "" });
 });
 
 app.options("/api/auth", (_, res) => res.sendStatus(204));

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ensureCsrfToken } from "@/lib/api";
 import { AdminUserProvider, type AdminUser } from "@/contexts/AdminUserContext";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -21,6 +21,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    // Fetch CSRF token on app boot (cross-origin cookie can't be read by JS)
+    ensureCsrfToken();
     api<AdminUser>("/api/users/me")
       .then((res) => {
         if (res.success && res.data) setUser(res.data);
