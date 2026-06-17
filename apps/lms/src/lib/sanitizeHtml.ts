@@ -1,7 +1,80 @@
-import { dedupeConsecutiveRichTextBlocks, rewriteEmbeddedMediaInHtml } from "@funt-platform/rich-text-editor";
+// ─── Inlined from @funt-platform/rich-text-editor to avoid pulling the full
+// editor bundle (Tiptap, ProseMirror, DOMPurify) into the LMS read-only page.
+// The barrel import from the package caused a crash because the editor module
+// initialization code in DOMPurify 3.4.x fails in this React/Next.js version.
+
 
 export const RICH_TEXT_VIEW_CLASS =
   "rich-text-view max-w-none leading-7 [overflow-wrap:anywhere] [&_p]:my-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1 [&_li]:list-item [&_li>p]:my-0 [&_li[data-list='bullet']]:list-item [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:ml-6 [&_li[data-list='ordered']]:list-item [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:ml-6 [&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-3 [&_h4]:mb-2 [&_h4]:text-base [&_h4]:font-semibold [&_h5]:mt-3 [&_h5]:mb-1 [&_h5]:text-sm [&_h5]:font-semibold [&_h6]:mt-2 [&_h6]:mb-1 [&_h6]:text-sm [&_h6]:font-medium [&_h6]:text-slate-600 [&_strong]:font-semibold [&_em]:italic [&_u]:underline [&_s]:line-through [&_a]:font-medium [&_a]:text-teal-700 [&_a]:underline [&_a]:decoration-teal-300 [&_a]:underline-offset-2 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-6 [&_.ql-indent-2]:pl-12 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-24 [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-900 [&_pre]:p-3 [&_pre]:text-slate-100 [&_code]:rounded [&_code]:bg-slate-100 [&_code]:px-1 [&_code]:py-0.5 [&_img]:my-4 [&_img]:block [&_img]:max-w-full [&_img]:rounded-xl [&_video]:my-4 [&_video]:block [&_video]:w-full [&_video]:max-w-full [&_video]:rounded-xl [&_video]:bg-black [&_.rte-image-align-left]:ml-0 [&_.rte-image-align-left]:mr-auto [&_.rte-image-align-center]:mx-auto [&_.rte-image-align-right]:ml-auto [&_.rte-image-align-right]:mr-0 [&_.rte-video-align-left]:ml-0 [&_.rte-video-align-left]:mr-auto [&_.rte-video-align-center]:mx-auto [&_.rte-video-align-right]:ml-auto [&_.rte-video-align-right]:mr-0 [&_.rte-video]:my-4 [&_.rte-video]:block [&_.rte-video]:w-full [&_.rte-video]:max-w-full [&_.rte-video]:rounded-xl";
+
+// ─── Inlined: dedupeConsecutiveRichTextBlocks ──────────────────────────────
+
+function dedupeConsecutiveRichTextBlocks(html: string | undefined | null): string {
+  const source = html ?? "";
+  if (!source.trim()) return source;
+  // Use regex-based approach (avoids DOMParser issues in some environments)
+  const blocks = Array.from(source.matchAll(/(<(?:p|h[1-6]|ul|ol|blockquote|pre|div|li)\b[\s\S]*?<\/(?:p|h[1-6]|ul|ol|blockquote|pre|div|li)>)/gi)).map(
+    (m) => m[1] ?? "",
+  );
+  if (blocks.length < 2) return source;
+  const out: string[] = [];
+  let prevPlain = "";
+  for (const block of blocks) {
+    const plain = block.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!plain) { out.push(block); prevPlain = ""; continue; }
+    if (prevPlain && prevPlain === plain) continue;
+    out.push(block);
+    prevPlain = plain;
+  }
+  return out.join("");
+}
+
+// ─── Inlined: rewriteEmbeddedMediaInHtml ───────────────────────────────────
+
+function isGoogleDriveUrl(src: string): boolean {
+  try {
+    const url = new URL(src);
+    return url.hostname === "drive.google.com" || url.hostname === "docs.google.com";
+  } catch { return false; }
+}
+
+function toGoogleDrivePreviewUrl(src: string): string {
+  try {
+    const url = new URL(src);
+    const match = url.pathname.match(/\/d\/([^/]+)/);
+    if (match) return `https://drive.google.com/file/d/${match[1]}/preview`;
+  } catch {}
+  return src;
+}
+
+function rewriteEmbeddedMediaInHtml(html: string): string {
+  let out = html;
+  // Videos mistakenly inserted via image upload (data URL)
+  out = out.replace(
+    /<img\b([^>]*?)\ssrc=(["'])(data:video\/[^"']+)\2([^>]*)>/gi,
+    (_m, _a, q: string, src: string) =>
+      `<video src=${q}${src}${q} controls playsinline preload="metadata" class="rte-video rte-video-align-center"></video>`
+  );
+  // Google Drive share links in <img> → iframe embed
+  out = out.replace(
+    /<img\b([^>]*?)\ssrc=(["'])([^"']+)\2([^>]*)>/gi,
+    (match, _a, q: string, src: string) => {
+      if (!isGoogleDriveUrl(src) || src.includes("/thumbnail?")) return match;
+      const preview = toGoogleDrivePreviewUrl(src);
+      if (preview === src) return match;
+      return `<iframe src=${q}${preview}${q} class="rte-video rte-video-align-center" allow="autoplay; fullscreen" allowfullscreen sandbox="allow-scripts allow-same-origin" style="width:100%;aspect-ratio:16/9;border:none"></iframe>`;
+    }
+  );
+  // Rewrite Google Drive thumbnail URLs for higher resolution
+  out = out.replace(
+    /(<img\b[^>]*?\ssrc=(["']))([^"']*drive\.google\.com\/thumbnail\?[^"']*)\2/gi,
+    (_m, prefix: string, _q, src: string) => {
+      const upgraded = src.includes("sz=") ? src.replace(/sz=w\d+/, "sz=w800") : `${src}&sz=w800`;
+      return `${prefix}${upgraded}"`;
+    }
+  );
+  return out;
+}
 
 // ─── Lightweight allowlist-based HTML sanitizer ─────────────────────────────
 // Replaces DOMPurify which has crash bugs in v3.4.x. Since content comes from
@@ -341,4 +414,14 @@ export function richTextToPlainPreview(html: string | undefined | null): string 
   const safe = sanitizeHtml(html ?? "");
   const text = safe.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   return text;
+}
+
+/** True when a standalone description block adds information beyond chapter content. */
+export function shouldShowChapterDescription(
+  description: string | undefined | null,
+  content: string | undefined | null,
+): boolean {
+  const normalizedContent = richTextToPlainPreview(content);
+  if (normalizedContent) return false;
+  return !!richTextToPlainPreview(description);
 }

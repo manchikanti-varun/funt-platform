@@ -62,7 +62,10 @@ function dedupeBlockList(blocks: string[]): string[] {
 
 function dedupeTopLevelBlocksWithDom(html: string): string {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  const { body } = doc;
+  const body = doc?.body;
+  if (!body || !body.childNodes || body.childNodes.length === 0) {
+    return html;
+  }
   const blocks = Array.from(body.childNodes).map((node) => {
     if (node.nodeType === Node.ELEMENT_NODE) return (node as Element).outerHTML;
     if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";

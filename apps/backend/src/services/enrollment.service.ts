@@ -422,6 +422,7 @@ export async function listEnrollmentsByBatch(batchId: string, page = 1, limit = 
       name: (u as { name?: string } | undefined)?.name ?? "",
       enrolledAt: e.enrolledAt,
       accessBlocked: e.accessBlocked,
+      courseAccessBlocked: e.courseAccessBlocked,
     };
   });
   return { rows, total, page, limit: effectiveLimit };

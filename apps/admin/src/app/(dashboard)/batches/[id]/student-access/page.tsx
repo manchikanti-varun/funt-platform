@@ -67,15 +67,18 @@ export default function BatchStudentAccessPage() {
   }
 
   async function reloadStudents() {
-    const r = await api<BatchStudent[]>(`/api/batches/${id}/students`);
-    if (r.success && Array.isArray(r.data)) setStudents(r.data);
+    const r = await api<BatchStudent[] | { rows: BatchStudent[] }>(`/api/batches/${id}/students`);
+    if (r.success && r.data) {
+      const list = Array.isArray(r.data) ? r.data : (r.data as { rows: BatchStudent[] }).rows ?? [];
+      setStudents(list);
+    }
   }
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       api<{ name: string; courseSnapshots?: BatchCourseSnapshot[]; courseSnapshot?: BatchCourseSnapshot }>(`/api/batches/${id}`),
-      api<BatchStudent[]>(`/api/batches/${id}/students`),
+      api<BatchStudent[] | { rows: BatchStudent[] }>(`/api/batches/${id}/students`),
     ]).then(([batchRes, studentsRes]) => {
       if (batchRes.success && batchRes.data) {
         setBatchName(batchRes.data.name);
@@ -87,7 +90,10 @@ export default function BatchStudentAccessPage() {
               : [];
         setCourseSnapshots(snaps);
       }
-      if (studentsRes.success && Array.isArray(studentsRes.data)) setStudents(studentsRes.data);
+      if (studentsRes.success && studentsRes.data) {
+        const list = Array.isArray(studentsRes.data) ? studentsRes.data : (studentsRes.data as { rows: BatchStudent[] }).rows ?? [];
+        setStudents(list);
+      }
       setLoading(false);
     });
   }, [id]);
