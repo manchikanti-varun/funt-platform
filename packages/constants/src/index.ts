@@ -259,5 +259,37 @@ export enum LICENSE_KEY_TYPE {
   FULL_PLAN_ACCESS      = "FULL_PLAN_ACCESS",
 }
 
+// ─── Payment Promise ──────────────────────────────────────────────────────────
+
+export enum PAYMENT_PROMISE_STATUS {
+  PROMISED   = "PROMISED",
+  ACTIVE     = "ACTIVE",
+  PAID       = "PAID",
+  OVERDUE    = "OVERDUE",
+  CANCELLED  = "CANCELLED",
+  REJECTED   = "REJECTED",
+  SUSPENDED  = "SUSPENDED",
+}
+
+/** Default configuration for payment promise feature */
+export const PAYMENT_PROMISE_DEFAULTS = {
+  /** Maximum days a student can promise to pay */
+  MAX_PROMISE_DAYS: 30,
+  /** Maximum active promises per student */
+  MAX_ACTIVE_PROMISES_PER_STUDENT: 2,
+  /** Whether admin approval is required before granting temporary access */
+  REQUIRE_ADMIN_APPROVAL: true,
+  /** Whether auto-suspend is enabled when due date passes */
+  AUTO_SUSPEND_ENABLED: true,
+  /** Grace period (days) after due date before suspension */
+  GRACE_PERIOD_DAYS: 0,
+  /** Allow extending the due date */
+  ALLOW_EXTENSIONS: true,
+  /** Reminder schedule: days before due date */
+  REMINDER_DAYS_BEFORE: [7, 3, 1, 0] as readonly number[],
+  /** Reminder schedule: days after due date (overdue) */
+  REMINDER_DAYS_AFTER: [1] as readonly number[],
+};
+
 export { INVOICE_SOURCE, INVOICE_STATUS } from "./invoice";
 export type { InvoiceSource, InvoiceStatus } from "./invoice";

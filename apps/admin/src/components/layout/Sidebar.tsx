@@ -159,6 +159,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/payment-qr" isActive={pathname.startsWith("/payment-qr")}>
               UPI QR center
             </SidebarNavLink>
+            <SidebarNavLink href="/payment-promises" isActive={pathname.startsWith("/payment-promises")}>
+              Payment promises
+            </SidebarNavLink>
           </>
         )}
         {(isAdmin || (isTrainer && !isAdmin)) && (

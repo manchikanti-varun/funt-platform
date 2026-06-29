@@ -720,13 +720,19 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                               </div>
                               {/* Eligible but not yet paid */}
                               {!ms.unlocked && !ms.locked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId && (
-                                <div className="mt-1.5">
+                                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                   <Link
                                     href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
                                     className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-indigo-500"
                                   >
                                     <CreditCard className="h-3 w-3" />
                                     {ms.order === 0 ? `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to start` : `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to unlock`}
+                                  </Link>
+                                  <Link
+                                    href={`/request-pay-later?batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}&title=${encodeURIComponent(ms.title)}&amount=${ms.feeInPaise}`}
+                                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                                  >
+                                    Pay Later
                                   </Link>
                                 </div>
                               )}
@@ -808,13 +814,20 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                                   .filter((ms) => !ms.unlocked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId)
                                   .slice(0, 1)
                                   .map((ms) => (
-                                    <Link
-                                      key={ms.milestoneId}
-                                      href={`/payment?type=milestone&batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
-                                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
-                                    >
-                                      Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock {ms.title}
-                                    </Link>
+                                    <div key={ms.milestoneId} className="flex flex-col gap-2">
+                                      <Link
+                                        href={`/payment?type=milestone&batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
+                                      >
+                                        Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock {ms.title}
+                                      </Link>
+                                      <Link
+                                        href={`/request-pay-later?batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}&title=${encodeURIComponent(ms.title)}&amount=${ms.feeInPaise}`}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+                                      >
+                                        Request Pay Later
+                                      </Link>
+                                    </div>
                                   ))}
                               </div>
                             )}

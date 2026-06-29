@@ -74,3 +74,11 @@ export async function generateMilestoneId(): Promise<string> {
   const seq = await nextSeq(key);
   return `${MILESTONE_ID_PREFIX}-${YY()}-${PAD(seq, 6)}`;
 }
+
+export const PROMISE_ID_PREFIX = "PRM";
+
+export async function generatePromiseId(): Promise<string> {
+  const key = `promise_${YY()}`;
+  const seq = await nextSeq(key);
+  return `${PROMISE_ID_PREFIX}-${YY()}-${PAD(seq, 6)}`;
+}
