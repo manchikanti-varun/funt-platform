@@ -51,11 +51,11 @@ export interface RejectPromiseInput {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function effectiveDueDate(promise: { promiseDate: Date; adminDueDate?: Date | null }): Date {
-  return promise.adminDueDate ?? promise.promiseDate;
+function effectiveDueDate(promise: { promiseDate: Date; adminDueDate?: Date | null | undefined }): Date {
+  return (promise.adminDueDate as Date | undefined | null) ?? promise.promiseDate;
 }
 
-function daysUntilDue(promise: { promiseDate: Date; adminDueDate?: Date | null }): number {
+function daysUntilDue(promise: { promiseDate: Date; adminDueDate?: Date | null | undefined }): number {
   const due = effectiveDueDate(promise);
   return Math.ceil((due.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
@@ -577,7 +577,7 @@ export async function getStudentPromises(studentId: string) {
     status: d.status,
     promiseDate: d.promiseDate,
     dueDate: d.adminDueDate ?? d.promiseDate,
-    daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null }),
+    daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null | undefined }),
     reason: d.reason,
     requestedAt: d.requestedAt,
     approvedAt: d.approvedAt,
@@ -630,7 +630,7 @@ export async function getAdminPromises(filters: {
       status: d.status,
       promiseDate: d.promiseDate,
       dueDate: d.adminDueDate ?? d.promiseDate,
-      daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null }),
+      daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null | undefined }),
       reason: d.reason,
       remarks: d.remarks,
       requestedAt: d.requestedAt,
