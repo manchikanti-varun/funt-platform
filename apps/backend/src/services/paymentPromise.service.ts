@@ -51,11 +51,11 @@ export interface RejectPromiseInput {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function effectiveDueDate(promise: { promiseDate: Date; adminDueDate?: Date }): Date {
+function effectiveDueDate(promise: { promiseDate: Date; adminDueDate?: Date | null }): Date {
   return promise.adminDueDate ?? promise.promiseDate;
 }
 
-function daysUntilDue(promise: { promiseDate: Date; adminDueDate?: Date }): number {
+function daysUntilDue(promise: { promiseDate: Date; adminDueDate?: Date | null }): number {
   const due = effectiveDueDate(promise);
   return Math.ceil((due.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
@@ -514,8 +514,8 @@ export async function sendPromiseReminders(): Promise<{ sent: number }> {
     const daysLeft = Math.ceil((dueDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
 
     const allReminderDays = [
-      ...PAYMENT_PROMISE_DEFAULTS.REMINDER_DAYS_BEFORE.map((d) => d),
-      ...PAYMENT_PROMISE_DEFAULTS.REMINDER_DAYS_AFTER.map((d) => -d),
+      ...PAYMENT_PROMISE_DEFAULTS.REMINDER_DAYS_BEFORE.map((d: number) => d),
+      ...PAYMENT_PROMISE_DEFAULTS.REMINDER_DAYS_AFTER.map((d: number) => -d),
     ];
 
     const shouldRemind = allReminderDays.includes(daysLeft);
@@ -577,7 +577,7 @@ export async function getStudentPromises(studentId: string) {
     status: d.status,
     promiseDate: d.promiseDate,
     dueDate: d.adminDueDate ?? d.promiseDate,
-    daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date }),
+    daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null }),
     reason: d.reason,
     requestedAt: d.requestedAt,
     approvedAt: d.approvedAt,
@@ -630,7 +630,7 @@ export async function getAdminPromises(filters: {
       status: d.status,
       promiseDate: d.promiseDate,
       dueDate: d.adminDueDate ?? d.promiseDate,
-      daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date }),
+      daysRemaining: daysUntilDue(d as { promiseDate: Date; adminDueDate?: Date | null }),
       reason: d.reason,
       remarks: d.remarks,
       requestedAt: d.requestedAt,

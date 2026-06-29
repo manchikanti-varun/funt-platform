@@ -28,7 +28,10 @@ export default function EnrollLicensePage() {
     setLoading(false);
     if (res.success) {
       setMsg({ type: "ok", text: res.message ?? "You are now enrolled. Opening your courses…" });
-      setTimeout(() => router.push("/courses"), 1500);
+      setTimeout(() => {
+        router.refresh();
+        router.push("/courses");
+      }, 1500);
     } else {
       setMsg({ type: "err", text: res.message ?? "Could not redeem this key." });
     }
