@@ -6,7 +6,7 @@ import { signToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
 import type { LoginResult } from "./auth.service.js";
 
-const GOOGLE_SIGNUP_TOKEN_EXPIRY = "15m";
+const GOOGLE_SIGNUP_TOKEN_EXPIRY = "30m";
 const SET_PASSWORD_TOKEN_EXPIRY = "10m";
 
 export interface GoogleSignupTokenPayload {
