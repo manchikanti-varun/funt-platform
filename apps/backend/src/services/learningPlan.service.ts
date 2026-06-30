@@ -525,6 +525,28 @@ export async function recalculateMilestoneProgress(
       // Only admin can mark completed — don't auto-complete
       completed = !!(progress as { completed?: boolean }).completed;
       break;
+    case MILESTONE_COMPLETION_RULE.PASS_MILESTONE_QUIZ: {
+      // Milestone completes when all chapters are done AND the milestone quiz is passed
+      const chaptersAllDone = completedCount >= totalChapters;
+      if (chaptersAllDone && (milestone as { milestoneQuizId?: string }).milestoneQuizId) {
+        const { hasStudentPassedQuiz } = await import("./quiz.service.js");
+        const quizPassed = await hasStudentPassedQuiz(
+          studentId,
+          (milestone as { milestoneQuizId?: string }).milestoneQuizId!,
+          batchId,
+          courseId,
+          undefined,
+          milestone.milestoneId
+        );
+        completed = quizPassed;
+      } else if (chaptersAllDone && !(milestone as { milestoneQuizId?: string }).milestoneQuizId) {
+        // No quiz linked — fall back to chapters
+        completed = true;
+      } else {
+        completed = false;
+      }
+      break;
+    }
   }
 
   const wasCompleted = !!(progress as { completed?: boolean }).completed;
@@ -1356,3 +1378,26 @@ export async function adminSkipMilestone(
 // ─── Export helpers for use in other services ─────────────────────────────────
 
 export { isLearningPlanActive, getMilestonesFromSnapshot, findMilestoneForChapter, orderedActiveMilestones };
+
+// ─── Milestone Quiz recalculation hook ────────────────────────────────────────
+
+/**
+ * Called by quiz.service after a milestone quiz is passed.
+ * Triggers a re-evaluation of milestone completion.
+ */
+export async function recalculateMilestoneProgressAfterQuiz(
+  studentId: string,
+  batchId: string,
+  courseId: string,
+  milestoneId: string
+): Promise<void> {
+  const batch = await findBatchByParam(batchId);
+  if (!batch) return;
+  const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+  if (!snap) return;
+  const milestones = getMilestonesFromSnapshot(snap);
+  const milestone = milestones.find((m) => m.milestoneId === milestoneId);
+  if (!milestone) return;
+  await recalculateMilestoneProgress(studentId, batchId, courseId, milestoneId, milestone);
+}

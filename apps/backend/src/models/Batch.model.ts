@@ -22,6 +22,7 @@ const courseModuleSnapshotSchema = new Schema(
     linkedAssignmentInstructionsOverride: { type: String, required: false },
     linkedAssignmentSubmissionTypeOverride: { type: String, required: false },
     linkedAssignmentSkillTagsOverride: { type: [String], required: false },
+    linkedQuizId: { type: String, required: false },
     order: { type: Number, required: true },
     /** XP granted when the student fully completes this module in a batch (snapshot value at batch creation). */
     xpReward: { type: Number, required: false, default: 40, min: 0, max: 100_000 },
@@ -45,6 +46,7 @@ const batchMilestoneSchema = new Schema(
     certificateEligible:  { type: Boolean, required: true, default: false },
     active:               { type: Boolean, required: true, default: true },
     chapterOrders:        { type: [Number], required: true, default: [] },
+    milestoneQuizId:      { type: String, required: false },
   },
   { _id: false }
 );
@@ -94,6 +96,10 @@ const courseSnapshotSchema = new Schema(
     completionBadgeTypes: { type: [String], required: false, default: [] },
     /** Copied from source course: shown as free demo in student UI. */
     isDemo: { type: Boolean, required: false, default: false },
+    /** Course-level final quiz ID (snapshotted from source course). */
+    finalQuizId: { type: String, required: false },
+    /** If true, passing the final quiz is required for certificate. */
+    finalQuizRequiredForCertificate: { type: Boolean, required: false, default: false },
     /** Delivery mode snapshot — FULL_ACCESS (default) or LEARNING_PLAN */
     deliveryMode: {
       type: String,

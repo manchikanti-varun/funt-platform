@@ -235,6 +235,31 @@ export enum MILESTONE_COMPLETION_RULE {
   COMPLETE_80_PERCENT     = "COMPLETE_80_PERCENT",
   COMPLETE_ASSIGNMENT     = "COMPLETE_ASSIGNMENT",
   MANUAL_APPROVAL         = "MANUAL_APPROVAL",
+  PASS_MILESTONE_QUIZ     = "PASS_MILESTONE_QUIZ",
+}
+
+// ─── Quiz / Assessment ────────────────────────────────────────────────────────
+
+export enum QUIZ_TYPE {
+  CHAPTER  = "CHAPTER",
+  MILESTONE = "MILESTONE",
+  COURSE_FINAL = "COURSE_FINAL",
+}
+
+export enum QUIZ_STATUS {
+  ACTIVE   = "ACTIVE",
+  DRAFT    = "DRAFT",
+  ARCHIVED = "ARCHIVED",
+}
+
+export enum QUESTION_TYPE {
+  SINGLE_SELECT = "SINGLE_SELECT",
+  // Future: MULTI_SELECT, TRUE_FALSE, FILL_IN_BLANK, etc.
+}
+
+export enum QUIZ_ATTEMPT_STATUS {
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED   = "COMPLETED",
 }
 
 export enum MILESTONE_UNLOCK_SOURCE {

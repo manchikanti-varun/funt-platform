@@ -82,3 +82,19 @@ export async function generatePromiseId(): Promise<string> {
   const seq = await nextSeq(key);
   return `${PROMISE_ID_PREFIX}-${YY()}-${PAD(seq, 6)}`;
 }
+
+export const QUIZ_ID_PREFIX = "QZ";
+
+export async function generateQuizId(): Promise<string> {
+  const key = `quiz_${YY()}`;
+  const seq = await nextSeq(key);
+  return `${QUIZ_ID_PREFIX}-${YY()}-${PAD(seq, 5)}`;
+}
+
+export const QUIZ_ATTEMPT_ID_PREFIX = "QA";
+
+export async function generateQuizAttemptId(): Promise<string> {
+  const key = `quiz_attempt_${YY()}`;
+  const seq = await nextSeq(key);
+  return `${QUIZ_ATTEMPT_ID_PREFIX}-${YY()}-${PAD(seq, 8)}`;
+}

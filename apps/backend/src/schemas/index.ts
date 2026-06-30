@@ -9,3 +9,4 @@ export * from "./admin.schema.js";
 export * from "./shop.schema.js";
 export * from "./badge.schema.js";
 export * from "./invoice.schema.js";
+export * from "./quiz.schema.js";

@@ -37,6 +37,10 @@ interface ChapterItem {
   videoCompleted?: boolean;
   youtubeCompleted?: boolean;
   assignmentCompleted?: boolean;
+  /** Quiz fields */
+  linkedQuizId?: string;
+  hasQuiz?: boolean;
+  quizCompleted?: boolean;
 }
 
 interface MilestoneStatus {
@@ -494,6 +498,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   const hasHostedVideo = !!selected?.videoPlaybackUrl;
   const hasResourceLink = !!selected?.resourceLinkUrl?.trim?.();
   const hasAssignments = !!selected?.linkedAssignmentId;
+  const hasQuiz = !!selected?.linkedQuizId;
 
   return (
     <AppPageShell className="max-w-7xl pb-8">
@@ -959,6 +964,30 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                               <Link href={`/assignments?batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}&assignmentId=${selected.linkedAssignmentId}`}
                                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">
                                 Submit Assignment
+                              </Link>
+                            )}
+                          </div>
+                        )}
+                        {hasQuiz && (
+                          <div className="px-6 py-6 border-t border-slate-100">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Chapter Quiz</p>
+                            <p className="mb-4 text-sm text-slate-600">Complete the quiz to finish this chapter.</p>
+                            {selected.quizCompleted ? (
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex items-center gap-2 rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700">
+                                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                  Quiz Passed
+                                </span>
+                                <Link href={`/quiz?quizId=${selected.linkedQuizId}&batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}`}
+                                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                                  Retake / Review
+                                </Link>
+                              </div>
+                            ) : (
+                              <Link href={`/quiz?quizId=${selected.linkedQuizId}&batchId=${data.batchId}&courseId=${data.courseId ?? ""}&chapterOrder=${selected.order}`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500">
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Start Quiz
                               </Link>
                             )}
                           </div>

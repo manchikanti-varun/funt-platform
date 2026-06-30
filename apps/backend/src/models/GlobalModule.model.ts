@@ -32,6 +32,7 @@ const globalModuleSchema = new Schema(
     resourceLinkUrl: { type: String, required: false },
     version: { type: Number, required: true, default: 1 },
     linkedAssignmentId: { type: String, required: false },
+    linkedQuizId: { type: String, required: false },
         versionSnapshots: { type: [versionSnapshotSchema], required: true, default: [] },
     status: {
       type: String,

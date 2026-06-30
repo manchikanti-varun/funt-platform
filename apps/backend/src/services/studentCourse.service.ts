@@ -88,6 +88,7 @@ type ModuleSnapshot = {
   videoUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
+  linkedQuizId?: string;
   xpReward?: unknown;
   [k: string]: unknown;
 };
@@ -99,25 +100,28 @@ type ProgressDoc = {
   videoCompletedAt?: Date | null;
   youtubeCompletedAt?: Date | null;
   assignmentCompletedAt?: Date | null;
+  quizCompletedAt?: Date | null;
 };
 
-function moduleParts(m: ModuleSnapshot): { hasContent: boolean; hasVideo: boolean; hasYoutube: boolean; hasAssignment: boolean } {
+function moduleParts(m: ModuleSnapshot): { hasContent: boolean; hasVideo: boolean; hasYoutube: boolean; hasAssignment: boolean; hasQuiz: boolean } {
   return {
     hasContent: !!((m.content as string)?.trim?.() ?? ""),
     hasVideo: !!((m.videoUrl as string)?.trim?.() ?? ""),
     hasYoutube: !!((m.youtubeUrl as string)?.trim?.() ?? ""),
     hasAssignment: !!((m.linkedAssignmentId as string)?.trim?.() ?? ""),
+    hasQuiz: !!((m.linkedQuizId as string)?.trim?.() ?? ""),
   };
 }
 
 function isModuleFullyCompleted(parts: ReturnType<typeof moduleParts>, p: ProgressDoc | null): boolean {
   if (!p) return false;
   if (p.completedAt) return true;
-  const { hasContent, hasVideo, hasYoutube, hasAssignment } = parts;
+  const { hasContent, hasVideo, hasYoutube, hasAssignment, hasQuiz } = parts;
   if (hasContent && !p.contentCompletedAt) return false;
   if (hasVideo && !p.videoCompletedAt) return false;
   if (hasYoutube && !p.youtubeCompletedAt) return false;
   if (hasAssignment && !p.assignmentCompletedAt) return false;
+  if (hasQuiz && !p.quizCompletedAt) return false;
   return true;
 }
 
@@ -183,10 +187,12 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     hasVideo?: boolean;
     hasYoutube?: boolean;
     hasAssignment?: boolean;
+    hasQuiz?: boolean;
     contentCompleted?: boolean;
     videoCompleted?: boolean;
     youtubeCompleted?: boolean;
     assignmentCompleted?: boolean;
+    quizCompleted?: boolean;
   }>;
 
   if (hasAccess) {
@@ -221,10 +227,12 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
         hasVideo: parts.hasVideo,
         hasYoutube: parts.hasYoutube,
         hasAssignment: parts.hasAssignment,
+        hasQuiz: parts.hasQuiz,
         contentCompleted: !!progress?.contentCompletedAt,
         videoCompleted: !!progress?.videoCompletedAt,
         youtubeCompleted: !!progress?.youtubeCompletedAt,
         assignmentCompleted: !!progress?.assignmentCompletedAt,
+        quizCompleted: !!progress?.quizCompletedAt,
       };
     });
 
@@ -743,7 +751,8 @@ export async function markChapterPartComplete(
     (!parts.hasContent || !!progress.contentCompletedAt) &&
     (!parts.hasVideo || !!progress.videoCompletedAt) &&
     (!parts.hasYoutube || !!progress.youtubeCompletedAt) &&
-    (!parts.hasAssignment || !!progress.assignmentCompletedAt);
+    (!parts.hasAssignment || !!progress.assignmentCompletedAt) &&
+    (!parts.hasQuiz || !!progress.quizCompletedAt);
   if (allDone) {
     await ChapterProgressModel.updateOne(
       { studentId, batchId: batchMongoId, moduleOrder: chapterOrder },
@@ -884,4 +893,65 @@ export async function markModulePartComplete(
 
 export async function markModuleComplete(studentId: string, batchId: string, moduleOrder: number, courseId?: string) {
   return markChapterComplete(studentId, batchId, moduleOrder, courseId);
+}
+
+/**
+ * Called by quiz.service after quizCompletedAt is set.
+ * Re-evaluates whether ALL parts of the chapter are done, and if so,
+ * marks the chapter as fully completed (triggers XP + milestone recalc).
+ */
+export async function checkAndCompleteChapterAfterQuiz(
+  studentId: string,
+  batchId: string,
+  courseId: string,
+  chapterOrder: number
+): Promise<void> {
+  const batch = await findBatchByParam(batchId);
+  if (!batch) return;
+  const batchMongoId = String((batch as { _id: unknown })._id);
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const snapshot = snapshots.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snapshots[0];
+  if (!snapshot) return;
+  const rawModules = (snapshot as { modules?: ModuleSnapshot[] }).modules ?? [];
+  if (chapterOrder < 0 || chapterOrder >= rawModules.length) return;
+  const mod = rawModules[chapterOrder] as ModuleSnapshot;
+  const parts = moduleParts(mod);
+
+  const filter = { studentId, batchId: batchMongoId, courseId, moduleOrder: chapterOrder };
+  const progress = await ChapterProgressModel.findOne(filter).lean().exec() as ProgressDoc | null;
+  if (!progress) return;
+  if (progress.completedAt) return; // already complete
+
+  const allDone =
+    (!parts.hasContent || !!progress.contentCompletedAt) &&
+    (!parts.hasVideo || !!progress.videoCompletedAt) &&
+    (!parts.hasYoutube || !!progress.youtubeCompletedAt) &&
+    (!parts.hasAssignment || !!progress.assignmentCompletedAt) &&
+    (!parts.hasQuiz || !!progress.quizCompletedAt);
+
+  if (!allDone) return;
+
+  const now = new Date();
+  await ChapterProgressModel.updateOne(filter, { $set: { completedAt: now } }).exec();
+  await awardChapterXp(studentId, xpAwardForModuleSnapshot(mod));
+  await ensureFirstModuleCompletedBadge(studentId, batchMongoId, chapterOrder).catch(() => {});
+
+  // Milestone recalculation
+  if (isLearningPlanActive(snapshot)) {
+    const milestones = getMilestonesFromSnapshot(snapshot);
+    const milestone = findMilestoneForChapter(milestones, chapterOrder);
+    if (milestone) {
+      try {
+        await recalculateMilestoneProgress(
+          studentId, batchMongoId, courseId,
+          milestone.milestoneId, milestone
+        );
+      } catch (lpErr) {
+        console.error(
+          `[LP_RECALC_AFTER_QUIZ] studentId=${studentId} milestoneId=${milestone.milestoneId}`,
+          lpErr instanceof Error ? lpErr.message : lpErr
+        );
+      }
+    }
+  }
 }

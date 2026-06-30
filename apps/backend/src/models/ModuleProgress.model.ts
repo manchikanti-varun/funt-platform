@@ -15,6 +15,7 @@ const chapterProgressSchema = new Schema(
     videoCompletedAt: { type: Date, required: false },
     youtubeCompletedAt: { type: Date, required: false },
     assignmentCompletedAt: { type: Date, required: false },
+    quizCompletedAt: { type: Date, required: false },
   },
   { timestamps: false }
 );
