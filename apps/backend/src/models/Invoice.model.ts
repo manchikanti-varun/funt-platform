@@ -41,6 +41,8 @@ const invoiceSchema = new Schema(
     documentHash: { type: String, required: false, default: "" },
     electronicSignature: { type: String, required: false, default: "" },
     createdBy: { type: String, required: true },
+    /** Franchise center that this invoice is attributed to (null = parent org) */
+    franchiseId: { type: String, required: false, index: true },
   },
   { timestamps: true }
 );

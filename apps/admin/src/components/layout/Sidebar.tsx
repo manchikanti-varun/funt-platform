@@ -7,11 +7,13 @@ import { ROLE } from "@funt-platform/constants";
 const PANEL_LABELS: Record<string, string> = {
   [ROLE.SUPER_ADMIN]: "Super Admin",
   [ROLE.TRAINER]: "Trainer",
+  [ROLE.FRANCHISE_ADMIN]: "Franchise",
 };
 const DEFAULT_PANEL_LABEL = "Admin";
 
 function getPanelLabel(roles: string[]): string {
   if (roles?.includes(ROLE.SUPER_ADMIN)) return PANEL_LABELS[ROLE.SUPER_ADMIN];
+  if (roles?.includes(ROLE.FRANCHISE_ADMIN)) return PANEL_LABELS[ROLE.FRANCHISE_ADMIN];
   if (roles?.includes(ROLE.TRAINER)) return PANEL_LABELS[ROLE.TRAINER];
   return DEFAULT_PANEL_LABEL;
 }
@@ -53,6 +55,7 @@ export function Sidebar({ roles }: SidebarProps) {
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
   const isAdmin = roles.includes(ROLE.ADMIN) || isSuperAdmin;
   const isTrainer = roles.includes(ROLE.TRAINER);
+  const isFranchiseAdmin = roles.includes(ROLE.FRANCHISE_ADMIN);
   const showContentAndBatches = isAdmin || isTrainer;
 
   return (
@@ -180,9 +183,11 @@ export function Sidebar({ roles }: SidebarProps) {
             )}
           </>
         )}
-        <SidebarNavLink href="/knowledge-center" isActive={pathname.startsWith("/knowledge-center")}>
-          Knowledge Center
-        </SidebarNavLink>
+        {!isFranchiseAdmin && (
+          <SidebarNavLink href="/knowledge-center" isActive={pathname.startsWith("/knowledge-center")}>
+            Knowledge Center
+          </SidebarNavLink>
+        )}
         {isAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>System</p>
@@ -204,6 +209,47 @@ export function Sidebar({ roles }: SidebarProps) {
                 Content protection
               </SidebarNavLink>
             )}
+          </>
+        )}
+        {isSuperAdmin && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>Franchise</p>
+            <SidebarNavLink href="/franchise/centers" isActive={pathname.startsWith("/franchise/centers")}>
+              Franchise centers
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/payouts" isActive={pathname.startsWith("/franchise/payouts")}>
+              Payouts
+            </SidebarNavLink>
+          </>
+        )}
+        {isFranchiseAdmin && (
+          <>
+            <SidebarNavLink href="/franchise/dashboard" isActive={pathname === "/franchise/dashboard"}>
+              Dashboard
+            </SidebarNavLink>
+            <p className={SECTION_LABEL_CLASS}>Operations</p>
+            <SidebarNavLink href="/franchise/my-batches" isActive={pathname.startsWith("/franchise/my-batches")}>
+              My Batches
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/my-students" isActive={pathname.startsWith("/franchise/my-students")}>
+              My Students
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/trainers" isActive={pathname.startsWith("/franchise/trainers")}>
+              My Trainers
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/courses" isActive={pathname.startsWith("/franchise/courses")}>
+              Course Library
+            </SidebarNavLink>
+            <p className={SECTION_LABEL_CLASS}>Commerce</p>
+            <SidebarNavLink href="/franchise/license-keys" isActive={pathname.startsWith("/franchise/license-keys")}>
+              License Keys
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/payments" isActive={pathname.startsWith("/franchise/payments")}>
+              Payments
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/earnings" isActive={pathname.startsWith("/franchise/earnings")}>
+              Earnings
+            </SidebarNavLink>
           </>
         )}
       </nav>

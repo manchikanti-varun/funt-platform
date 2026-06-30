@@ -26,6 +26,10 @@ const enrollmentSchema = new Schema(
     currentMilestoneId:       { type: String, required: false },
     /** milestoneId of the next milestone the student is eligible to unlock */
     nextEligibleMilestoneId:  { type: String, required: false },
+
+    // ── Franchise tracking ──────────────────────────────────────────────
+    /** Franchise center that enrolled this student (null = enrolled by parent org) */
+    franchiseId: { type: String, required: false, index: true },
   },
   { timestamps: false }
 );

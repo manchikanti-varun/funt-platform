@@ -54,6 +54,8 @@ const userSchema = new Schema(
     funtId: { type: String, required: false, unique: true, sparse: true },
     tokenVersion: { type: Number, required: true, default: 0 },
     passwordChangedAt: { type: Date, required: false },
+    /** Franchise center this user belongs to (for franchise-scoped trainers) */
+    franchiseId: { type: String, required: false, index: true },
   },
   { timestamps: true }
 );

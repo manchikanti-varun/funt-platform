@@ -26,6 +26,7 @@ type PersonRow = {
   coursesCompletedCount?: number;
   activeEnrollments?: number;
   certificatesIssued?: number;
+  franchiseCode?: string;
 };
 
 type PeopleResponse = {
@@ -296,6 +297,9 @@ export default function PeopleInsightsPage() {
                 <th className="px-3 py-2 text-left font-semibold text-slate-600">Username</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-600">ID</th>
                 <th className="px-3 py-2 text-left font-semibold text-slate-600">Joined</th>
+                {(role === "TRAINER" || role === "STUDENT") && (
+                  <th className="px-3 py-2 text-left font-semibold text-slate-600">Franchise</th>
+                )}
                 {role === "STUDENT" && (
                   <>
                     <th className="px-3 py-2 text-left font-semibold text-slate-600">XP</th>
@@ -321,6 +325,17 @@ export default function PeopleInsightsPage() {
                   <td className="px-3 py-2 text-slate-700">{r.username || "—"}</td>
                   <td className="px-3 py-2 text-slate-700">{r.funtId || r.id}</td>
                   <td className="px-3 py-2 text-slate-700">{fmtDate(r.joinedAt)}</td>
+                  {(role === "TRAINER" || role === "STUDENT") && (
+                    <td className="px-3 py-2 text-slate-700">
+                      {(r as { franchiseCode?: string }).franchiseCode ? (
+                        <span className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700">
+                          {(r as { franchiseCode?: string }).franchiseCode}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                  )}
                   {role === "STUDENT" && (
                     <>
                       <td className="px-3 py-2 text-slate-700">{r.studentXp ?? 0}</td>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api, apiUrl } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
@@ -105,6 +106,7 @@ function QuickLinkIcon({ icon }: { icon: string }) {
 
 export default function DashboardPage() {
   const { roles } = useAdminUser();
+  const router = useRouter();
   const [stats, setStats] = useState<Stats>({
     courses: 0,
     batches: 0,
@@ -117,6 +119,11 @@ export default function DashboardPage() {
   const [finance, setFinance] = useState<FinanceSummary | null>(null);
 
   useEffect(() => {
+    // Franchise admins get their own dashboard
+    if (roles.includes(ROLE.FRANCHISE_ADMIN)) {
+      router.replace("/franchise/dashboard");
+      return;
+    }
     setRole(roles);
 
     const isAdminOrSuper = roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN);

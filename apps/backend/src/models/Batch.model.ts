@@ -165,6 +165,8 @@ const batchSchema = new Schema(
     },
     /** When true, every active student is auto-enrolled in this batch (use for free demo courses; set fees to ₹0). */
     autoEnrollAllStudents: { type: Boolean, required: false, default: false },
+    /** Franchise center that owns this batch (null = parent org batch) */
+    franchiseId: { type: String, required: false, index: true },
   },
   { timestamps: true }
 );

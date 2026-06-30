@@ -50,6 +50,7 @@ import { exportImportRoutes } from "./routes/exportImport.routes.js";
 import { knowledgeReaderRouter, knowledgeAdminRouter } from "./routes/knowledge.routes.js";
 import { paymentPromiseRoutes } from "./routes/paymentPromise.routes.js";
 import { quizAdminRoutes, quizStudentRoutes } from "./routes/quiz.routes.js";
+import { franchiseAdminRoutes, franchiseRoutes } from "./routes/franchise.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -153,6 +154,8 @@ app.use("/api/admin/knowledge", knowledgeAdminRouter);
 app.use("/api/payment-promises", paymentPromiseRoutes);
 app.use("/api/quizzes", quizAdminRoutes);
 app.use("/api/student/quizzes", quizStudentRoutes);
+app.use("/api/franchise/admin", franchiseAdminRoutes);
+app.use("/api/franchise", franchiseRoutes);
 app.use("/verify", verifyRoutes);
 
 // 404 catch-all — must be after all routes and before error handler

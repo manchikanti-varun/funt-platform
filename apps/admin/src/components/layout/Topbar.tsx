@@ -12,6 +12,7 @@ interface TopbarProps {
 
 function getPanelLabel(roles: string[]): string {
   if (roles?.includes(ROLE.SUPER_ADMIN)) return "Super Admin";
+  if (roles?.includes(ROLE.FRANCHISE_ADMIN)) return "Franchise";
   if (roles?.includes(ROLE.TRAINER)) return "Trainer";
   return "Admin";
 }

@@ -16,6 +16,7 @@ import { AppError } from "../utils/AppError.js";
 import { UserModel } from "../models/User.model.js";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { CertificateModel } from "../models/Certificate.model.js";
+import { FranchiseCenterModel } from "../models/FranchiseCenter.model.js";
 
 type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN";
 
@@ -35,6 +36,7 @@ type PersonRow = {
   coursesCompletedCount?: number;
   activeEnrollments?: number;
   certificatesIssued?: number;
+  franchiseCode?: string;
 };
 
 type PeopleQueryOptions = {
@@ -128,7 +130,7 @@ async function buildPeopleRows(role: PeopleRole, opts: PeopleQueryOptions = {}):
   const page = Math.max(1, Number(opts.page ?? 1));
   const limit = Math.min(200, Math.max(1, Number(opts.limit ?? 25)));
   const userQuery = UserModel.find(query)
-    .select("funtId name username email mobile city status roles createdAt studentXp studentLevel coursesCompletedCount")
+    .select("funtId name username email mobile city status roles createdAt studentXp studentLevel coursesCompletedCount franchiseId")
     .sort({ createdAt: -1 });
   if (!opts.disablePagination && !(Array.isArray(opts.userIds) && opts.userIds.length > 0)) {
     userQuery.skip((page - 1) * limit).limit(limit);
@@ -153,9 +155,25 @@ async function buildPeopleRows(role: PeopleRole, opts: PeopleQueryOptions = {}):
     certificatesByStudent = new Map(certAgg.map((x) => [String(x._id), Number(x.count || 0)]));
   }
 
+  // Resolve franchise codes for users with franchiseId
+  const franchiseIds = [...new Set(
+    users.map((u) => (u as { franchiseId?: string }).franchiseId).filter((f): f is string => !!f)
+  )];
+  const franchiseCodeMap = new Map<string, string>();
+  if (franchiseIds.length > 0) {
+    const centers = await FranchiseCenterModel.find({ _id: { $in: franchiseIds } })
+      .select("franchiseCode")
+      .lean()
+      .exec();
+    for (const c of centers) {
+      franchiseCodeMap.set(String(c._id), c.franchiseCode);
+    }
+  }
+
   const rows = users.map((u) => {
     const id = String((u as { _id: unknown })._id);
     const createdAt = (u as { createdAt?: Date }).createdAt;
+    const userFranchiseId = (u as { franchiseId?: string }).franchiseId;
     const base: PersonRow = {
       id,
       funtId: String((u as { funtId?: string }).funtId ?? ""),
@@ -167,6 +185,7 @@ async function buildPeopleRows(role: PeopleRole, opts: PeopleQueryOptions = {}):
       status: String((u as { status?: string }).status ?? ""),
       role,
       joinedAt: createdAt ? new Date(createdAt).toISOString() : "",
+      franchiseCode: userFranchiseId ? (franchiseCodeMap.get(userFranchiseId) ?? undefined) : undefined,
     };
     if (role === "STUDENT") {
       base.studentXp = Number((u as { studentXp?: number }).studentXp ?? 0);

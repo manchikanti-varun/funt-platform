@@ -28,9 +28,20 @@ function ExportPanel() {
       const ids = courseIds.split(",").map((s) => s.trim()).filter(Boolean);
       if (ids.length > 0) body.courseIds = ids;
 
-      const res = await fetch("/api/admin/data/export", {
+      const { apiUrl } = await import("@/lib/api");
+      const { ensureCsrfToken } = await import("@/lib/api");
+      await ensureCsrfToken();
+
+      // Read CSRF token from cookie or in-memory
+      const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
+      const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+      const res = await fetch(apiUrl("/api/admin/data/export"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(body),
       });
@@ -133,19 +144,28 @@ function ImportPanel() {
       // Load courses and batches for conflict detection
       const courses: unknown[] = [];
       const batchesArr: unknown[] = [];
-      zip.folder("courses")?.forEach(async (_, zipEntry) => {
-        if (zipEntry.name.endsWith(".json")) {
-          courses.push(JSON.parse(await zipEntry.async("string")));
-        }
-      });
-      zip.folder("batches")?.forEach(async (_, zipEntry) => {
-        if (zipEntry.name.endsWith(".json")) {
-          batchesArr.push(JSON.parse(await zipEntry.async("string")));
-        }
-      });
 
-      // Wait a tick for async forEach to complete
-      await new Promise((r) => setTimeout(r, 200));
+      const courseFolder = zip.folder("courses");
+      if (courseFolder) {
+        const courseFiles = Object.keys(zip.files).filter(
+          (n) => n.startsWith("courses/") && n.endsWith(".json")
+        );
+        for (const name of courseFiles) {
+          const content = await zip.file(name)?.async("string");
+          if (content) courses.push(JSON.parse(content));
+        }
+      }
+
+      const batchFolder = zip.folder("batches");
+      if (batchFolder) {
+        const batchFiles = Object.keys(zip.files).filter(
+          (n) => n.startsWith("batches/") && n.endsWith(".json")
+        );
+        for (const name of batchFiles) {
+          const content = await zip.file(name)?.async("string");
+          if (content) batchesArr.push(JSON.parse(content));
+        }
+      }
 
       const res = await api<Record<string, unknown>>("/api/admin/data/import/preview", {
         method: "POST",

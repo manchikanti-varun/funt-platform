@@ -5,6 +5,7 @@ export enum ROLE {
   TRAINER = "TRAINER",
   STUDENT = "STUDENT",
   PARENT = "PARENT",
+  FRANCHISE_ADMIN = "FRANCHISE_ADMIN",
 }
 
 export enum ACCOUNT_STATUS {
@@ -315,6 +316,33 @@ export const PAYMENT_PROMISE_DEFAULTS = {
   /** Reminder schedule: days after due date (overdue) */
   REMINDER_DAYS_AFTER: [1] as readonly number[],
 };
+
+// ─── Franchise ─────────────────────────────────────────────────────────────────
+
+export enum FRANCHISE_STATUS {
+  ACTIVE    = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  CLOSED    = "CLOSED",
+}
+
+export enum FRANCHISE_COMMISSION_MODEL {
+  PERCENTAGE       = "PERCENTAGE",
+  FLAT_PER_STUDENT = "FLAT_PER_STUDENT",
+}
+
+export enum FRANCHISE_TRANSACTION_TYPE {
+  ONLINE_PAYMENT    = "ONLINE_PAYMENT",
+  OFFLINE_COLLECTION = "OFFLINE_COLLECTION",
+  COMMISSION        = "COMMISSION",
+  PAYOUT            = "PAYOUT",
+  ADJUSTMENT        = "ADJUSTMENT",
+}
+
+export enum FRANCHISE_PAYOUT_STATUS {
+  PENDING  = "PENDING",
+  PAID     = "PAID",
+  CANCELLED = "CANCELLED",
+}
 
 export { INVOICE_SOURCE, INVOICE_STATUS } from "./invoice";
 export type { InvoiceSource, InvoiceStatus } from "./invoice";
