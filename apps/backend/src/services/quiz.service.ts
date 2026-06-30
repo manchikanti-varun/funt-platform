@@ -129,6 +129,28 @@ export async function archiveQuiz(idParam: string): Promise<unknown> {
   return updateQuiz(idParam, { status: QUIZ_STATUS.ARCHIVED } as Partial<QuizDoc>);
 }
 
+export async function deleteQuiz(idParam: string): Promise<{ id: string; quizId?: string; title: string; deleted: boolean }> {
+  const quiz = await findQuizByParam(idParam);
+  if (!quiz) throw new AppError("Quiz not found", 404);
+
+  const mongoId = String(quiz._id);
+
+  // Check for dependent quiz attempts
+  const attemptCount = await QuizAttemptModel.countDocuments({
+    quizId: { $in: [mongoId, quiz.quizId].filter(Boolean) },
+  }).exec();
+
+  if (attemptCount > 0) {
+    throw new AppError(
+      `Cannot delete quiz — it has ${attemptCount} student attempt${attemptCount === 1 ? "" : "s"}. Archive it instead.`,
+      409
+    );
+  }
+
+  await QuizModel.deleteOne({ _id: quiz._id }).exec();
+  return { id: mongoId, quizId: quiz.quizId, title: quiz.title, deleted: true };
+}
+
 export async function listQuizzesForLinking(type?: string): Promise<unknown[]> {
   const query: Record<string, unknown> = {
     status: { $in: [QUIZ_STATUS.ACTIVE, QUIZ_STATUS.DRAFT] },

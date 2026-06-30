@@ -50,6 +50,13 @@ export const archiveQuiz = asyncHandler(async (req: Request, res: Response): Pro
   successRes(res, data, "Quiz archived");
 });
 
+export const deleteQuiz = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (!id) throw new AppError("Quiz ID is required", 400);
+  const data = await quizService.deleteQuiz(id);
+  successRes(res, data, "Quiz deleted");
+});
+
 export const listQuizzesForLinking = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const type = req.query.type as string | undefined;
   const data = await quizService.listQuizzesForLinking(type);

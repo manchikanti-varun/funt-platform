@@ -36,6 +36,7 @@ import {
   getQuiz,
   updateQuiz,
   archiveQuiz,
+  deleteQuiz,
   listQuizzesForLinking,
   getQuizForStudent,
   startQuizAttempt,
@@ -58,6 +59,7 @@ quizAdminRoutes.get("/for-linking", listQuizzesForLinking);
 quizAdminRoutes.get("/:id", getQuiz);
 quizAdminRoutes.put("/:id", validateBody(updateQuizSchema), updateQuiz);
 quizAdminRoutes.patch("/:id/archive", archiveQuiz);
+quizAdminRoutes.delete("/:id", deleteQuiz);
 
 // ─── Student Router ───────────────────────────────────────────────────────────
 
