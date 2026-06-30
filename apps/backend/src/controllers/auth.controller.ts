@@ -143,7 +143,7 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
   const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
   await changePasswordService(userId, currentPassword ?? "", newPassword ?? "");
   const { jwtSecret } = getEnv();
-  const user = await UserModel.findById(userId).select("username roles").lean().exec();
+  const user = await UserModel.findById(userId).select("username roles tokenVersion").lean().exec();
   if (!user) throw new AppError("User not found", 404);
   const userRoles = (user as { roles: ROLE[] }).roles;
   const portal: AuthPortal = portalFromRequestOrigin(req) ?? inferPortalFromRoles(userRoles);
@@ -153,7 +153,7 @@ export const changePassword = asyncHandler(async (req: Request, res: Response): 
       userId,
       username: (user as { username?: string }).username?.trim() ?? "",
       roles: userRoles,
-      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0) + 1,
+      tokenVersion: Number((user as { tokenVersion?: number }).tokenVersion ?? 0),
     },
     jwtSecret,
     expiresIn

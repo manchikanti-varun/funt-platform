@@ -767,6 +767,8 @@ export async function changePassword(userId: string, currentPassword: string, ne
       $inc: { tokenVersion: 1 },
     }
   ).exec();
+  // Invalidate cached user so auth middleware reads the fresh tokenVersion
+  await cacheDel(CACHE_KEYS.user(userId)).catch(() => {});
 }
 
 /**
@@ -794,6 +796,8 @@ export async function setInitialPassword(userId: string, newPassword: string): P
       $inc: { tokenVersion: 1 },
     }
   ).exec();
+  // Invalidate cached user so auth middleware reads the fresh tokenVersion
+  await cacheDel(CACHE_KEYS.user(userId)).catch(() => {});
 }
 
 export async function resetLoginAttemptsByUsername(
@@ -816,4 +820,6 @@ export async function resetLoginAttemptsByUsername(
       $inc: { tokenVersion: 1 },
     }
   ).exec();
+  // Invalidate cached user so auth middleware reads the fresh tokenVersion
+  await cacheDel(CACHE_KEYS.user(userId)).catch(() => {});
 }

@@ -30,6 +30,8 @@ npm-debug.log*
 # Testing
 coverage
 .nyc_output
+scripts/full-app-test.mjs
+scripts/prod-health-check.mjs
 
 # Misc
 *.tsbuildinfo
