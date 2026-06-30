@@ -35,3 +35,8 @@ scripts/prod-health-check.mjs
 
 # Misc
 *.tsbuildinfo
+
+# Documentation
+*.md
+!README.md
+!**/README.md

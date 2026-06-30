@@ -86,6 +86,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
               Assignments
             </SidebarNavLink>
+            <SidebarNavLink href="/quizzes" isActive={pathname.startsWith("/quizzes")}>
+              Quizzes
+            </SidebarNavLink>
             <SidebarNavLink href="/assignments" isActive={pathname.startsWith("/assignments")}>
               Assignment reviews
             </SidebarNavLink>
