@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { api, apiUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 
 /** Backend key format: FUNT- + 24 hex chars (see licenseKey.service randomKey). */
 const FUNT_KEY_REGEX = /FUNT-[A-F0-9]{24}/gi;
@@ -215,31 +215,21 @@ export function CourseLicenseKeyGenerator({
     };
     if (resolvedBatchId) body.batchId = resolvedBatchId;
 
-    const legacy = typeof window !== "undefined" ? localStorage.getItem("funt_admin_token")?.trim() : undefined;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (legacy) headers.Authorization = `Bearer ${legacy}`;
-
-    const resHttp = await fetch(apiUrl("/api/admin/license-keys"), {
+    const res = await api<{ keys?: string[]; message?: string }>("/api/admin/license-keys", {
       method: "POST",
-      credentials: "include",
-      headers,
       body: JSON.stringify(body),
     });
-    const raw: unknown = await resHttp.json().catch(() => null);
     setSubmitting(false);
 
-    const notice =
-      raw && typeof raw === "object" && "message" in raw && typeof (raw as { message: unknown }).message === "string"
-        ? (raw as { message: string }).message
-        : null;
+    const notice = res.message ?? null;
 
-    if (!resHttp.ok) {
+    if (!res.success) {
       setGenerateNotice(null);
-      setError(notice ?? `Request failed (${resHttp.status})`);
+      setError(notice ?? "Request failed");
       return;
     }
 
-    const keys = extractKeysFromLicenseResponse(raw);
+    const keys = extractKeysFromLicenseResponse(res);
     if (keys?.length) {
       setGeneratedKeys(shuffleKeys(keys));
       setKeysModalOpen(true);

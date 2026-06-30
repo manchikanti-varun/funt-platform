@@ -6,6 +6,7 @@ import { UserModel } from "../models/User.model.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
 import { createAuditLog } from "./audit.service.js";
+import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import {
   buildAdminUsernameBase,
   normalizeStudentUsername,
@@ -422,6 +423,9 @@ export async function login(
     throw new AppError("User not found", 401);
   }
 
+  // Invalidate cached user so auth middleware reads the fresh tokenVersion
+  await cacheDel(CACHE_KEYS.user(String(user._id))).catch(() => {});
+
   const token = signToken(
     {
       userId: String(user._id),
@@ -500,6 +504,9 @@ export async function parentLogin(
   if (!updated) {
     throw new AppError("User not found", 401);
   }
+
+  // Invalidate cached user so auth middleware reads the fresh tokenVersion
+  await cacheDel(CACHE_KEYS.user(String(user._id))).catch(() => {});
 
   const token = signToken(
     {

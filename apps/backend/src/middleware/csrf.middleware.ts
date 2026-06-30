@@ -78,8 +78,10 @@ export function generateCsrfToken(): string {
  * Sets the CSRF cookie on the response.
  * This cookie is NOT httpOnly so the frontend JavaScript can read it
  * and include its value in the X-CSRF-Token header.
+ *
+ * Returns the token value that was set.
  */
-export function setCsrfCookie(res: Response, token?: string): void {
+export function setCsrfCookie(res: Response, token?: string): string {
   const { isProduction, corsOrigins } = getEnv();
   const csrfToken = token ?? generateCsrfToken();
 
@@ -106,6 +108,8 @@ export function setCsrfCookie(res: Response, token?: string): void {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     ...(domain ? { domain } : {}),
   });
+
+  return csrfToken;
 }
 
 /**

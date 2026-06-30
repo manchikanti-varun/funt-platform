@@ -469,6 +469,11 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [age, setAge] = useState("10");
+  const [address, setAddress] = useState("");
+  const [grade, setGrade] = useState("");
+  const [gradeOther, setGradeOther] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [city, setCity] = useState("");
   const [loading, setLoading] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<{
     checking: boolean;
@@ -565,6 +570,18 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       onError("Confirm password does not match.");
       return;
     }
+    if (!address.trim()) {
+      onError("Address is required.");
+      return;
+    }
+    if (!schoolName.trim()) {
+      onError("School / college name is required.");
+      return;
+    }
+    if (grade === "other" && !gradeOther.trim()) {
+      onError("Please specify grade or program details.");
+      return;
+    }
     setLoading(true);
     const res = await api<{ username?: string }>("/api/admin/users/student", {
       method: "POST",
@@ -575,6 +592,11 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
         mobile: `${countryCode}${mobileNumber.trim()}`,
         password,
         age: Number(age),
+        address: address.trim(),
+        grade: grade && grade !== "other" ? grade : grade === "other" ? "other" : undefined,
+        gradeOther: grade === "other" ? gradeOther.trim() : undefined,
+        schoolName: schoolName.trim(),
+        city: city.trim() || undefined,
       }),
     });
     setLoading(false);
@@ -583,6 +605,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       onSuccess(u ? `Student created. Username: ${u}` : "Student created.");
       setUsername(""); setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword(""); setAge("10");
+      setAddress(""); setGrade(""); setGradeOther(""); setSchoolName(""); setCity("");
       setUsernameStatus({ checking: false, available: null, message: "" });
     } else onError(res.message ?? "Failed to create student.");
   }
@@ -674,6 +697,72 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
             className="input text-sm"
             value={age}
             onChange={(e) => setAge(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-address">Address *</Label>
+          <textarea
+            id="student-address"
+            required
+            rows={2}
+            className="input text-sm resize-y"
+            placeholder="Student's address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-school">School / College *</Label>
+          <input
+            id="student-school"
+            required
+            className="input text-sm"
+            placeholder="School or college name"
+            value={schoolName}
+            onChange={(e) => setSchoolName(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-grade">Class</Label>
+          <div className="relative">
+            <select
+              id="student-grade"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="input text-sm appearance-none pr-9"
+            >
+              <option value="">Select class</option>
+              {["6", "7", "8", "9", "10", "11", "12", "other"].map((c) => (
+                <option key={c} value={c}>
+                  {c === "other" ? "Other (above 12 / college)" : `Class ${c}`}
+                </option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.515a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        {grade === "other" && (
+          <div>
+            <Label htmlFor="student-grade-other">Grade / Program details</Label>
+            <input
+              id="student-grade-other"
+              className="input text-sm"
+              placeholder="e.g. B.Tech 2nd year"
+              value={gradeOther}
+              onChange={(e) => setGradeOther(e.target.value)}
+            />
+          </div>
+        )}
+        <div>
+          <Label htmlFor="student-city">City</Label>
+          <input
+            id="student-city"
+            className="input text-sm"
+            placeholder="City (optional)"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
           />
         </div>
         <div>

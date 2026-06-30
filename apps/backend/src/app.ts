@@ -7,7 +7,7 @@ import { getEnv } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { AppError } from "./utils/AppError.js";
 import { helmetMiddleware } from "./middleware/security.middleware.js";
-import { csrfProtection, CSRF_COOKIE_NAME } from "./middleware/csrf.middleware.js";
+import { csrfProtection, setCsrfCookie, CSRF_COOKIE_NAME } from "./middleware/csrf.middleware.js";
 import { authRateLimiter, apiRateLimiter } from "./middleware/rateLimit.middleware.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
@@ -93,10 +93,16 @@ app.use("/health", healthRouter);
 // The token is returned in BOTH the cookie AND the response body.
 // This handles the cross-origin case where admin.funt.in can't read cookies set by api.funt.in.
 app.get("/api/csrf-token", (req, res) => {
-  // The csrfProtection middleware already sets the cookie on GET requests.
-  // Also return the token in the body so frontends can store it in memory.
+  // The csrfProtection middleware already sets the cookie on GET requests if missing.
+  // Read the token from the cookie (already present) or from the newly set response cookie.
   const cookieToken = (req.cookies as Record<string, string>)?.[CSRF_COOKIE_NAME];
-  res.status(200).json({ success: true, csrfToken: cookieToken ?? "" });
+  if (cookieToken) {
+    res.status(200).json({ success: true, csrfToken: cookieToken });
+  } else {
+    // No cookie in request — generate one and return it in both cookie and body.
+    const newToken = setCsrfCookie(res);
+    res.status(200).json({ success: true, csrfToken: newToken });
+  }
 });
 
 app.options("/api/auth", (_, res) => res.sendStatus(204));
