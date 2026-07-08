@@ -19,11 +19,7 @@ export default function SupportSignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setSuccess("");
-
-    if (!name.trim() || !email.trim() || !mobile.trim() || !password.trim()) {
-      setError("All fields are required");
-      return;
-    }
+    if (!name.trim() || !email.trim() || !mobile.trim() || !password.trim()) { setError("All fields are required"); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
     if (password !== confirmPassword) { setError("Passwords do not match"); return; }
 
@@ -32,111 +28,82 @@ export default function SupportSignupPage() {
       const res = await fetch(`${apiUrl}/api/auth/support-signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          mobile: mobile.trim(),
-          city: city.trim() || undefined,
-          password,
-        }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), mobile: mobile.trim(), city: city.trim() || undefined, password }),
       });
       const data = await res.json();
-      if (res.ok && data.success) {
-        setSuccess("Your request has been submitted! An admin will review and approve your account. You'll be able to sign in once approved.");
-      } else {
-        setError(data.message ?? "Signup failed");
-      }
-    } catch {
-      setError("Unable to connect to server");
-    }
+      if (res.ok && data.success) setSuccess("Your request has been submitted! An admin will review and approve your account.");
+      else setError(data.message ?? "Signup failed");
+    } catch { setError("Unable to connect to server"); }
     setLoading(false);
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
-        <div className="w-full max-w-sm rounded-2xl border border-slate-700/50 bg-slate-800/80 p-8 shadow-2xl backdrop-blur text-center">
-          <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
-            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 p-4">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.35]" aria-hidden style={{ background: "radial-gradient(520px 280px at 50% -8%, rgba(99,102,241,0.20), transparent 70%)" }} />
+        <div className="relative w-full max-w-[410px] rounded-3xl border border-slate-200/90 bg-white/95 px-7 py-8 shadow-xl ring-1 ring-slate-100/80 text-center">
+          <div className="flex h-14 w-14 mx-auto items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h2 className="mt-4 text-lg font-bold text-white">Request Submitted</h2>
-          <p className="mt-2 text-sm text-slate-400">{success}</p>
-          <Link href="/login" className="mt-6 inline-block rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white hover:bg-indigo-500">
-            Go to Login
-          </Link>
+          <h2 className="mt-4 text-lg font-bold text-slate-900">Request Submitted</h2>
+          <p className="mt-2 text-sm text-slate-500">{success}</p>
+          <Link href="/login" className="mt-6 inline-block btn-primary px-6 py-2.5">Go to Login</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-700/50 bg-slate-800/80 p-8 shadow-2xl backdrop-blur">
-        <div className="text-center">
-          <h1 className="text-2xl font-black text-white">Join FUNT Support</h1>
-          <p className="mt-1 text-sm text-slate-400">Request a support agent account. An admin will review your request.</p>
-        </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 p-4">
+      <div className="pointer-events-none absolute inset-0 opacity-[0.35]" aria-hidden style={{ background: "radial-gradient(520px 280px at 50% -8%, rgba(99,102,241,0.20), transparent 70%)" }} />
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {error && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">{error}</div>
-          )}
+      <div className="relative w-full max-w-[460px] rounded-3xl border border-slate-200/90 bg-white/95 px-7 py-6 shadow-xl ring-1 ring-slate-100/80 sm:px-8 sm:py-7">
+        <header className="mb-6 text-center">
+          <img src="/funt-logo.png" alt="FUNT Support" className="mx-auto h-12 w-auto object-contain sm:h-14" />
+          <p className="mt-2 label-overline text-black/70">FUNT Support</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-800">Request Access</h1>
+          <p className="mt-1 text-sm text-slate-500">Submit your details. An admin will review and approve.</p>
+        </header>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Full Name *</label>
-            <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              placeholder="Your full name" />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-800">{error}</p>}
 
           <div>
-            <label className="block text-sm font-medium text-slate-300">Email *</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              placeholder="your@email.com" />
+            <label className="mb-1.5 block text-sm font-medium text-black">Full Name *</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="input" placeholder="Your full name" />
           </div>
-
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-black">Email *</label>
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="input" placeholder="your@email.com" />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300">Mobile *</label>
-              <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                placeholder="9876543210" />
+              <label className="mb-1.5 block text-sm font-medium text-black">Mobile *</label>
+              <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value)} className="input" placeholder="9876543210" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300">City</label>
-              <input type="text" value={city} onChange={(e) => setCity(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                placeholder="Optional" />
+              <label className="mb-1.5 block text-sm font-medium text-black">City</label>
+              <input type="text" value={city} onChange={(e) => setCity(e.target.value)} className="input" placeholder="Optional" />
             </div>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-300">Password *</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              placeholder="Min 8 characters" />
+            <label className="mb-1.5 block text-sm font-medium text-black">Password *</label>
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Min 8 characters" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-black">Confirm Password *</label>
+            <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="input" placeholder="Repeat password" />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300">Confirm Password *</label>
-            <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-              placeholder="Repeat password" />
-          </div>
-
-          <button type="submit" disabled={loading}
-            className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500 disabled:opacity-50">
-            {loading ? "Submitting..." : "Request Account"}
+          <button type="submit" disabled={loading} className="btn-primary mt-1 w-full py-2.5 text-base">
+            {loading ? "Submitting…" : "Request Account"}
           </button>
-        </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Already have an account?{" "}
-          <Link href="/login" className="font-medium text-indigo-400 hover:text-indigo-300">Sign In</Link>
-        </p>
+          <p className="mt-4 text-center text-xs text-slate-600">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-indigo-700 hover:underline">Sign in</Link>
+          </p>
+        </form>
       </div>
     </div>
   );
