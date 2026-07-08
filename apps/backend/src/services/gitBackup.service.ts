@@ -1,30 +1,24 @@
 /**
  * Git Backup Service — automated weekly full database backup to a git repository.
  *
+ * Uses the GitHub REST API (no git CLI required) — works in containers without git installed.
+ *
  * Flow:
  *   1. Exports all MongoDB collections as JSON files
- *   2. Writes them into a local backup directory
- *   3. Commits with a timestamped message
- *   4. Pushes to the configured remote backup repo
+ *   2. Creates a git tree via GitHub API
+ *   3. Commits and updates the branch ref
  *
  * Environment variables:
  *   BACKUP_GIT_REPO_URL    — Remote git repo URL (e.g. https://github.com/org/funt-backup.git)
  *   BACKUP_GIT_BRANCH      — Branch name (default: "main")
  *   BACKUP_GIT_USER_NAME   — Git committer name (default: "FUNT Backup Bot")
  *   BACKUP_GIT_USER_EMAIL  — Git committer email (default: "backup@funt.in")
- *   BACKUP_GIT_TOKEN       — Personal access token for authentication (embedded in URL)
+ *   BACKUP_GIT_TOKEN       — GitHub Personal Access Token (fine-grained, Contents: read+write)
  *   BACKUP_CRON_SCHEDULE   — Cron expression (default: "0 2 * * 0" = every Sunday 2 AM)
  *   BACKUP_ENABLED         — Set to "1" to enable (disabled by default)
  */
 
-import { exec } from "child_process";
-import { promisify } from "util";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
 import mongoose from "mongoose";
-
-const execAsync = promisify(exec);
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -36,31 +30,44 @@ function getBackupConfig() {
     userName: process.env.BACKUP_GIT_USER_NAME ?? "FUNT Backup Bot",
     userEmail: process.env.BACKUP_GIT_USER_EMAIL ?? "backup@funt.in",
     token: process.env.BACKUP_GIT_TOKEN ?? "",
-    cronSchedule: process.env.BACKUP_CRON_SCHEDULE ?? "0 2 * * 0", // Sunday 2 AM
+    cronSchedule: process.env.BACKUP_CRON_SCHEDULE ?? "0 2 * * 0",
   };
 }
 
-/** Build the authenticated git URL by embedding the token. */
-function getAuthenticatedRepoUrl(repoUrl: string, token: string): string {
-  if (!token) return repoUrl;
-  try {
-    const url = new URL(repoUrl);
-    url.username = token;
-    url.password = "x-oauth-basic";
-    return url.toString();
-  } catch {
-    // Fallback: insert token into https:// URL
-    return repoUrl.replace("https://", `https://${token}@`);
-  }
+/** Extract owner/repo from a GitHub URL like https://github.com/owner/repo.git */
+function parseGitHubRepo(url: string): { owner: string; repo: string } | null {
+  const match = url.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2] };
+}
+
+// ─── GitHub API helpers ───────────────────────────────────────────────────────
+
+async function githubApi(
+  endpoint: string,
+  token: string,
+  options: { method?: string; body?: unknown } = {}
+): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const res = await fetch(`https://api.github.com${endpoint}`, {
+    method: options.method ?? "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  const data = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, data };
 }
 
 // ─── Collections to backup ────────────────────────────────────────────────────
 
-// Exclude large audit/log collections that grow fast and aren't critical for recovery
 const EXCLUDED_COLLECTIONS = new Set([
-  "auditlogs",       // grows fast, can be regenerated
-  "oauthnonces",     // ephemeral
-  "sessions",        // ephemeral
+  "auditlogs",
+  "oauthnonces",
+  "sessions",
 ]);
 
 // ─── Core backup logic ────────────────────────────────────────────────────────
@@ -72,36 +79,23 @@ export async function runFullBackup(): Promise<{ success: boolean; message: stri
   if (!config.repoUrl) {
     return { success: false, message: "BACKUP_GIT_REPO_URL not configured", collections: 0, timestamp };
   }
+  if (!config.token) {
+    return { success: false, message: "BACKUP_GIT_TOKEN not configured", collections: 0, timestamp };
+  }
 
-  const backupDir = path.join(os.tmpdir(), `funt-backup-${Date.now()}`);
+  const parsed = parseGitHubRepo(config.repoUrl);
+  if (!parsed) {
+    return { success: false, message: "Invalid GitHub repo URL format", collections: 0, timestamp };
+  }
+  const { owner, repo } = parsed;
 
   try {
-    // 1. Clone the backup repo (shallow — we only need latest)
-    const authUrl = getAuthenticatedRepoUrl(config.repoUrl, config.token);
-    await execAsync(`git clone --depth 1 --branch ${config.branch} "${authUrl}" "${backupDir}"`, {
-      timeout: 60_000,
-    }).catch(async () => {
-      // Branch might not exist yet — clone default and create branch
-      await fs.mkdir(backupDir, { recursive: true });
-      await execAsync(`git init`, { cwd: backupDir });
-      await execAsync(`git remote add origin "${authUrl}"`, { cwd: backupDir });
-      await execAsync(`git checkout -b ${config.branch}`, { cwd: backupDir });
-    });
-
-    // 2. Configure git user
-    await execAsync(`git config user.name "${config.userName}"`, { cwd: backupDir });
-    await execAsync(`git config user.email "${config.userEmail}"`, { cwd: backupDir });
-
-    // 3. Clear old data files (keep .git)
-    const dataDir = path.join(backupDir, "data");
-    await fs.rm(dataDir, { recursive: true, force: true });
-    await fs.mkdir(dataDir, { recursive: true });
-
-    // 4. Export all collections
+    // 1. Export all collections from MongoDB
     const db = mongoose.connection.db;
     if (!db) throw new Error("Database not connected");
 
     const collections = await db.listCollections().toArray();
+    const files: Array<{ path: string; content: string }> = [];
     let exportedCount = 0;
 
     for (const col of collections) {
@@ -109,12 +103,14 @@ export async function runFullBackup(): Promise<{ success: boolean; message: stri
       if (EXCLUDED_COLLECTIONS.has(name.toLowerCase())) continue;
 
       const docs = await db.collection(name).find({}).toArray();
-      const filePath = path.join(dataDir, `${name}.json`);
-      await fs.writeFile(filePath, JSON.stringify(docs, null, 2), "utf-8");
+      files.push({
+        path: `data/${name}.json`,
+        content: JSON.stringify(docs, null, 2),
+      });
       exportedCount++;
     }
 
-    // 5. Write backup metadata
+    // Add backup metadata
     const meta = {
       platform: "funt",
       backupAt: new Date().toISOString(),
@@ -122,30 +118,107 @@ export async function runFullBackup(): Promise<{ success: boolean; message: stri
       mongoUri: maskUri(process.env.MONGO_URI ?? ""),
       version: "1.0.0",
     };
-    await fs.writeFile(path.join(backupDir, "backup-meta.json"), JSON.stringify(meta, null, 2), "utf-8");
+    files.push({
+      path: "backup-meta.json",
+      content: JSON.stringify(meta, null, 2),
+    });
 
-    // 6. Git add, commit, push
-    await execAsync("git add -A", { cwd: backupDir });
+    // 2. Get the current commit SHA on the branch (if exists)
+    const refRes = await githubApi(`/repos/${owner}/${repo}/git/ref/heads/${config.branch}`, config.token);
+    const parentSha: string | null = refRes.ok
+      ? ((refRes.data as { object: { sha: string } }).object.sha ?? null)
+      : null;
 
-    // Check if there are changes to commit
-    const { stdout: statusOut } = await execAsync("git status --porcelain", { cwd: backupDir });
-    if (!statusOut.trim()) {
-      return { success: true, message: "No changes since last backup", collections: exportedCount, timestamp };
+    // 3. Create blobs for each file
+    const treeItems: Array<{ path: string; mode: string; type: string; sha: string }> = [];
+
+    for (const file of files) {
+      const blobRes = await githubApi(`/repos/${owner}/${repo}/git/blobs`, config.token, {
+        method: "POST",
+        body: { content: file.content, encoding: "utf-8" },
+      });
+      if (!blobRes.ok) {
+        throw new Error(`Failed to create blob for ${file.path}: ${JSON.stringify(blobRes.data)}`);
+      }
+      treeItems.push({
+        path: file.path,
+        mode: "100644",
+        type: "blob",
+        sha: (blobRes.data as { sha: string }).sha,
+      });
     }
 
-    const commitMsg = `backup: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} — ${exportedCount} collections`;
-    await execAsync(`git commit -m "${commitMsg}"`, { cwd: backupDir });
-    await execAsync(`git push origin ${config.branch} --force`, { cwd: backupDir, timeout: 120_000 });
+    // 4. Create a tree
+    const treeBody: { tree: typeof treeItems; base_tree?: string } = { tree: treeItems };
+    if (parentSha) {
+      // Get the tree SHA of the parent commit
+      const commitRes = await githubApi(`/repos/${owner}/${repo}/git/commits/${parentSha}`, config.token);
+      if (commitRes.ok) {
+        treeBody.base_tree = (commitRes.data as { tree: { sha: string } }).tree.sha;
+      }
+    }
 
-    console.log(`[backup] ✓ Pushed ${exportedCount} collections to ${config.branch}`);
+    const treeRes = await githubApi(`/repos/${owner}/${repo}/git/trees`, config.token, {
+      method: "POST",
+      body: treeBody,
+    });
+    if (!treeRes.ok) {
+      throw new Error(`Failed to create tree: ${JSON.stringify(treeRes.data)}`);
+    }
+    const treeSha = (treeRes.data as { sha: string }).sha;
+
+    // 5. Create a commit
+    const commitMsg = `backup: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} — ${exportedCount} collections`;
+    const commitBody: {
+      message: string;
+      tree: string;
+      parents: string[];
+      author: { name: string; email: string; date: string };
+    } = {
+      message: commitMsg,
+      tree: treeSha,
+      parents: parentSha ? [parentSha] : [],
+      author: {
+        name: config.userName,
+        email: config.userEmail,
+        date: new Date().toISOString(),
+      },
+    };
+
+    const commitRes = await githubApi(`/repos/${owner}/${repo}/git/commits`, config.token, {
+      method: "POST",
+      body: commitBody,
+    });
+    if (!commitRes.ok) {
+      throw new Error(`Failed to create commit: ${JSON.stringify(commitRes.data)}`);
+    }
+    const newCommitSha = (commitRes.data as { sha: string }).sha;
+
+    // 6. Update the branch ref (or create it)
+    if (parentSha) {
+      const updateRes = await githubApi(`/repos/${owner}/${repo}/git/refs/heads/${config.branch}`, config.token, {
+        method: "PATCH",
+        body: { sha: newCommitSha, force: true },
+      });
+      if (!updateRes.ok) {
+        throw new Error(`Failed to update ref: ${JSON.stringify(updateRes.data)}`);
+      }
+    } else {
+      const createRes = await githubApi(`/repos/${owner}/${repo}/git/refs`, config.token, {
+        method: "POST",
+        body: { ref: `refs/heads/${config.branch}`, sha: newCommitSha },
+      });
+      if (!createRes.ok) {
+        throw new Error(`Failed to create ref: ${JSON.stringify(createRes.data)}`);
+      }
+    }
+
+    console.log(`[backup] ✓ Pushed ${exportedCount} collections to ${owner}/${repo}@${config.branch}`);
     return { success: true, message: `Backup pushed: ${exportedCount} collections`, collections: exportedCount, timestamp };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[backup] Failed:", msg);
     return { success: false, message: msg, collections: 0, timestamp };
-  } finally {
-    // Cleanup temp directory
-    await fs.rm(backupDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
@@ -158,26 +231,20 @@ function maskUri(uri: string): string {
 
 let schedulerTimer: ReturnType<typeof setTimeout> | null = null;
 
-/**
- * Parse a simple cron expression and return the next run time.
- * Supports: minute hour dayOfMonth month dayOfWeek
- */
 function getNextCronRun(cronExpr: string): Date {
   const parts = cronExpr.trim().split(/\s+/);
   if (parts.length !== 5) {
-    // Default to Sunday 2 AM if invalid
-    return getNextWeeklyRun(0, 2, 0); // Sunday 2:00 AM
+    return getNextWeeklyRun(0, 2, 0);
   }
 
   const [minuteStr, hourStr, , , dayOfWeekStr] = parts;
   const minute = minuteStr === "*" ? 0 : parseInt(minuteStr, 10);
   const hour = hourStr === "*" ? 2 : parseInt(hourStr, 10);
-  const dayOfWeek = dayOfWeekStr === "*" ? -1 : parseInt(dayOfWeekStr, 10); // 0=Sunday
+  const dayOfWeek = dayOfWeekStr === "*" ? -1 : parseInt(dayOfWeekStr, 10);
 
   if (dayOfWeek >= 0) {
     return getNextWeeklyRun(dayOfWeek, hour, minute);
   }
-  // Daily
   return getNextDailyRun(hour, minute);
 }
 
@@ -229,7 +296,6 @@ function scheduleNextRun(cronExpr: string): void {
   schedulerTimer = setTimeout(async () => {
     console.log("[backup] Running scheduled backup...");
     await runFullBackup();
-    // Schedule the next run
     scheduleNextRun(cronExpr);
   }, delay);
 }
