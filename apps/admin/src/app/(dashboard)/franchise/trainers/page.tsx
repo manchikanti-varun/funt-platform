@@ -120,7 +120,7 @@ export default function FranchiseTrainersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Mobile *</label>
-                <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} className="input mt-1 w-full" required />
+                <input type="tel" value={mobile} onChange={(e) => setMobile(e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, ""))} className="input mt-1 w-full" required maxLength={14} />
               </div>
             </div>
             <div className="max-w-xs">

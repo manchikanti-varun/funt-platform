@@ -365,7 +365,7 @@ function ShopInner() {
             )}
             <div className="grid gap-3 sm:grid-cols-2">
               <input className="input" placeholder="Full name" value={address.fullName} onChange={(e) => setAddress((p) => ({ ...p, fullName: e.target.value }))} />
-              <input className="input" placeholder="Phone" value={address.phone} onChange={(e) => setAddress((p) => ({ ...p, phone: e.target.value }))} />
+              <input className="input" placeholder="Phone" value={address.phone} onChange={(e) => setAddress((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "") }))} maxLength={14} />
               <input className="input sm:col-span-2" placeholder="Address line 1" value={address.line1} onChange={(e) => setAddress((p) => ({ ...p, line1: e.target.value }))} />
               <input className="input sm:col-span-2" placeholder="Address line 2 (optional)" value={address.line2} onChange={(e) => setAddress((p) => ({ ...p, line2: e.target.value }))} />
               <input className="input" placeholder="City" value={address.city} onChange={(e) => setAddress((p) => ({ ...p, city: e.target.value }))} />

@@ -109,7 +109,7 @@ export default function FranchiseRegisterStudentPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-700">Mobile *</label>
-              <input type="tel" value={studentMobile} onChange={(e) => setStudentMobile(e.target.value)} className="input mt-1 w-full" required />
+              <input type="tel" value={studentMobile} onChange={(e) => setStudentMobile(e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, ""))} className="input mt-1 w-full" required maxLength={14} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700">Email</label>

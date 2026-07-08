@@ -314,6 +314,61 @@ function ImportPanel() {
   );
 }
 
+function GitBackupPanel() {
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<Record<string, unknown> | null>(null);
+  const [error, setError] = useState("");
+
+  async function handleBackup() {
+    setError("");
+    setResult(null);
+    setRunning(true);
+    try {
+      const res = await api<Record<string, unknown>>("/api/admin/backup/run", {
+        method: "POST",
+      });
+      if (res.success) {
+        setResult(res.data ?? null);
+      } else {
+        throw new Error(res.message ?? "Backup failed");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Backup failed");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <h2 className="text-lg font-bold text-slate-900">Git Backup</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Push a full database snapshot to the backup git repository. Runs automatically every week.
+      </p>
+
+      <button
+        type="button"
+        onClick={handleBackup}
+        disabled={running}
+        className="mt-4 rounded-lg bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+      >
+        {running ? "Backing up..." : "Run Backup Now"}
+      </button>
+
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+      {result && (
+        <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-xs font-bold text-emerald-800">Backup Complete</p>
+          <pre className="mt-2 max-h-60 overflow-auto text-xs text-emerald-900">
+            {JSON.stringify(result, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ImportExportPage() {
   return (
     <AppPageShell>
@@ -325,6 +380,7 @@ export default function ImportExportPage() {
 
       <ExportPanel />
       <ImportPanel />
+      <GitBackupPanel />
     </AppPageShell>
   );
 }

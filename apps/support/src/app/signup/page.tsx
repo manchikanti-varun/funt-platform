@@ -79,7 +79,7 @@ export default function SupportSignupPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-black">Mobile *</label>
-              <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value)} className="input" placeholder="9876543210" />
+              <input type="tel" required value={mobile} onChange={(e) => setMobile(e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, ""))} className="input" placeholder="9876543210" maxLength={14} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-black">City</label>
