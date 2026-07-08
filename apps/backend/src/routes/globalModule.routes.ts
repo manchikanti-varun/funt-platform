@@ -34,7 +34,7 @@ router.get("/:id/export-doc", requireRoles(ROLE.SUPER_ADMIN), async (req, res, n
   try {
     const { exportChapterAsDoc } = await import("../services/chapterExport.service.js");
     const { html, filename } = await exportChapterAsDoc(req.params.id);
-    res.setHeader("Content-Type", "application/msword");
+    res.setHeader("Content-Type", "application/vnd.ms-word");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.send(html);
   } catch (err) { next(err); }

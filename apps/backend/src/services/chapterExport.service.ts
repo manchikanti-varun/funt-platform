@@ -36,17 +36,34 @@ export async function exportChapterAsDoc(moduleId: string): Promise<{ html: stri
     ? `<h2 style="color:#4338ca;margin-top:30px;">Attached Media & Links</h2>\n${videoLinks.join("\n")}`
     : "";
 
-  // Generate Word-compatible HTML
-  const html = `<!DOCTYPE html>
-<html>
+  // Strip inline color spans that fragment text in Word — merge adjacent same-style spans
+  const cleanedContent = cleanContentForWord(content);
+
+  // Generate Word-compatible HTML with MS Office namespace for proper rendering
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
 <title>${escapeHtml(title)}</title>
 <style>
-  body { font-family: Calibri, Arial, sans-serif; margin: 40px; line-height: 1.6; color: #1e293b; }
-  h1 { color: #1e1b4b; font-size: 24pt; margin-bottom: 8px; }
-  h2 { color: #4338ca; font-size: 16pt; margin-top: 24px; }
-  .description { color: #475569; font-style: italic; font-size: 11pt; margin-bottom: 20px; }
+  @page { margin: 1in; }
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; }
+  h1 { color: #1e1b4b; font-size: 22pt; margin-bottom: 6px; text-align: center; }
+  h2 { color: #1e1b4b; font-size: 14pt; margin-top: 20px; margin-bottom: 8px; }
+  h3 { color: #1e1b4b; font-size: 12pt; margin-top: 16px; margin-bottom: 6px; }
+  p { margin: 6px 0; font-size: 11pt; }
+  .description { color: #475569; font-style: italic; font-size: 11pt; margin-bottom: 16px; text-align: center; }
   .content { font-size: 11pt; }
   .content img { max-width: 100%; height: auto; }
   .content table { border-collapse: collapse; width: 100%; margin: 12px 0; }
@@ -59,14 +76,13 @@ export async function exportChapterAsDoc(moduleId: string): Promise<{ html: stri
 <h1>${escapeHtml(title)}</h1>
 <p class="description">${escapeHtml(description)}</p>
 
-<h2>Chapter Content</h2>
 <div class="content">
-${content || "<p><em>No text content</em></p>"}
+${cleanedContent || "<p><em>No text content</em></p>"}
 </div>
 
 ${videoSection}
 
-<p class="meta">Exported from FUNT Robotics Academy — ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
+<p class="meta">Exported from FUNT Robotics Academy &mdash; ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
 </body>
 </html>`;
 
@@ -75,6 +91,41 @@ ${videoSection}
   const filename = `${safeName}.doc`;
 
   return { html, filename };
+}
+
+/**
+ * Clean rich text HTML for better Word compatibility:
+ * - Remove redundant color spans that fragment text
+ * - Strip style attributes with only color that match body text color
+ * - Ensure heading styles are preserved
+ */
+function cleanContentForWord(html: string): string {
+  // Remove span tags that only set color close to default body text (dark grays/blacks)
+  // These are common in rich text editors and fragment text in Word
+  let cleaned = html.replace(
+    /<span\s+style="color:\s*rgb\(\s*(\d+),\s*(\d+),\s*(\d+)\s*\);?">(.*?)<\/span>/gi,
+    (_match, r, g, b, inner) => {
+      const red = parseInt(r, 10);
+      const green = parseInt(g, 10);
+      const blue = parseInt(b, 10);
+      // If it's a dark color (close to black/dark gray), strip the span
+      if (red < 100 && green < 100 && blue < 100) {
+        return inner;
+      }
+      return _match;
+    }
+  );
+
+  // Remove empty spans
+  cleaned = cleaned.replace(/<span[^>]*>\s*<\/span>/gi, "");
+
+  // Replace &nbsp; used as spacing with regular spaces in non-pre elements
+  cleaned = cleaned.replace(
+    /(<span[^>]*style="[^"]*font-family:\s*&quot;Times New Roman&quot;[^"]*"[^>]*>)(&nbsp;\s*)+(<\/span>)/gi,
+    "    "
+  );
+
+  return cleaned;
 }
 
 function escapeHtml(str: string): string {

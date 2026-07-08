@@ -80,7 +80,7 @@ export async function streamExportZip(
   if (courseIds && courseIds.length > 0) {
     courseFilter.$or = [
       { courseId: { $in: courseIds } },
-      { _id: { $in: courseIds } },
+      { _id: { $in: courseIds.filter(id => /^[0-9a-fA-F]{24}$/.test(id)) } },
     ];
   }
   const courses = await CourseModel.find(courseFilter).lean().exec();
@@ -94,7 +94,12 @@ export async function streamExportZip(
     }
   }
   const globalModules = moduleIds.size > 0
-    ? await GlobalModuleModel.find({ _id: { $in: [...moduleIds] } }).lean().exec()
+    ? await GlobalModuleModel.find({
+        $or: [
+          { _id: { $in: [...moduleIds].filter(id => /^[0-9a-fA-F]{24}$/.test(id)) } },
+          { moduleId: { $in: [...moduleIds] } },
+        ],
+      }).lean().exec()
     : [];
 
   // Global Assignments referenced by modules
@@ -106,7 +111,7 @@ export async function streamExportZip(
   const globalAssignments = assignmentIds.size > 0
     ? await GlobalAssignmentModel.find({
         $or: [
-          { _id: { $in: [...assignmentIds] } },
+          { _id: { $in: [...assignmentIds].filter(id => /^[0-9a-fA-F]{24}$/.test(id)) } },
           { assignmentId: { $in: [...assignmentIds] } },
         ],
       }).lean().exec()
@@ -118,7 +123,7 @@ export async function streamExportZip(
     const batchFilter: Record<string, unknown> = {};
     if (batchIds && batchIds.length > 0) {
       batchFilter.$or = [
-        { _id: { $in: batchIds } },
+        { _id: { $in: batchIds.filter(id => /^[0-9a-fA-F]{24}$/.test(id)) } },
         { batchId: { $in: batchIds } },
       ];
     } else if (courseIds && courseIds.length > 0) {
