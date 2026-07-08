@@ -37,6 +37,9 @@ async function start(): Promise<void> {
   const server = await listen();
   try {
     await connectDb(mongoUri);
+    // Start the weekly git backup scheduler (if configured)
+    const { startBackupScheduler } = await import("./services/gitBackup.service.js");
+    startBackupScheduler();
   } catch (err) {
     server.close();
     throw err;

@@ -202,4 +202,13 @@ router.patch("/badges/:badgeType", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), v
 router.post("/badges/award", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(awardBadgeSchema), postAwardBadgeByAdmin);
 router.get("/users/:userId/achievements", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getUserAchievementsForAdmin);
 
+// ── Git Backup (Super Admin only) ─────────────────────────────────────────────
+router.post("/backup/run", requireRoles(ROLE.SUPER_ADMIN), async (_req, res, next) => {
+  try {
+    const { runFullBackup } = await import("../services/gitBackup.service.js");
+    const result = await runFullBackup();
+    res.json({ success: result.success, data: result, message: result.message });
+  } catch (err) { next(err); }
+});
+
 export const adminRoutes = router;
