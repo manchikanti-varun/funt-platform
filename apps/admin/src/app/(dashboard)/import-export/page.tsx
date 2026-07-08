@@ -324,16 +324,39 @@ function GitBackupPanel() {
     setResult(null);
     setRunning(true);
     try {
-      const res = await api<Record<string, unknown>>("/api/admin/backup/run", {
+      // Backup can take 2-3 minutes for large databases — use custom timeout
+      const { apiUrl } = await import("@/lib/api");
+      const { ensureCsrfToken } = await import("@/lib/api");
+      await ensureCsrfToken();
+      const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
+      const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+      const controller = new AbortController();
+      const timeout = globalThis.setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+
+      const res = await fetch(apiUrl("/api/admin/backup/run"), {
         method: "POST",
+        headers,
+        credentials: "include",
+        signal: controller.signal,
       });
-      if (res.success) {
-        setResult(res.data ?? null);
+      globalThis.clearTimeout(timeout);
+
+      const json = await res.json().catch(() => ({ success: false, message: "Invalid response" }));
+      if (json.success) {
+        setResult(json.data ?? json);
       } else {
-        throw new Error(res.message ?? "Backup failed");
+        throw new Error(json.message ?? "Backup failed");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Backup failed");
+      if ((err as Error).name === "AbortError") {
+        setError("Backup is taking longer than expected. Check the repo in a few minutes.");
+      } else {
+        setError(err instanceof Error ? err.message : "Backup failed");
+      }
     } finally {
       setRunning(false);
     }

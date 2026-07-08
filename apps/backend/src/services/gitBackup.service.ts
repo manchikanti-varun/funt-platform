@@ -129,23 +129,31 @@ export async function runFullBackup(): Promise<{ success: boolean; message: stri
       ? ((refRes.data as { object: { sha: string } }).object.sha ?? null)
       : null;
 
-    // 3. Create blobs for each file
+    // 3. Create blobs for each file (batch small files to reduce API calls)
     const treeItems: Array<{ path: string; mode: string; type: string; sha: string }> = [];
 
-    for (const file of files) {
-      const blobRes = await githubApi(`/repos/${owner}/${repo}/git/blobs`, config.token, {
-        method: "POST",
-        body: { content: file.content, encoding: "utf-8" },
-      });
-      if (!blobRes.ok) {
-        throw new Error(`Failed to create blob for ${file.path}: ${JSON.stringify(blobRes.data)}`);
-      }
-      treeItems.push({
-        path: file.path,
-        mode: "100644",
-        type: "blob",
-        sha: (blobRes.data as { sha: string }).sha,
-      });
+    // Process files in parallel batches of 5 to speed things up
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (file) => {
+          const blobRes = await githubApi(`/repos/${owner}/${repo}/git/blobs`, config.token, {
+            method: "POST",
+            body: { content: Buffer.from(file.content, "utf-8").toString("base64"), encoding: "base64" },
+          });
+          if (!blobRes.ok) {
+            throw new Error(`Failed to create blob for ${file.path}: ${JSON.stringify(blobRes.data)}`);
+          }
+          return {
+            path: file.path,
+            mode: "100644" as const,
+            type: "blob" as const,
+            sha: (blobRes.data as { sha: string }).sha,
+          };
+        })
+      );
+      treeItems.push(...results);
     }
 
     // 4. Create a tree
