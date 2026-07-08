@@ -125,9 +125,65 @@ export async function runFullBackup(): Promise<{ success: boolean; message: stri
 
     // 2. Get the current commit SHA on the branch (if exists)
     const refRes = await githubApi(`/repos/${owner}/${repo}/git/ref/heads/${config.branch}`, config.token);
-    const parentSha: string | null = refRes.ok
+    let parentSha: string | null = refRes.ok
       ? ((refRes.data as { object: { sha: string } }).object.sha ?? null)
       : null;
+
+    // If repo is empty (no commits), create an initial commit with a README
+    if (!parentSha) {
+      // Create initial blob
+      const initBlobRes = await githubApi(`/repos/${owner}/${repo}/git/blobs`, config.token, {
+        method: "POST",
+        body: { content: Buffer.from("# FUNT Platform Backup\n\nAutomated database backups.\n", "utf-8").toString("base64"), encoding: "base64" },
+      });
+      if (!initBlobRes.ok) {
+        // Repo might need to be initialized via the API first
+        // Try creating a file via the Contents API which auto-initializes the repo
+        const initFileRes = await githubApi(`/repos/${owner}/${repo}/contents/README.md`, config.token, {
+          method: "PUT",
+          body: {
+            message: "init: initialize backup repository",
+            content: Buffer.from("# FUNT Platform Backup\n\nAutomated database backups.\n").toString("base64"),
+            branch: config.branch,
+          },
+        });
+        if (!initFileRes.ok) {
+          throw new Error(`Failed to initialize empty repo: ${JSON.stringify(initFileRes.data)}`);
+        }
+        // Re-fetch the ref after initialization
+        const refRetry = await githubApi(`/repos/${owner}/${repo}/git/ref/heads/${config.branch}`, config.token);
+        if (!refRetry.ok) {
+          throw new Error("Failed to get branch ref after repo initialization");
+        }
+        parentSha = (refRetry.data as { object: { sha: string } }).object.sha;
+      } else {
+        // Blob created successfully — create tree, commit, and ref manually
+        const initTreeRes = await githubApi(`/repos/${owner}/${repo}/git/trees`, config.token, {
+          method: "POST",
+          body: { tree: [{ path: "README.md", mode: "100644", type: "blob", sha: (initBlobRes.data as { sha: string }).sha }] },
+        });
+        if (!initTreeRes.ok) throw new Error("Failed to create initial tree");
+        
+        const initCommitRes = await githubApi(`/repos/${owner}/${repo}/git/commits`, config.token, {
+          method: "POST",
+          body: {
+            message: "init: initialize backup repository",
+            tree: (initTreeRes.data as { sha: string }).sha,
+            parents: [],
+            author: { name: config.userName, email: config.userEmail, date: new Date().toISOString() },
+          },
+        });
+        if (!initCommitRes.ok) throw new Error("Failed to create initial commit");
+        
+        const initRefRes = await githubApi(`/repos/${owner}/${repo}/git/refs`, config.token, {
+          method: "POST",
+          body: { ref: `refs/heads/${config.branch}`, sha: (initCommitRes.data as { sha: string }).sha },
+        });
+        if (!initRefRes.ok) throw new Error("Failed to create initial branch ref");
+        
+        parentSha = (initCommitRes.data as { sha: string }).sha;
+      }
+    }
 
     // 3. Create blobs for each file (batch small files to reduce API calls)
     const treeItems: Array<{ path: string; mode: string; type: string; sha: string }> = [];
