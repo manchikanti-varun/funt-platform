@@ -77,6 +77,14 @@ export const updateFranchiseCenter = asyncHandler(async (req: Request, res: Resp
   successRes(res, result);
 });
 
+export const deleteFranchiseCenter = asyncHandler(async (req: Request, res: Response) => {
+  const result = await franchiseService.deleteFranchiseCenter(
+    req.params.franchiseId,
+    getUserId(req)
+  );
+  successRes(res, result, "Franchise center closed successfully");
+});
+
 // ─── Super Admin: Payout Management ──────────────────────────────────────────
 
 export const createPayout = asyncHandler(async (req: Request, res: Response) => {

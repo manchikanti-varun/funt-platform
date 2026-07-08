@@ -1,5 +1,5 @@
 
-import { Router } from "express";
+import express, { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
@@ -207,6 +207,29 @@ router.post("/backup/run", requireRoles(ROLE.SUPER_ADMIN), async (_req, res, nex
   try {
     const { runFullBackup } = await import("../services/gitBackup.service.js");
     const result = await runFullBackup();
+    res.json({ success: result.success, data: result, message: result.message });
+  } catch (err) { next(err); }
+});
+
+// ── Restore from Git Backup (Super Admin only) ────────────────────────────────
+router.post("/backup/restore", requireRoles(ROLE.SUPER_ADMIN), async (_req, res, next) => {
+  try {
+    const { restoreFromGitBackup } = await import("../services/gitBackup.service.js");
+    const result = await restoreFromGitBackup();
+    res.json({ success: result.success, data: result, message: result.message });
+  } catch (err) { next(err); }
+});
+
+// ── Restore from uploaded backup data (Super Admin only) ──────────────────────
+router.post("/backup/restore-upload", requireRoles(ROLE.SUPER_ADMIN), express.json({ limit: "200mb" }), async (req, res, next) => {
+  try {
+    const { restoreFromUpload } = await import("../services/gitBackup.service.js");
+    const body = req.body as { collections?: Record<string, unknown[]>; skipCollections?: string[] };
+    if (!body.collections || typeof body.collections !== "object") {
+      res.status(400).json({ success: false, message: "Request body must include 'collections' object with { collectionName: docs[] }" });
+      return;
+    }
+    const result = await restoreFromUpload(body.collections, { skipCollections: body.skipCollections });
     res.json({ success: result.success, data: result, message: result.message });
   } catch (err) { next(err); }
 });

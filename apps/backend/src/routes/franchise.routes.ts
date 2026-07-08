@@ -16,6 +16,7 @@ import {
   listFranchiseCenters,
   getFranchiseCenter,
   updateFranchiseCenter,
+  deleteFranchiseCenter,
   createPayout,
   listPayouts,
   // Super Admin: key request management
@@ -54,6 +55,7 @@ adminRouter.post("/centers", createFranchiseCenter);
 adminRouter.get("/centers", listFranchiseCenters);
 adminRouter.get("/centers/:franchiseId", getFranchiseCenter);
 adminRouter.put("/centers/:franchiseId", updateFranchiseCenter);
+adminRouter.delete("/centers/:franchiseId", deleteFranchiseCenter);
 adminRouter.post("/centers/:franchiseId/payouts", createPayout);
 adminRouter.get("/centers/:franchiseId/payouts", listPayouts);
 adminRouter.get("/key-requests", listPendingKeyRequests);

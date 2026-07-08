@@ -182,6 +182,47 @@ export async function updateFranchiseCenter(
   return center;
 }
 
+/**
+ * Soft-delete a franchise center:
+ *  - Sets status to CLOSED
+ *  - Suspends the franchise owner's user account
+ *  - Returns the closed franchise for confirmation
+ *
+ * Does NOT delete related data (batches, enrollments, transactions, key pools)
+ * — these are retained for historical/audit purposes.
+ */
+export async function deleteFranchiseCenter(franchiseId: string, performedBy: string) {
+  const center = await FranchiseCenterModel.findById(franchiseId).exec();
+  if (!center) throw new AppError("Franchise center not found", 404);
+
+  if (center.status === FRANCHISE_STATUS.CLOSED) {
+    throw new AppError("Franchise center is already closed", 400);
+  }
+
+  // Mark center as closed
+  center.status = FRANCHISE_STATUS.CLOSED;
+  await center.save();
+
+  // Suspend the franchise owner's user account
+  if (center.ownerUserId) {
+    await UserModel.findByIdAndUpdate(center.ownerUserId, {
+      $set: { status: ACCOUNT_STATUS.SUSPENDED },
+    }).exec();
+  }
+
+  await createAuditLog("FRANCHISE_CENTER_DELETED", performedBy, "FranchiseCenter", String(center._id), {
+    franchiseCode: center.franchiseCode,
+    centerName: center.centerName,
+  });
+
+  return {
+    id: String(center._id),
+    franchiseCode: center.franchiseCode,
+    centerName: center.centerName,
+    status: center.status,
+  };
+}
+
 // ─── Franchise Batch Operations ───────────────────────────────────────────────
 
 /**

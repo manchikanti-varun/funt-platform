@@ -35,7 +35,7 @@ export default function SupportLoginPage() {
       const data = await res.json();
       if (!res.ok || !data.success) { setError(data.message ?? "Invalid username or password"); setLoading(false); return; }
 
-      const roles: string[] = data.data?.roles ?? [];
+      const roles: string[] = data.data?.user?.roles ?? [];
       const isStaff = roles.some((r) => ["SUPER_ADMIN", "ADMIN", "TRAINER", "SUPPORT_AGENT"].includes(r));
       if (!isStaff) { setError("Access denied. Only support staff can use this portal."); setLoading(false); return; }
 
