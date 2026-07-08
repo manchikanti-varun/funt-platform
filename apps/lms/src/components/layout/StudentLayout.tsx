@@ -72,6 +72,7 @@ const NAV_SECTIONS: Array<{
   {
     title: "Account",
     items: [
+      { href: "/referral", label: "Referral", Icon: IconCertificates },
       { href: "/payment-promises", label: "Payment promises", Icon: IconCertificates },
       { href: "/invoices", label: "Invoices", Icon: IconCertificates },
       { href: "/support", label: "Support", Icon: IconFaq },
