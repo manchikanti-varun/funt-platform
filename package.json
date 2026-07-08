@@ -13,6 +13,7 @@
     "start:backend": "node apps/backend/dist/server.js",
     "start:admin": "npm run start --workspace=@funt-platform/admin",
     "start:lms": "npm run start --workspace=@funt-platform/lms",
+    "start:support": "npm run start --workspace=@funt-platform/support",
     "dev": "node scripts/dev.js",
     "dev:backend": "node scripts/start-backend-only.js",
     "free-ports": "powershell -ExecutionPolicy Bypass -File ./scripts/free-ports.ps1",

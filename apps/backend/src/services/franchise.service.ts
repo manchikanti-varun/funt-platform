@@ -338,6 +338,7 @@ export async function franchiseRegisterAndEnroll(input: {
   batchId: string;
   paymentMode: "CASH" | "ONLINE" | "FREE";
   amountPaise?: number;
+  consumeLicenseKey?: boolean;
   createdBy: string;
 }) {
   const center = await FranchiseCenterModel.findById(input.franchiseId).lean().exec();
@@ -356,6 +357,27 @@ export async function franchiseRegisterAndEnroll(input: {
   // Verify batch belongs to this franchise
   if (!center.assignedBatchIds.includes(input.batchId)) {
     throw new AppError("This batch is not assigned to your franchise", 403);
+  }
+
+  // If consuming license key, find the course from batch snapshot and consume from pool
+  if (input.consumeLicenseKey !== false) {
+    const batch = await BatchModel.findById(input.batchId).lean().exec();
+    if (batch) {
+      const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      // Try to consume a key for each course in the batch
+      for (const snap of snaps) {
+        const courseId = (snap as { courseId?: string }).courseId;
+        if (courseId) {
+          const consumed = await consumeFranchiseKey(input.franchiseId, courseId);
+          if (!consumed) {
+            throw new AppError(
+              `No license keys available for course "${(snap as { title?: string }).title ?? courseId}". Request more keys first.`,
+              400
+            );
+          }
+        }
+      }
+    }
   }
 
   // Create student account
@@ -884,6 +906,81 @@ export async function directAllocateKeys(input: { franchiseId: string; courseId:
   ).exec();
 
   return { franchiseId: input.franchiseId, courseId: input.courseId, allocated: input.count };
+}
+
+/**
+ * Franchise assigns a license key to a student, consuming one from their pool.
+ * This creates an enrollment (if not already enrolled) and marks one key as used.
+ */
+export async function franchiseAssignKeyToStudent(input: {
+  franchiseId: string;
+  studentId: string;
+  batchId: string;
+  courseId: string;
+  performedBy: string;
+}): Promise<{ enrollmentId: string; keysRemaining: number }> {
+  const { franchiseId, studentId, batchId, courseId, performedBy } = input;
+
+  if (!studentId?.trim()) throw new AppError("studentId is required", 400);
+  if (!batchId?.trim()) throw new AppError("batchId is required", 400);
+  if (!courseId?.trim()) throw new AppError("courseId is required", 400);
+
+  // Verify franchise owns the batch
+  const center = await FranchiseCenterModel.findById(franchiseId).lean().exec();
+  if (!center) throw new AppError("Franchise center not found", 404);
+  if (!center.assignedBatchIds.includes(batchId)) {
+    throw new AppError("This batch is not assigned to your franchise", 403);
+  }
+
+  // Consume one key from pool (atomic)
+  const consumed = await consumeFranchiseKey(franchiseId, courseId);
+  if (!consumed) {
+    throw new AppError("No license keys available for this course. Request more keys first.", 400);
+  }
+
+  // Check if student already enrolled
+  const existing = await EnrollmentModel.findOne({ studentId, batchId }).lean().exec();
+  let enrollmentId: string;
+
+  if (existing) {
+    enrollmentId = String(existing._id);
+  } else {
+    // Create enrollment
+    const enrollment = await createEnrollment({
+      studentId,
+      batchId,
+      createdBy: performedBy,
+      skipAutoInvoice: true,
+    });
+    enrollmentId = enrollment.id;
+
+    // Tag enrollment with franchiseId
+    await EnrollmentModel.updateOne(
+      { _id: enrollmentId },
+      { $set: { franchiseId } }
+    ).exec();
+
+    // Increment franchise student count
+    await FranchiseCenterModel.updateOne(
+      { _id: franchiseId },
+      { $inc: { totalStudents: 1 } }
+    ).exec();
+  }
+
+  // Audit
+  await createAuditLog(
+    "FRANCHISE_KEY_ASSIGNED" as Parameters<typeof createAuditLog>[0],
+    performedBy,
+    "Enrollment",
+    enrollmentId,
+    { franchiseId, courseId, studentId }
+  );
+
+  // Get remaining keys
+  const pool = await FranchiseKeyPoolModel.findOne({ franchiseId, courseId }).lean().exec();
+  const keysRemaining = pool ? pool.totalAllocated - pool.totalUsed : 0;
+
+  return { enrollmentId, keysRemaining };
 }
 
 /**

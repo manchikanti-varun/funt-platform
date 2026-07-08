@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell, PageHeader } from "@/components/ui";
 
@@ -21,17 +22,32 @@ interface DashboardData {
   pendingPayoutPaise: number;
 }
 
+interface KeyPool {
+  courseId: string;
+  courseTitle: string;
+  totalAllocated: number;
+  totalUsed: number;
+  available: number;
+}
+
 function formatINR(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
 
 export default function FranchiseDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [pools, setPools] = useState<KeyPool[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<DashboardData>("/api/franchise/dashboard")
-      .then((r) => { if (r.success && r.data) setData(r.data); })
+    Promise.all([
+      api<DashboardData>("/api/franchise/dashboard"),
+      api<{ pools: KeyPool[] }>("/api/franchise/key-pool"),
+    ])
+      .then(([dashRes, poolRes]) => {
+        if (dashRes.success && dashRes.data) setData(dashRes.data);
+        if (poolRes.success && poolRes.data?.pools) setPools(poolRes.data.pools);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -74,6 +90,57 @@ export default function FranchiseDashboardPage() {
           <p className="text-sm font-medium text-amber-700">Pending Payout</p>
           <p className="mt-2 text-2xl font-bold text-amber-900">{formatINR(data.pendingPayoutPaise)}</p>
         </div>
+      </div>
+
+      {/* License Key Availability */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">License Keys Available</h2>
+          <Link
+            href="/franchise/license-keys"
+            className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition"
+          >
+            Manage Keys →
+          </Link>
+        </div>
+        {pools.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+            <p className="text-sm text-slate-500">No keys allocated yet.</p>
+            <Link
+              href="/franchise/license-keys"
+              className="mt-2 inline-block text-sm font-medium text-indigo-600 hover:text-indigo-800"
+            >
+              Request License Keys
+            </Link>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pools.map((p) => (
+              <div key={p.courseId} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-semibold text-slate-800 truncate">{p.courseTitle}</p>
+                <div className="mt-3 flex items-baseline gap-4">
+                  <div>
+                    <p className={`text-2xl font-bold ${p.available > 0 ? "text-indigo-700" : "text-red-600"}`}>
+                      {p.available}
+                    </p>
+                    <p className="text-xs text-slate-500">Available</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-slate-600">{p.totalUsed}</p>
+                    <p className="text-xs text-slate-500">Used</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-slate-400">{p.totalAllocated}</p>
+                    <p className="text-xs text-slate-500">Total</p>
+                  </div>
+                </div>
+                {p.available === 0 && (
+                  <p className="mt-2 text-xs text-red-500 font-medium">⚠ No keys remaining</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </AppPageShell>
   );

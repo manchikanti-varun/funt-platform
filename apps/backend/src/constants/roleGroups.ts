@@ -8,14 +8,14 @@
 
 import { ROLE } from "@funt-platform/constants";
 
-/** All staff roles: trainers + admins + super admins */
-export const STAFF_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER] as const;
+/** All staff roles: trainers + admins + super admins + support agents */
+export const STAFF_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.SUPPORT_AGENT] as const;
 
-/** Admin-level roles only (no trainers) */
+/** Admin-level roles only (no trainers, no support) */
 export const ADMIN_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN] as const;
 
 /** All authenticated roles */
-export const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.FRANCHISE_ADMIN] as const;
+export const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.SUPPORT_AGENT, ROLE.STUDENT, ROLE.PARENT, ROLE.FRANCHISE_ADMIN] as const;
 
 /** Super admin only */
 export const SUPER_ADMIN_ONLY = [ROLE.SUPER_ADMIN] as const;

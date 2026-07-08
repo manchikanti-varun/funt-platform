@@ -229,6 +229,48 @@ export async function approveRequest(
       message: `Super Admin account created. Username: ${username}. Temporary password: ${temporaryPassword}. User must log in and change password.`,
     };
   }
+  if (req.roleType === "SUPPORT_AGENT") {
+    const storedHash = typeof (req as { passwordHash?: string }).passwordHash === "string"
+      ? (req as { passwordHash: string }).passwordHash
+      : undefined;
+
+    if (storedHash) {
+      const { createSupportAgentWithHash } = await import("./auth.service.js");
+      const { id, username } = await createSupportAgentWithHash({
+        name: req.name,
+        email: req.email,
+        mobile: req.mobile,
+        passwordHash: storedHash,
+      });
+      req.status = "APPROVED";
+      req.approvedBy = approvedByUserId;
+      req.approvedAt = new Date();
+      req.createdUserId = id;
+      await req.save();
+      await RegistrationRequestModel.updateOne({ _id: req._id }, { $unset: { passwordHash: 1 } }).exec();
+      return {
+        username,
+        message: `Support Agent account created. Username: ${username}. They can sign in at support.funt.in with the password they set during signup.`,
+      };
+    }
+
+    const { createSupportAgentWithTempPassword } = await import("./auth.service.js");
+    const { id, username, temporaryPassword } = await createSupportAgentWithTempPassword({
+      name: req.name,
+      email: req.email,
+      mobile: req.mobile,
+    });
+    req.status = "APPROVED";
+    req.approvedBy = approvedByUserId;
+    req.approvedAt = new Date();
+    req.createdUserId = id;
+    await req.save();
+    return {
+      username,
+      temporaryPassword,
+      message: `Support Agent account created. Username: ${username}. Temporary password: ${temporaryPassword}. They can sign in at support.funt.in.`,
+    };
+  }
   throw new AppError("Invalid role type", 400);
 }
 

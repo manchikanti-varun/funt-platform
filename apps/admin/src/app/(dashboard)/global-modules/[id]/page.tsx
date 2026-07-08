@@ -184,23 +184,33 @@ export default function EditGlobalChapterPage() {
           </>
         }
         headerAside={
-          chapter.status !== MODULE_STATUS.ARCHIVED ? (
-            <button
-              type="button"
-              onClick={archive}
-              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50"
+          <div className="flex items-center gap-2">
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/global-modules/${id}/export-doc`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm font-medium text-indigo-600 shadow-sm hover:bg-indigo-50"
             >
-              Archive
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={unarchive}
-              className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
-            >
-              Unarchive
-            </button>
-          )
+              ↓ Download .doc
+            </a>
+            {chapter.status !== MODULE_STATUS.ARCHIVED ? (
+              <button
+                type="button"
+                onClick={archive}
+                className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50"
+              >
+                Archive
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={unarchive}
+                className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 shadow-sm hover:bg-emerald-50"
+              >
+                Unarchive
+              </button>
+            )}
+          </div>
         }
       >
         <form onSubmit={submit} className="space-y-4">

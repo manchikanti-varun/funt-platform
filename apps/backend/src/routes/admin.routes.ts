@@ -15,6 +15,7 @@ import {
 import {
   createStudentHandler,
   createTrainerHandler,
+  createSupportAgentHandler,
   createAdminHandler,
   createSuperAdminHandler,
   resetLoginHandler,
@@ -98,6 +99,7 @@ router.use(authMiddleware);
 
 router.post("/users/student", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createStudentSchema), createStudentHandler);
 router.post("/users/trainer", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createTrainerSchema), createTrainerHandler);
+router.post("/users/support-agent", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createTrainerSchema), createSupportAgentHandler);
 router.post("/users/admin", requireRoles(ROLE.SUPER_ADMIN), validateBody(createAdminSchema), createAdminHandler);
 router.post("/users/super-admin", requireRoles(ROLE.SUPER_ADMIN), validateBody(createAdminSchema), createSuperAdminHandler);
 router.post("/users/:username/reset-login", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), resetLoginHandler);

@@ -80,10 +80,10 @@ export function isParent(roles: string[] | undefined): boolean {
 
 /**
  * Determines the appropriate portal based on roles.
- * Staff → admin, Students/Parents → lms.
+ * Staff → admin, Support → admin (support uses admin auth cookie), Students/Parents → lms.
  */
 export function inferPortal(roles: string[]): "admin" | "lms" {
-  const staffRoles = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER];
+  const staffRoles = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.SUPPORT_AGENT];
   if (roles.some((r) => staffRoles.includes(r as ROLE))) return "admin";
   return "lms";
 }

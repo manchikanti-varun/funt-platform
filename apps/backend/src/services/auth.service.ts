@@ -216,6 +216,58 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
   return { id: String(user._id), username: user.username! };
 }
 
+export async function createSupportAgent(input: CreateTrainerInput): Promise<{ id: string; username: string }> {
+  const normalizedUsername = input.username.trim().toLowerCase();
+  const uErr = validateAdminUsername(normalizedUsername);
+  if (uErr) throw new AppError(uErr, 400);
+  validateStrongPassword(input.password);
+  const passwordHash = await hashPassword(input.password);
+  const user = await UserModel.create({
+    username: normalizedUsername,
+    name: input.name,
+    email: input.email,
+    mobile: input.mobile,
+    passwordHash,
+    roles: [ROLE.SUPPORT_AGENT],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
+export async function createSupportAgentWithHash(input: {
+  name: string; email: string; mobile: string; passwordHash: string;
+}): Promise<{ id: string; username: string }> {
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email,
+    mobile: input.mobile,
+    passwordHash: input.passwordHash,
+    roles: [ROLE.SUPPORT_AGENT],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
+export async function createSupportAgentWithTempPassword(input: {
+  name: string; email: string; mobile: string;
+}): Promise<{ id: string; username: string; temporaryPassword: string }> {
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const temporaryPassword = randomTemporaryPassword();
+  const hash = await hashPassword(temporaryPassword);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email,
+    mobile: input.mobile,
+    passwordHash: hash,
+    roles: [ROLE.SUPPORT_AGENT],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username!, temporaryPassword };
+}
+
 export async function createAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);

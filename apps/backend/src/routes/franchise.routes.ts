@@ -37,6 +37,8 @@ import {
   getMyKeyPools,
   requestKeys,
   listMyKeyRequests,
+  getPaymentProofUploadUrl,
+  assignKeyToStudent,
   // Franchise Admin: trainers
   createTrainer,
   listTrainers,
@@ -59,6 +61,17 @@ adminRouter.post("/key-requests/:requestId/approve", approveKeyRequest);
 adminRouter.post("/key-requests/:requestId/reject", rejectKeyRequest);
 adminRouter.post("/centers/:franchiseId/allocate-keys", directAllocateKeys);
 
+// Franchise report download
+adminRouter.get("/centers/:franchiseId/report", async (req, res, next) => {
+  try {
+    const { generateFranchiseReport } = await import("../services/franchiseReport.service.js");
+    const { csv, filename } = await generateFranchiseReport(req.params.franchiseId);
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(csv);
+  } catch (err) { next(err); }
+});
+
 // ─── Franchise Admin Routes (operate their own center) ───────────────────────
 const franchiseRouter = Router();
 franchiseRouter.use(authMiddleware);
@@ -76,6 +89,8 @@ franchiseRouter.post("/payments/offline", recordOfflinePayment);
 franchiseRouter.get("/key-pool", getMyKeyPools);
 franchiseRouter.post("/key-requests", requestKeys);
 franchiseRouter.get("/key-requests", listMyKeyRequests);
+franchiseRouter.post("/upload-proof", getPaymentProofUploadUrl);
+franchiseRouter.post("/students/assign-key", assignKeyToStudent);
 franchiseRouter.post("/trainers", createTrainer);
 franchiseRouter.get("/trainers", listTrainers);
 franchiseRouter.patch("/trainers/:trainerId/status", updateTrainerStatus);

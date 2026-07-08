@@ -9,7 +9,7 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { AppPageShell, FormPanel, PageSection, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
-type Tab = "requests" | "student" | "trainer" | "admin" | "superAdmin" | "reset";
+type Tab = "requests" | "student" | "trainer" | "supportAgent" | "admin" | "superAdmin" | "reset";
 
 interface RegistrationRequestRow {
   id: string;
@@ -106,6 +106,7 @@ export default function AdminManagementPage() {
     { id: "requests", label: "Requests" },
     { id: "student", label: "Create Student" },
     { id: "trainer", label: "Create Trainer" },
+    { id: "supportAgent", label: "Create Support Agent" },
     { id: "admin", label: "Create Admin", show: isSuperAdmin },
     { id: "superAdmin", label: "Create Super Admin", show: isSuperAdmin },
     { id: "reset", label: "Reset Login" },
@@ -174,6 +175,12 @@ export default function AdminManagementPage() {
         )}
         {tab === "trainer" && (
           <CreateTrainerForm
+            onSuccess={(m) => setMessageAndClear("success", m)}
+            onError={(m) => setMessageAndClear("error", m)}
+          />
+        )}
+        {tab === "supportAgent" && (
+          <CreateSupportAgentForm
             onSuccess={(m) => setMessageAndClear("success", m)}
             onError={(m) => setMessageAndClear("error", m)}
           />
@@ -1001,6 +1008,102 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       </div>
       <button type="submit" disabled={loading} className="btn-primary">
         {loading ? "Creating…" : "Create Trainer"}
+      </button>
+    </form>
+  );
+}
+
+function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!username.trim() || !name.trim() || !email.trim() || !mobileNumber.trim() || !password.trim()) {
+      onError("All fields are required."); return;
+    }
+    if (!isValidEmailFormat(email)) { onError("Enter a valid email address."); return; }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) { onError("Enter a valid mobile number."); return; }
+    const usernameError = validateManagementUsernameInput(username);
+    if (usernameError) { onError(usernameError); return; }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) { onError(pwdErr); return; }
+    if (password !== confirmPassword) { onError("Confirm password does not match."); return; }
+
+    setLoading(true);
+    const res = await api<{ username?: string }>("/api/admin/users/support-agent", {
+      method: "POST",
+      body: JSON.stringify({
+        username: normalizeUsername(username),
+        name, email,
+        mobile: `${countryCode}${mobileNumber.trim()}`,
+        password,
+      }),
+    });
+    setLoading(false);
+    if (res.success) {
+      onSuccess(`Support agent created. Username: ${res.data?.username ?? username}`);
+      setUsername(""); setName(""); setEmail(""); setMobileNumber(""); setPassword(""); setConfirmPassword("");
+    } else onError(res.message ?? "Failed to create support agent.");
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-800">Create Support Agent</h2>
+        <p className="mt-1 text-sm text-slate-500">Add a support agent. They can log in at support.funt.in to handle live chat requests from students.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="sa-username">Username</Label>
+          <input id="sa-username" required className="input text-sm" placeholder="e.g. support.priya@funt"
+            value={username} onChange={(e) => setUsername(e.target.value)} />
+          <p className="mt-1 text-xs text-slate-500">Must end with @funt. Example: support.priya@funt</p>
+        </div>
+        <div>
+          <Label htmlFor="sa-name">Full Name</Label>
+          <input id="sa-name" required className="input text-sm" placeholder="Priya Sharma"
+            value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="sa-email">Email</Label>
+          <input id="sa-email" type="email" required className="input text-sm" placeholder="priya@funtrobotics.in"
+            value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="sa-mobile">Mobile</Label>
+          <div className="flex gap-2">
+            <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="input w-24 text-sm">
+              {COUNTRY_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input id="sa-mobile" required className="input flex-1 text-sm" placeholder="9876543210"
+              value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ""))} />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="sa-password">Password</Label>
+          <input id="sa-password" type="password" required className="input text-sm"
+            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="sa-confirm">Confirm Password</Label>
+          <input id="sa-confirm" type="password" required className="input text-sm"
+            value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+        </div>
+      </div>
+      <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5 text-sm disabled:opacity-50">
+        {loading ? "Creating..." : "Create Support Agent"}
       </button>
     </form>
   );

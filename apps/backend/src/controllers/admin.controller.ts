@@ -242,6 +242,24 @@ export const createTrainerHandler = asyncHandler(async (req: Request, res: Respo
   successRes(res, result, "Trainer created", 201);
 });
 
+export const createSupportAgentHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { username, name, email, mobile, password } = req.body as Record<string, unknown>;
+  if (!username || !name || !email || !mobile || !password) {
+    throw new AppError("username, name, email, mobile and password are required", 400);
+  }
+  const { createSupportAgent } = await import("../services/auth.service.js");
+  const result = await createSupportAgent({
+    username: String(username),
+    name: String(name),
+    email: String(email),
+    mobile: String(mobile),
+    password: String(password),
+  });
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "SUPPORT_AGENT", username: String(username) }).catch(() => {});
+  successRes(res, result, "Support agent created", 201);
+});
+
 export const createAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);

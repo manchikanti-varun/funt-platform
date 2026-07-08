@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearParentSession } from "@/lib/parentSelection";
 
+import { LiveChatWidget } from "@/components/support/LiveChatWidget";
+
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -112,6 +114,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
         <main className="min-h-0 flex-1 overflow-y-scroll overflow-x-hidden bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 sm:p-6 md:p-8">
           {children}
         </main>
+        <LiveChatWidget />
       </div>
     </div>
   );

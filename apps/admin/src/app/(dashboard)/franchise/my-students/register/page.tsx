@@ -62,12 +62,13 @@ export default function FranchiseRegisterStudentPage() {
         batchId,
         paymentMode,
         amountPaise: paymentMode === "CASH" ? Math.round(Number(amount) * 100) : undefined,
+        consumeLicenseKey: true,
       }),
     });
     setSubmitting(false);
 
     if (res.success) {
-      setSuccess(`Student "${studentName}" registered and enrolled successfully!`);
+      setSuccess(`Student "${studentName}" registered and enrolled successfully! A license key has been assigned.`);
       setStudentName("");
       setStudentUsername("");
       setStudentMobile("");

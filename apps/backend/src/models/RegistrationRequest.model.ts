@@ -4,7 +4,7 @@ import mongoose, { Schema } from "mongoose";
 
 const registrationRequestSchema = new Schema(
   {
-    roleType: { type: String, required: true, enum: ["ADMIN", "SUPER_ADMIN"] },
+    roleType: { type: String, required: true, enum: ["ADMIN", "SUPER_ADMIN", "SUPPORT_AGENT"] },
     name: { type: String, required: true },
     email: { type: String, required: true },
     mobile: { type: String, required: true },

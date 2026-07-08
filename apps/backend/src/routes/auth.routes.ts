@@ -48,4 +48,40 @@ router.post("/google/signup-complete", googleSignupComplete);
 router.get("/google/admin-signup-preview", googleAdminSignupPreview);
 router.post("/google/admin-signup-complete", googleAdminSignupComplete);
 
+// Support agent self-registration (creates a pending request for admin approval)
+router.post("/support-signup", async (req, res, next) => {
+  try {
+    const { name, email, mobile, city, password } = req.body as Record<string, string>;
+    if (!name?.trim() || !email?.trim() || !mobile?.trim() || !password?.trim()) {
+      res.status(400).json({ success: false, message: "name, email, mobile, and password are required" });
+      return;
+    }
+    const { RegistrationRequestModel } = await import("../models/RegistrationRequest.model.js");
+    const { hashPassword, validateStrongPassword } = await import("../services/auth.service.js");
+
+    // Check if request already exists
+    const existing = await RegistrationRequestModel.findOne({
+      email: email.trim(), roleType: "SUPPORT_AGENT", status: "PENDING",
+    }).lean().exec();
+    if (existing) {
+      res.status(400).json({ success: false, message: "A request with this email is already pending." });
+      return;
+    }
+
+    validateStrongPassword(password);
+    const passwordHash = await hashPassword(password);
+
+    await RegistrationRequestModel.create({
+      roleType: "SUPPORT_AGENT",
+      name: name.trim(),
+      email: email.trim(),
+      mobile: mobile.trim(),
+      city: city?.trim() || undefined,
+      passwordHash,
+    });
+
+    res.status(201).json({ success: true, message: "Request submitted. An admin will review and approve your account." });
+  } catch (err) { next(err); }
+});
+
 export const authRoutes = router;

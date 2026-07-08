@@ -190,6 +190,7 @@ export const registerAndEnrollStudent = asyncHandler(async (req: Request, res: R
     batchId: String(body.batchId ?? ""),
     paymentMode: (body.paymentMode as "CASH" | "ONLINE" | "FREE") ?? "FREE",
     amountPaise: body.amountPaise != null ? Number(body.amountPaise) : undefined,
+    consumeLicenseKey: body.consumeLicenseKey !== false,
     createdBy: getUserId(req),
   });
   successRes(res, result, undefined, 201);
@@ -277,6 +278,35 @@ export const listMyKeyRequests = asyncHandler(async (req: Request, res: Response
   const franchiseId = await resolveFranchiseId(req);
   const requests = await franchiseService.listFranchiseKeyRequests(franchiseId);
   successRes(res, { requests });
+});
+
+// ─── Franchise Admin: Payment Proof Upload ────────────────────────────────────
+
+export const getPaymentProofUploadUrl = asyncHandler(async (req: Request, res: Response) => {
+  const franchiseId = await resolveFranchiseId(req);
+  const body = req.body as Record<string, unknown>;
+  const { getPaymentProofPresignedUpload } = await import("../services/franchiseUpload.service.js");
+  const result = await getPaymentProofPresignedUpload({
+    franchiseId,
+    filename: String(body.filename ?? ""),
+    contentType: String(body.contentType ?? ""),
+  });
+  successRes(res, result);
+});
+
+// ─── Franchise Admin: Assign Key to Student ───────────────────────────────────
+
+export const assignKeyToStudent = asyncHandler(async (req: Request, res: Response) => {
+  const franchiseId = await resolveFranchiseId(req);
+  const body = req.body as Record<string, unknown>;
+  const result = await franchiseService.franchiseAssignKeyToStudent({
+    franchiseId,
+    studentId: String(body.studentId ?? ""),
+    batchId: String(body.batchId ?? ""),
+    courseId: String(body.courseId ?? ""),
+    performedBy: getUserId(req),
+  });
+  successRes(res, result);
 });
 
 

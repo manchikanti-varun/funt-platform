@@ -26,6 +26,7 @@ import {
 import { StateScreen } from "@/components/ui/StateScreen";
 import { ProtectionProvider } from "@/components/security/ProtectionContext";
 import { ContentProtectionProvider } from "@/components/security/ContentProtectionProvider";
+import { LiveChatWidget } from "@/components/support/LiveChatWidget";
 
 interface UserMe {
   id: string;
@@ -411,6 +412,7 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
               onMenuClick={() => setSidebarOpen((o) => !o)}
             />
             <main id="lms-main-content" className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-gradient-to-b from-transparent via-indigo-50/20 to-slate-100/60 p-4 text-slate-800 sm:p-6 md:p-8">{children}</main>
+            <LiveChatWidget />
           </div>
         </div>
       </ContentProtectionProvider>

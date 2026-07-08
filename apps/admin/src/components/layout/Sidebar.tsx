@@ -173,7 +173,7 @@ export function Sidebar({ roles }: SidebarProps) {
         {(isAdmin || (isTrainer && !isAdmin)) && (
           <>
             <p className={SECTION_LABEL_CLASS}>Support</p>
-            <SidebarNavLink href="/support" isActive={pathname.startsWith("/support")}>
+            <SidebarNavLink href="/support" isActive={pathname === "/support" || (pathname.startsWith("/support") && !pathname.startsWith("/support-live"))}>
               Support desk
             </SidebarNavLink>
             {isAdmin && (
@@ -216,6 +216,12 @@ export function Sidebar({ roles }: SidebarProps) {
             <p className={SECTION_LABEL_CLASS}>Franchise</p>
             <SidebarNavLink href="/franchise/centers" isActive={pathname.startsWith("/franchise/centers")}>
               Franchise centers
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/key-requests" isActive={pathname.startsWith("/franchise/key-requests")}>
+              Key requests
+            </SidebarNavLink>
+            <SidebarNavLink href="/franchise/bulk-allocate" isActive={pathname.startsWith("/franchise/bulk-allocate")}>
+              Bulk allocate keys
             </SidebarNavLink>
             <SidebarNavLink href="/franchise/payouts" isActive={pathname.startsWith("/franchise/payouts")}>
               Payouts

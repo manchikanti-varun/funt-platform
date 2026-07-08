@@ -36,6 +36,7 @@ import {
   getAnalytics,
   getSla,
 } from "../controllers/ticket.controller.js";
+import { getChatAnalyticsHandler } from "../controllers/chatAnalytics.controller.js";
 import {
   createTicketSchema,
   replyTicketSchema,
@@ -48,14 +49,15 @@ import {
 const router = Router();
 router.use(authMiddleware);
 
-const ALL_ROLES = [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN] as const;
-const STAFF_ROLES = [ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN] as const;
+const ALL_ROLES = [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUPPORT_AGENT] as const;
+const STAFF_ROLES = [ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUPPORT_AGENT] as const;
 const ADMIN_ROLES = [ROLE.ADMIN, ROLE.SUPER_ADMIN] as const;
 
 // ── Fixed routes before /:id ──────────────────────────────────────────────────
 router.get("/my",        requireRoles(...ALL_ROLES),   getMyTickets);
 router.get("/analytics", requireRoles(...ADMIN_ROLES), getAnalytics);
 router.get("/sla",       requireRoles(...ADMIN_ROLES), getSla);
+router.get("/chat-analytics", requireRoles(...ADMIN_ROLES), getChatAnalyticsHandler);
 
 // ── Collection ────────────────────────────────────────────────────────────────
 router.post("/",  requireRoles(...ALL_ROLES),   validateBody(createTicketSchema), postCreateTicket);

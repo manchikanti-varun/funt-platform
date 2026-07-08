@@ -3,6 +3,7 @@ import http from "http";
 import app from "./app.js";
 import { connectDb } from "./config/db.js";
 import { validateEnv, getEnv } from "./config/env.js";
+import { initSocketServer } from "./realtime/socketServer.js";
 
 validateEnv();
 const { port, mongoUri, isProduction, nodeEnv } = getEnv();
@@ -16,6 +17,10 @@ const host = "0.0.0.0";
 function listen(): Promise<http.Server> {
   return new Promise((resolve, reject) => {
     const server = http.createServer(app);
+
+    // Initialize Socket.IO on the same HTTP server
+    initSocketServer(server);
+
     server.on("error", reject);
     server.listen(
       { port: Number(port), host, reuseAddress: true },

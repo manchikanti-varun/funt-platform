@@ -84,4 +84,9 @@ router.get("/trainers", getTrainers);
 router.get("/certificates", getMyCertificates);
 router.post("/certificates/generate", postGenerateMyCertificate);
 
+// ── Franchise linking ─────────────────────────────────────────────────────────
+import { linkToFranchise, getMyFranchiseStatus } from "../controllers/franchisePublic.controller.js";
+router.post("/franchise/link", linkToFranchise);
+router.get("/franchise/status", getMyFranchiseStatus);
+
 export const studentRoutes = router;

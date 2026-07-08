@@ -9,7 +9,7 @@ const ticketSchema = new Schema(
     createdByRole: {
       type: String,
       required: true,
-      enum: [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN],
+      enum: [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUPPORT_AGENT],
     },
     /** For parent tickets — the linked student userId */
     studentId: { type: String, required: false },
@@ -55,6 +55,19 @@ const ticketSchema = new Schema(
     /** SLA due date computed from priority at creation */
     slaDueAt: { type: Date, required: false },
     slaBreached: { type: Boolean, required: false, default: false },
+
+    // ── Live Chat fields ──────────────────────────────────────────────
+    /** True if this ticket was created via the live chat widget */
+    isLiveChat: { type: Boolean, required: false, default: false },
+    /** Live chat session status: WAITING → ACTIVE → CLOSED */
+    liveChatStatus: {
+      type: String,
+      required: false,
+      enum: ["WAITING", "ACTIVE", "CLOSED", null],
+      default: null,
+    },
+    /** Student rating of the live chat session (1-5 stars) */
+    chatRating: { type: Number, required: false, min: 1, max: 5 },
   },
   { timestamps: true }
 );

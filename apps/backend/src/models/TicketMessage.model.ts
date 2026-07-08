@@ -8,7 +8,7 @@ const ticketMessageSchema = new Schema(
     senderRole: {
       type: String,
       required: true,
-      enum: [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN],
+      enum: [ROLE.STUDENT, ROLE.PARENT, ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUPPORT_AGENT],
     },
     message: { type: String, required: true, maxlength: 10000 },
     attachments: { type: [String], required: false, default: [] },

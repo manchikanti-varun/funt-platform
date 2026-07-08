@@ -156,6 +156,8 @@ app.use("/api/quizzes", quizAdminRoutes);
 app.use("/api/student/quizzes", quizStudentRoutes);
 app.use("/api/franchise/admin", franchiseAdminRoutes);
 app.use("/api/franchise", franchiseRoutes);
+import { referralRoutes } from "./routes/referral.routes.js";
+app.use("/api/referral", referralRoutes);
 app.use("/verify", verifyRoutes);
 
 // 404 catch-all — must be after all routes and before error handler

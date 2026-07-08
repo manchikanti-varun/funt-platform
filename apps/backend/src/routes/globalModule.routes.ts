@@ -29,4 +29,15 @@ router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteModule);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateModule);
 router.post("/:id/versions/restore", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), restoreVersion);
 
+// ── Temporary: Export chapter as Word doc (Super Admin only) ──────────────────
+router.get("/:id/export-doc", requireRoles(ROLE.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    const { exportChapterAsDoc } = await import("../services/chapterExport.service.js");
+    const { html, filename } = await exportChapterAsDoc(req.params.id);
+    res.setHeader("Content-Type", "application/msword");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(html);
+  } catch (err) { next(err); }
+});
+
 export const globalModuleRoutes = router;

@@ -26,7 +26,7 @@ import { AppError } from "../utils/AppError.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function generateTicketNumber(): Promise<string> {
+export async function generateTicketNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const key = `ticket_${year}`;
   const counter = await CounterModel.findOneAndUpdate(
