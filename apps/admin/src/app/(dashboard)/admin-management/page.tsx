@@ -13,7 +13,7 @@ type Tab = "requests" | "student" | "trainer" | "supportAgent" | "admin" | "supe
 
 interface RegistrationRequestRow {
   id: string;
-  roleType: "ADMIN" | "SUPER_ADMIN";
+  roleType: "ADMIN" | "SUPER_ADMIN" | "SUPPORT_AGENT";
   name: string;
   email: string;
   mobile: string;
@@ -99,7 +99,7 @@ export default function AdminManagementPage() {
 
   const setMessageAndClear = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
-    setTimeout(() => setMessage(null), 6000);
+    setTimeout(() => setMessage(null), 30000);
   };
 
   const allTabs: { id: Tab; label: string; show?: boolean }[] = [
@@ -244,11 +244,14 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
     );
     setActingId(null);
     if (res.success) {
-      onMessage(
-        "success",
-        res.data?.message ??
-          `Account created. Username: ${res.data?.username ?? ""}. Temporary password: ${res.data?.temporaryPassword ?? ""}.`
-      );
+      const username = res.data?.username ?? "";
+      const tempPwd = res.data?.temporaryPassword ?? "";
+      const msg = res.data?.message ?? `Account created.`;
+      // Show alert with copyable username
+      if (username) {
+        window.alert(`✅ Account Created!\n\nUsername: ${username}${tempPwd ? `\nTemporary Password: ${tempPwd}` : ""}\n\nShare these credentials with the user.`);
+      }
+      onMessage("success", msg);
       load();
     } else {
       onMessage("error", res.message ?? "Failed to approve.");
@@ -360,7 +363,7 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
             <tbody className="divide-y divide-slate-100 bg-white">
               {requests.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80">
-                  <td className="px-4 py-3">{r.roleType === "SUPER_ADMIN" ? "Super Admin" : "Admin"}</td>
+                  <td className="px-4 py-3">{r.roleType === "SUPER_ADMIN" ? "Super Admin" : r.roleType === "SUPPORT_AGENT" ? "Support Agent" : "Admin"}</td>
                   <td className="px-4 py-3 font-medium text-slate-800">{r.name}</td>
                   <td className="px-4 py-3 text-slate-600">{r.email}</td>
                   <td className="px-4 py-3 text-slate-600">{r.mobile}</td>
@@ -609,7 +612,9 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     setLoading(false);
     if (res.success) {
       const u = res.data?.username;
-      onSuccess(u ? `Student created. Username: ${u}` : "Student created.");
+      const msg = u ? `Student created. Username: ${u}` : "Student created.";
+      if (u) window.alert(`✅ Student Created!\n\nUsername: ${u}\n\nShare this with the student.`);
+      onSuccess(msg);
       setUsername(""); setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword(""); setAge("10");
       setAddress(""); setGrade(""); setGradeOther(""); setSchoolName(""); setCity("");
@@ -907,7 +912,9 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     setLoading(false);
     if (res.success) {
       const u = res.data?.username;
-      onSuccess(u ? `Trainer created. Username: ${u}` : "Trainer created.");
+      const msg = u ? `Trainer created. Username: ${u}` : "Trainer created.";
+      if (u) window.alert(`✅ Trainer Created!\n\nUsername: ${u}\n\nShare this with the trainer.`);
+      onSuccess(msg);
       // Reset form after successful creation
       setUsername("");
       setName("");
@@ -1048,7 +1055,9 @@ function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string)
     });
     setLoading(false);
     if (res.success) {
-      onSuccess(`Support agent created. Username: ${res.data?.username ?? username}`);
+      const u = res.data?.username ?? username;
+      window.alert(`✅ Support Agent Created!\n\nUsername: ${u}\n\nThey can log in at support.funt.in`);
+      onSuccess(`Support agent created. Username: ${u}`);
       setUsername(""); setName(""); setEmail(""); setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create support agent.");
   }
@@ -1145,7 +1154,9 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
     setLoading(false);
     if (res.success) {
       const u = res.data?.username;
-      onSuccess(u ? `Admin created. Username: ${u}` : "Admin created.");
+      const msg = u ? `Admin created. Username: ${u}` : "Admin created.";
+      if (u) window.alert(`✅ Admin Created!\n\nUsername: ${u}`);
+      onSuccess(msg);
       setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create admin.");
@@ -1252,7 +1263,9 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
     setLoading(false);
     if (res.success) {
       const u = res.data?.username;
-      onSuccess(u ? `Super Admin created. Username: ${u}` : "Super Admin created.");
+      const msg = u ? `Super Admin created. Username: ${u}` : "Super Admin created.";
+      if (u) window.alert(`✅ Super Admin Created!\n\nUsername: ${u}`);
+      onSuccess(msg);
       setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create super admin.");

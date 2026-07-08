@@ -8,7 +8,7 @@ import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 
-type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN";
+type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT";
 
 type PersonRow = {
   id: string;
@@ -38,6 +38,7 @@ const ROLE_TABS: Array<{ id: PeopleRole; label: string }> = [
   { id: "STUDENT", label: "Students" },
   { id: "ADMIN", label: "Admin" },
   { id: "TRAINER", label: "Trainer" },
+  { id: "SUPPORT_AGENT", label: "Support Agent" },
   { id: "SUPER_ADMIN", label: "Super Admin" },
 ];
 

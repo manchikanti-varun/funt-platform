@@ -132,6 +132,47 @@ router.patch("/enrollments/:id/access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMI
 router.patch("/enrollments/:id/course-access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchEnrollmentCourseAccess);
 router.patch("/users/:userId/username", requireRoles(ROLE.SUPER_ADMIN), patchUserUsername);
 
+// Delete user account (Super Admin only)
+router.delete("/users/:userId", requireRoles(ROLE.SUPER_ADMIN), async (req, res, next) => {
+  try {
+    const { AppError } = await import("../utils/AppError.js");
+    const { UserModel } = await import("../models/User.model.js");
+    const { EnrollmentModel } = await import("../models/Enrollment.model.js");
+    const { createAuditLog } = await import("../services/audit.service.js");
+    const { successRes } = await import("../utils/response.js");
+
+    const targetId = req.params.userId;
+    const performedBy = req.user?.userId;
+    if (!targetId) throw new AppError("userId is required", 400);
+
+    const user = await UserModel.findById(targetId).select("username name roles").exec();
+    if (!user) throw new AppError("User not found", 404);
+
+    // Prevent deleting yourself
+    if (targetId === performedBy) throw new AppError("You cannot delete your own account", 400);
+
+    // Prevent deleting other super admins (safety)
+    if (user.roles.includes(ROLE.SUPER_ADMIN)) {
+      throw new AppError("Cannot delete a Super Admin account. Demote first.", 400);
+    }
+
+    // Delete associated enrollments
+    await EnrollmentModel.deleteMany({ studentId: targetId }).exec();
+
+    // Delete the user
+    await UserModel.deleteOne({ _id: targetId }).exec();
+
+    await createAuditLog("USER_CREATED" as Parameters<typeof createAuditLog>[0], performedBy ?? "unknown", "User", targetId, {
+      action: "DELETED",
+      deletedUsername: user.username,
+      deletedName: user.name,
+      deletedRoles: user.roles,
+    }).catch(() => {});
+
+    successRes(res, { deletedUserId: targetId, username: user.username }, "User account deleted");
+  } catch (err) { next(err); }
+});
+
 router.get("/staff-picker", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getStaffPickersList);
 
 router.get("/shop/products", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listShopProductsAdmin);

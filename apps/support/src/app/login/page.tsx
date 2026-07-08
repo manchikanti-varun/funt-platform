@@ -25,7 +25,12 @@ export default function SupportLoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username: username.trim(), password, portal: "admin" }),
+        body: JSON.stringify({
+          username: username.trim(),
+          email: username.includes("@") && !username.endsWith("@funt") ? username.trim() : undefined,
+          password,
+          portal: "admin",
+        }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) { setError(data.message ?? "Invalid username or password"); setLoading(false); return; }
@@ -60,9 +65,9 @@ export default function SupportLoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-black">Username</label>
+            <label className="mb-1.5 block text-sm font-medium text-black">Username or Email</label>
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required
-              className="input font-mono text-black placeholder:text-black/45" placeholder="Enter your username" autoComplete="username" />
+              className="input font-mono text-black placeholder:text-black/45" placeholder="Username or email" autoComplete="username" />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-black">Password</label>

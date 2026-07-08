@@ -18,7 +18,7 @@ import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { CertificateModel } from "../models/Certificate.model.js";
 import { FranchiseCenterModel } from "../models/FranchiseCenter.model.js";
 
-type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN";
+type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT";
 
 type PersonRow = {
   id: string;
@@ -51,8 +51,8 @@ type PeopleQueryOptions = {
 
 function normalizePeopleRole(value: unknown): PeopleRole {
   const v = String(value ?? "").trim().toUpperCase();
-  if (v === "STUDENT" || v === "ADMIN" || v === "TRAINER" || v === "SUPER_ADMIN") return v;
-  throw new AppError("role is required and must be one of STUDENT, ADMIN, TRAINER, SUPER_ADMIN", 400);
+  if (v === "STUDENT" || v === "ADMIN" || v === "TRAINER" || v === "SUPER_ADMIN" || v === "SUPPORT_AGENT") return v;
+  throw new AppError("role is required and must be one of STUDENT, ADMIN, TRAINER, SUPER_ADMIN, SUPPORT_AGENT", 400);
 }
 
 function toCsv(rows: PersonRow[]): string {

@@ -80,21 +80,52 @@ export async function resolveUserByIdentifier(q: string) {
     )
     .lean()
     .exec();
-  return user
+  if (user) {
+    return {
+      _id: user._id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      mobile: user.mobile,
+      roles: user.roles,
+      status: user.status,
+      grade: user.grade,
+      schoolName: user.schoolName,
+      city: user.city,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      linkedStudentUsernames: user.linkedStudentUsernames,
+    };
+  }
+
+  // Try finding by email or name (case-insensitive)
+  const byEmailOrName = await UserModel.findOne({
+    $or: [
+      { email: { $regex: `^${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
+      { name: { $regex: `^${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
+      { mobile: v },
+    ],
+  })
+    .select(
+      "_id username name email mobile roles status grade schoolName city createdAt updatedAt linkedStudentUsernames"
+    )
+    .lean()
+    .exec();
+  return byEmailOrName
     ? {
-        _id: user._id,
-        username: user.username,
-        name: user.name,
-        email: user.email,
-        mobile: user.mobile,
-        roles: user.roles,
-        status: user.status,
-        grade: user.grade,
-        schoolName: user.schoolName,
-        city: user.city,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        linkedStudentUsernames: user.linkedStudentUsernames,
+        _id: byEmailOrName._id,
+        username: byEmailOrName.username,
+        name: byEmailOrName.name,
+        email: byEmailOrName.email,
+        mobile: byEmailOrName.mobile,
+        roles: byEmailOrName.roles,
+        status: byEmailOrName.status,
+        grade: byEmailOrName.grade,
+        schoolName: byEmailOrName.schoolName,
+        city: byEmailOrName.city,
+        createdAt: byEmailOrName.createdAt,
+        updatedAt: byEmailOrName.updatedAt,
+        linkedStudentUsernames: byEmailOrName.linkedStudentUsernames,
       }
     : null;
 }

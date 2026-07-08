@@ -112,6 +112,22 @@ export default function ProfileSearchPage() {
 
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
+  async function handleDeleteUser(userId: string, name: string, username: string) {
+    const confirmed = window.confirm(`⚠️ PERMANENTLY DELETE "${name}" (@${username})?\n\nThis will remove their account and all enrollments. This cannot be undone.`);
+    if (!confirmed) return;
+    const doubleConfirm = window.confirm(`Are you absolutely sure? Type OK to confirm deletion of ${username}.`);
+    if (!doubleConfirm) return;
+
+    const res = await api(`/api/admin/users/${userId}`, { method: "DELETE" });
+    if (res.success) {
+      setProfile(null);
+      setError("");
+      alert(`Account "${username}" has been deleted.`);
+    } else {
+      alert(res.message ?? "Failed to delete account");
+    }
+  }
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
@@ -142,14 +158,14 @@ export default function ProfileSearchPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Profile search</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Enter a student username (e.g. srikar.ch) to view their full profile: courses, batch access (paid), certificates, and attendance.
-          {isSuperAdmin && " As Super Admin you can search any user: students, admins, trainers, or super admins."}
+          Search by username, name, or email to view their full profile: courses, batch access, certificates, and attendance.
+          {isSuperAdmin && " As Super Admin you can search any user: students, admins, trainers, support agents, or super admins."}
         </p>
       </div>
 
       <form onSubmit={handleSearch} className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <label className="flex-1 min-w-[200px]">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Student username</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700">Username, name, or email</span>
           <input
             type="text"
             value={query}
@@ -202,6 +218,14 @@ export default function ProfileSearchPage() {
               <div className="text-right text-sm text-slate-500">
                 <p>ID: {profile.user.id}</p>
                 {profile.user.createdAt && <p className="mt-1">Joined {formatDate(profile.user.createdAt)}</p>}
+                {isSuperAdmin && !profile.user.roles.includes("SUPER_ADMIN") && (
+                  <button
+                    onClick={() => handleDeleteUser(profile.user.id, profile.user.name, profile.user.username)}
+                    className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition"
+                  >
+                    Delete Account
+                  </button>
+                )}
               </div>
             </div>
             <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
