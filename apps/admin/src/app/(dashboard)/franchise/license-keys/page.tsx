@@ -218,14 +218,14 @@ export default function FranchiseLicenseKeysPage() {
         <h3 className="text-sm font-semibold text-blue-800">Need help or want to purchase keys directly?</h3>
         <p className="mt-1 text-sm text-blue-700">Contact FUNT Robotics for bulk purchases, custom pricing, or questions.</p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <a href="tel:+919XXXXXXXXX" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
+          <a href="tel:+916305930640" className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition">
             📞 Call Us
           </a>
-          <a href="https://wa.me/919XXXXXXXXX?text=Hi%2C%20I%20want%20to%20purchase%20license%20keys" target="_blank" rel="noopener noreferrer"
+          <a href="https://wa.me/916305930640?text=Hi%2C%20I%20want%20to%20purchase%20license%20keys" target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition">
             💬 WhatsApp
           </a>
-          <a href="mailto:support@funtrobotics.in?subject=License%20Key%20Purchase" className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition">
+          <a href="mailto:info@funt.in?subject=License%20Key%20Purchase" className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 transition">
             ✉️ Email
           </a>
         </div>
