@@ -254,7 +254,7 @@ export default function SupportDashboard() {
                   <div className="flex items-center gap-3">
                     <button onClick={() => setShowCanned((v) => !v)} title="Quick replies"
                       className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${showCanned ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "border-slate-200 text-slate-400 hover:text-slate-600"}`}>
-                      ⚡
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     </button>
                     <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                       placeholder="Type your reply..." className="input flex-1" />

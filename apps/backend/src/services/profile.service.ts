@@ -98,12 +98,14 @@ export async function resolveUserByIdentifier(q: string) {
     };
   }
 
-  // Try finding by email or name (case-insensitive)
+  // Try finding by email or name (case-insensitive, partial match)
+  const escaped = v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const byEmailOrName = await UserModel.findOne({
     $or: [
-      { email: { $regex: `^${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
-      { name: { $regex: `^${v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" } },
-      { mobile: v },
+      { email: { $regex: escaped, $options: "i" } },
+      { name: { $regex: escaped, $options: "i" } },
+      { username: { $regex: escaped, $options: "i" } },
+      { mobile: { $regex: escaped } },
     ],
   })
     .select(

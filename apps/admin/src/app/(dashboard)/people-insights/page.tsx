@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ROLE } from "@funt-platform/constants";
-import { CheckCheck, Code2, Download, Eye, ListChecks, RefreshCw, X } from "lucide-react";
+import { CheckCheck, Code2, Download, Eye, ListChecks, RefreshCw, Trash2, X } from "lucide-react";
 import { api, apiUrl } from "@/lib/api";
 import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
@@ -366,6 +366,26 @@ export default function PeopleInsightsPage() {
                       >
                         <Download className="h-4.5 w-4.5" />
                       </a>
+                      {isSuperAdmin && role !== "SUPER_ADMIN" && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm(`⚠️ DELETE "${r.name}" (@${r.username})?\n\nThis cannot be undone.`)) return;
+                            if (!window.confirm(`Are you sure? This will permanently remove this account.`)) return;
+                            const res = await api(`/api/admin/users/${r.id}`, { method: "DELETE" });
+                            if (res.success) {
+                              setRows((prev) => prev.filter((row) => row.id !== r.id));
+                              alert(`Deleted: ${r.username}`);
+                            } else {
+                              alert((res as { message?: string }).message ?? "Failed to delete");
+                            }
+                          }}
+                          title="Delete account"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
