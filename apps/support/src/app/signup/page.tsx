@@ -21,6 +21,10 @@ export default function SupportSignupPage() {
     setError(""); setSuccess("");
     if (!name.trim() || !email.trim() || !mobile.trim() || !password.trim()) { setError("All fields are required"); return; }
     if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (!/[A-Z]/.test(password)) { setError("Password must contain at least one uppercase letter"); return; }
+    if (!/[a-z]/.test(password)) { setError("Password must contain at least one lowercase letter"); return; }
+    if (!/[0-9]/.test(password)) { setError("Password must contain at least one number"); return; }
+    if (!/[^A-Za-z0-9]/.test(password)) { setError("Password must contain at least one special character"); return; }
     if (password !== confirmPassword) { setError("Passwords do not match"); return; }
 
     setLoading(true);
@@ -88,7 +92,7 @@ export default function SupportSignupPage() {
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-black">Password *</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Min 8 characters" />
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="input" placeholder="Min 8 chars, upper+lower+number+special" />
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-black">Confirm Password *</label>

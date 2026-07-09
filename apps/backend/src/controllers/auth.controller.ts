@@ -299,7 +299,7 @@ export const logout = asyncHandler(async (req: Request, res: Response): Promise<
 });
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { username, password, portal } = req.body as { username?: string; password: string; portal?: string };
+  const { username, email, password, portal } = req.body as { username?: string; email?: string; password: string; portal?: string };
   const ident = (username ?? "").trim();
   if (!password || !ident) {
     throw new AppError("Username and password are required", 400);
@@ -311,7 +311,7 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   const cookiePortal: AuthPortal = portalLower === "lms" ? "lms" : "admin";
   const { expiresIn, maxAgeMs } = authExpiryForPortal(cookiePortal);
   const result = await loginService(
-    { username: ident, password },
+    { username: ident, email: email?.trim(), password },
     jwtSecret,
     expiresIn,
     { userAgent, ip }

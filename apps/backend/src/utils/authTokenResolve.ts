@@ -35,10 +35,12 @@ export function portalFromRequestOrigin(req: Pick<Request, "headers">): AuthPort
     }
   }
   if (!origin) return null;
-  const { frontendAdminUrl, frontendLmsUrl } = getEnv();
+  const { frontendAdminUrl, frontendLmsUrl, frontendSupportUrl } = getEnv();
   const adminOrigins = normalizeAlternateOrigins(frontendAdminUrl);
+  const supportOrigins = normalizeAlternateOrigins(frontendSupportUrl);
   const lmsOrigins = normalizeAlternateOrigins(frontendLmsUrl);
   if (adminOrigins.includes(origin)) return "admin";
+  if (supportOrigins.includes(origin)) return "admin";
   if (lmsOrigins.includes(origin)) return "lms";
   return null;
 }

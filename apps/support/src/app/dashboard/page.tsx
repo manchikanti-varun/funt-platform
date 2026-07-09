@@ -67,11 +67,8 @@ export default function SupportDashboard() {
 
   const connectSocket = useCallback(() => {
     if (socketRef.current?.connected) return;
-    const token = document.cookie.split(";").map((c) => c.trim())
-      .find((c) => c.startsWith("funt_auth_admin="))?.split("=").slice(1).join("=");
-    if (!token) { router.push("/login"); return; }
 
-    const socket = io(apiUrl, { path: "/socket.io", transports: ["websocket", "polling"], auth: { token }, withCredentials: true });
+    const socket = io(apiUrl, { path: "/socket.io", transports: ["websocket", "polling"], withCredentials: true });
     socket.on("connect", () => {});
     socket.on("connect_error", () => router.push("/login"));
     socket.on("disconnect", () => setIsOnline(false));

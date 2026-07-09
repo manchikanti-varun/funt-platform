@@ -405,6 +405,11 @@ async function findUserForPasswordLogin(input: LoginInput) {
       .select("+passwordHash +loginAttempts +lockedUntil +loginHistory")
       .exec();
     if (user) return user;
+    // If the "username" looks like an email and no exact username match, try email lookup
+    if (raw.includes("@") && !input.email) {
+      const byEmail = await findUserByEmailOrMobile(raw.toLowerCase(), undefined);
+      if (byEmail) return byEmail;
+    }
   }
   if (input.email || input.mobile) {
     return findUserByEmailOrMobile(input.email, input.mobile);

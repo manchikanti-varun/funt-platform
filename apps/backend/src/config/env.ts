@@ -97,6 +97,7 @@ export function getEnv() {
   const jwtExpiresInLms = process.env.JWT_EXPIRES_IN_LMS ?? "12h";
   const frontendAdminUrlDefault = isProduction ? "https://admin.funt.in" : "http://localhost:3000";
   const frontendLmsUrlDefault = isProduction ? "https://learn.funt.in" : "http://localhost:3001";
+  const frontendSupportUrlDefault = isProduction ? "https://support.funt.in" : "http://localhost:3002";
   return {
     port: Number(process.env.PORT ?? optional.PORT),
     mongoUri: process.env.MONGO_URI!,
@@ -111,6 +112,7 @@ export function getEnv() {
     backendPublicUrl: process.env.BACKEND_PUBLIC_URL ?? "",
     frontendAdminUrl: process.env.FRONTEND_ADMIN_URL ?? frontendAdminUrlDefault,
     frontendLmsUrl: process.env.FRONTEND_LMS_URL ?? frontendLmsUrlDefault,
+    frontendSupportUrl: process.env.FRONTEND_SUPPORT_URL ?? frontendSupportUrlDefault,
     nodeEnv,
     isProduction,
     corsOrigins,
