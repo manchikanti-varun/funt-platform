@@ -11,6 +11,7 @@ import { csrfProtection, setCsrfCookie, CSRF_COOKIE_NAME } from "./middleware/cs
 import { authRateLimiter, apiRateLimiter } from "./middleware/rateLimit.middleware.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { authRoutes } from "./routes/auth.routes.js";
+import { checkUsernameAvailability } from "./controllers/auth.controller.js";
 import { userRoutes } from "./routes/user.routes.js";
 import { adminRoutes } from "./routes/admin.routes.js";
 import { studentRoutes } from "./routes/student.routes.js";
@@ -108,6 +109,9 @@ app.get("/api/csrf-token", (req, res) => {
 });
 
 app.options("/api/auth", (_, res) => res.sendStatus(204));
+// Username availability is a read-only GET used on every keystroke during signup.
+// It must NOT consume the stricter authRateLimiter budget — route it separately first.
+app.get("/api/auth/username-availability", apiRateLimiter, checkUsernameAvailability);
 app.use("/api/auth", authRateLimiter, authRoutes);
 app.use(apiRateLimiter);
 

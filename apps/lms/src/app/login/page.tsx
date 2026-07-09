@@ -13,7 +13,7 @@ import { SUPPORT_EMAIL, supportWhatsAppHref } from "@/lib/support";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = safeRedirectPath(searchParams.get("from"), "/dashboard");
+  const from = safeRedirectPath(searchParams.get("from"), "/courses");
   const tokenFromQuery = searchParams.get("token");
   const errorFromQuery = searchParams.get("error");
   const [username, setUsername] = useState("");

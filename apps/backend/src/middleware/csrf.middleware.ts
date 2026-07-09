@@ -50,6 +50,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const EXEMPT_PATH_PREFIXES = [
   "/api/auth/login",
   "/api/auth/signup",
+  "/api/auth/support-signup",
   "/api/auth/session",
   "/api/auth/parent-login",
   "/api/auth/parent-linked-students",

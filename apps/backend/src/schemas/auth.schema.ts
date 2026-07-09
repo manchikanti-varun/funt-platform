@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required").max(100),
+  email: z.string().email().max(200).optional(),
   password: z.string().min(1, "Password is required").max(200),
   portal: z.enum(["admin", "lms"]).optional(),
 });

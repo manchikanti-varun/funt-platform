@@ -46,7 +46,7 @@ function AuthCallbackContent() {
         return;
       }
       markClientLoggedIn();
-      window.location.replace("/dashboard");
+      window.location.replace("/courses");
     })();
     return () => {
       cancelled = true;
