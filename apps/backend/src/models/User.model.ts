@@ -56,6 +56,10 @@ const userSchema = new Schema(
     passwordChangedAt: { type: Date, required: false },
     /** Franchise center this user belongs to (for franchise-scoped trainers) */
     franchiseId: { type: String, required: false, index: true },
+    /** The batch this student is assigned to (set during signup or first enrollment) */
+    assignedBatchId: { type: String, required: false, index: true },
+    /** Number of times the student has been asked for a batch ID (max 2: signup + first enrollment) */
+    batchAssignmentCount: { type: Number, required: false, default: 0 },
   },
   { timestamps: true }
 );

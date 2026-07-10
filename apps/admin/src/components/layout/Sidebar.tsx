@@ -168,6 +168,11 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/payment-promises" isActive={pathname.startsWith("/payment-promises")}>
               Payment promises
             </SidebarNavLink>
+            {isSuperAdmin && (
+              <SidebarNavLink href="/letters" isActive={pathname.startsWith("/letters")}>
+                Letters
+              </SidebarNavLink>
+            )}
           </>
         )}
         {(isAdmin || (isTrainer && !isAdmin)) && (

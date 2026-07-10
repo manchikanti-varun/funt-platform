@@ -399,6 +399,12 @@ export const signupStudent = asyncHandler(async (req: Request, res: Response): P
       city: body.city?.trim() || undefined,
     });
     await ensureDemoEnrollmentsForStudent(result.id);
+    // Batch Assignment Engine: assign student to batch on signup
+    const { assignBatchOnSignup } = await import("../services/batchAssignment.service.js");
+    const batchIdInput = (body as { batchId?: string }).batchId;
+    await assignBatchOnSignup(result.id, batchIdInput).catch((err) =>
+      console.error("[signup] batch assignment:", err instanceof Error ? err.message : err)
+    );
     await createAuditLog("USER_SIGNUP", result.id, "User", result.id, { username: result.username, method: "password" }).catch(() => {});
     const token = signToken(
       { userId: result.id, username: result.username, roles: [ROLE.STUDENT], tokenVersion: 0 },

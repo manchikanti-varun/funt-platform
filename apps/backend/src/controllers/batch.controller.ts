@@ -2,6 +2,7 @@
 import type { Request, Response } from "express";
 import * as service from "../services/batch.service.js";
 import * as enrollmentService from "../services/enrollment.service.js";
+import { transferStudentBatch, setGlobalOnlineBatch, setNotEnrolledBatch } from "../services/batchAssignment.service.js";
 import { successRes } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
@@ -322,4 +323,38 @@ export const bulkRemoveBatchStudents = asyncHandler(async (req: Request, res: Re
   if (!Array.isArray(identifiers)) throw new AppError("identifiers or studentUsernames must be an array", 400);
   const data = await enrollmentService.bulkRemoveEnrollment(id, identifiers, performedBy);
   successRes(res, data, "Bulk remove completed");
+});
+
+export const transferBatchStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const performedBy = getUserId(req);
+  const { studentId, username, newBatchId } = req.body as { studentId?: string; username?: string; newBatchId?: string };
+  const identifier = (studentId ?? username ?? "").trim();
+  if (!identifier) throw new AppError("studentId or username is required", 400);
+  if (!newBatchId?.trim()) throw new AppError("newBatchId is required", 400);
+
+  // Resolve student ID
+  const { UserModel } = await import("../models/User.model.js");
+  let resolvedStudentId = identifier;
+  if (!/^[a-fA-F0-9]{24}$/.test(identifier)) {
+    const user = await UserModel.findOne({ username: identifier.toLowerCase() }).select("_id").lean().exec();
+    if (!user) throw new AppError("Student not found", 404);
+    resolvedStudentId = String(user._id);
+  }
+
+  const result = await transferStudentBatch(resolvedStudentId, newBatchId.trim(), performedBy);
+  successRes(res, result, "Student transferred");
+});
+
+export const setGlobalOnlineBatchHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (!id) throw new AppError("Batch ID is required", 400);
+  await setGlobalOnlineBatch(id);
+  successRes(res, { batchId: id }, "Batch marked as Global Online Batch");
+});
+
+export const setNotEnrolledBatchHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (!id) throw new AppError("Batch ID is required", 400);
+  await setNotEnrolledBatch(id);
+  successRes(res, { batchId: id }, "Batch marked as Not Enrolled Students batch");
 });

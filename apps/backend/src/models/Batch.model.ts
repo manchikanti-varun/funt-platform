@@ -165,6 +165,10 @@ const batchSchema = new Schema(
     },
     /** When true, every active student is auto-enrolled in this batch (use for free demo courses; set fees to ₹0). */
     autoEnrollAllStudents: { type: Boolean, required: false, default: false },
+    /** Marks this batch as the Global Online Batch (only one can be active at a time). Super Admin only. */
+    isGlobalOnlineBatch: { type: Boolean, required: false, default: false },
+    /** Marks this batch as the "Not Enrolled Students" batch (only one can be active at a time). Super Admin only. */
+    isNotEnrolledBatch: { type: Boolean, required: false, default: false },
     /** Franchise center that owns this batch (null = parent org batch) */
     franchiseId: { type: String, required: false, index: true },
   },

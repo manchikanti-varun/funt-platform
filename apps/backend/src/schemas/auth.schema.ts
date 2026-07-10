@@ -27,6 +27,7 @@ export const studentSignupSchema = z.object({
   gradeOther: z.string().max(100).optional(),
   schoolName: z.string({ message: "School / college name is required" }).min(1, "School / college name is required").max(200),
   city: z.string().max(100).optional(),
+  batchId: z.string().max(20).optional(),
   signupToken: z.string().optional(),
 });
 

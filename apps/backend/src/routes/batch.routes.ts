@@ -21,6 +21,9 @@ import {
   bulkAddBatchStudents,
   bulkRemoveBatchStudents,
   removeBatchStudent,
+  transferBatchStudent,
+  setGlobalOnlineBatchHandler,
+  setNotEnrolledBatchHandler,
 } from "../controllers/batch.controller.js";
 
 const router = Router();
@@ -34,6 +37,9 @@ router.post("/:id/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addBatc
 router.post("/:id/students/bulk", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkAddBatchStudents);
 router.post("/:id/students/bulk-remove", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkRemoveBatchStudents);
 router.delete("/:id/students/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), removeBatchStudent);
+router.post("/:id/students/transfer", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), transferBatchStudent);
+router.post("/:id/set-global-online", requireRoles(ROLE.SUPER_ADMIN), setGlobalOnlineBatchHandler);
+router.post("/:id/set-not-enrolled", requireRoles(ROLE.SUPER_ADMIN), setNotEnrolledBatchHandler);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatch);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), requireBatchOwnership, validateBody(updateBatchSchema), updateBatch);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateBatch);

@@ -22,6 +22,7 @@ import { assignmentRoutes } from "./routes/assignment.routes.js";
 import { attendanceRoutes } from "./routes/attendance.routes.js";
 import { generalAttendanceRoutes } from "./routes/generalAttendance.routes.js";
 import { certificateRoutes } from "./routes/certificate.routes.js";
+import { letterRoutes } from "./routes/letter.routes.js";
 import { globalModuleRoutes } from "./routes/globalModule.routes.js";
 import { globalAssignmentRoutes } from "./routes/globalAssignment.routes.js";
 import { enrollmentRoutes } from "./routes/enrollment.routes.js";
@@ -126,6 +127,7 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/general-attendance", generalAttendanceRoutes);
 app.use("/api/certificates", certificateRoutes);
+app.use("/api/letters", letterRoutes);
 app.use("/api/global-modules", globalModuleRoutes);
 // Legacy alias — prefer /api/global-modules. Will be removed in a future version.
 app.use("/api/global-chapters", (_req, res, next) => {

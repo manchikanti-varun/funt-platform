@@ -32,6 +32,9 @@ export default function BatchStudentAccessPage() {
   const [courseSnapshots, setCourseSnapshots] = useState<BatchCourseSnapshot[]>([]);
   const [students, setStudents] = useState<BatchStudent[]>([]);
   const [username, setUsername] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [transferUsername, setTransferUsername] = useState("");
+  const [transferBatchId, setTransferBatchId] = useState("");
   const [bulkText, setBulkText] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -112,6 +115,33 @@ export default function BatchStudentAccessPage() {
       await reloadStudents();
     } else setError(res.message ?? "Failed to add.");
   }
+
+  async function transferStudent() {
+    if (!transferUsername.trim() || !transferBatchId.trim()) {
+      setError("Both student username and target Batch ID are required for transfer.");
+      return;
+    }
+    setActionLoading(true);
+    setError("");
+    const res = await api(`/api/batches/${id}/students/transfer`, {
+      method: "POST",
+      body: JSON.stringify({ username: transferUsername.trim(), newBatchId: transferBatchId.trim() }),
+    });
+    setActionLoading(false);
+    if (res.success) {
+      setTransferUsername("");
+      setTransferBatchId("");
+      setError("Student transferred successfully.");
+      await reloadStudents();
+    } else setError(res.message ?? "Transfer failed.");
+  }
+
+  const filteredStudents = searchFilter.trim()
+    ? students.filter((s) =>
+        s.username.toLowerCase().includes(searchFilter.trim().toLowerCase()) ||
+        s.name.toLowerCase().includes(searchFilter.trim().toLowerCase())
+      )
+    : students;
 
   async function bulkAdd() {
     const identifiers = parseBulkIdentifiers(bulkText);
@@ -270,6 +300,42 @@ export default function BatchStudentAccessPage() {
               Add
             </button>
           </div>
+
+          {/* Transfer Student */}
+          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-semibold text-slate-800">Transfer Student</p>
+            <p className="mt-1 text-xs text-slate-500">Move a student from this batch to another batch (Admin/Super Admin only).</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={transferUsername}
+                onChange={(e) => setTransferUsername(e.target.value)}
+                placeholder="Student username"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <input
+                type="text"
+                value={transferBatchId}
+                onChange={(e) => setTransferBatchId(e.target.value)}
+                placeholder="Target Batch ID (e.g. BT-000011)"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+              <button type="button" onClick={transferStudent} disabled={actionLoading} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+                Transfer
+              </button>
+            </div>
+          </div>
+
+          {/* Search Filter */}
+          <div className="mt-4">
+            <input
+              type="text"
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Search by username or name..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:max-w-sm"
+            />
+          </div>
           <div className="mt-3">
             <textarea
               value={bulkText}
@@ -321,7 +387,7 @@ export default function BatchStudentAccessPage() {
           )}
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100">
             <ul className="divide-y divide-slate-100">
-              {students.map((s) => (
+              {filteredStudents.map((s) => (
                 <li key={s.studentId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -385,8 +451,10 @@ export default function BatchStudentAccessPage() {
                 </li>
               ))}
             </ul>
-            {students.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-slate-500">No students added yet. Add by username or bulk above.</p>
+            {filteredStudents.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-slate-500">
+                {searchFilter.trim() ? "No students match your search." : "No students added yet. Add by username or bulk above."}
+              </p>
             )}
           </div>
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}

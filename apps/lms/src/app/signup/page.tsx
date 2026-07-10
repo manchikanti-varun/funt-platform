@@ -82,6 +82,7 @@ function SignupForm() {
   const [gradeOther, setGradeOther] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [city, setCity] = useState("");
+  const [batchId, setBatchId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -274,6 +275,7 @@ function SignupForm() {
           gradeOther: grade === "other" ? gradeOther.trim() : undefined,
           schoolName: schoolName.trim(),
           city: city.trim() || undefined,
+          batchId: batchId.trim() || undefined,
           ...(skipPassword ? {} : { password }),
         }),
       });
@@ -509,6 +511,17 @@ function SignupForm() {
                 className="input w-full text-black placeholder:text-black/45"
                 placeholder="Enter your city"
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-sm font-medium text-black">Batch ID (Optional)</label>
+              <input
+                type="text"
+                value={batchId}
+                onChange={(e) => setBatchId(e.target.value.toUpperCase())}
+                className="input w-full font-mono text-black placeholder:text-black/45"
+                placeholder="e.g. BT-000001"
+              />
+              <p className="mt-1 text-xs text-black/50">If you have a Batch ID from your trainer or franchise, enter it here. Otherwise leave blank.</p>
             </div>
               </div>
             </div>

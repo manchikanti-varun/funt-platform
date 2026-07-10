@@ -32,9 +32,9 @@ export async function generateCertificateId(): Promise<string> {
 }
 
 export async function generateBatchId(): Promise<string> {
-  const key = `batch_${YY()}`;
+  const key = "batch_global";
   const seq = await nextSeq(key);
-  return `${BATCH_ID_PREFIX}-${YY()}-${PAD(seq, 5)}`;
+  return `${BATCH_ID_PREFIX}-${PAD(seq, 6)}`;
 }
 
 export async function generateCourseId(): Promise<string> {
@@ -97,4 +97,12 @@ export async function generateQuizAttemptId(): Promise<string> {
   const key = `quiz_attempt_${YY()}`;
   const seq = await nextSeq(key);
   return `${QUIZ_ATTEMPT_ID_PREFIX}-${YY()}-${PAD(seq, 8)}`;
+}
+
+export const LETTER_ID_PREFIX = "LTR";
+
+export async function generateLetterId(): Promise<string> {
+  const key = "letter_global";
+  const seq = await nextSeq(key);
+  return `${LETTER_ID_PREFIX}-${PAD(seq, 6)}`;
 }

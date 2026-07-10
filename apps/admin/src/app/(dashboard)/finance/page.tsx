@@ -34,19 +34,32 @@ export default function FinanceDashboardPage() {
   const [error, setError] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterYear, setFilterYear] = useState("");
   const [batchId, setBatchId] = useState("");
   const [courseId, setCourseId] = useState("");
   const [couponCode, setCouponCode] = useState("");
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
-    if (fromDate) p.set("fromDate", fromDate);
-    if (toDate) p.set("toDate", toDate);
+    if (filterMonth && filterYear) {
+      // Month/year convenience filter overrides date range
+      const m = parseInt(filterMonth, 10);
+      const y = parseInt(filterYear, 10);
+      const start = `${y}-${String(m).padStart(2, "0")}-01`;
+      const lastDay = new Date(y, m, 0).getDate();
+      const end = `${y}-${String(m).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      p.set("fromDate", start);
+      p.set("toDate", end);
+    } else {
+      if (fromDate) p.set("fromDate", fromDate);
+      if (toDate) p.set("toDate", toDate);
+    }
     if (batchId.trim()) p.set("batchId", batchId.trim());
     if (courseId.trim()) p.set("courseId", courseId.trim());
     if (couponCode.trim()) p.set("couponCode", couponCode.trim().toUpperCase());
     return p.toString();
-  }, [fromDate, toDate, batchId, courseId, couponCode]);
+  }, [fromDate, toDate, filterMonth, filterYear, batchId, courseId, couponCode]);
 
   useEffect(() => {
     setLoading(true);
@@ -84,13 +97,30 @@ export default function FinanceDashboardPage() {
       </div>
 
       <PageSection>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input text-sm" />
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input text-sm" />
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="input text-sm">
+            <option value="">Month</option>
+            {["January","February","March","April","May","June","July","August","September","October","November","December"].map((m, i) => (
+              <option key={i + 1} value={String(i + 1)}>{m}</option>
+            ))}
+          </select>
+          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="input text-sm">
+            <option value="">Year</option>
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+              <option key={y} value={String(y)}>{y}</option>
+            ))}
+          </select>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="input text-sm" placeholder="Start date" />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="input text-sm" placeholder="End date" />
           <input value={batchId} onChange={(e) => setBatchId(e.target.value)} placeholder="Filter by batchId" className="input text-sm" />
           <input value={courseId} onChange={(e) => setCourseId(e.target.value)} placeholder="Filter by courseId" className="input text-sm" />
           <input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="Filter by coupon code" className="input text-sm" />
         </div>
+        {filterMonth && filterYear && (
+          <p className="mt-2 text-xs text-slate-500">
+            Showing data for {["","January","February","March","April","May","June","July","August","September","October","November","December"][parseInt(filterMonth, 10)]} {filterYear}
+          </p>
+        )}
       </PageSection>
 
       {loading ? (
