@@ -1,22 +1,26 @@
 import type { Response } from "express";
 import { getEnv } from "../config/env.js";
 
-export type AuthPortal = "admin" | "lms";
+export type AuthPortal = "admin" | "lms" | "support";
 
 /** @deprecated Single cookie before admin/Learn split — cleared on new logins. */
 export const AUTH_COOKIE_LEGACY = "funt_auth";
 export const AUTH_COOKIE_ADMIN = "funt_auth_admin";
 export const AUTH_COOKIE_LMS = "funt_auth_lms";
+export const AUTH_COOKIE_SUPPORT = "funt_auth_support";
 export const IDLE_COOKIE_ADMIN = "funt_idle_admin";
 export const IDLE_COOKIE_LMS = "funt_idle_lms";
-/** Short-lived LMS parent “view as child” session after mobile+student verification. */
+export const IDLE_COOKIE_SUPPORT = "funt_idle_support";
+/** Short-lived LMS parent "view as child" session after mobile+student verification. */
 export const PARENT_DELEGATE_COOKIE = "funt_parent_delegate";
 
 function cookieNameForPortal(portal: AuthPortal): string {
+  if (portal === "support") return AUTH_COOKIE_SUPPORT;
   return portal === "admin" ? AUTH_COOKIE_ADMIN : AUTH_COOKIE_LMS;
 }
 
 function idleCookieNameForPortal(portal: AuthPortal): string {
+  if (portal === "support") return IDLE_COOKIE_SUPPORT;
   return portal === "admin" ? IDLE_COOKIE_ADMIN : IDLE_COOKIE_LMS;
 }
 
@@ -24,8 +28,6 @@ export function setAuthCookie(res: Response, token: string, maxAgeMs: number, po
   const { isProduction, corsOrigins } = getEnv();
   const name = cookieNameForPortal(portal);
 
-  // In production, set domain to the shared parent domain (e.g. ".funt.in")
-  // so that cookies set by api.funt.in are sent to learn.funt.in / admin.funt.in.
   let domain: string | undefined;
   if (isProduction && corsOrigins.length > 0) {
     try {
@@ -91,6 +93,7 @@ export function clearLegacyAuthCookie(res: Response): void {
 export function clearAllAuthCookies(res: Response): void {
   clearAuthCookie(res, "admin");
   clearAuthCookie(res, "lms");
+  clearAuthCookie(res, "support");
   clearLegacyAuthCookie(res);
   clearParentDelegateCookie(res);
 }

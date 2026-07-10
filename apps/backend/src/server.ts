@@ -40,6 +40,12 @@ async function start(): Promise<void> {
     // Start the weekly git backup scheduler (if configured)
     const { startBackupScheduler } = await import("./services/gitBackup.service.js");
     startBackupScheduler();
+    // Auto-expire overdue offer letters (check every hour)
+    const { expireOverdueLetters } = await import("./services/letter.service.js");
+    expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch(() => {});
+    setInterval(() => {
+      expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch(() => {});
+    }, 60 * 60 * 1000); // every hour
   } catch (err) {
     server.close();
     throw err;

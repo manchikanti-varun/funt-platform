@@ -9,8 +9,10 @@ import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import {
   AUTH_COOKIE_ADMIN,
   AUTH_COOKIE_LMS,
+  AUTH_COOKIE_SUPPORT,
   IDLE_COOKIE_ADMIN,
   IDLE_COOKIE_LMS,
+  IDLE_COOKIE_SUPPORT,
   clearAllAuthCookies,
   clearAuthCookie,
   setIdleCookie,
@@ -78,10 +80,10 @@ export async function authMiddleware(
     const cookieBag = (req.cookies ?? {}) as Record<string, string | undefined>;
     const hintedPortal = portalFromRequestOrigin(req);
     const portal: AuthPortal = hintedPortal ?? inferPortalFromRoles(payload.roles);
-    const authCookieName = portal === "admin" ? AUTH_COOKIE_ADMIN : AUTH_COOKIE_LMS;
-    const idleCookieName = portal === "admin" ? IDLE_COOKIE_ADMIN : IDLE_COOKIE_LMS;
-    const idleTimeoutMs = (portal === "admin" ? idleTimeoutMinutesAdmin : idleTimeoutMinutesLms) * 60 * 1000;
-    const absoluteMaxAgeMs = jwtExpiresInToMs(portal === "admin" ? jwtExpiresInAdmin : jwtExpiresInLms);
+    const authCookieName = portal === "support" ? AUTH_COOKIE_SUPPORT : portal === "admin" ? AUTH_COOKIE_ADMIN : AUTH_COOKIE_LMS;
+    const idleCookieName = portal === "support" ? IDLE_COOKIE_SUPPORT : portal === "admin" ? IDLE_COOKIE_ADMIN : IDLE_COOKIE_LMS;
+    const idleTimeoutMs = (portal === "lms" ? idleTimeoutMinutesLms : idleTimeoutMinutesAdmin) * 60 * 1000;
+    const absoluteMaxAgeMs = jwtExpiresInToMs(portal === "lms" ? jwtExpiresInLms : jwtExpiresInAdmin);
     const hasPortalCookie = Boolean(cookieBag[authCookieName]);
     if (hasPortalCookie) {
       const lastSeen = Number(cookieBag[idleCookieName] ?? 0);

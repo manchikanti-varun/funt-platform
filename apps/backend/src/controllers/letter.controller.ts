@@ -13,8 +13,8 @@ export const createLetter = asyncHandler(async (req: Request, res: Response): Pr
   const issuedBy = getUserId(req);
   const {
     type, recipientName, recipientEmail, employmentType, department,
-    designation, joiningDate, endDate, stipend, ctc, location, reportingTo,
-    performanceSummary,
+    designation, joiningDate, endDate, duration, stipend, ctc, location, reportingTo,
+    responsibilities, performanceSummary,
   } = req.body ?? {};
 
   if (!type) throw new AppError("type is required", 400);
@@ -33,10 +33,12 @@ export const createLetter = asyncHandler(async (req: Request, res: Response): Pr
     designation,
     joiningDate: new Date(joiningDate),
     endDate: endDate ? new Date(endDate) : undefined,
+    duration,
     stipend,
     ctc,
     location,
     reportingTo,
+    responsibilities,
     performanceSummary,
     issuedBy,
   });
@@ -67,6 +69,22 @@ export const revokeLetter = asyncHandler(async (req: Request, res: Response): Pr
   if (!reason?.trim()) throw new AppError("reason is required", 400);
   const data = await service.revokeLetter(letterId, revokedBy, reason);
   successRes(res, data, "Letter revoked");
+});
+
+export const acceptLetter = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const acceptedBy = getUserId(req);
+  const letterId = req.params.letterId;
+  if (!letterId) throw new AppError("letterId is required", 400);
+  const data = await service.acceptLetter(letterId, acceptedBy);
+  successRes(res, data, "Letter accepted");
+});
+
+export const withdrawLetter = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const withdrawnBy = getUserId(req);
+  const letterId = req.params.letterId;
+  if (!letterId) throw new AppError("letterId is required", 400);
+  const data = await service.withdrawLetter(letterId, withdrawnBy);
+  successRes(res, data, "Letter withdrawn");
 });
 
 export const downloadLetterPdf = asyncHandler(async (req: Request, res: Response): Promise<void> => {

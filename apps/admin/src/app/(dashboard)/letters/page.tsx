@@ -64,10 +64,12 @@ export default function LettersPage() {
   const [designation, setDesignation] = useState("");
   const [joiningDate, setJoiningDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [duration, setDuration] = useState("3 Months");
   const [stipend, setStipend] = useState("");
   const [ctc, setCtc] = useState("");
   const [location, setLocation] = useState("Remote");
   const [reportingTo, setReportingTo] = useState("");
+  const [responsibilities, setResponsibilities] = useState("");
   const [performanceSummary, setPerformanceSummary] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -114,16 +116,18 @@ export default function LettersPage() {
         designation: designation.trim(),
         joiningDate,
         endDate: endDate || undefined,
+        duration: duration.trim() || undefined,
         stipend: stipend.trim() || undefined,
         ctc: ctc.trim() || undefined,
         location: location.trim() || undefined,
         reportingTo: reportingTo.trim() || undefined,
+        responsibilities: responsibilities.trim() || undefined,
         performanceSummary: performanceSummary.trim() || undefined,
       }),
     });
     setSubmitting(false);
     if (res.success && res.data) {
-      setFormSuccess(`Letter created: ${res.data.letterId}`);
+      setFormSuccess(res.data.letterId);
       resetForm();
       loadLetters();
     } else {
@@ -155,6 +159,17 @@ export default function LettersPage() {
       setRevokeReason("");
       loadLetters();
     }
+  }
+
+  async function handleAccept(id: string) {
+    const res = await api(`/api/letters/${id}/accept`, { method: "PATCH" });
+    if (res.success) loadLetters();
+  }
+
+  async function handleWithdraw(id: string) {
+    if (!confirm("Withdraw this offer? The candidate will no longer be able to accept it.")) return;
+    const res = await api(`/api/letters/${id}/withdraw`, { method: "PATCH" });
+    if (res.success) loadLetters();
   }
 
   return (
@@ -324,12 +339,20 @@ export default function LettersPage() {
               {formType === "OFFER_LETTER" && (
                 <>
                   <div>
+                    <label className="block text-sm font-medium text-slate-700">Duration (for interns)</label>
+                    <input value={duration} onChange={(e) => setDuration(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 3 Months" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">End Date</label>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="input mt-1 text-sm" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700">Stipend</label>
-                    <input value={stipend} onChange={(e) => setStipend(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. ₹10,000/month" />
+                    <input value={stipend} onChange={(e) => setStipend(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,000 (Six Thousand Rupees Only)" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">CTC</label>
-                    <input value={ctc} onChange={(e) => setCtc(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. ₹6,00,000/year" />
+                    <input value={ctc} onChange={(e) => setCtc(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,00,000/year" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Location</label>
@@ -338,6 +361,10 @@ export default function LettersPage() {
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Reporting To</label>
                     <input value={reportingTo} onChange={(e) => setReportingTo(e.target.value)} className="input mt-1 text-sm" placeholder="Manager name" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700">Primary Responsibilities</label>
+                    <input value={responsibilities} onChange={(e) => setResponsibilities(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. Training & Electronics tasks" />
                   </div>
                 </>
               )}
@@ -349,7 +376,30 @@ export default function LettersPage() {
               </div>
             )}
             {formError && <p className="text-sm text-red-600">{formError}</p>}
-            {formSuccess && <p className="text-sm text-emerald-600">{formSuccess}</p>}
+            {formSuccess && (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-sm font-medium text-emerald-800">✓ Letter created: {formSuccess}</p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${formSuccess}/pdf`, { credentials: "include" });
+                      if (!res.ok) return;
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${formSuccess}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { /* ignore */ }
+                  }}
+                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-emerald-500"
+                >
+                  Download PDF
+                </button>
+              </div>
+            )}
             <button type="submit" disabled={submitting} className="btn-primary px-6 py-2 text-sm">
               {submitting ? "Generating..." : "Generate Letter"}
             </button>
@@ -460,7 +510,10 @@ export default function LettersPage() {
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input text-sm">
             <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
+            <option value="PENDING_ACCEPTANCE">Pending</option>
+            <option value="ACCEPTED">Accepted</option>
+            <option value="EXPIRED">Expired</option>
+            <option value="WITHDRAWN">Withdrawn</option>
             <option value="REVOKED">Revoked</option>
           </select>
         </div>
@@ -492,8 +545,14 @@ export default function LettersPage() {
                   <td className="px-4 py-3 text-slate-600">{l.designation}</td>
                   <td className="px-4 py-3 text-slate-600">{l.department}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${l.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-                      {l.status}
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                      l.status === "ACCEPTED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      l.status === "PENDING_ACCEPTANCE" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                      l.status === "EXPIRED" ? "bg-slate-100 text-slate-600 border border-slate-200" :
+                      l.status === "WITHDRAWN" ? "bg-orange-50 text-orange-700 border border-orange-200" :
+                      "bg-red-50 text-red-700 border border-red-200"
+                    }`}>
+                      {l.status === "PENDING_ACCEPTANCE" ? "Pending" : l.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : "—"}</td>
@@ -518,7 +577,17 @@ export default function LettersPage() {
                       >
                         PDF
                       </button>
-                      {l.status === "ACTIVE" && (
+                      {l.status === "PENDING_ACCEPTANCE" && (
+                        <>
+                          <button type="button" onClick={() => handleAccept(l.letterId)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                            Accept
+                          </button>
+                          <button type="button" onClick={() => handleWithdraw(l.letterId)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100">
+                            Withdraw
+                          </button>
+                        </>
+                      )}
+                      {(l.status === "ACCEPTED" || l.status === "ACTIVE") && (
                         <button type="button" onClick={() => setRevokeId(l.letterId)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
                           Revoke
                         </button>

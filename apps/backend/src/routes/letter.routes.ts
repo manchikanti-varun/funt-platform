@@ -7,6 +7,8 @@ import {
   listLetters,
   getLetter,
   revokeLetter,
+  acceptLetter,
+  withdrawLetter,
   downloadLetterPdf,
 } from "../controllers/letter.controller.js";
 
@@ -18,6 +20,8 @@ router.post("/", requireRoles(ROLE.SUPER_ADMIN), createLetter);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listLetters);
 router.get("/:letterId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getLetter);
 router.get("/:letterId/pdf", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadLetterPdf);
+router.patch("/:letterId/accept", requireRoles(ROLE.SUPER_ADMIN), acceptLetter);
+router.patch("/:letterId/withdraw", requireRoles(ROLE.SUPER_ADMIN), withdrawLetter);
 router.patch("/:letterId/revoke", requireRoles(ROLE.SUPER_ADMIN), revokeLetter);
 
 export const letterRoutes = router;

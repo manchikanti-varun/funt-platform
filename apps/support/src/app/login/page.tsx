@@ -29,7 +29,7 @@ export default function SupportLoginPage() {
           username: username.trim(),
           email: username.includes("@") && !username.endsWith("@funt") ? username.trim() : undefined,
           password,
-          portal: "admin",
+          portal: "support",
         }),
       });
       const data = await res.json();

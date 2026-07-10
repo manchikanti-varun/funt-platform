@@ -56,7 +56,7 @@ const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 function authExpiryForPortal(portal: AuthPortal): { expiresIn: string; maxAgeMs: number } {
   const { jwtExpiresInAdmin, jwtExpiresInLms } = getEnv();
-  const expiresIn = portal === "admin" ? jwtExpiresInAdmin : jwtExpiresInLms;
+  const expiresIn = portal === "lms" ? jwtExpiresInLms : jwtExpiresInAdmin;
   return { expiresIn, maxAgeMs: jwtExpiresInToMs(expiresIn) };
 }
 
@@ -252,7 +252,7 @@ export const establishSession = asyncHandler(async (req: Request, res: Response)
   }
   const hint = body.portal?.trim().toLowerCase();
   let portal: AuthPortal;
-  if (hint === "lms" || hint === "admin") {
+  if (hint === "lms" || hint === "admin" || hint === "support") {
     portal = hint;
   } else {
     portal = inferPortalFromRoles(payload.roles);
@@ -308,7 +308,7 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
   const userAgent = req.headers["user-agent"];
   const ip = (req.headers["x-forwarded-for"] as string) ?? req.socket.remoteAddress;
   const portalLower = portal?.trim().toLowerCase();
-  const cookiePortal: AuthPortal = portalLower === "lms" ? "lms" : "admin";
+  const cookiePortal: AuthPortal = portalLower === "lms" ? "lms" : portalLower === "support" ? "support" : "admin";
   const { expiresIn, maxAgeMs } = authExpiryForPortal(cookiePortal);
   const result = await loginService(
     { username: ident, email: email?.trim(), password },
@@ -321,6 +321,12 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     const allowed = roles.includes(ROLE.STUDENT) || roles.includes(ROLE.PARENT);
     if (!allowed) {
       throw new AppError("FUNT Learn is for student and parent accounts only. Use the Admin app for staff.", 403);
+    }
+  } else if (portalLower === "support") {
+    const supportAllowed =
+      roles.includes(ROLE.SUPPORT_AGENT) || roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN);
+    if (!supportAllowed) {
+      throw new AppError("FUNT Support is for support agents and admins only.", 403);
     }
   } else {
     const staffAllowed =

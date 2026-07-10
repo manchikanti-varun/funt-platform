@@ -9,18 +9,18 @@ const PDFDocument = require("pdfkit");
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 
-// Colors
-const PRIMARY = "#0f172a";     // slate-900
-const SECONDARY = "#475569";   // slate-600
-const ACCENT = "#4f46e5";      // indigo-600
-const MUTED = "#94a3b8";       // slate-400
+// Layout
+const PAGE_MARGIN = 55;
+const FONT_BODY = 11;
+const LINE_GAP = 4;
 
 // Company details
-const COMPANY_NAME = "FUNT Robotics Academy";
-const COMPANY_PHONE = "+91 6305930640";
+const COMPANY_NAME = "FUNT ROBOTICS ACADEMY";
+const COMPANY_ADDRESS_LINE1 = "2-20-2/211, 1st Floor, Ganesh Nagar, Uppal,";
+const COMPANY_ADDRESS_LINE2 = "Hyderabad, TS PIN: 500039.";
 const COMPANY_EMAIL = "info@funt.in";
-const COMPANY_ADDRESS = "2-20-2/211, Ganesh Nagar, Sai Nagar, Uppal, Hyderabad, Telangana 500039";
-const COMPANY_WEBSITE = "www.funt.in";
+const COMPANY_WEB = "funt.in";
+const HR_EMAIL = "hr@funt.in";
 
 function resolveLogoPath(): string | null {
   const candidates = [
@@ -39,7 +39,13 @@ function resolveLogoPath(): string | null {
 }
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function formatDateLong(d: Date): string {
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${day}th ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function employmentTypeLabel(type: string): string {
@@ -52,6 +58,25 @@ function employmentTypeLabel(type: string): string {
   }
 }
 
+function departmentLabel(dept: string): string {
+  switch (dept) {
+    case "ENGINEERING": return "Engineering";
+    case "DESIGN": return "Design";
+    case "SUPPORT": return "Support";
+    case "MARKETING": return "Marketing";
+    case "OPERATIONS": return "Operations";
+    case "EDUCATION": return "Education";
+    case "HR": return "Human Resources";
+    case "FINANCE": return "Finance";
+    default: return dept;
+  }
+}
+
+function articleFor(word: string): string {
+  const first = word.trim().toLowerCase().charAt(0);
+  return "aeiou".includes(first) ? "an" : "a";
+}
+
 export interface OfferLetterData {
   letterId: string;
   recipientName: string;
@@ -59,10 +84,13 @@ export interface OfferLetterData {
   department: string;
   employmentType: string;
   joiningDate: Date;
+  endDate?: Date;
+  duration?: string;
   stipend?: string;
   ctc?: string;
   location?: string;
   reportingTo?: string;
+  responsibilities?: string;
   issuedAt: Date;
 }
 
@@ -79,7 +107,7 @@ export interface ExperienceLetterData {
 }
 
 async function generateQrBuffer(url: string): Promise<Buffer> {
-  return QRCode.toBuffer(url, { width: 80, margin: 1, errorCorrectionLevel: "M" });
+  return QRCode.toBuffer(url, { width: 70, margin: 1, errorCorrectionLevel: "M" });
 }
 
 function getVerifyUrl(letterId: string): string {
@@ -90,120 +118,256 @@ function getVerifyUrl(letterId: string): string {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function drawLetterhead(doc: any): void {
   const logoPath = resolveLogoPath();
-  const startY = doc.y;
 
-  // Logo
+  // Logo on the left
   if (logoPath) {
-    doc.image(logoPath, 60, startY, { width: 60 });
+    doc.image(logoPath, PAGE_MARGIN, PAGE_MARGIN, { width: 100 });
   }
 
-  // Company info (to the right of logo)
-  const textX = logoPath ? 130 : 60;
-  doc.fontSize(16).fillColor(PRIMARY).font("Helvetica-Bold")
-    .text(COMPANY_NAME, textX, startY + 2, { width: 350 });
-  doc.fontSize(8).fillColor(SECONDARY).font("Helvetica")
-    .text(`${COMPANY_PHONE}  |  ${COMPANY_EMAIL}  |  ${COMPANY_WEBSITE}`, textX, startY + 22, { width: 380 });
-  doc.fontSize(7.5).fillColor(MUTED).font("Helvetica")
-    .text(COMPANY_ADDRESS, textX, startY + 34, { width: 380 });
+  // Company info on the right (right-aligned)
+  const rightX = 320;
+  doc.fontSize(9).font("Helvetica-Bold").fillColor("#000000")
+    .text(COMPANY_NAME, rightX, PAGE_MARGIN, { width: 200, align: "right" });
+  doc.fontSize(8).font("Helvetica").fillColor("#333333")
+    .text(COMPANY_ADDRESS_LINE1, rightX, doc.y + 2, { width: 200, align: "right" });
+  doc.text(COMPANY_ADDRESS_LINE2, { width: 200, align: "right" });
+  doc.text(`Email: ${COMPANY_EMAIL} | Web: ${COMPANY_WEB}`, { width: 200, align: "right" });
 
-  // Accent line under header
-  const lineY = startY + 52;
-  doc.moveTo(60, lineY).lineTo(doc.page.width - 60, lineY).strokeColor(ACCENT).lineWidth(2).stroke();
-  doc.y = lineY + 20;
+  // Line under header
+  const lineY = PAGE_MARGIN + 70;
+  doc.moveTo(PAGE_MARGIN, lineY).lineTo(doc.page.width - PAGE_MARGIN, lineY)
+    .strokeColor("#000000").lineWidth(1).stroke();
+  doc.y = lineY + 25;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawFooter(doc: any, letterId: string, qrBuffer: Buffer): void {
+function drawFooterQr(doc: any, letterId: string, qrBuffer: Buffer): void {
   const verifyUrl = getVerifyUrl(letterId);
-  const footerY = doc.page.height - 130;
+  const footerY = doc.page.height - 90;
 
-  doc.moveTo(60, footerY).lineTo(doc.page.width - 60, footerY).strokeColor("#e2e8f0").lineWidth(0.5).stroke();
+  doc.moveTo(PAGE_MARGIN, footerY).lineTo(doc.page.width - PAGE_MARGIN, footerY)
+    .strokeColor("#cccccc").lineWidth(0.5).stroke();
 
-  doc.image(qrBuffer, 60, footerY + 8, { width: 55 });
+  doc.image(qrBuffer, PAGE_MARGIN, footerY + 5, { width: 50 });
 
-  const txtX = 125;
-  doc.fontSize(7.5).fillColor(SECONDARY).font("Helvetica")
-    .text(`Verify this letter: ${verifyUrl}`, txtX, footerY + 10, { width: 380 });
-  doc.text(`Letter ID: ${letterId}`, txtX, footerY + 22);
-  doc.fontSize(7).fillColor(MUTED)
-    .text("This document is electronically generated and digitally signed by FUNT Robotics Academy.", txtX, footerY + 38, { width: 380 });
-  doc.text("It does not require a physical signature. Authenticity can be verified by scanning the QR code or visiting the URL above.", txtX, footerY + 49, { width: 380 });
-  doc.text(`© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`, txtX, footerY + 64, { width: 380 });
+  const txtX = PAGE_MARGIN + 58;
+  doc.fontSize(7).fillColor("#666666").font("Helvetica")
+    .text(`Verify: ${verifyUrl}`, txtX, footerY + 8, { width: 380 });
+  doc.text(`Letter ID: ${letterId} | Digitally signed by ${COMPANY_NAME}`, txtX, footerY + 19);
+  doc.text("This is a system-generated document and does not require a physical signature.", txtX, footerY + 30);
 }
 
 export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buffer> {
   const qrBuffer = await generateQrBuffer(getVerifyUrl(data.letterId));
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 60, bufferPages: true });
+    const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    // Letterhead
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+    const empLabel = employmentTypeLabel(data.employmentType);
+    const deptLabel = departmentLabel(data.department);
+
+    // ─── PAGE 1 ─────────────────────────────────────────────────────
+
     drawLetterhead(doc);
 
-    // Title
-    doc.moveDown(0.5);
-    doc.fontSize(16).fillColor(ACCENT).font("Helvetica-Bold")
-      .text("OFFER LETTER", { align: "center" });
-    doc.moveDown(0.3);
-    doc.fontSize(9).fillColor(MUTED).font("Helvetica")
-      .text(`Ref: ${data.letterId}  |  Date: ${formatDate(data.issuedAt)}`, { align: "center" });
+    // Date (right-aligned)
+    doc.fontSize(FONT_BODY).font("Helvetica-Bold").fillColor("#000000")
+      .text(formatDate(data.issuedAt), PAGE_MARGIN, doc.y, { width: contentWidth, align: "right" });
     doc.moveDown(1.5);
 
-    // Body
-    doc.fontSize(11).fillColor(PRIMARY).font("Helvetica");
-    doc.text(`Dear ${data.recipientName},`, { align: "left" });
-    doc.moveDown(0.8);
+    // Greeting
+    doc.font("Helvetica").fontSize(FONT_BODY)
+      .text(`Dear ${data.recipientName}`, PAGE_MARGIN);
+    doc.moveDown(1.2);
 
+    // Paragraph 1: Offer
     doc.text(
-      `We are pleased to offer you the position of "${data.designation}" in the ${data.department} department at ${COMPANY_NAME} as a ${employmentTypeLabel(data.employmentType)}.`,
-      { align: "left", lineGap: 3 }
+      `Congratulations! We are pleased to offer you ${articleFor(empLabel)} ${empLabel === "Intern" ? "Internship" : "position"} at FUNT ROBOTICS (hereinafter referred to as "FRA" or "we") in the position of "`,
+      PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
     );
-    doc.moveDown(0.8);
+    doc.font("Helvetica-Bold").text(data.designation, { continued: true });
+    doc.font("Helvetica").text('"');
+    doc.moveDown(1);
 
-    doc.text("The details of your appointment are as follows:", { align: "left" });
-    doc.moveDown(0.6);
+    // Paragraph 2: Duration
+    if (data.employmentType === "INTERN") {
+      const duration = data.duration || "3 Months";
+      const endDateStr = data.endDate ? formatDateLong(data.endDate) : "";
+      let durationText = `This internship is for a period of ${duration}, beginning on `;
+      doc.text(durationText, PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP });
+      doc.font("Helvetica-Bold").text(formatDateLong(data.joiningDate), { continued: true });
+      if (endDateStr) {
+        doc.font("Helvetica").text(" and ending on ", { continued: true });
+        doc.font("Helvetica-Bold").text(`${endDateStr}.`);
+      } else {
+        doc.font("Helvetica").text(".");
+      }
+    } else {
+      doc.text(`Your employment will commence on `, PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP });
+      doc.font("Helvetica-Bold").text(`${formatDateLong(data.joiningDate)}.`);
+    }
+    doc.moveDown(1);
 
-    // Details
-    const details: Array<[string, string]> = [
-      ["Position", data.designation],
-      ["Department", data.department],
-      ["Employment Type", employmentTypeLabel(data.employmentType)],
-      ["Date of Joining", formatDate(data.joiningDate)],
-      ["Location", data.location || "Remote"],
-    ];
-    if (data.stipend) details.push(["Stipend / Compensation", data.stipend]);
-    if (data.ctc) details.push(["CTC", data.ctc]);
-    if (data.reportingTo) details.push(["Reporting To", data.reportingTo]);
-
-    const tableX = 80;
-    for (const [label, value] of details) {
-      doc.font("Helvetica-Bold").fontSize(10).text(`${label}:`, tableX, doc.y, { continued: true, width: 180 });
-      doc.font("Helvetica").text(`  ${value}`, { width: 300 });
-      doc.moveDown(0.2);
+    // Paragraph 3: Reporting & Responsibilities
+    if (data.reportingTo) {
+      doc.font("Helvetica").text(
+        `As ${articleFor(empLabel)} ${empLabel.toLowerCase()}, you will be reporting to Mr./Ms. `,
+        PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.font("Helvetica-Bold").text(data.reportingTo.toUpperCase(), { continued: true });
+      doc.font("Helvetica").text(`. Your primary responsibilities will include assisting in "`, { continued: true });
+      doc.font("Helvetica-Bold").text(data.responsibilities || `${deptLabel} tasks`, { continued: true });
+      doc.font("Helvetica").text('". Additionally, you will be expected to adhere to the company\'s policies and procedures at all times.');
+      doc.moveDown(1);
     }
 
-    doc.moveDown(1);
-    doc.font("Helvetica").fontSize(11).text(
-      "We are confident that your skills and experience will be a valuable addition to our team. Please confirm your acceptance by signing and returning a copy of this letter.",
-      60, doc.y, { align: "left", lineGap: 3, width: doc.page.width - 120 }
+    // Paragraph 4: Stipend/CTC
+    if (data.stipend) {
+      doc.font("Helvetica").text(
+        `You will receive a stipend of `,
+        PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.font("Helvetica-Bold").text(`INR ${data.stipend}`, { continued: true });
+      doc.font("Helvetica").text(` Per Month.`);
+      doc.text(
+        `please confirm your acceptance in writing via electronic mail to us on or before `,
+        PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
+      );
+      const acceptDate = new Date(data.joiningDate);
+      acceptDate.setDate(acceptDate.getDate() - 14);
+      doc.font("Helvetica-Bold").text(`${formatDate(acceptDate)}.`);
+      doc.moveDown(1);
+    } else if (data.ctc) {
+      doc.font("Helvetica").text(
+        `Your compensation will be `,
+        PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.font("Helvetica-Bold").text(`INR ${data.ctc}`, { continued: true });
+      doc.font("Helvetica").text(` per annum (CTC).`);
+      doc.moveDown(1);
+    }
+
+    // Paragraph 5: Completion note (for interns)
+    if (data.employmentType === "INTERN") {
+      doc.font("Helvetica").text(
+        "Please note that upon successful completion of your internship, you will be eligible for a full-time position or Internship extension with our company, subject to your performance and organizational requirements based on your performance during the internship and the final evaluation process.",
+        PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.moveDown(1);
+    }
+
+    // Closing
+    doc.font("Helvetica").text("We look forward to working with you.", PAGE_MARGIN, doc.y, { width: contentWidth });
+    doc.moveDown(1.5);
+
+    // Acceptance block
+    doc.font("Helvetica").text(
+      `I, `,
+      PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
     );
-    doc.moveDown(0.6);
-    doc.text("We look forward to welcoming you aboard and wish you a rewarding career with us.", { align: "left", lineGap: 3 });
+    doc.font("Helvetica-Bold").text(data.recipientName, { continued: true });
+    doc.font("Helvetica").text(`, accept the above offer and agree to join as a `, { continued: true });
+    doc.text(`${data.designation}`);
+    doc.text(`on ${formatDate(data.joiningDate)}.`, PAGE_MARGIN);
+    doc.moveDown(1.5);
+
+    // Name
+    doc.font("Helvetica").text(`Name: ${data.recipientName}`, PAGE_MARGIN);
+    doc.moveDown(1.2);
+
+    // Signature lines
+    doc.font("Helvetica").text("Signature: ________________________", PAGE_MARGIN, doc.y, { continued: true });
+    doc.text("          Date: ________________________");
     doc.moveDown(2);
 
-    // Signature block
-    doc.font("Helvetica-Bold").fontSize(11).text(`For ${COMPANY_NAME}`, 60);
-    doc.moveDown(2.5);
-    doc.moveTo(60, doc.y).lineTo(200, doc.y).strokeColor(PRIMARY).lineWidth(0.5).stroke();
-    doc.moveDown(0.3);
-    doc.font("Helvetica").fontSize(9).fillColor(SECONDARY).text("Authorized Signatory");
+    // Authority signature
+    doc.font("Helvetica").text("With Regards,", PAGE_MARGIN);
+    doc.font("Helvetica-Bold").text("Human Resources");
+    doc.font("Helvetica-Bold").text("Funt Robotics Academy");
 
-    // Footer
-    drawFooter(doc, data.letterId, qrBuffer);
+    // Footer QR on page 1
+    drawFooterQr(doc, data.letterId, qrBuffer);
+
+    // ─── PAGE 2: Acceptance & Annexure ──────────────────────────────
+
+    doc.addPage();
+    drawLetterhead(doc);
+
+    doc.font("Helvetica").fontSize(FONT_BODY).fillColor("#000000");
+    doc.text(
+      `Kindly sign and return a copy of this letter along with Annexure-1 to ${HR_EMAIL} to confirm your acceptance of this offer within 3 working days. If we do not receive your acceptance within the specified timeline, the offer will be automatically withdrawn without any further action from Funt Robotics Entity.`,
+      PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+    );
+    doc.moveDown(1.5);
+
+    doc.text(
+      "We look forward to having you join our team and contribute to our growth. Best wishes and welcome to the team!",
+      PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+    );
+    doc.moveDown(1);
+
+    doc.text(`Feel free to contact us at ${HR_EMAIL} for any further concerns.`, PAGE_MARGIN, doc.y, { width: contentWidth });
+    doc.moveDown(2.5);
+
+    // Annexure heading
+    doc.font("Helvetica-Bold").fontSize(12).text("Annexure -1", { align: "center" });
+    doc.moveDown(1);
+
+    // Annexure table
+    const tX = PAGE_MARGIN;
+    const tW = contentWidth;
+    const col1W = 40;
+    const col2W = tW - col1W;
+
+    const annexureItems = [
+      "Professional / Educational Certificates (original) and Mark Sheets (original) towards:\n• 10th standard or equivalent examination\n• 12th standard or equivalent examination\n• Graduation\n• Post-graduation / Doctorate\nOther relevant educational or skill certifications",
+      "Colour Scanned Copy of your Photographs and Hard copy of the offer letter (entire copy of offer letter)",
+      "Scanned Copy of an Aadhaar Card, Voter ID, or Driving License.",
+      "PAN Card, Bank Account Details: Bank Name, Your Name as per Bank records, Account Number, IFSC Code.",
+      "Any of the below-mentioned Original Marksheet must be submitted for Employment verification During the Onboarding Process.\n• 10th Standard Original Marksheet\n• 12th Standard Original Marksheet\n• Degree Semester Marksheet / Consolidated Marksheet\n• Diploma Consolidated Marksheet",
+    ];
+
+    // Table header
+    let tableY = doc.y;
+    doc.rect(tX, tableY, col1W, 20).stroke();
+    doc.rect(tX + col1W, tableY, col2W, 20).stroke();
+    doc.font("Helvetica-Bold").fontSize(9)
+      .text("Sl.No", tX + 5, tableY + 5, { width: col1W - 10 })
+      .text("PARTICULARS", tX + col1W + 5, tableY + 5, { width: col2W - 10 });
+    tableY += 20;
+
+    // Table rows
+    doc.font("Helvetica").fontSize(8.5);
+    for (let i = 0; i < annexureItems.length; i++) {
+      const text = annexureItems[i];
+      const textHeight = doc.heightOfString(text, { width: col2W - 10 }) + 10;
+      const rowH = Math.max(textHeight, 20);
+
+      // Check if we need a new page
+      if (tableY + rowH > doc.page.height - 80) {
+        doc.addPage();
+        drawLetterhead(doc);
+        tableY = doc.y;
+      }
+
+      doc.rect(tX, tableY, col1W, rowH).stroke();
+      doc.rect(tX + col1W, tableY, col2W, rowH).stroke();
+
+      doc.font("Helvetica-Bold").fontSize(9)
+        .text(`${i + 1}.`, tX + 5, tableY + 5, { width: col1W - 10 });
+      doc.font("Helvetica").fontSize(8.5)
+        .text(text, tX + col1W + 5, tableY + 5, { width: col2W - 10 });
+
+      tableY += rowH;
+    }
+
+    // Footer QR on last page
+    drawFooterQr(doc, data.letterId, qrBuffer);
 
     doc.end();
   });
@@ -213,87 +377,84 @@ export async function generateExperienceLetterPdf(data: ExperienceLetterData): P
   const qrBuffer = await generateQrBuffer(getVerifyUrl(data.letterId));
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 60, bufferPages: true });
+    const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    // Letterhead
+    const contentWidth = doc.page.width - PAGE_MARGIN * 2;
+    const empLabel = employmentTypeLabel(data.employmentType);
+    const deptLabel = departmentLabel(data.department);
+
     drawLetterhead(doc);
 
-    // Title
-    doc.moveDown(0.5);
-    doc.fontSize(16).fillColor(ACCENT).font("Helvetica-Bold")
-      .text("EXPERIENCE LETTER", { align: "center" });
-    doc.moveDown(0.3);
-    doc.fontSize(9).fillColor(MUTED).font("Helvetica")
-      .text(`Ref: ${data.letterId}  |  Date: ${formatDate(data.issuedAt)}`, { align: "center" });
+    // Date (right-aligned)
+    doc.fontSize(FONT_BODY).font("Helvetica-Bold").fillColor("#000000")
+      .text(formatDate(data.issuedAt), PAGE_MARGIN, doc.y, { width: contentWidth, align: "right" });
     doc.moveDown(1.5);
 
-    // To Whom It May Concern
-    doc.fontSize(12).fillColor(PRIMARY).font("Helvetica-Bold")
-      .text("To Whom It May Concern", { align: "left" });
-    doc.moveDown(1);
+    // Title
+    doc.font("Helvetica-Bold").fontSize(13).text("TO WHOM IT MAY CONCERN", { align: "center" });
+    doc.moveDown(1.5);
 
     // Body
-    doc.fontSize(11).fillColor(PRIMARY).font("Helvetica");
+    doc.font("Helvetica").fontSize(FONT_BODY).fillColor("#000000");
     doc.text(
-      `This is to certify that ${data.recipientName} was associated with ${COMPANY_NAME} as a ${employmentTypeLabel(data.employmentType)} in the ${data.department} department from ${formatDate(data.joiningDate)} to ${formatDate(data.endDate)}.`,
-      { align: "left", lineGap: 3 }
+      `This is to certify that `,
+      PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
     );
-    doc.moveDown(0.8);
-
-    doc.text("The details of employment are as follows:", { align: "left" });
-    doc.moveDown(0.6);
-
-    // Details
-    const details: Array<[string, string]> = [
-      ["Name", data.recipientName],
-      ["Designation", data.designation],
-      ["Department", data.department],
-      ["Employment Type", employmentTypeLabel(data.employmentType)],
-      ["Period of Service", `${formatDate(data.joiningDate)} to ${formatDate(data.endDate)}`],
-    ];
-
-    const tableX = 80;
-    for (const [label, value] of details) {
-      doc.font("Helvetica-Bold").fontSize(10).text(`${label}:`, tableX, doc.y, { continued: true, width: 180 });
-      doc.font("Helvetica").text(`  ${value}`, { width: 300 });
-      doc.moveDown(0.2);
-    }
-
+    doc.font("Helvetica-Bold").text(data.recipientName, { continued: true });
+    doc.font("Helvetica").text(
+      ` was employed with FUNT ROBOTICS ACADEMY (hereinafter referred to as "FRA") as ${articleFor(empLabel)} `,
+      { continued: true }
+    );
+    doc.font("Helvetica-Bold").text(empLabel, { continued: true });
+    doc.font("Helvetica").text(` in the ${deptLabel} department.`);
     doc.moveDown(1);
 
+    // Period
+    doc.text(`Period of employment: `, PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP });
+    doc.font("Helvetica-Bold").text(`${formatDateLong(data.joiningDate)} to ${formatDateLong(data.endDate)}`);
+    doc.moveDown(0.5);
+    doc.font("Helvetica").text(`Designation: `, PAGE_MARGIN, doc.y, { continued: true, width: contentWidth });
+    doc.font("Helvetica-Bold").text(data.designation);
+    doc.moveDown(1);
+
+    // Performance
     if (data.performanceSummary?.trim()) {
-      doc.font("Helvetica-Bold").fontSize(11).text("Performance Summary:", 60);
-      doc.moveDown(0.3);
-      doc.font("Helvetica").fontSize(11).text(data.performanceSummary.trim(), 60, doc.y, {
-        align: "left", lineGap: 3, width: doc.page.width - 120,
-      });
-      doc.moveDown(0.8);
+      doc.font("Helvetica").text(
+        data.performanceSummary.trim(),
+        PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.moveDown(1);
     }
 
-    doc.font("Helvetica").fontSize(11).text(
-      `During the tenure at ${COMPANY_NAME}, ${data.recipientName} demonstrated professionalism, dedication, and a strong work ethic. We appreciate the contributions made and wish all the best for future endeavors.`,
-      60, doc.y, { align: "left", lineGap: 3, width: doc.page.width - 120 }
+    doc.font("Helvetica").text(
+      `During the tenure at FUNT Robotics Academy, ${data.recipientName} demonstrated sincerity, dedication, and a strong work ethic. The conduct and performance were found to be satisfactory.`,
+      PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
     );
-    doc.moveDown(0.6);
+    doc.moveDown(1);
+
     doc.text(
-      "This letter is issued on request and does not constitute any liability on the part of the organization.",
-      { align: "left", lineGap: 3 }
+      "We wish all the best for future endeavors.",
+      PAGE_MARGIN, doc.y, { width: contentWidth }
+    );
+    doc.moveDown(1);
+
+    doc.text(
+      "This letter is issued on request and does not constitute any financial liability on the part of the organization.",
+      PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
     );
     doc.moveDown(2);
 
-    // Signature block
-    doc.font("Helvetica-Bold").fontSize(11).fillColor(PRIMARY).text(`For ${COMPANY_NAME}`, 60);
-    doc.moveDown(2.5);
-    doc.moveTo(60, doc.y).lineTo(200, doc.y).strokeColor(PRIMARY).lineWidth(0.5).stroke();
-    doc.moveDown(0.3);
-    doc.font("Helvetica").fontSize(9).fillColor(SECONDARY).text("Authorized Signatory");
+    // Authority
+    doc.font("Helvetica").text("With Regards,", PAGE_MARGIN);
+    doc.font("Helvetica-Bold").text("Human Resources");
+    doc.font("Helvetica-Bold").text("Funt Robotics Academy");
 
-    // Footer
-    drawFooter(doc, data.letterId, qrBuffer);
+    // Footer QR
+    drawFooterQr(doc, data.letterId, qrBuffer);
 
     doc.end();
   });

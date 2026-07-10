@@ -4,6 +4,7 @@ import {
   AUTH_COOKIE_ADMIN,
   AUTH_COOKIE_LEGACY,
   AUTH_COOKIE_LMS,
+  AUTH_COOKIE_SUPPORT,
   type AuthPortal,
 } from "./authCookie.js";
 import { getEnv } from "../config/env.js";
@@ -40,13 +41,14 @@ export function portalFromRequestOrigin(req: Pick<Request, "headers">): AuthPort
   const supportOrigins = normalizeAlternateOrigins(frontendSupportUrl);
   const lmsOrigins = normalizeAlternateOrigins(frontendLmsUrl);
   if (adminOrigins.includes(origin)) return "admin";
-  if (supportOrigins.includes(origin)) return "admin";
+  if (supportOrigins.includes(origin)) return "support";
   if (lmsOrigins.includes(origin)) return "lms";
   return null;
 }
 
 export function inferPortalFromRoles(roles: ROLE[]): AuthPortal {
   if (roles.includes(ROLE.STUDENT) || roles.includes(ROLE.PARENT)) return "lms";
+  if (roles.includes(ROLE.SUPPORT_AGENT) && !roles.includes(ROLE.ADMIN) && !roles.includes(ROLE.SUPER_ADMIN)) return "support";
   return "admin";
 }
 
@@ -58,15 +60,18 @@ export function resolveAuthToken(req: Request): string | null {
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
   const admin = cookies?.[AUTH_COOKIE_ADMIN];
   const lms = cookies?.[AUTH_COOKIE_LMS];
+  const support = cookies?.[AUTH_COOKIE_SUPPORT];
   const legacy = cookies?.[AUTH_COOKIE_LEGACY];
 
   const portal = portalFromRequestOrigin(req);
   if (portal === "admin") return admin ?? legacy ?? null;
+  if (portal === "support") return support ?? legacy ?? null;
   if (portal === "lms") return lms ?? legacy ?? null;
 
-  if (legacy && !admin && !lms) return legacy;
+  if (legacy && !admin && !lms && !support) return legacy;
   if (admin && !lms) return admin;
+  if (support) return support;
   if (lms && !admin) return lms;
   if (admin && lms) return null;
-  return legacy ?? admin ?? lms ?? null;
+  return legacy ?? admin ?? lms ?? support ?? null;
 }

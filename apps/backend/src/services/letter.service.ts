@@ -14,10 +14,12 @@ export interface CreateLetterInput {
   designation: string;
   joiningDate: Date;
   endDate?: Date;
+  duration?: string;
   stipend?: string;
   ctc?: string;
   location?: string;
   reportingTo?: string;
+  responsibilities?: string;
   performanceSummary?: string;
   issuedBy: string;
 }
@@ -30,6 +32,9 @@ export async function createLetter(input: CreateLetterInput) {
   }
 
   const issuedAt = new Date();
+  const deadlineDays = 3;
+  const acceptanceDeadline = new Date(issuedAt);
+  acceptanceDeadline.setDate(acceptanceDeadline.getDate() + deadlineDays);
 
   // Compute digital signature
   const signablePayload: LetterSignablePayload = {
@@ -55,14 +60,18 @@ export async function createLetter(input: CreateLetterInput) {
     designation: input.designation.trim(),
     joiningDate: input.joiningDate,
     endDate: input.endDate ?? undefined,
+    duration: input.duration?.trim() || undefined,
     stipend: input.stipend?.trim() || undefined,
     ctc: input.ctc?.trim() || undefined,
     location: input.location?.trim() || "Remote",
     reportingTo: input.reportingTo?.trim() || undefined,
+    responsibilities: input.responsibilities?.trim() || undefined,
     performanceSummary: input.performanceSummary?.trim() || undefined,
     issuedBy: input.issuedBy,
     issuedAt,
-    status: LETTER_STATUS.ACTIVE,
+    status: LETTER_STATUS.PENDING_ACCEPTANCE,
+    acceptanceDeadlineDays: deadlineDays,
+    acceptanceDeadline,
     documentHash,
     electronicSignature,
   });
@@ -119,6 +128,54 @@ export async function revokeLetter(letterId: string, revokedBy: string, reason: 
   return { letterId: letter.letterId, status: letter.status };
 }
 
+/** Admin marks a letter as accepted (recipient confirmed) */
+export async function acceptLetter(letterId: string, acceptedBy: string) {
+  const letter = await LetterModel.findOne({ letterId: letterId.trim().toUpperCase() }).exec();
+  if (!letter) throw new AppError("Letter not found", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) {
+    throw new AppError(`Cannot accept — current status is ${letter.status}`, 400);
+  }
+
+  letter.status = LETTER_STATUS.ACCEPTED;
+  (letter as unknown as { acceptedAt: Date }).acceptedAt = new Date();
+  await letter.save();
+
+  await createAuditLog("LETTER_ISSUED", acceptedBy, "Letter", letterId, { action: "accepted" });
+
+  return { letterId: letter.letterId, status: letter.status };
+}
+
+/** Admin manually withdraws an offer before acceptance */
+export async function withdrawLetter(letterId: string, withdrawnBy: string) {
+  const letter = await LetterModel.findOne({ letterId: letterId.trim().toUpperCase() }).exec();
+  if (!letter) throw new AppError("Letter not found", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) {
+    throw new AppError(`Cannot withdraw — current status is ${letter.status}`, 400);
+  }
+
+  letter.status = LETTER_STATUS.WITHDRAWN;
+  (letter as unknown as { withdrawnAt: Date }).withdrawnAt = new Date();
+  (letter as unknown as { withdrawnBy: string }).withdrawnBy = withdrawnBy;
+  await letter.save();
+
+  await createAuditLog("LETTER_REVOKED", withdrawnBy, "Letter", letterId, { action: "withdrawn" });
+
+  return { letterId: letter.letterId, status: letter.status };
+}
+
+/** Auto-expire letters that passed their acceptance deadline. Call periodically (e.g. cron/startup). */
+export async function expireOverdueLetters(): Promise<number> {
+  const now = new Date();
+  const result = await LetterModel.updateMany(
+    {
+      status: LETTER_STATUS.PENDING_ACCEPTANCE,
+      acceptanceDeadline: { $lte: now },
+    },
+    { $set: { status: LETTER_STATUS.EXPIRED } }
+  ).exec();
+  return result.modifiedCount;
+}
+
 export async function generateLetterPdf(letterId: string): Promise<Buffer> {
   const letter = await LetterModel.findOne({ letterId: letterId.trim().toUpperCase() }).lean().exec();
   if (!letter) throw new AppError("Letter not found", 404);
@@ -131,10 +188,13 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       department: letter.department,
       employmentType: letter.employmentType,
       joiningDate: new Date(letter.joiningDate),
+      endDate: letter.endDate ? new Date(letter.endDate) : undefined,
+      duration: (letter as { duration?: string }).duration ?? undefined,
       stipend: letter.stipend ?? undefined,
       ctc: letter.ctc ?? undefined,
       location: letter.location ?? undefined,
       reportingTo: letter.reportingTo ?? undefined,
+      responsibilities: (letter as { responsibilities?: string }).responsibilities ?? undefined,
       issuedAt: new Date(letter.issuedAt),
     });
   }
@@ -195,7 +255,7 @@ export async function verifyLetterPublic(letterId: string) {
     endDate: letter.endDate,
     status: letter.status,
     issuedAt: letter.issuedAt,
-    isValid: letter.status === LETTER_STATUS.ACTIVE,
+    isValid: letter.status === LETTER_STATUS.ACCEPTED || letter.status === LETTER_STATUS.ACTIVE || letter.status === LETTER_STATUS.PENDING_ACCEPTANCE,
     signatureValid,
     signedBy: issuer.signedBy,
     issuer: issuer.legalName,

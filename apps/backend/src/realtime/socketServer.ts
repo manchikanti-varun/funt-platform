@@ -105,7 +105,7 @@ function extractCookieToken(cookieHeader: string | undefined): string | null {
   if (!cookieHeader) return null;
   const cookies = cookieHeader.split(";").map((c) => c.trim());
   for (const cookie of cookies) {
-    if (cookie.startsWith("funt_auth_admin=") || cookie.startsWith("funt_auth_lms=")) {
+    if (cookie.startsWith("funt_auth_admin=") || cookie.startsWith("funt_auth_lms=") || cookie.startsWith("funt_auth_support=")) {
       return cookie.split("=").slice(1).join("=");
     }
   }

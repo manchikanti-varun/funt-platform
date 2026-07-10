@@ -6,6 +6,10 @@ export const LETTER_TYPE = {
 } as const;
 
 export const LETTER_STATUS = {
+  PENDING_ACCEPTANCE: "PENDING_ACCEPTANCE",
+  ACCEPTED: "ACCEPTED",
+  EXPIRED: "EXPIRED",
+  WITHDRAWN: "WITHDRAWN",
   ACTIVE: "ACTIVE",
   REVOKED: "REVOKED",
 } as const;
@@ -62,6 +66,9 @@ const letterSchema = new Schema(
 
     // Experience letter fields
     performanceSummary: { type: String, required: false },
+    // Offer letter additional fields
+    duration: { type: String, required: false },
+    responsibilities: { type: String, required: false },
 
     // Metadata
     issuedBy: { type: String, required: true },
@@ -75,6 +82,12 @@ const letterSchema = new Schema(
     revokedAt: { type: Date, required: false },
     revokedBy: { type: String, required: false },
     revokedReason: { type: String, required: false },
+    // Acceptance workflow
+    acceptanceDeadlineDays: { type: Number, required: false, default: 3 },
+    acceptanceDeadline: { type: Date, required: false },
+    acceptedAt: { type: Date, required: false },
+    withdrawnAt: { type: Date, required: false },
+    withdrawnBy: { type: String, required: false },
     // Digital signature
     documentHash: { type: String, required: false },
     electronicSignature: { type: String, required: false },
