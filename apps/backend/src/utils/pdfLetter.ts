@@ -1,20 +1,14 @@
 import { createRequire } from "module";
-import { dirname, join } from "path";
-import { fileURLToPath, pathToFileURL } from "url";
-import { existsSync } from "fs";
-import QRCode from "qrcode";
 import { getEnv } from "../config/env.js";
+import QRCode from "qrcode";
 
 const require = createRequire(import.meta.url);
 const PDFDocument = require("pdfkit");
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Colors
 const PRIMARY = "#1e293b";     // slate-800
 const SECONDARY = "#475569";   // slate-600
 const ACCENT = "#4f46e5";      // indigo-600
-const LIGHT_BG = "#f8fafc";    // slate-50
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
@@ -74,8 +68,6 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     doc.on("data", (c: Buffer) => chunks.push(c));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
-
-    const pageWidth = doc.page.width - 120;
 
     // Header
     doc.fontSize(22).fillColor(PRIMARY).font("Helvetica-Bold")

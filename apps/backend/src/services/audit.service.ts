@@ -138,7 +138,11 @@ export type AuditAction =
   | "FRANCHISE_CENTER_DELETED"
   | "FRANCHISE_BATCH_CREATED"
   | "FRANCHISE_PAYOUT_CREATED"
-  | "FRANCHISE_TRAINER_CREATED";
+  | "FRANCHISE_TRAINER_CREATED"
+  | "BATCH_TRANSFER"
+  | "LETTER_ISSUED"
+  | "LETTER_REVOKED"
+  | "LETTER_VERIFY_ACCESSED";
 
 export async function createAuditLog(
   action: AuditAction,
