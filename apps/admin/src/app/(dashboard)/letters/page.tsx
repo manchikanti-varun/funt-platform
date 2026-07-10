@@ -499,9 +499,25 @@ export default function LettersPage() {
                   <td className="px-4 py-3 text-xs text-slate-500">{l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <a href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${l.letterId}/pdf`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${l.letterId}/pdf`, { credentials: "include" });
+                            if (!res.ok) return;
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `${l.letterId}.pdf`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          } catch { /* ignore */ }
+                        }}
+                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      >
                         PDF
-                      </a>
+                      </button>
                       {l.status === "ACTIVE" && (
                         <button type="button" onClick={() => setRevokeId(l.letterId)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
                           Revoke
