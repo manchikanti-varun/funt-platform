@@ -21,6 +21,11 @@ export interface RichTextEditorProps {
    *                  Falls back to `url` when omitted.
    */
   uploadVideo?: (file: File, onProgress: (pct: number) => void) => Promise<{ url: string; storageUrl?: string }>;
+  /**
+   * When provided, images inserted via file upload will be uploaded to R2
+   * and the base64 placeholder replaced with the permanent URL.
+   */
+  uploadImage?: (file: File) => Promise<{ url: string; alt?: string }>;
 }
 
 export function RichTextEditor({
@@ -32,6 +37,7 @@ export function RichTextEditor({
   className = "",
   enableSlashCommands = true,
   uploadVideo,
+  uploadImage,
 }: RichTextEditorProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<RichTextEditorApi | null>(null);
@@ -41,6 +47,9 @@ export function RichTextEditor({
   // Keep uploadVideo stable via ref so the editor doesn't need to be recreated
   const uploadVideoRef = useRef(uploadVideo);
   useEffect(() => { uploadVideoRef.current = uploadVideo; }, [uploadVideo]);
+  // Keep uploadImage stable via ref so the editor doesn't need to be recreated
+  const uploadImageRef = useRef(uploadImage);
+  useEffect(() => { uploadImageRef.current = uploadImage; }, [uploadImage]);
 
   useEffect(() => {
     const mount = rootRef.current;
@@ -58,6 +67,12 @@ export function RichTextEditor({
         ? {
             uploadVideo: (file: File, onProgress: (pct: number) => void) =>
               uploadVideoRef.current!(file, onProgress),
+          }
+        : {}),
+      ...(uploadImage !== undefined
+        ? {
+            uploadImage: (file: File) =>
+              uploadImageRef.current!(file),
           }
         : {}),
     });

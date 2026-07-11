@@ -35,6 +35,7 @@ import { profileRoutes } from "./routes/profile.routes.js";
 import { shopRoutes } from "./routes/shop.routes.js";
 import { publicRoutes } from "./routes/public.routes.js";
 import { r2VideoRoutes } from "./routes/r2Video.routes.js";
+import { r2ImageRoutes } from "./routes/r2Image.routes.js";
 import {
   contentProtectionConfigRoutes,
   contentProtectionStudentRoutes,
@@ -78,7 +79,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "10mb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "16mb" }));
 // Sanitize MongoDB operator injection from user inputs (defense-in-depth).
 // Note: we deliberately exclude req.headers — sanitizing headers breaks
 // Express's req.get() and our CSRF X-CSRF-Token header reading.
@@ -145,6 +146,7 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/admin/videos", r2VideoRoutes);
+app.use("/api/admin/images", r2ImageRoutes);
 app.use("/api/config/content-protection", contentProtectionConfigRoutes);
 app.use("/api/student/content-protection", contentProtectionStudentRoutes);
 app.use("/api/leaves", leaveRoutes);

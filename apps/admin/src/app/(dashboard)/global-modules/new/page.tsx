@@ -13,6 +13,7 @@ import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
+import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
 interface AssignmentOption {
   id: string;
@@ -135,6 +136,7 @@ export default function NewGlobalChapterPage() {
             onChange={(v) => update("content", v)}
             minHeight={320}
             uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: tempModuleId.current })}
+            uploadImage={makeUploadImageFn({ courseId: "global", moduleId: tempModuleId.current })}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

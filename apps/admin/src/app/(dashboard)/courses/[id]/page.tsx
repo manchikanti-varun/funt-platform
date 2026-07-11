@@ -11,6 +11,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
+import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
 interface CourseModule {
   originalGlobalModuleId: string;
@@ -599,6 +600,10 @@ export default function EditCoursePage() {
                           onChange={(v) => setModuleEdit((p) => ({ ...p, content: v }))}
                           minHeight={120}
                           uploadVideo={makeUploadVideoFn({
+                            courseId: course.courseId ?? id,
+                            moduleId: sortedModules[editingIndex ?? 0]?.originalGlobalModuleId ?? String(editingIndex ?? 0),
+                          })}
+                          uploadImage={makeUploadImageFn({
                             courseId: course.courseId ?? id,
                             moduleId: sortedModules[editingIndex ?? 0]?.originalGlobalModuleId ?? String(editingIndex ?? 0),
                           })}

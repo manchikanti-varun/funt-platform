@@ -11,6 +11,7 @@ import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/co
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
+import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
 interface VersionSnapshot {
   version: number;
@@ -231,6 +232,7 @@ export default function EditGlobalChapterPage() {
                 onChange={setContent}
                 minHeight={320}
                 uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: id })}
+                uploadImage={makeUploadImageFn({ courseId: "global", moduleId: id })}
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

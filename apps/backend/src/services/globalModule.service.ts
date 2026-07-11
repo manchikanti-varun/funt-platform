@@ -78,12 +78,30 @@ export async function createModule(input: CreateModuleInput) {
     );
   }
 
+  // Guard against excessively large content (e.g. many embedded base64 images).
+  // MongoDB BSON limit is 16MB; we cap at 12MB to leave room for other fields.
+  const contentLength = input.content?.length ?? 0;
+  if (contentLength > 12_000_000) {
+    throw new AppError(
+      "Chapter content is too large. Please use external image URLs instead of pasting large images directly into the editor.",
+      400
+    );
+  }
+
   const moduleId = await generateModuleId();
+  let sanitizedContent: string;
+  try {
+    sanitizedContent = sanitizeRichText(input.content);
+  } catch (err) {
+    console.error("[createModule] sanitizeRichText failed:", err instanceof Error ? err.message : err);
+    throw new AppError("Failed to process chapter content. Try reducing the number or size of embedded images.", 400);
+  }
+
   const doc = await GlobalModuleModel.create({
     moduleId,
     title: input.title.trim(),
     description: input.description.trim(),
-    content: sanitizeRichText(input.content),
+    content: sanitizedContent,
     youtubeUrl: input.youtubeUrl?.trim() || undefined,
     videoUrl: input.videoUrl?.trim() || undefined,
     resourceLinkUrl: input.resourceLinkUrl?.trim() || undefined,
