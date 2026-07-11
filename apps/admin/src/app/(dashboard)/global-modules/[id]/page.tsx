@@ -61,6 +61,7 @@ export default function EditGlobalChapterPage() {
 
   // Upload helper for images
   const uploadImageFn = useRef(makeUploadImageFn({ courseId: "global", moduleId: id }));
+  const uploadVideoFnRef = useRef(makeUploadVideoFn({ courseId: "global", moduleId: id }));
 
   // Tracked upload for the editor's uploadImage prop
   const trackedUploadImage = useRef(async (file: File) => {
@@ -72,40 +73,94 @@ export default function EditGlobalChapterPage() {
     }
   });
 
-  // Auto-detect and re-upload base64 images (pasted from old chapters)
+  // Auto-detect and re-upload base64 images AND videos (pasted from old chapters)
   const reuploadingRef = useRef(new Set<string>());
+  const reuploadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!content) return;
-    const base64Regex = /src="(data:image\/[^"]+)"/g;
-    let match: RegExpExecArray | null;
-    const base64Sources: string[] = [];
-    while ((match = base64Regex.exec(content)) !== null) {
-      const src = match[1];
-      if (!reuploadingRef.current.has(src)) {
-        base64Sources.push(src);
-      }
-    }
-    if (base64Sources.length === 0) return;
+    const hasBase64Image = content.includes("data:image/");
+    const hasBase64Video = content.includes("data:video/");
+    if (!hasBase64Image && !hasBase64Video) return;
 
-    for (const dataUrl of base64Sources) {
-      reuploadingRef.current.add(dataUrl);
-      setUploadsInProgress((n) => n + 1);
+    if (reuploadTimerRef.current) clearTimeout(reuploadTimerRef.current);
+    reuploadTimerRef.current = setTimeout(() => {
+      const toUpload: { dataUrl: string; type: "image" | "video" }[] = [];
+
+      const imgMarker = 'src="data:image/';
+      let searchFrom = 0;
+      while (true) {
+        const start = content.indexOf(imgMarker, searchFrom);
+        if (start === -1) break;
+        const srcStart = start + 5;
+        const srcEnd = content.indexOf('"', srcStart);
+        if (srcEnd === -1) break;
+        const dataUrl = content.slice(srcStart, srcEnd);
+        const key = dataUrl.slice(0, 100);
+        if (!reuploadingRef.current.has(key)) {
+          toUpload.push({ dataUrl, type: "image" });
+          reuploadingRef.current.add(key);
+        }
+        searchFrom = srcEnd + 1;
+      }
+
+      const vidMarker = 'src="data:video/';
+      searchFrom = 0;
+      while (true) {
+        const start = content.indexOf(vidMarker, searchFrom);
+        if (start === -1) break;
+        const srcStart = start + 5;
+        const srcEnd = content.indexOf('"', srcStart);
+        if (srcEnd === -1) break;
+        const dataUrl = content.slice(srcStart, srcEnd);
+        const key = dataUrl.slice(0, 100);
+        if (!reuploadingRef.current.has(key)) {
+          toUpload.push({ dataUrl, type: "video" });
+          reuploadingRef.current.add(key);
+        }
+        searchFrom = srcEnd + 1;
+      }
+
+      if (toUpload.length === 0) return;
+
       (async () => {
-        try {
-          const res = await fetch(dataUrl);
-          const blob = await res.blob();
-          const ext = blob.type.split("/")[1]?.split(";")[0] ?? "png";
-          const file = new File([blob], `pasted-image.${ext}`, { type: blob.type });
-          const uploaded = await uploadImageFn.current(file);
-          setContent((prev) => prev.split(dataUrl).join(uploaded.url));
-        } catch (err) {
-          console.error("Failed to re-upload pasted base64 image:", err);
-        } finally {
-          reuploadingRef.current.delete(dataUrl);
-          setUploadsInProgress((n) => Math.max(0, n - 1));
+        for (const { dataUrl, type } of toUpload) {
+          const key = dataUrl.slice(0, 100);
+          setUploadsInProgress((n) => n + 1);
+          try {
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+
+            let replacementUrl: string;
+            if (type === "image") {
+              const ext = blob.type.split("/")[1]?.split(";")[0] ?? "png";
+              const file = new File([blob], `pasted-image.${ext}`, { type: blob.type });
+              const uploaded = await uploadImageFn.current(file);
+              replacementUrl = uploaded.url;
+            } else {
+              const file = new File([blob], "pasted-video.mp4", { type: blob.type || "video/mp4" });
+              const uploaded = await uploadVideoFnRef.current(file, () => {});
+              replacementUrl = uploaded.storageUrl ?? uploaded.url;
+            }
+
+            setContent((prev) => {
+              const idx = prev.indexOf(dataUrl);
+              if (idx === -1) return prev;
+              return prev.slice(0, idx) + replacementUrl + prev.slice(idx + dataUrl.length);
+            });
+          } catch (err) {
+            console.error(`Failed to re-upload pasted base64 ${type}:`, err);
+          } finally {
+            reuploadingRef.current.delete(key);
+            setUploadsInProgress((n) => Math.max(0, n - 1));
+          }
         }
       })();
-    }
+    }, 500);
+
+    return () => {
+      if (reuploadTimerRef.current) clearTimeout(reuploadTimerRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content]);
 
@@ -139,8 +194,9 @@ export default function EditGlobalChapterPage() {
       setError("Please wait for image uploads to finish before saving.");
       return;
     }
-    if (content.includes("data:image/") && content.length > 500_000) {
-      setError("Some images are still uploading or failed to upload. Wait a moment and try again, or remove large images.");
+    // Block submit if content still contains any base64 images or videos
+    if (content.includes("data:image/") || content.includes("data:video/")) {
+      setError("Images/videos are still being uploaded to storage. Please wait a few seconds and try again.");
       return;
     }
     setLoading(true);
