@@ -16,6 +16,7 @@ import {
   archiveBatch,
   unarchiveBatch,
   deleteBatch,
+  bulkDeleteBatches,
   getBatchStudents,
   addBatchStudent,
   bulkAddBatchStudents,
@@ -32,6 +33,7 @@ router.use(authMiddleware);
 
 router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createBatchSchema), createBatch);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listBatches);
+router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteBatches);
 router.get("/:id/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatchStudents);
 router.post("/:id/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addBatchStudent);
 router.post("/:id/students/bulk", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkAddBatchStudents);

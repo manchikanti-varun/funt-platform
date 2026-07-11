@@ -19,6 +19,7 @@ import {
   unarchiveCourse,
   setLaunchingSoon,
   deleteCourse,
+  bulkDeleteCourses,
 } from "../controllers/course.controller.js";
 
 const router = Router();
@@ -27,6 +28,7 @@ router.use(authMiddleware);
 
 router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createCourseSchema), createCourse);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listCourses);
+router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteCourses);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getCourse);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(updateCourseSchema), updateCourse);
 router.patch("/:id/reorder-chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), reorderChapters);

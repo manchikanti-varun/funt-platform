@@ -916,6 +916,23 @@ export async function verifyPaymentAndEnroll(
           kind: "COURSE",
           assignedLicenseKey: key,
         };
+
+        // ── Batch Assignment Engine: handle first enrollment transfer ──
+        // If this is the student's first course enrollment, transfer them from
+        // "Not Enrolled Students" batch to the appropriate batch.
+        if (enrollmentCreated) {
+          try {
+            const { assignBatchOnFirstEnrollment } = await import("./batchAssignment.service.js");
+            await assignBatchOnFirstEnrollment(doc.studentId, undefined);
+          } catch (batchErr) {
+            console.error(
+              `[verifyPaymentAndEnroll] batch assignment on first enrollment failed for student ${doc.studentId}:`,
+              batchErr instanceof Error ? batchErr.message : batchErr
+            );
+            // Non-critical — enrollment and license key are already created
+          }
+        }
+
         return;
       }
 

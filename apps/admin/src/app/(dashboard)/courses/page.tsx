@@ -29,6 +29,8 @@ export default function CoursesPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("title");
@@ -74,6 +76,37 @@ export default function CoursesPage() {
       return;
     }
     await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive course." });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ok = await dialog.confirm({
+      title: "Bulk delete courses",
+      message: `Permanently delete ${selectedIds.size} selected course(s)?\n\nThis cannot be undone. Courses with active batches will be skipped.`,
+      confirmLabel: `Delete ${selectedIds.size} course(s)`,
+      variant: "danger",
+    });
+    if (!ok) return;
+    setBulkDeleting(true);
+    const res = await api<{ results: { id: string; deleted: boolean; error?: string }[]; deleted: number; failed: number }>(
+      "/api/courses/bulk-delete",
+      { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) }
+    );
+    setBulkDeleting(false);
+    if (res.success && res.data) {
+      const deletedIds = new Set(res.data.results.filter((r) => r.deleted).map((r) => r.id));
+      setList((prev) => prev.filter((c) => !deletedIds.has(c.id)));
+      setSelectedIds(new Set());
+      if (res.data.failed > 0) {
+        const failedItems = res.data.results.filter((r) => !r.deleted);
+        await dialog.alert({
+          title: "Some courses could not be deleted",
+          message: failedItems.map((r) => `${r.id}: ${r.error}`).join("\n"),
+        });
+      }
+    } else {
+      await dialog.alert({ title: "Bulk delete failed", message: res.message ?? "Failed to delete courses." });
+    }
   }
 
   const sortedList = useMemo(() => {
@@ -176,9 +209,41 @@ export default function CoursesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
+            {isSuperAdmin && selectedIds.size > 0 && (
+              <div className="flex items-center gap-3 border-b border-rose-100 bg-rose-50 px-5 py-3">
+                <span className="text-sm font-medium text-rose-800">{selectedIds.size} selected</span>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-50"
+                >
+                  {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size} course(s)`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
+                  {isSuperAdmin && (
+                    <th className="w-10 px-3 py-4">
+                      <input
+                        type="checkbox"
+                        checked={sortedList.length > 0 && selectedIds.size === sortedList.length}
+                        onChange={(e) =>
+                          setSelectedIds(e.target.checked ? new Set(sortedList.map((c) => c.id)) : new Set())
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      />
+                    </th>
+                  )}
                   <SortableTh label="Title" columnKey="title" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Description" columnKey="description" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Chapters" columnKey="modules" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -189,7 +254,24 @@ export default function CoursesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {sortedList.map((c) => (
-                  <tr key={c.id} className="transition hover:bg-slate-50/80">
+                  <tr key={c.id} className={`transition hover:bg-slate-50/80 ${selectedIds.has(c.id) ? "bg-teal-50/40" : ""}`}>
+                    {isSuperAdmin && (
+                      <td className="w-10 px-3 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(c.id)}
+                          onChange={() =>
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(c.id)) next.delete(c.id);
+                              else next.add(c.id);
+                              return next;
+                            })
+                          }
+                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-5 py-4 text-sm font-medium text-slate-800">{c.title}</td>
                     <td className="max-w-xs truncate px-5 py-4 text-sm text-slate-600" title={c.description ? c.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : ""}>
                       {c.description ? c.description.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || "—" : "—"}

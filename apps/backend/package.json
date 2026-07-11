@@ -14,7 +14,8 @@
     "db:reset-dev": "tsx src/scripts/dropDbAndSeedDevLogins.ts",
     "db:reset-users-dev": "tsx src/scripts/dropAllUsersAndSeedDevLogins.ts",
     "regen:test-cert": "tsx src/scripts/regenerateTestCertificate.ts",
-    "seed:knowledge": "tsx src/scripts/seedKnowledgeArticles.ts"
+    "seed:knowledge": "tsx src/scripts/seedKnowledgeArticles.ts",
+    "test:flow": "tsx src/scripts/testChapterCourseBatchEnrollment.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.777.0",

@@ -82,6 +82,29 @@ export const deleteModule = asyncHandler(async (req: Request, res: Response): Pr
   successRes(res, data, "Chapter deleted");
 });
 
+export const bulkDeleteModules = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const performedBy = getUserId(req);
+  const { ids } = req.body ?? {};
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new AppError("ids array is required", 400);
+  }
+  if (ids.length > 50) {
+    throw new AppError("Cannot delete more than 50 chapters at once", 400);
+  }
+  const results: { id: string; deleted: boolean; error?: string }[] = [];
+  for (const id of ids) {
+    try {
+      await service.deleteModule(id, performedBy);
+      results.push({ id, deleted: true });
+    } catch (err) {
+      results.push({ id, deleted: false, error: err instanceof AppError ? err.message : "Failed to delete" });
+    }
+  }
+  const deleted = results.filter((r) => r.deleted).length;
+  const failed = results.filter((r) => !r.deleted).length;
+  successRes(res, { results, deleted, failed }, `Deleted ${deleted} chapter(s), ${failed} failed`);
+});
+
 export const duplicateModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

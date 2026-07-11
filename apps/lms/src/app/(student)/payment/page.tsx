@@ -55,6 +55,10 @@ function PaymentForm() {
   const productName = searchParams.get("productName") ?? "";
   const milestoneId = searchParams.get("milestoneId") ?? "";
 
+  const [enteredBatchId, setEnteredBatchId] = useState("");
+  const [batchIdConfirmed, setBatchIdConfirmed] = useState(!!batchId);
+  const effectiveBatchId = batchId || enteredBatchId.trim();
+
   const [checkout, setCheckout] = useState<CheckoutInfo | null>(null);
   const [checkoutErr, setCheckoutErr] = useState<string | null>(null);
 
@@ -82,10 +86,10 @@ function PaymentForm() {
   const [lastTimelineCheckedAt, setLastTimelineCheckedAt] = useState("");
 
   const loadCheckout = useCallback(() => {
-    if (type !== "course" || !batchId || !courseId) return;
+    if (type !== "course" || !effectiveBatchId || !courseId) return;
     setCheckoutErr(null);
     const qs = new URLSearchParams();
-    qs.set("batchId", batchId);
+    qs.set("batchId", effectiveBatchId);
     if (appliedCoupon.trim()) qs.set("couponCode", appliedCoupon.trim());
     api<CheckoutInfo>(`/api/student/courses/${encodeURIComponent(courseId)}/checkout?${qs.toString()}`)
       .then((r) => {
@@ -94,7 +98,7 @@ function PaymentForm() {
         } else setCheckoutErr(r.message ?? "Could not load checkout");
       })
       .catch(() => setCheckoutErr("Could not load checkout"));
-  }, [type, batchId, courseId, appliedCoupon]);
+  }, [type, effectiveBatchId, courseId, appliedCoupon]);
 
   useEffect(() => {
     loadCheckout();
@@ -125,8 +129,8 @@ function PaymentForm() {
 
   useEffect(() => {
     const qs = new URLSearchParams();
-    if (type === "course" && batchId && courseId) {
-      qs.set("batchId", batchId);
+    if (type === "course" && effectiveBatchId && courseId) {
+      qs.set("batchId", effectiveBatchId);
       qs.set("courseId", courseId);
     }
     if (type === "shop" && productId) qs.set("productId", productId);
@@ -154,7 +158,7 @@ function PaymentForm() {
       }
     };
 
-    if (type === "course" && batchId && courseId) {
+    if (type === "course" && effectiveBatchId && courseId) {
       Promise.all([
         api<{
           coursePending: boolean;
@@ -165,10 +169,10 @@ function PaymentForm() {
           shopRejectReason?: string;
         }>(`/api/student/payments/pending?${qs.toString()}`),
         api<{ accessBlocked?: boolean }>(
-          `/api/student/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(batchId)}`
+          `/api/student/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`
         ),
         api<PaymentTimeline>(
-          `/api/student/payments/timeline?kind=COURSE&batchId=${encodeURIComponent(batchId)}&courseId=${encodeURIComponent(courseId)}`
+          `/api/student/payments/timeline?kind=COURSE&batchId=${encodeURIComponent(effectiveBatchId)}&courseId=${encodeURIComponent(courseId)}`
         ),
       ])
         .then(([payRes, courseRes, timelineRes]) => {
@@ -193,20 +197,20 @@ function PaymentForm() {
     }>(`/api/student/payments/pending?${qs.toString()}`)
       .then(applyPending)
       .finally(() => setChecking(false));
-  }, [type, batchId, courseId, productId]);
+  }, [type, effectiveBatchId, courseId, productId]);
 
   useEffect(() => {
-    if (!(type === "course" && batchId && courseId && coursePending)) return;
+    if (!(type === "course" && effectiveBatchId && courseId && coursePending)) return;
     const t = window.setInterval(() => {
       api<PaymentTimeline>(
-        `/api/student/payments/timeline?kind=COURSE&batchId=${encodeURIComponent(batchId)}&courseId=${encodeURIComponent(courseId)}`
+        `/api/student/payments/timeline?kind=COURSE&batchId=${encodeURIComponent(effectiveBatchId)}&courseId=${encodeURIComponent(courseId)}`
       ).then((r) => {
         setTimeline(r.success ? (r.data ?? null) : null);
         setLastTimelineCheckedAt(new Date().toLocaleTimeString());
       });
     }, 15000);
     return () => window.clearInterval(t);
-  }, [type, batchId, courseId, coursePending]);
+  }, [type, effectiveBatchId, courseId, coursePending]);
 
   function getOrCreateDeviceId(): string {
     if (typeof window === "undefined") return "server";
@@ -241,7 +245,7 @@ function PaymentForm() {
       }
       body.amountPaise = Math.floor(amountDuePaise);
       body.payerName = payerName.trim();
-      body.batchId = batchId;
+      body.batchId = effectiveBatchId;
       body.courseId = courseId;
       if (appliedCoupon.trim()) body.couponCode = appliedCoupon.trim();
       if (milestoneId.trim()) body.milestoneId = milestoneId.trim();
@@ -265,7 +269,7 @@ function PaymentForm() {
       setMsg({ type: "ok", text: okText });
       if (type === "course" && courseId) {
         window.setTimeout(() => {
-          router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(batchId)}`);
+          router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
         }, 2800);
       } else if (type === "shop") {
         window.setTimeout(() => router.push("/shop"), 2000);
@@ -287,7 +291,7 @@ function PaymentForm() {
 
   async function openRazorpay() {
     setMsg(null);
-    if (!batchId || !courseId) return;
+    if (!effectiveBatchId || !courseId) return;
     setLoading(true);
     try {
       const orderRes = await api<{
@@ -299,7 +303,7 @@ function PaymentForm() {
       }>("/api/student/payments/razorpay/order", {
         method: "POST",
         body: JSON.stringify({
-          batchId,
+          batchId: effectiveBatchId,
           courseId,
           ...(appliedCoupon.trim() ? { couponCode: appliedCoupon.trim() } : {}),
           ...(milestoneId.trim() ? { milestoneId: milestoneId.trim() } : {}),
@@ -327,7 +331,7 @@ function PaymentForm() {
           const confirm = await api("/api/student/payments/razorpay/confirm", {
             method: "POST",
             body: JSON.stringify({
-              batchId,
+              batchId: effectiveBatchId,
               courseId,
               ...(appliedCoupon.trim() ? { couponCode: appliedCoupon.trim() } : {}),
               ...(milestoneId.trim() ? { milestoneId: milestoneId.trim() } : {}),
@@ -345,7 +349,7 @@ function PaymentForm() {
                 "Payment successful. You are enrolled.",
             });
             window.setTimeout(() => {
-              router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(batchId)}`);
+              router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
             }, 2400);
           } else {
             setMsg({ type: "err", text: confirm.message ?? "Could not confirm payment." });
@@ -362,7 +366,44 @@ function PaymentForm() {
 
   const waiting = (type === "course" && coursePending) || (type === "shop" && shopPending);
 
-  if (type === "course" && (!batchId || !courseId)) {
+  if (type === "course" && !effectiveBatchId && !batchIdConfirmed && courseId) {
+    return (
+      <div className="mx-auto max-w-lg rounded-2xl border border-funt-gold/30 bg-gradient-to-br from-white via-funt-butter/60 to-funt-honey/20 p-8 shadow-lg">
+        <h2 className="text-lg font-semibold text-funt-ink">Enter Batch ID (Optional)</h2>
+        <p className="mt-2 text-sm text-black/60">
+          If your trainer or franchise gave you a Batch ID, enter it below. Otherwise skip to continue as an online student.
+        </p>
+        <div className="mt-4">
+          <input
+            type="text"
+            value={enteredBatchId}
+            onChange={(e) => setEnteredBatchId(e.target.value.toUpperCase())}
+            className="input w-full font-mono"
+            placeholder="e.g. BT-000001"
+          />
+        </div>
+        <div className="mt-4 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setBatchIdConfirmed(true)}
+            disabled={!enteredBatchId.trim()}
+            className="btn-primary px-5 py-2.5 text-sm disabled:opacity-50"
+          >
+            Continue with Batch ID
+          </button>
+          <button
+            type="button"
+            onClick={() => { setEnteredBatchId(""); setBatchIdConfirmed(true); }}
+            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Skip — I'm an online student
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "course" && !effectiveBatchId && !courseId) {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-amber-200 bg-white p-8 shadow-lg">
         <p className="font-medium text-funt-ink">Missing course details.</p>
@@ -389,7 +430,7 @@ function PaymentForm() {
     return (
       <div className="mx-auto w-full max-w-lg">
         <Link
-          href={`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(batchId)}`}
+          href={`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
           className="text-sm font-medium text-funt-gold-deep hover:underline"
         >
           ← Course
@@ -406,7 +447,7 @@ function PaymentForm() {
   return (
     <AppPageShell className="max-w-lg">
       <Link
-        href={type === "shop" ? "/shop" : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(batchId)}`}
+        href={type === "shop" ? "/shop" : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
         className="text-sm font-medium text-funt-gold-deep hover:underline"
       >
         ← Back

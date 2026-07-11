@@ -34,6 +34,8 @@ export default function BatchesPage() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>("name");
@@ -80,6 +82,37 @@ export default function BatchesPage() {
       return;
     }
     await dialog.alert({ title: "Unarchive failed", message: res.message ?? "Failed to unarchive batch." });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    const ok = await dialog.confirm({
+      title: "Bulk delete batches",
+      message: `Permanently delete ${selectedIds.size} selected batch(es)?\n\nThis cannot be undone. Batches with enrolments, submissions, or other references will be skipped.`,
+      confirmLabel: `Delete ${selectedIds.size} batch(es)`,
+      variant: "danger",
+    });
+    if (!ok) return;
+    setBulkDeleting(true);
+    const res = await api<{ results: { id: string; deleted: boolean; error?: string }[]; deleted: number; failed: number }>(
+      "/api/batches/bulk-delete",
+      { method: "POST", body: JSON.stringify({ ids: Array.from(selectedIds) }) }
+    );
+    setBulkDeleting(false);
+    if (res.success && res.data) {
+      const deletedIds = new Set(res.data.results.filter((r) => r.deleted).map((r) => r.id));
+      setList((prev) => prev.filter((b) => !deletedIds.has(b.id)));
+      setSelectedIds(new Set());
+      if (res.data.failed > 0) {
+        const failedItems = res.data.results.filter((r) => !r.deleted);
+        await dialog.alert({
+          title: "Some batches could not be deleted",
+          message: failedItems.map((r) => `${r.id}: ${r.error}`).join("\n"),
+        });
+      }
+    } else {
+      await dialog.alert({ title: "Bulk delete failed", message: res.message ?? "Failed to delete batches." });
+    }
   }
 
   const filteredList = useMemo(() => {
@@ -209,9 +242,41 @@ export default function BatchesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
+            {isSuperAdmin && selectedIds.size > 0 && (
+              <div className="flex items-center gap-3 border-b border-rose-100 bg-rose-50 px-5 py-3">
+                <span className="text-sm font-medium text-rose-800">{selectedIds.size} selected</span>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-50"
+                >
+                  {bulkDeleting ? "Deleting…" : `Delete ${selectedIds.size} batch(es)`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
+                  {isSuperAdmin && (
+                    <th className="w-10 px-3 py-4">
+                      <input
+                        type="checkbox"
+                        checked={sortedList.length > 0 && selectedIds.size === sortedList.length}
+                        onChange={(e) =>
+                          setSelectedIds(e.target.checked ? new Set(sortedList.map((b) => b.id)) : new Set())
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      />
+                    </th>
+                  )}
                   <SortableTh label="Name" columnKey="name" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Trainer" columnKey="trainerName" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="Course" columnKey="courseTitle" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
@@ -223,7 +288,24 @@ export default function BatchesPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {sortedList.map((b) => (
-                  <tr key={b.id} className="transition hover:bg-slate-50/80">
+                  <tr key={b.id} className={`transition hover:bg-slate-50/80 ${selectedIds.has(b.id) ? "bg-teal-50/40" : ""}`}>
+                    {isSuperAdmin && (
+                      <td className="w-10 px-3 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(b.id)}
+                          onChange={() =>
+                            setSelectedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(b.id)) next.delete(b.id);
+                              else next.add(b.id);
+                              return next;
+                            })
+                          }
+                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        />
+                      </td>
+                    )}
                     <td className="px-5 py-4 text-sm font-medium text-slate-800">{b.name}</td>
                     <td className="px-5 py-4 text-sm text-slate-700">
                       {b.trainerName ? (

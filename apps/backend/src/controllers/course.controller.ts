@@ -153,6 +153,29 @@ export const deleteCourse = asyncHandler(async (req: Request, res: Response): Pr
   successRes(res, data, "Course deleted");
 });
 
+export const bulkDeleteCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const performedBy = getUserId(req);
+  const { ids } = req.body ?? {};
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new AppError("ids array is required", 400);
+  }
+  if (ids.length > 50) {
+    throw new AppError("Cannot delete more than 50 courses at once", 400);
+  }
+  const results: { id: string; deleted: boolean; error?: string }[] = [];
+  for (const id of ids) {
+    try {
+      await service.deleteCourse(id, performedBy);
+      results.push({ id, deleted: true });
+    } catch (err) {
+      results.push({ id, deleted: false, error: err instanceof AppError ? err.message : "Failed to delete" });
+    }
+  }
+  const deleted = results.filter((r) => r.deleted).length;
+  const failed = results.filter((r) => !r.deleted).length;
+  successRes(res, { results, deleted, failed }, `Deleted ${deleted} course(s), ${failed} failed`);
+});
+
 /** Public — returns courses with status LAUNCHING_SOON for marketing/explore pages. */
 export const getUpcomingCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   const data = await service.listUpcomingCourses();

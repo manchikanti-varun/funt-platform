@@ -11,6 +11,7 @@ import {
   archiveModule,
   unarchiveModule,
   deleteModule,
+  bulkDeleteModules,
   duplicateModule,
   restoreVersion,
 } from "../controllers/globalModule.controller.js";
@@ -21,6 +22,7 @@ router.use(authMiddleware);
 
 router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), createModule);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listModules);
+router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteModules);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getModule);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateModule);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveModule);
