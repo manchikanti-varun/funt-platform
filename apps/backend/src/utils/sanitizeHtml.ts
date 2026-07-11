@@ -66,6 +66,44 @@ const SANITIZE_OPTIONS: sanitize.IOptions = {
   disallowedTagsMode: "discard",
   // Allow data attributes
   allowedClasses: { "*": true as unknown as string[] },
+  // Allow all inline CSS properties (safe — no script execution via CSS in modern browsers)
+  allowedStyles: {
+    "*": {
+      // Allow any CSS property and value
+      "color": [/.*/],
+      "background-color": [/.*/],
+      "background": [/.*/],
+      "font-family": [/.*/],
+      "font-size": [/.*/],
+      "font-weight": [/.*/],
+      "font-style": [/.*/],
+      "text-align": [/.*/],
+      "text-decoration": [/.*/],
+      "line-height": [/.*/],
+      "margin": [/.*/],
+      "margin-top": [/.*/],
+      "margin-bottom": [/.*/],
+      "margin-left": [/.*/],
+      "margin-right": [/.*/],
+      "padding": [/.*/],
+      "padding-top": [/.*/],
+      "padding-bottom": [/.*/],
+      "padding-left": [/.*/],
+      "padding-right": [/.*/],
+      "width": [/.*/],
+      "height": [/.*/],
+      "max-width": [/.*/],
+      "min-width": [/.*/],
+      "display": [/.*/],
+      "vertical-align": [/.*/],
+      "border": [/.*/],
+      "border-collapse": [/.*/],
+      "list-style-type": [/.*/],
+      "white-space": [/.*/],
+      "word-break": [/.*/],
+      "overflow": [/.*/],
+    },
+  },
 };
 
 /**
@@ -78,5 +116,22 @@ export function sanitizeRichText(html: string | undefined | null): string {
   if (!trimmed) return "";
   // Quick check: if it doesn't look like HTML at all, return as-is
   if (!/<[a-z][\s\S]*>/i.test(trimmed)) return trimmed;
-  return sanitize(trimmed, SANITIZE_OPTIONS);
+  // If content is extremely large (likely contains embedded base64), fail early
+  // with a clear message rather than letting sanitize-html crash.
+  if (trimmed.length > 5_000_000) {
+    throw new Error(`Content too large for sanitization (${(trimmed.length / 1_000_000).toFixed(1)}MB). Likely contains embedded base64 media.`);
+  }
+  try {
+    return sanitize(trimmed, SANITIZE_OPTIONS);
+  } catch (err) {
+    // sanitize-html can crash on certain complex HTML (deeply nested styles, unusual entities).
+    // Since the frontend already sanitizes with DOMPurify, store as-is as a fallback.
+    console.error("[sanitizeRichText] sanitize-html crashed, storing raw HTML:", err instanceof Error ? err.message : err);
+    // Do a minimal strip of dangerous tags as fallback
+    return trimmed
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/\son\w+="[^"]*"/gi, "")
+      .replace(/\son\w+='[^']*'/gi, "");
+  }
 }

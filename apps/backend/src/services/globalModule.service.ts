@@ -92,6 +92,7 @@ export async function createModule(input: CreateModuleInput) {
 
   // Reject content that still contains embedded base64 data (should be uploaded to R2 first)
   if (input.content && (input.content.includes("data:image/") || input.content.includes("data:video/"))) {
+    console.error(`[createModule] Content has embedded base64 — length: ${input.content.length}, hasDataImage: ${input.content.includes("data:image/")}, hasDataVideo: ${input.content.includes("data:video/")}`);
     throw new AppError(
       "Chapter content contains embedded images/videos. Please wait for all uploads to finish before saving — the editor will automatically upload them to storage.",
       400
@@ -102,8 +103,11 @@ export async function createModule(input: CreateModuleInput) {
   try {
     sanitizedContent = sanitizeRichText(input.content);
   } catch (err) {
-    console.error("[createModule] sanitizeRichText failed:", err instanceof Error ? err.message : err);
-    throw new AppError("Failed to process chapter content. Try reducing the number or size of embedded images.", 400);
+    console.error("[createModule] sanitizeRichText failed:", err instanceof Error ? err.message : err, "— content length:", input.content?.length ?? 0);
+    throw new AppError(
+      "Chapter content is too large or contains unsupported media. Please remove embedded images/videos and use the upload button instead.",
+      400
+    );
   }
 
   const doc = await GlobalModuleModel.create({
