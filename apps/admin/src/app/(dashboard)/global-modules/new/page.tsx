@@ -57,10 +57,23 @@ export default function NewGlobalChapterPage() {
   const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [uploadsInProgress, setUploadsInProgress] = useState(0);
 
   function update<K extends keyof ChapterDraft>(field: K, value: ChapterDraft[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
+  // Wrap uploadImage to track in-progress uploads
+  const uploadImageFn = useRef(makeUploadImageFn({ courseId: "global", moduleId: tempModuleId.current }));
+  const trackedUploadImage = useRef(async (file: File) => {
+    setUploadsInProgress((n) => n + 1);
+    try {
+      const result = await uploadImageFn.current(file);
+      return result;
+    } finally {
+      setUploadsInProgress((n) => Math.max(0, n - 1));
+    }
+  });
 
   useEffect(() => {
     api<{ id: string; title: string }[]>("/api/global-assignments").then((r) => {
@@ -71,6 +84,15 @@ export default function NewGlobalChapterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (uploadsInProgress > 0) {
+      setError("Please wait for image uploads to finish before saving.");
+      return;
+    }
+    // Check if content still has base64 images (upload may have failed)
+    if (content.includes("data:image/") && content.length > 500_000) {
+      setError("Some images are still uploading or failed to upload. Wait a moment and try again, or remove large images.");
+      return;
+    }
     if (!title.trim() && !content.trim() && !youtubeUrl.trim() && !videoUrl.trim() && !resourceLinkUrl.trim() && !linkedAssignmentId.trim()) {
       setError("At least one of content, YouTube URL, video URL, resource link, or assignment must be provided.");
       return;
@@ -136,7 +158,7 @@ export default function NewGlobalChapterPage() {
             onChange={(v) => update("content", v)}
             minHeight={320}
             uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: tempModuleId.current })}
-            uploadImage={makeUploadImageFn({ courseId: "global", moduleId: tempModuleId.current })}
+            uploadImage={trackedUploadImage.current}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -190,13 +212,18 @@ export default function NewGlobalChapterPage() {
           </div>
         </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {uploadsInProgress > 0 && (
+              <p className="text-sm text-amber-700">
+                ⏳ Uploading {uploadsInProgress} image{uploadsInProgress > 1 ? "s" : ""} to storage… please wait before saving.
+              </p>
+            )}
             <div className="flex flex-wrap gap-3 pt-2">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadsInProgress > 0}
                 className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "Creating…" : "Create Chapter"}
+                {loading ? "Creating…" : uploadsInProgress > 0 ? "Waiting for uploads…" : "Create Chapter"}
               </button>
               <Link
                 href="/global-modules"
