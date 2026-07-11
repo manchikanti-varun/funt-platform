@@ -414,18 +414,20 @@ export default function EditGlobalChapterPage() {
               </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            {uploadsInProgress > 0 && (
+            {(uploadsInProgress > 0 || content.includes("data:image/") || content.includes("data:video/")) && (
               <p className="text-sm text-amber-700">
-                ⏳ Uploading {uploadsInProgress} image{uploadsInProgress > 1 ? "s" : ""} to storage… please wait before saving.
+                ⏳ {uploadsInProgress > 0
+                  ? `Uploading ${uploadsInProgress} file${uploadsInProgress > 1 ? "s" : ""} to storage… please wait before saving.`
+                  : "Detecting embedded media and preparing upload… please wait."}
               </p>
             )}
             <div className="flex flex-wrap gap-3 pt-2">
               <button
                 type="submit"
-                disabled={loading || uploadsInProgress > 0}
+                disabled={loading || uploadsInProgress > 0 || content.includes("data:image/") || content.includes("data:video/")}
                 className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "Saving…" : uploadsInProgress > 0 ? "Waiting for uploads…" : "Save"}
+                {loading ? "Saving…" : (uploadsInProgress > 0 || content.includes("data:image/") || content.includes("data:video/")) ? "Waiting for uploads…" : "Save"}
               </button>
               <Link
                 href="/global-modules"
