@@ -89,6 +89,15 @@ export async function createModule(input: CreateModuleInput) {
   }
 
   const moduleId = await generateModuleId();
+
+  // Reject content that still contains embedded base64 data (should be uploaded to R2 first)
+  if (input.content && (input.content.includes("data:image/") || input.content.includes("data:video/"))) {
+    throw new AppError(
+      "Chapter content contains embedded images/videos. Please wait for all uploads to finish before saving — the editor will automatically upload them to storage.",
+      400
+    );
+  }
+
   let sanitizedContent: string;
   try {
     sanitizedContent = sanitizeRichText(input.content);
@@ -256,6 +265,14 @@ export async function updateModule(
       savedBy: performedBy,
     });
     (existing as { versionSnapshots: typeof snapshots }).versionSnapshots = snapshots.slice(-MAX_VERSION_SNAPSHOTS);
+  }
+
+  // Reject content that still contains embedded base64 data
+  if (input.content && (input.content.includes("data:image/") || input.content.includes("data:video/"))) {
+    throw new AppError(
+      "Chapter content contains embedded images/videos. Please wait for all uploads to finish before saving — the editor will automatically upload them to storage.",
+      400
+    );
   }
 
   existing.title = input.title !== undefined ? input.title.trim() : existing.title;
