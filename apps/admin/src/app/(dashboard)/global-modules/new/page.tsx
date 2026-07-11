@@ -75,6 +75,51 @@ export default function NewGlobalChapterPage() {
     }
   });
 
+  // Auto-detect and re-upload base64 images (e.g. pasted from old chapters)
+  const reuploadingRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!content) return;
+    // Find all base64 image src in the content
+    const base64Regex = /src="(data:image\/[^"]+)"/g;
+    let match: RegExpExecArray | null;
+    const base64Sources: string[] = [];
+    while ((match = base64Regex.exec(content)) !== null) {
+      const src = match[1];
+      if (!reuploadingRef.current.has(src)) {
+        base64Sources.push(src);
+      }
+    }
+    if (base64Sources.length === 0) return;
+
+    // Upload each base64 image to R2 and replace in content
+    for (const dataUrl of base64Sources) {
+      reuploadingRef.current.add(dataUrl);
+      setUploadsInProgress((n) => n + 1);
+
+      // Convert data URL to File
+      (async () => {
+        try {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const ext = blob.type.split("/")[1]?.split(";")[0] ?? "png";
+          const file = new File([blob], `pasted-image.${ext}`, { type: blob.type });
+          const uploaded = await uploadImageFn.current(file);
+          // Replace the base64 src with the R2 URL in content
+          setForm((prev) => ({
+            ...prev,
+            content: prev.content.split(dataUrl).join(uploaded.url),
+          }));
+        } catch (err) {
+          console.error("Failed to re-upload pasted base64 image:", err);
+        } finally {
+          reuploadingRef.current.delete(dataUrl);
+          setUploadsInProgress((n) => Math.max(0, n - 1));
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
+
   useEffect(() => {
     api<{ id: string; title: string }[]>("/api/global-assignments").then((r) => {
       if (r.success && Array.isArray(r.data)) setAssignments(r.data);

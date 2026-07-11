@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -57,6 +57,57 @@ export default function EditGlobalChapterPage() {
   const [loading, setLoading] = useState(false);
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [uploadsInProgress, setUploadsInProgress] = useState(0);
+
+  // Upload helper for images
+  const uploadImageFn = useRef(makeUploadImageFn({ courseId: "global", moduleId: id }));
+
+  // Tracked upload for the editor's uploadImage prop
+  const trackedUploadImage = useRef(async (file: File) => {
+    setUploadsInProgress((n) => n + 1);
+    try {
+      return await uploadImageFn.current(file);
+    } finally {
+      setUploadsInProgress((n) => Math.max(0, n - 1));
+    }
+  });
+
+  // Auto-detect and re-upload base64 images (pasted from old chapters)
+  const reuploadingRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (!content) return;
+    const base64Regex = /src="(data:image\/[^"]+)"/g;
+    let match: RegExpExecArray | null;
+    const base64Sources: string[] = [];
+    while ((match = base64Regex.exec(content)) !== null) {
+      const src = match[1];
+      if (!reuploadingRef.current.has(src)) {
+        base64Sources.push(src);
+      }
+    }
+    if (base64Sources.length === 0) return;
+
+    for (const dataUrl of base64Sources) {
+      reuploadingRef.current.add(dataUrl);
+      setUploadsInProgress((n) => n + 1);
+      (async () => {
+        try {
+          const res = await fetch(dataUrl);
+          const blob = await res.blob();
+          const ext = blob.type.split("/")[1]?.split(";")[0] ?? "png";
+          const file = new File([blob], `pasted-image.${ext}`, { type: blob.type });
+          const uploaded = await uploadImageFn.current(file);
+          setContent((prev) => prev.split(dataUrl).join(uploaded.url));
+        } catch (err) {
+          console.error("Failed to re-upload pasted base64 image:", err);
+        } finally {
+          reuploadingRef.current.delete(dataUrl);
+          setUploadsInProgress((n) => Math.max(0, n - 1));
+        }
+      })();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content]);
 
   function applyChapterToForm(data: Chapter) {
     setChapter(data);
@@ -84,6 +135,14 @@ export default function EditGlobalChapterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (uploadsInProgress > 0) {
+      setError("Please wait for image uploads to finish before saving.");
+      return;
+    }
+    if (content.includes("data:image/") && content.length > 500_000) {
+      setError("Some images are still uploading or failed to upload. Wait a moment and try again, or remove large images.");
+      return;
+    }
     setLoading(true);
     // Only send fields that changed to avoid re-uploading large content unnecessarily
     const body: Record<string, string | undefined> = {
@@ -234,7 +293,7 @@ export default function EditGlobalChapterPage() {
                 onChange={setContent}
                 minHeight={320}
                 uploadVideo={makeUploadVideoFn({ courseId: "global", moduleId: id })}
-                uploadImage={makeUploadImageFn({ courseId: "global", moduleId: id })}
+                uploadImage={trackedUploadImage.current}
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -299,13 +358,18 @@ export default function EditGlobalChapterPage() {
               </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {uploadsInProgress > 0 && (
+              <p className="text-sm text-amber-700">
+                ⏳ Uploading {uploadsInProgress} image{uploadsInProgress > 1 ? "s" : ""} to storage… please wait before saving.
+              </p>
+            )}
             <div className="flex flex-wrap gap-3 pt-2">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadsInProgress > 0}
                 className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
               >
-                {loading ? "Saving…" : "Save"}
+                {loading ? "Saving…" : uploadsInProgress > 0 ? "Waiting for uploads…" : "Save"}
               </button>
               <Link
                 href="/global-modules"
