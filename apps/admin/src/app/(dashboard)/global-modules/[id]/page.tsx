@@ -85,17 +85,19 @@ export default function EditGlobalChapterPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+    // Only send fields that changed to avoid re-uploading large content unnecessarily
+    const body: Record<string, string | undefined> = {
+      title,
+      description: title.trim(),
+    };
+    if (content !== (chapter?.content ?? "")) body.content = content;
+    if ((youtubeUrl || "") !== (chapter?.youtubeUrl ?? "")) body.youtubeUrl = youtubeUrl || undefined;
+    if ((videoUrl || "") !== (chapter?.videoUrl ?? "")) body.videoUrl = videoUrl || undefined;
+    if ((resourceLinkUrl || "") !== (chapter?.resourceLinkUrl ?? "")) body.resourceLinkUrl = resourceLinkUrl || undefined;
+    if ((linkedAssignmentId || "") !== (chapter?.linkedAssignmentId ?? "")) body.linkedAssignmentId = linkedAssignmentId || undefined;
     const res = await api(`/api/global-chapters/${id}`, {
       method: "PUT",
-      body: JSON.stringify({
-        title,
-        description: title.trim(),
-        content,
-        youtubeUrl: youtubeUrl || undefined,
-        videoUrl: videoUrl || undefined,
-        resourceLinkUrl: resourceLinkUrl || undefined,
-        linkedAssignmentId: linkedAssignmentId || undefined,
-      }),
+      body: JSON.stringify(body),
     });
     setLoading(false);
     if (res.success) {

@@ -9,7 +9,7 @@ function resolveApiUrl(): string {
 }
 
 const API_URL = resolveApiUrl();
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 60000;
 
 const LEGACY_TOKEN_KEY = "funt_admin_token";
 const CSRF_COOKIE_NAME = "funt_csrf";
