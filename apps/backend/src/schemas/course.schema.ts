@@ -29,7 +29,7 @@ const chapterSnapshotSchema = z.object({
 export const createCourseSchema = z.object({
   title: titleField,
   description: z.string().min(1, "Description is required").max(10_000),
-  headerImageUrl: urlField,
+  headerImageUrl: z.string().max(2_500_000).optional().or(z.literal("")),
   isDemo: z.boolean().optional().default(false),
   durationText: z.string().max(200).optional().default(""),
   ageGroup: z.string().max(100).optional().default(""),
