@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readImageFileAsDataUrl } from "@/lib/readImageFileAsDataUrl";
 import {
   courseCardImageLinkLabel,
   courseCardImagePreviewSrc,
   isValidCourseCardImageLink,
 } from "@/lib/courseCardImage";
+import { api } from "@/lib/api";
 
 interface CourseCardImageFieldProps {
   value: string;
@@ -14,12 +14,15 @@ interface CourseCardImageFieldProps {
   onError?: (message: string) => void;
   /** When true (default), image cannot be cleared and label shows required. */
   required?: boolean;
+  /** Course ID or "new" — used as part of the R2 key path. */
+  courseId?: string;
 }
 
-export function CourseCardImageField({ value, onChange, onError, required = true }: CourseCardImageFieldProps) {
+export function CourseCardImageField({ value, onChange, onError, required = true, courseId = "new" }: CourseCardImageFieldProps) {
   const [linkDraft, setLinkDraft] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
   const [localError, setLocalError] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const t = value.trim();
@@ -66,6 +69,65 @@ export function CourseCardImageField({ value, onChange, onError, required = true
     setSourceLabel("");
   }
 
+  async function uploadToR2(file: File) {
+    clearError();
+    setUploading(true);
+    try {
+      const mimeType = file.type || "image/jpeg";
+
+      // Step 1: presign
+      const presignRes = await api<{
+        uploadUrl: string;
+        imageKey: string;
+        publicUrl: string;
+      }>("/api/admin/images/presign", {
+        method: "POST",
+        body: JSON.stringify({
+          courseId: courseId || "course-card",
+          moduleId: "card-image",
+          mimeType,
+        }),
+      });
+
+      if (!presignRes.success || !presignRes.data?.uploadUrl) {
+        throw new Error(presignRes.message ?? "Failed to get upload URL");
+      }
+
+      const { uploadUrl, imageKey } = presignRes.data;
+
+      // Step 2: PUT to R2
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed (HTTP ${xhr.status})`));
+        });
+        xhr.addEventListener("error", () => reject(new Error("Network error uploading image")));
+        xhr.open("PUT", uploadUrl);
+        xhr.setRequestHeader("Content-Type", mimeType);
+        xhr.send(file);
+      });
+
+      // Step 3: confirm
+      const confirmRes = await api<{ imageKey: string; publicUrl: string; size: number }>(
+        "/api/admin/images/confirm",
+        { method: "POST", body: JSON.stringify({ imageKey }) }
+      );
+
+      if (!confirmRes.success || !confirmRes.data?.publicUrl) {
+        throw new Error(confirmRes.message ?? "Upload confirmation failed");
+      }
+
+      onChange(confirmRes.data.publicUrl);
+      setSourceLabel(file.name);
+      setLinkDraft("");
+    } catch (err) {
+      reportError(err instanceof Error ? err.message : "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const previewSrc = courseCardImagePreviewSrc(value);
 
   return (
@@ -77,21 +139,18 @@ export function CourseCardImageField({ value, onChange, onError, required = true
         type="file"
         required={required && !value.trim()}
         accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
-        className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700"
+        disabled={uploading}
+        className="block w-full max-w-md text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-teal-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-teal-700 disabled:opacity-50"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          void readImageFileAsDataUrl(f)
-            .then((url) => {
-              clearError();
-              onChange(url);
-              setLinkDraft("");
-              setSourceLabel(f.name);
-            })
-            .catch((err: unknown) => reportError(err instanceof Error ? err.message : "Invalid image"));
+          void uploadToR2(f);
           e.target.value = "";
         }}
       />
+      {uploading && (
+        <p className="mt-1.5 text-xs font-medium text-amber-700">⏳ Uploading image to storage…</p>
+      )}
       <p className="mt-2 text-xs font-medium text-slate-600">Or paste a Google Drive / image link</p>
       <div className="mt-1.5 flex max-w-xl flex-col gap-2 sm:flex-row sm:items-start">
         <input
