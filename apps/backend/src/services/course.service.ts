@@ -314,6 +314,7 @@ export async function createCourse(input: CreateCourseInput) {
         resourceLinkUrl: (m as { resourceLinkUrl?: string }).resourceLinkUrl ?? undefined,
         versionAtSnapshot: m.version,
         linkedAssignmentId,
+        linkedQuizId: (m as { linkedQuizId?: string }).linkedQuizId ?? undefined,
         order: getModuleOrder(m as { _id: unknown; moduleId?: string }),
         xpReward: 40,
       };
@@ -597,6 +598,7 @@ export async function addChapterToCourse(id: string, globalModuleId: string, per
     videoUrl: (gm as { videoUrl?: string }).videoUrl ?? undefined,
     resourceLinkUrl: (gm as { resourceLinkUrl?: string }).resourceLinkUrl ?? undefined,
     linkedAssignmentId: (gm as { linkedAssignmentId?: string }).linkedAssignmentId ?? undefined,
+    linkedQuizId: (gm as { linkedQuizId?: string }).linkedQuizId ?? undefined,
     versionAtSnapshot: (gm as { version: number }).version ?? 1,
     order: nextOrder,
     xpReward: 40,
