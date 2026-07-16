@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api, apiUrl, markClientLoggedIn, clearToken } from "@/lib/api";
+import { api, apiUrl, markClientLoggedIn, clearToken, ensureCsrfToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 import { safeRedirectPath } from "@/lib/safeRedirectPath";
 import { FormPanel } from "@/components/ui/FormPanel";
@@ -32,6 +32,9 @@ function LoginForm() {
   useEffect(() => {
     if (errorFromQuery) setError(decodeURIComponent(errorFromQuery));
   }, [errorFromQuery]);
+
+  // Initialize CSRF token for the login POST
+  useEffect(() => { void ensureCsrfToken(); }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -116,8 +119,6 @@ function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onCopy={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
                 required
                 className="input pr-11 text-black placeholder:text-black/45"
                 autoComplete="current-password"

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api, ensureCsrfToken } from "@/lib/api";
 
 export default function SupportLoginPage() {
   const router = useRouter();
@@ -12,7 +13,8 @@ export default function SupportLoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472";
+  // Initialize CSRF token on mount
+  useEffect(() => { void ensureCsrfToken(); }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -21,10 +23,8 @@ export default function SupportLoginPage() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
+      const res = await api<{ user: { roles: string[] } }>("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           username: username.trim(),
           email: username.includes("@") && !username.endsWith("@funt") ? username.trim() : undefined,
@@ -32,11 +32,10 @@ export default function SupportLoginPage() {
           portal: "support",
         }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) { setError(data.message ?? "Invalid username or password"); setLoading(false); return; }
+      if (!res.success || !res.data?.user) { setError(res.message ?? "Invalid username or password"); setLoading(false); return; }
 
-      const roles: string[] = data.data?.user?.roles ?? [];
-      const isStaff = roles.some((r) => ["SUPER_ADMIN", "ADMIN", "TRAINER", "SUPPORT_AGENT"].includes(r));
+      const roles: string[] = res.data.user.roles ?? [];
+      const isStaff = roles.some((r) => ["SUPER_ADMIN", "ADMIN", "SUPPORT_AGENT"].includes(r));
       if (!isStaff) { setError("Access denied. Only support staff can use this portal."); setLoading(false); return; }
 
       router.push("/dashboard");

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { establishSessionFromTokenDetailed, markClientLoggedIn, clearToken } from "@/lib/api";
+import { establishSessionFromCodeDetailed, establishSessionFromTokenDetailed, markClientLoggedIn, clearToken } from "@/lib/api";
 import { ROLE } from "@funt-platform/constants";
 
 function AuthCallbackContent() {
@@ -15,14 +15,18 @@ function AuthCallbackContent() {
       window.location.replace(`/login?error=${encodeURIComponent(decodeURIComponent(error))}`);
       return;
     }
+    // Prefer opaque session code; fall back to legacy raw token
+    const code = searchParams.get("code")?.trim();
     const token = searchParams.get("token")?.trim();
-    if (!token) {
+    if (!code && !token) {
       window.location.replace("/login");
       return;
     }
     let cancelled = false;
     (async () => {
-      const result = await establishSessionFromTokenDetailed(token);
+      const result = code
+        ? await establishSessionFromCodeDetailed(code)
+        : await establishSessionFromTokenDetailed(token!);
       if (cancelled) return;
       const session = result.session;
       if (!session) {

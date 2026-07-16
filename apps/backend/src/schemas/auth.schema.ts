@@ -37,5 +37,14 @@ export const changePasswordSchema = z.object({
 });
 
 export const setPasswordSchema = z.object({
+  setPasswordToken: z.string().min(1, "setPasswordToken is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(200),
+});
+
+export const supportSignupSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email").max(200),
+  mobile: z.string().min(10, "Mobile is required").max(15),
+  city: z.string().max(100).optional(),
   password: z.string().min(8, "Password must be at least 8 characters").max(200),
 });

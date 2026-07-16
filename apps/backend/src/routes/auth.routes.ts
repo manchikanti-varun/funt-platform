@@ -2,7 +2,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
-import { loginSchema, studentSignupSchema, changePasswordSchema, setPasswordSchema } from "../schemas/index.js";
+import { loginSchema, studentSignupSchema, changePasswordSchema, setPasswordSchema, supportSignupSchema } from "../schemas/index.js";
 import {
   login,
   parentLogin,
@@ -24,7 +24,7 @@ import {
   establishParentDelegateSession,
   parentDelegateLogout,
 } from "../controllers/auth.controller.js";
-import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter, passwordChangeRateLimiter, signupRateLimiter } from "../middleware/rateLimit.middleware.js";
+import { parentMobileLookupRateLimiter, parentDelegateIssueRateLimiter, passwordChangeRateLimiter, signupRateLimiter, supportSignupRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router = Router();
 
@@ -49,13 +49,15 @@ router.get("/google/admin-signup-preview", googleAdminSignupPreview);
 router.post("/google/admin-signup-complete", googleAdminSignupComplete);
 
 // Support agent self-registration (creates a pending request for admin approval)
-router.post("/support-signup", async (req, res, next) => {
+router.post("/support-signup", supportSignupRateLimiter, validateBody(supportSignupSchema), async (req, res, next) => {
   try {
-    const { name, email, mobile, city, password } = req.body as Record<string, string>;
-    if (!name?.trim() || !email?.trim() || !mobile?.trim() || !password?.trim()) {
-      res.status(400).json({ success: false, message: "name, email, mobile, and password are required" });
-      return;
-    }
+    const { name, email, mobile, city, password } = req.body as {
+      name: string;
+      email: string;
+      mobile: string;
+      city?: string;
+      password: string;
+    };
     const { RegistrationRequestModel } = await import("../models/RegistrationRequest.model.js");
     const { hashPassword, validateStrongPassword } = await import("../services/auth.service.js");
 

@@ -89,3 +89,16 @@ export const signupRateLimiter = rateLimit({
   legacyHeaders: false,
   ...getStore("signup"),
 });
+
+/**
+ * Support agent signup rate limiter.
+ * Very tight — prevents spamming registration requests.
+ */
+export const supportSignupRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: getEnv().isProduction ? 3 : 30,
+  message: { success: false, message: "Too many signup attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  ...getStore("support-signup"),
+});

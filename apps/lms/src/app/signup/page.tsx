@@ -130,7 +130,7 @@ function SignupForm() {
 
   useEffect(() => {
     const candidate = normalizeUsername(username);
-    if (!candidate) {
+    if (!candidate || candidate.length < USERNAME_MIN_LENGTH) {
       setUsernameStatus({ checking: false, available: null, message: "" });
       return;
     }
@@ -257,12 +257,14 @@ function SignupForm() {
       }
     }
     setSubmitting(true);
+    const controller = new AbortController();
     try {
       const endpoint = isGoogleFlow ? `${API_URL}/api/auth/google/signup-complete` : `${API_URL}/api/auth/signup`;
       const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           ...(isGoogleFlow ? { signupToken: token } : {}),
           username: normalizeUsername(username),
@@ -292,7 +294,8 @@ function SignupForm() {
       } else {
         setSubmitError(data.message ?? data.error ?? `Sign up failed (${res.status}). Try again.`);
       }
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       setSubmitError("Something went wrong. Try again.");
     } finally {
       setSubmitting(false);
@@ -545,8 +548,6 @@ function SignupForm() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onCopy={(e) => e.preventDefault()}
-                  onCut={(e) => e.preventDefault()}
                   required={!isGoogleFlow}
                   className="input w-full pr-10 text-black placeholder:text-black/45"
                   placeholder="Create a strong password"
@@ -615,8 +616,6 @@ function SignupForm() {
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                onCopy={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
                 required={!isGoogleFlow}
                 className="input w-full text-black placeholder:text-black/45"
                 placeholder="Re-enter your password"

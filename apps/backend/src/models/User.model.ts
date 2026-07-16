@@ -71,7 +71,7 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.index({ mobile: 1 });
-userSchema.index({ email: 1 });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ roles: 1, status: 1 });
 
 export const UserModel = mongoose.model("User", userSchema);

@@ -214,20 +214,22 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   const cookieToken = (req.cookies as Record<string, string>)?.[CSRF_COOKIE_NAME];
   const headerToken = req.get(CSRF_HEADER_NAME);
 
-  // In development, if both are present, validate match
-  if (cookieToken && headerToken) {
-    if (cookieToken.length !== headerToken.length) {
-      next(new AppError("CSRF validation failed: token mismatch", 403));
-      return;
-    }
-    const cookieBuf = Buffer.from(cookieToken, "utf8");
-    const headerBuf = Buffer.from(headerToken, "utf8");
-    if (!crypto.timingSafeEqual(cookieBuf, headerBuf)) {
-      next(new AppError("CSRF validation failed: token mismatch", 403));
-      return;
-    }
+  // Require both cookie and header for CSRF validation
+  if (!cookieToken || !headerToken) {
+    next(new AppError("CSRF validation failed: missing token", 403));
+    return;
   }
 
-  // In development without strict CORS, allow if Origin was valid
+  if (cookieToken.length !== headerToken.length) {
+    next(new AppError("CSRF validation failed: token mismatch", 403));
+    return;
+  }
+  const cookieBuf = Buffer.from(cookieToken, "utf8");
+  const headerBuf = Buffer.from(headerToken, "utf8");
+  if (!crypto.timingSafeEqual(cookieBuf, headerBuf)) {
+    next(new AppError("CSRF validation failed: token mismatch", 403));
+    return;
+  }
+
   next();
 }

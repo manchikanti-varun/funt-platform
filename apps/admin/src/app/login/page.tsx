@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, apiUrl, markClientLoggedIn } from "@/lib/api";
+import { api, apiUrl, markClientLoggedIn, ensureCsrfToken } from "@/lib/api";
 import { safeRedirectPath } from "@/lib/safeRedirectPath";
 import { FormPanel } from "@/components/ui/FormPanel";
 
@@ -29,13 +29,16 @@ function LoginForm() {
     if (errorFromQuery) setError(decodeURIComponent(errorFromQuery));
   }, [errorFromQuery]);
 
+  // Initialize CSRF token for the login POST
+  useEffect(() => { void ensureCsrfToken(); }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     const res = await api<{ user: { username: string } }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: username.trim(), password }),
+      body: JSON.stringify({ username: username.trim(), password, portal: "admin" }),
     });
     setLoading(false);
     if (!res.success || !res.data?.user) {
@@ -93,8 +96,6 @@ function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onCopy={(e) => e.preventDefault()}
-                onCut={(e) => e.preventDefault()}
                 required
                 className="input pr-10 text-black placeholder:text-black/45"
                 placeholder="Enter your password"
@@ -131,7 +132,7 @@ function LoginForm() {
             </div>
           </div>
           {error && (
-            <p className="rounded-xl border border-amber-900/15 bg-funt-honey px-3.5 py-2.5 text-sm font-medium leading-snug text-black">
+            <p role="alert" aria-live="assertive" className="rounded-xl border border-amber-900/15 bg-funt-honey px-3.5 py-2.5 text-sm font-medium leading-snug text-black">
               {error}
             </p>
           )}

@@ -117,10 +117,14 @@ async function uniqueAdminUsernameFromName(name: string): Promise<string> {
   const base = buildAdminUsernameBase(name);
   let candidate = base;
   for (let i = 0; i < 80; i++) {
-    const exists = await UserModel.findOne({ username: candidate }).exec();
+    // Use atomic check: attempt to create a short-lived reservation is impractical
+    // with Mongoose, so we check and rely on the unique index to reject collisions.
+    // If two concurrent requests pick the same candidate, the second will fail at
+    // UserModel.create() with a 11000 error — callers must handle that gracefully.
+    const exists = await UserModel.findOne({ username: candidate }).select("_id").lean().exec();
     if (!exists) return candidate;
     const local = base.replace(/@funt$/, "");
-    candidate = `${local}${i + 2}@funt`;
+    candidate = `${local}${crypto.randomInt(10, 9999)}@funt`;
   }
   throw new AppError("Could not allocate admin username", 500);
 }
@@ -134,9 +138,9 @@ async function uniqueParentUsername(name: string): Promise<string> {
     .toLowerCase() || "user";
   let candidate = `parent.${slug}`;
   for (let i = 0; i < 80; i++) {
-    const exists = await UserModel.findOne({ username: candidate }).exec();
+    const exists = await UserModel.findOne({ username: candidate }).select("_id").lean().exec();
     if (!exists) return candidate;
-    candidate = `parent.${slug}${i + 2}`;
+    candidate = `parent.${slug}${crypto.randomInt(10, 9999)}`;
   }
   throw new AppError("Could not allocate parent username", 500);
 }
@@ -429,11 +433,12 @@ export async function login(
   }
 
   if (user.status !== ACCOUNT_STATUS.ACTIVE) {
-    throw new AppError("Account is suspended or archived", 403);
+    // Use generic message to avoid revealing that the account exists
+    throw new AppError("Invalid username or password", 401);
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new AppError(`Account locked. Try again after ${user.lockedUntil.toISOString()}`, 423);
+    throw new AppError("Too many failed attempts. Please try again later.", 423);
   }
 
   if (!user.passwordHash) {
@@ -520,11 +525,11 @@ export async function parentLogin(
   }
 
   if (user.status !== ACCOUNT_STATUS.ACTIVE) {
-    throw new AppError("Account is suspended or archived", 403);
+    throw new AppError("Invalid mobile or student link", 401);
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new AppError(`Account locked. Try again after ${user.lockedUntil.toISOString()}`, 423);
+    throw new AppError("Too many failed attempts. Please try again later.", 423);
   }
 
   const linked = user.linkedStudentUsernames && user.linkedStudentUsernames.includes(studentU);

@@ -50,6 +50,7 @@ import { successRes } from "../utils/response.js";
 import { OAuthNonceModel } from "../models/OAuthNonce.model.js";
 import { cacheDel, CACHE_KEYS } from "../utils/cache.js";
 import { createAuditLog } from "../services/audit.service.js";
+import { createSessionCode, redeemSessionCode } from "../utils/sessionCode.js";
 
 const OAUTH_NONCE_COOKIE = "funt_oauth_nonce";
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
@@ -223,11 +224,20 @@ export const setPasswordWithGoogle = asyncHandler(async (req: Request, res: Resp
   successRes(res, { sessionRotated: true }, "Password set");
 });
 
-/** One-time: exchange a Bearer JWT (e.g. from OAuth redirect URL) for an httpOnly session cookie. */
+/** One-time: exchange a session code (or legacy Bearer JWT) for an httpOnly session cookie. */
 export const establishSession = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const body = req.body as { token?: string; portal?: string };
-  const raw = body.token?.trim();
-  if (!raw) throw new AppError("token is required", 400);
+  const body = req.body as { token?: string; code?: string; portal?: string };
+  // Prefer opaque session code; fall back to raw token for backward compatibility
+  const code = body.code?.trim();
+  let raw: string | undefined;
+  if (code) {
+    const redeemed = await redeemSessionCode(code);
+    if (!redeemed) throw new AppError("Invalid or expired session code", 401);
+    raw = redeemed;
+  } else {
+    raw = body.token?.trim();
+  }
+  if (!raw) throw new AppError("code or token is required", 400);
   const { jwtSecret } = getEnv();
   let payload: ReturnType<typeof verifyToken>;
   try {
@@ -655,7 +665,8 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
     }
   }
   const frontBase = (state.app === "lms" ? frontendLmsUrl : frontendAdminUrl).replace(/\/$/, "");
-  const callbackUrl = `${frontBase}/auth/callback?token=${encodeURIComponent(result.token)}`;
+  const sessionCode = await createSessionCode(result.token);
+  const callbackUrl = `${frontBase}/auth/callback?code=${encodeURIComponent(sessionCode)}`;
   res.redirect(302, callbackUrl);
 });
 

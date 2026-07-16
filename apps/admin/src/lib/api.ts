@@ -22,31 +22,48 @@ const CSRF_COOKIE_NAME = "funt_csrf";
  */
 let _csrfToken: string | null = null;
 
+/** Persist CSRF token to sessionStorage as a backup for page refreshes. */
+function persistCsrfToken(token: string): void {
+  _csrfToken = token;
+  if (typeof sessionStorage !== "undefined") {
+    try { sessionStorage.setItem("_csrf", token); } catch { /* quota exceeded */ }
+  }
+}
+
 /**
- * Reads the CSRF token — first from in-memory store, then falls back to cookie.
+ * Reads the CSRF token — first from in-memory store, then sessionStorage, then falls back to cookie.
  */
 function getCsrfToken(): string | null {
   if (_csrfToken) return _csrfToken;
+  if (typeof sessionStorage !== "undefined") {
+    const stored = sessionStorage.getItem("_csrf");
+    if (stored) { _csrfToken = stored; return stored; }
+  }
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 /**
- * Fetches the CSRF token from the backend and stores it in memory.
+ * Fetches the CSRF token from the backend and stores it in memory + sessionStorage.
  * Call once on app boot. The backend returns the token in the response body
  * so we don't need to read cross-origin cookies.
  */
 export async function ensureCsrfToken(): Promise<void> {
   if (_csrfToken) return;
-  // Try cookie first (works in same-origin / non-restricted browsers)
+  // Try sessionStorage first (survives page refresh)
+  if (typeof sessionStorage !== "undefined") {
+    const stored = sessionStorage.getItem("_csrf");
+    if (stored) { _csrfToken = stored; return; }
+  }
+  // Try cookie (works in same-origin / non-restricted browsers)
   const fromCookie = getCsrfToken();
-  if (fromCookie) { _csrfToken = fromCookie; return; }
+  if (fromCookie) { persistCsrfToken(fromCookie); return; }
   try {
     const res = await fetch(`${API_URL}/api/csrf-token`, { credentials: "include" });
     if (res.ok) {
       const json = await res.json();
-      if (json.csrfToken) _csrfToken = json.csrfToken;
+      if (json.csrfToken) persistCsrfToken(json.csrfToken);
     }
   } catch {
     // Non-critical — the next mutation will fail with a clear CSRF error
@@ -104,11 +121,33 @@ export async function establishSessionFromTokenDetailed(
   return { session: { roles } };
 }
 
+/** Exchange a single-use session code (from OAuth redirect) for an httpOnly session cookie. */
+export async function establishSessionFromCodeDetailed(
+  code: string
+): Promise<{ session: { roles: string[] } | null; error?: string }> {
+  const res = await fetch(`${API_URL}/api/auth/session`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code: code.trim(), portal: "admin" }),
+  });
+  const json = (await res.json().catch(() => ({}))) as { data?: { user?: { roles: string[] } }; message?: string };
+  if (!res.ok) {
+    return { session: null, error: json.message ?? `Session setup failed (${res.status})` };
+  }
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  const roles = json.data?.user?.roles;
+  if (!roles) return { session: null, error: "Session response missing user roles" };
+  return { session: { roles } };
+}
+
 export async function migrateLegacyTokenIfPresent(): Promise<void> {
   const legacy = getToken()?.trim();
   if (!legacy) return;
   const session = await establishSessionFromToken(legacy);
-  if (!session) localStorage.removeItem(LEGACY_TOKEN_KEY);
+  // Always clear legacy token from localStorage regardless of migration success
+  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  if (session) markClientLoggedIn();
 }
 
 export function setToken(_token: string): void {

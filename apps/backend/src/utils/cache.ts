@@ -90,8 +90,8 @@ export const CACHE_KEYS = {
 // ─── TTL constants (seconds) ─────────────────────────────────────────────────
 
 export const CACHE_TTL = {
-  /** Auth user lookup — short, invalidated on logout/password change */
-  USER: 60,
+  /** Auth user lookup — very short to minimize stale security state */
+  USER: 30,
   /** Public course catalog — changes rarely */
   EXPLORE: 300,
   /** Student-specific data — moderate */

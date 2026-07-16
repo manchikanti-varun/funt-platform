@@ -72,6 +72,8 @@ export function resolveAuthToken(req: Request): string | null {
   if (admin && !lms) return admin;
   if (support) return support;
   if (lms && !admin) return lms;
-  if (admin && lms) return null;
+  // When both admin and lms cookies exist without an origin hint, prefer admin
+  // (non-browser clients, cURL) to avoid silent 401 failures.
+  if (admin && lms) return admin;
   return legacy ?? admin ?? lms ?? support ?? null;
 }
