@@ -53,12 +53,19 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
 
       const payload = verifyToken(token, jwtSecret);
       const user = await UserModel.findById(payload.userId)
-        .select("_id username name roles status")
+        .select("_id username name roles status tokenVersion")
         .lean()
         .exec();
 
       if (!user || user.status !== "ACTIVE") {
         return next(new Error("User not found or inactive"));
+      }
+
+      // Verify tokenVersion matches — ensures logged-out users can't maintain socket connections
+      const expectedTokenVersion = Number((user as { tokenVersion?: number }).tokenVersion ?? 0);
+      const payloadTokenVersion = Number(payload.tokenVersion ?? 0);
+      if (payloadTokenVersion !== expectedTokenVersion) {
+        return next(new Error("Session expired"));
       }
 
       // Attach user info to socket

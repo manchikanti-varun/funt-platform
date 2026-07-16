@@ -11,7 +11,10 @@ export const createTicketSchema = z.object({
   subject: z.string().min(3, "Subject must be at least 3 characters").max(300),
   description: z.string().min(10, "Description must be at least 10 characters").max(10000),
   priority: z.enum(allPriorities).optional(),
-  attachments: z.array(z.string().url()).optional().default([]),
+  attachments: z.array(z.string().url().refine(
+    (url) => /^https?:\/\//i.test(url),
+    { message: "Attachment URLs must use https://" }
+  )).optional().default([]),
   /** Parent-only: the linked student's userId or username they are raising on behalf of */
   studentId: z.string().optional(),
 }).refine(
@@ -21,7 +24,10 @@ export const createTicketSchema = z.object({
 
 export const replyTicketSchema = z.object({
   message: z.string().min(1, "Message is required").max(10000),
-  attachments: z.array(z.string().url()).optional().default([]),
+  attachments: z.array(z.string().url().refine(
+    (url) => /^https?:\/\//i.test(url),
+    { message: "Attachment URLs must use https://" }
+  )).optional().default([]),
   isInternalNote: z.boolean().optional().default(false),
 });
 

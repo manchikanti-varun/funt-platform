@@ -78,12 +78,28 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
   const { userId, username, name, roles, isStaff } = socket.data;
 
   // ── Student: Request live support ─────────────────────────────────
+  let lastSupportRequestAt = 0;
+  const SUPPORT_REQUEST_COOLDOWN_MS = 30_000; // 30 seconds between requests
+
   socket.on("support:request", async (data: { message?: string }) => {
     if (isStaff) return;
+
+    // Rate limit: max 1 support request per 30 seconds per student
+    const now = Date.now();
+    if (now - lastSupportRequestAt < SUPPORT_REQUEST_COOLDOWN_MS) {
+      socket.emit("support:error", { error: "Please wait before creating another support request" });
+      return;
+    }
+    lastSupportRequestAt = now;
 
     const message = data.message?.trim();
     if (!message) {
       socket.emit("support:error", { error: "Message is required" });
+      return;
+    }
+
+    if (message.length > 2000) {
+      socket.emit("support:error", { error: "Message too long (max 2000 characters)" });
       return;
     }
 
@@ -236,22 +252,41 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
   });
 
   // ── Both: Send a chat message ─────────────────────────────────────
+  const chatMessageCooldowns = new Map<string, number>();
+  const CHAT_MSG_COOLDOWN_MS = 500; // min 500ms between messages per user
+  const CHAT_MSG_MAX_LENGTH = 10000;
+
   socket.on("chat:message", async (data: { ticketId?: string; text?: string }) => {
     const ticketId = data.ticketId?.trim();
     const text = data.text?.trim();
     if (!ticketId || !text) return;
 
+    // Rate limit: 1 message per 500ms per user
+    const now = Date.now();
+    const lastSent = chatMessageCooldowns.get(userId) ?? 0;
+    if (now - lastSent < CHAT_MSG_COOLDOWN_MS) {
+      socket.emit("support:error", { error: "Please wait before sending another message" });
+      return;
+    }
+    chatMessageCooldowns.set(userId, now);
+
+    // Length validation (matches TicketMessage schema maxlength)
+    if (text.length > CHAT_MSG_MAX_LENGTH) {
+      socket.emit("support:error", { error: `Message too long (max ${CHAT_MSG_MAX_LENGTH} characters)` });
+      return;
+    }
+
     try {
       const ticket = await TicketModel.findById(ticketId).lean().exec();
       if (!ticket) return;
-      const isOwner = ticket.createdBy === userId;
+      const isOwner = ticket.createdBy === userId || (ticket as { studentId?: string }).studentId === userId;
       const isAssigned = ticket.assignedTo === userId;
       if (!isOwner && !isAssigned && !isStaff) return;
 
       const msg = await TicketMessageModel.create({
         ticketId,
         senderId: userId,
-        senderRole: isStaff ? (roles[0] ?? "ADMIN") : "STUDENT",
+        senderRole: isStaff ? (roles.includes("SUPPORT_AGENT") ? "SUPPORT_AGENT" : roles[0] ?? "ADMIN") : "STUDENT",
         message: text,
       });
 
@@ -317,6 +352,20 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
     if (!ticketId || !targetAgentId) return;
 
     try {
+      // Validate target is a staff user
+      const targetUser = await (await import("../models/User.model.js")).UserModel
+        .findById(targetAgentId).select("name username roles").lean().exec();
+      if (!targetUser) {
+        socket.emit("support:error", { error: "Target agent not found" });
+        return;
+      }
+      const targetRoles = (targetUser as { roles?: string[] }).roles ?? [];
+      const targetIsStaff = targetRoles.some((r: string) => ["SUPER_ADMIN", "ADMIN", "TRAINER", "SUPPORT_AGENT"].includes(r));
+      if (!targetIsStaff) {
+        socket.emit("support:error", { error: "Target user is not a staff member" });
+        return;
+      }
+
       const ticket = await TicketModel.findOneAndUpdate(
         { _id: ticketId, liveChatStatus: "ACTIVE" },
         { $set: { assignedTo: targetAgentId } },
@@ -324,9 +373,6 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
       ).exec();
       if (!ticket) return;
 
-      // Get target agent name
-      const targetUser = await (await import("../models/User.model.js")).UserModel
-        .findById(targetAgentId).select("name username").lean().exec();
       const targetName = (targetUser as { name?: string })?.name ?? "Agent";
 
       // Notify the ticket room
@@ -470,7 +516,7 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
     try {
       const ticket = await TicketModel.findById(ticketId).lean().exec();
       if (!ticket) return;
-      const isOwner = ticket.createdBy === userId;
+      const isOwner = ticket.createdBy === userId || (ticket as { studentId?: string }).studentId === userId;
       if (!isOwner && !isStaff) return;
 
       const messages = await TicketMessageModel.find({ ticketId })

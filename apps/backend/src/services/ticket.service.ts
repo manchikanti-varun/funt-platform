@@ -50,7 +50,7 @@ function defaultPriority(category: string): TICKET_PRIORITY {
 }
 
 function isStaff(roles: string[]): boolean {
-  return roles.some((r) => [ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN].includes(r as ROLE));
+  return roles.some((r) => [ROLE.TRAINER, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUPPORT_AGENT].includes(r as ROLE));
 }
 
 function isAdmin(roles: string[]): boolean {
@@ -220,11 +220,13 @@ export async function replyToTicket(
     ? ROLE.SUPER_ADMIN
     : senderRoles.includes(ROLE.ADMIN)
       ? ROLE.ADMIN
-      : senderRoles.includes(ROLE.TRAINER)
-        ? ROLE.TRAINER
-        : senderRoles.includes(ROLE.PARENT)
-          ? ROLE.PARENT
-          : ROLE.STUDENT;
+      : senderRoles.includes(ROLE.SUPPORT_AGENT)
+        ? ROLE.SUPPORT_AGENT
+        : senderRoles.includes(ROLE.TRAINER)
+          ? ROLE.TRAINER
+          : senderRoles.includes(ROLE.PARENT)
+            ? ROLE.PARENT
+            : ROLE.STUDENT;
 
   const msgDoc = await TicketMessageModel.create({
     ticketId,
