@@ -612,11 +612,13 @@ export interface RestoreResult {
 
 /**
  * Collections that should NEVER be overwritten during restore to avoid
- * losing active sessions and security data.
+ * losing active sessions, security data, and admin accounts.
  */
 const RESTORE_PROTECTED_COLLECTIONS = new Set([
   "sessions",
   "oauthnonces",
+  "users",
+  "registrationrequests",
 ]);
 
 /**
@@ -784,7 +786,18 @@ export async function restoreFromUpload(
       ...(options?.skipCollections ?? []).map((s) => s.toLowerCase()),
     ]);
 
+    // Allowed collection names — only application-level collections can be restored.
+    // Prevents injection into MongoDB system collections or other sensitive targets.
+    const ALLOWED_COLLECTION_PATTERN = /^[a-z][a-z0-9_-]{1,60}$/i;
+    const BLOCKED_PREFIXES = ["system.", "admin.", "config.", "local."];
+
     for (const [collectionName, docs] of Object.entries(data)) {
+      // Validate collection name format
+      if (!ALLOWED_COLLECTION_PATTERN.test(collectionName) || BLOCKED_PREFIXES.some((p) => collectionName.toLowerCase().startsWith(p))) {
+        errors.push({ collection: collectionName, message: "Invalid or disallowed collection name" });
+        continue;
+      }
+
       if (skipSet.has(collectionName.toLowerCase())) {
         skipped.push(collectionName);
         continue;
@@ -792,6 +805,11 @@ export async function restoreFromUpload(
 
       if (!Array.isArray(docs)) {
         errors.push({ collection: collectionName, message: "Expected an array of documents" });
+        continue;
+      }
+
+      if (docs.length > 100_000) {
+        errors.push({ collection: collectionName, message: "Too many documents (max 100,000 per collection)" });
         continue;
       }
 

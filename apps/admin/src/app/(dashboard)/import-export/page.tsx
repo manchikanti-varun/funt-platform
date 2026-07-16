@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { AppPageShell } from "@/components/ui";
-import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { RequireRoles } from "@/components/auth/RequireRoles";
+import { ROLE } from "@funt-platform/constants";
 
 type ExportLevel = 1 | 2 | 3 | 4;
 
@@ -28,13 +29,16 @@ function ExportPanel() {
       const ids = courseIds.split(",").map((s) => s.trim()).filter(Boolean);
       if (ids.length > 0) body.courseIds = ids;
 
-      const { apiUrl } = await import("@/lib/api");
-      const { ensureCsrfToken } = await import("@/lib/api");
+      const { apiUrl, ensureCsrfToken } = await import("@/lib/api");
       await ensureCsrfToken();
 
-      // Read CSRF token from cookie or in-memory
-      const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
-      const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+      // Read CSRF token from sessionStorage (cross-origin safe) then cookie fallback
+      let csrfToken: string | null = null;
+      if (typeof sessionStorage !== "undefined") csrfToken = sessionStorage.getItem("_csrf");
+      if (!csrfToken) {
+        const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
+        csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+      }
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
@@ -129,6 +133,21 @@ function ImportPanel() {
   const [result, setResult] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"CREATE_NEW" | "MERGE" | "REPLACE">("CREATE_NEW");
+
+  const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50MB max
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null;
+    setPreview(null);
+    setResult(null);
+    setError("");
+    if (f && f.size > MAX_ZIP_SIZE) {
+      setError(`File too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_ZIP_SIZE / 1024 / 1024}MB.`);
+      setFile(null);
+      return;
+    }
+    setFile(f);
+  }
 
   async function handlePreview() {
     if (!file) return;
@@ -257,9 +276,10 @@ function ImportPanel() {
         <input
           type="file"
           accept=".zip"
-          onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPreview(null); setResult(null); }}
+          onChange={handleFileChange}
           className="text-sm"
         />
+        {file && <p className="mt-1 text-xs text-slate-500">{file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)</p>}
       </div>
 
       <div className="mt-4 flex items-center gap-3">
@@ -284,11 +304,13 @@ function ImportPanel() {
         <button
           type="button"
           onClick={handleImport}
-          disabled={!file || importing}
+          disabled={!file || importing || !preview}
+          title={!preview ? "Run Preview first to check for conflicts" : undefined}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
         >
           {importing ? "Importing..." : "Import"}
         </button>
+        {!preview && file && <p className="self-center text-xs text-amber-600">Run Preview first</p>}
       </div>
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -324,11 +346,15 @@ function GitBackupPanel() {
     setResult(null);
     setRunning(true);
     try {
-      const { apiUrl } = await import("@/lib/api");
-      const { ensureCsrfToken } = await import("@/lib/api");
+      const { apiUrl, ensureCsrfToken } = await import("@/lib/api");
       await ensureCsrfToken();
-      const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
-      const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+
+      let csrfToken: string | null = null;
+      if (typeof sessionStorage !== "undefined") csrfToken = sessionStorage.getItem("_csrf");
+      if (!csrfToken) {
+        const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
+        csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+      }
 
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
@@ -403,8 +429,12 @@ function RestorePanel() {
   async function getAuthHeaders(): Promise<Record<string, string>> {
     const { ensureCsrfToken } = await import("@/lib/api");
     await ensureCsrfToken();
-    const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
-    const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+    let csrfToken: string | null = null;
+    if (typeof sessionStorage !== "undefined") csrfToken = sessionStorage.getItem("_csrf");
+    if (!csrfToken) {
+      const csrfMatch = document.cookie.match(/(?:^|; )funt_csrf=([^;]*)/);
+      csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : null;
+    }
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
     return headers;
@@ -657,7 +687,7 @@ function RestorePanel() {
 export default function ImportExportPage() {
   return (
     <AppPageShell>
-      <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
+      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Import / Export</h1>
         <p className="mt-1 text-sm text-slate-500">Backup, migrate, and clone platform data.</p>

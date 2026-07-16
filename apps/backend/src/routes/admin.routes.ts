@@ -233,7 +233,7 @@ router.post("/backup/restore", requireRoles(ROLE.SUPER_ADMIN), async (_req, res,
 });
 
 // ── Restore from uploaded backup data (Super Admin only) ──────────────────────
-router.post("/backup/restore-upload", requireRoles(ROLE.SUPER_ADMIN), express.json({ limit: "200mb" }), async (req, res, next) => {
+router.post("/backup/restore-upload", requireRoles(ROLE.SUPER_ADMIN), express.json({ limit: "50mb" }), async (req, res, next) => {
   try {
     const { restoreFromUpload } = await import("../services/gitBackup.service.js");
     const body = req.body as { collections?: Record<string, unknown[]>; skipCollections?: string[] };

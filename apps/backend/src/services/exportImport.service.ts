@@ -403,10 +403,25 @@ export async function executeImport(
     licenseKeys: 0, coupons: 0, shopProducts: 0, badgeDefinitions: 0,
   };
 
+  // Sanitize imported documents: strip $-prefixed keys (MongoDB operator injection prevention)
+  function sanitizeDoc(obj: unknown): unknown {
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(sanitizeDoc);
+    if (typeof obj === "object") {
+      const result: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+        if (key.startsWith("$")) continue; // Strip operator-like keys
+        result[key] = sanitizeDoc(value);
+      }
+      return result;
+    }
+    return obj;
+  }
+
   // ── Import Global Assignments ──────────────────────────────────────────
   for (const raw of data.globalAssignments) {
     try {
-      const a = raw as Record<string, unknown>;
+      const a = sanitizeDoc(raw) as Record<string, unknown>;
       const oldId = String(a._id ?? "");
       delete a._id;
       delete a.__v;
@@ -425,7 +440,7 @@ export async function executeImport(
   // ── Import Global Modules ──────────────────────────────────────────────
   for (const raw of data.globalModules) {
     try {
-      const m = raw as Record<string, unknown>;
+      const m = sanitizeDoc(raw) as Record<string, unknown>;
       const oldId = String(m._id ?? "");
       delete m._id;
       delete m.__v;
@@ -446,7 +461,7 @@ export async function executeImport(
   // ── Import Courses ─────────────────────────────────────────────────────
   for (const raw of data.courses) {
     try {
-      const c = raw as Record<string, unknown>;
+      const c = sanitizeDoc(raw) as Record<string, unknown>;
       const oldId = String(c._id ?? "");
       delete c._id;
       delete c.__v;
@@ -492,7 +507,7 @@ export async function executeImport(
   // ── Import Batches ─────────────────────────────────────────────────────
   for (const raw of data.batches) {
     try {
-      const b = raw as Record<string, unknown>;
+      const b = sanitizeDoc(raw) as Record<string, unknown>;
       const oldId = String(b._id ?? "");
       delete b._id;
       delete b.__v;
@@ -524,7 +539,7 @@ export async function executeImport(
   // ── Import Coupons (level 4) ───────────────────────────────────────────
   for (const raw of data.coupons) {
     try {
-      const c = raw as Record<string, unknown>;
+      const c = sanitizeDoc(raw) as Record<string, unknown>;
       delete c._id;
       delete c.__v;
       // Skip if code already exists
@@ -540,7 +555,7 @@ export async function executeImport(
   // ── Import Shop Products (level 4) ─────────────────────────────────────
   for (const raw of data.shopProducts) {
     try {
-      const p = raw as Record<string, unknown>;
+      const p = sanitizeDoc(raw) as Record<string, unknown>;
       delete p._id;
       delete p.__v;
       await ShopProductModel.create(p);
@@ -553,7 +568,7 @@ export async function executeImport(
   // ── Import Badge Definitions (level 4) ─────────────────────────────────
   for (const raw of data.badgeDefinitions) {
     try {
-      const b = raw as Record<string, unknown>;
+      const b = sanitizeDoc(raw) as Record<string, unknown>;
       delete b._id;
       delete b.__v;
       const existing = await BadgeTypeDefinitionModel.findOne({ badgeType: b.badgeType }).lean().exec();

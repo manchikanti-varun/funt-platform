@@ -11,6 +11,7 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 import { successRes } from "../utils/response.js";
+import { ROLE } from "@funt-platform/constants";
 import {
   streamExportZip,
   previewImport,
@@ -41,6 +42,12 @@ export const postExport = asyncHandler(async (req: Request, res: Response): Prom
 
   const level = Math.floor(Number(body.level ?? 1));
   if (level < 1 || level > 4) throw new AppError("level must be 1, 2, 3, or 4", 400);
+
+  // Level 3-4 exports require SUPER_ADMIN
+  const isSuperAdmin = req.user?.roles?.includes(ROLE.SUPER_ADMIN);
+  if (level >= 3 && !isSuperAdmin) {
+    throw new AppError("Level 3-4 exports require Super Admin access", 403);
+  }
 
   const filename = `funt-export-L${level}-${new Date().toISOString().slice(0, 10)}.zip`;
 
@@ -110,10 +117,24 @@ export const postImport = asyncHandler(async (req: Request, res: Response): Prom
   if (!body.manifest) throw new AppError("manifest is required", 400);
   if (body.manifest.platform !== "funt") throw new AppError("Invalid package: not a FUNT export", 400);
 
+  // Level 3-4 data (coupons, shop, badges, license keys) requires SUPER_ADMIN
+  const isSuperAdmin = req.user?.roles?.includes(ROLE.SUPER_ADMIN);
+  const hasLevel34Data = (body.licenseKeys?.length ?? 0) > 0 ||
+    (body.coupons?.length ?? 0) > 0 ||
+    (body.shopProducts?.length ?? 0) > 0 ||
+    (body.badgeDefinitions?.length ?? 0) > 0;
+  if (hasLevel34Data && !isSuperAdmin) {
+    throw new AppError("Importing license keys, coupons, shop products, or badges requires Super Admin access", 403);
+  }
+
+  // REPLACE mode is destructive — require SUPER_ADMIN
   const mode: ImportMode =
     body.mode === "MERGE" ? "MERGE" :
     body.mode === "REPLACE" ? "REPLACE" :
     "CREATE_NEW";
+  if (mode === "REPLACE" && !isSuperAdmin) {
+    throw new AppError("REPLACE import mode requires Super Admin access", 403);
+  }
 
   const result = await executeImport(
     {
