@@ -10,6 +10,7 @@ interface BatchOption {
 
 export default function EnrollmentsPage() {
   const [batches, setBatches] = useState<BatchOption[]>([]);
+  const [batchesError, setBatchesError] = useState<string | null>(null);
   const [studentId, setStudentId] = useState("");
   const [batchId, setBatchId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,20 +19,30 @@ export default function EnrollmentsPage() {
   useEffect(() => {
     api<BatchOption[]>("/api/batches").then((r) => {
       if (r.success && Array.isArray(r.data)) setBatches(r.data);
+      else setBatchesError(r.message ?? "Could not load batches");
     });
   }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!studentId.trim() || !batchId.trim()) {
+      setMessage({ type: "error", text: "Both student and batch are required." });
+      return;
+    }
     setMessage(null);
     setLoading(true);
     const res = await api("/api/enrollments", {
       method: "POST",
-      body: JSON.stringify({ studentId, batchId }),
+      body: JSON.stringify({ studentId: studentId.trim(), batchId }),
     });
     setLoading(false);
-    if (res.success) setMessage({ type: "success", text: "Enrolled." });
-    else setMessage({ type: "error", text: res.message ?? "Could not enroll." });
+    if (res.success) {
+      setMessage({ type: "success", text: "Enrolled." });
+      setStudentId("");
+      setBatchId("");
+    } else {
+      setMessage({ type: "error", text: res.message ?? "Could not enroll." });
+    }
   }
 
   return (
@@ -50,14 +61,18 @@ export default function EnrollmentsPage() {
         </div>
         <div>
           <label className="mb-1 block text-sm font-semibold text-slate-700">Batch</label>
-          <select required value={batchId} onChange={(e) => setBatchId(e.target.value)} className="input">
-            <option value="">Select batch</option>
-            {batches.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+          {batchesError ? (
+            <p className="text-sm text-red-600">{batchesError}</p>
+          ) : (
+            <select required value={batchId} onChange={(e) => setBatchId(e.target.value)} className="input">
+              <option value="">Select batch</option>
+              {batches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         {message ? (
           <div className={message.type === "success" ? "alert--success" : "alert--error"}>

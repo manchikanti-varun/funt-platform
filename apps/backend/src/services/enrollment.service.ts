@@ -58,12 +58,6 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
   if (!batch) throw new AppError("Batch not found", 404);
   const batchMongoId = String((batch as { _id: unknown })._id);
 
-  const existing = await EnrollmentModel.findOne({
-    studentId,
-    batchId: batchMongoId,
-  }).exec();
-  if (existing) throw new AppError("Student is already enrolled in this batch", 400);
-
   let doc;
   try {
     doc = await EnrollmentModel.create({
@@ -72,7 +66,6 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
       status: ENROLLMENT_STATUS.ACTIVE,
     });
   } catch (err) {
-    // Handle race condition: concurrent requests may both pass the findOne check above
     if ((err as { code?: number })?.code === 11000) {
       throw new AppError("Student is already enrolled in this batch", 400);
     }
@@ -144,22 +137,22 @@ export async function getMyEnrollments(studentId: string, page = 1, limit = 50) 
   const skip = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit));
   const effectiveLimit = Math.min(100, Math.max(1, limit));
 
+  const statusFilter = { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] };
+
   const [enrollments, _total] = await Promise.all([
-    EnrollmentModel.find({ studentId })
+    EnrollmentModel.find({ studentId, status: statusFilter })
       .sort({ enrolledAt: -1 })
       .skip(skip)
       .limit(effectiveLimit)
       .lean()
       .exec(),
-    EnrollmentModel.countDocuments({ studentId }).exec(),
+    EnrollmentModel.countDocuments({ studentId, status: statusFilter }).exec(),
   ]);
   const batchIds = enrollments.map((e) => e.batchId);
   const batches = await BatchModel.find({ _id: { $in: batchIds } }).lean().exec();
   const batchMap = new Map(batches.map((b) => [String(b._id), b]));
 
-  const items = enrollments
-    .filter((e) => e.status === ENROLLMENT_STATUS.ACTIVE || e.status === ENROLLMENT_STATUS.COMPLETED)
-    .map((e) => {
+  const items = enrollments.map((e) => {
       const batch = batchMap.get(e.batchId);
       const snapshots = batch ? getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]) : [];
       const firstSnap = snapshots[0] as { courseId?: string } | undefined;
@@ -329,40 +322,63 @@ export async function bulkEnroll(
   const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
   const defaultCourseId = String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() || undefined;
 
-  for (const studentId of toCreate) {
+  // Batch-insert all enrollments at once using insertMany with ordered:false
+  // This is far more efficient than sequential create() calls for large batches.
+  if (toCreate.length > 0) {
+    const docs = toCreate.map((studentId) => ({
+      studentId,
+      batchId: batchMongoId,
+      status: ENROLLMENT_STATUS.ACTIVE,
+    }));
+
+    let insertedStudentIds: string[];
     try {
-      const doc = await EnrollmentModel.create({
-        studentId,
-        batchId: batchMongoId,
-        status: ENROLLMENT_STATUS.ACTIVE,
-      });
-      // Fire secondary operations in parallel — they're non-critical for enrollment success
-      await Promise.allSettled([
+      const inserted = await EnrollmentModel.insertMany(docs, { ordered: false });
+      insertedStudentIds = inserted.map((d) => String(d.studentId));
+    } catch (err: unknown) {
+      // With ordered:false, insertMany throws a BulkWriteError but still inserts non-duplicates
+      const bulkErr = err as { insertedDocs?: Array<{ studentId: string }>; code?: number; writeErrors?: Array<{ index: number }> };
+      if (bulkErr.code === 11000 || (bulkErr.writeErrors && bulkErr.writeErrors.length > 0)) {
+        // Some succeeded, some were duplicates
+        const successfulDocs = bulkErr.insertedDocs ?? [];
+        insertedStudentIds = successfulDocs.map((d) => String(d.studentId));
+        result.skipped += toCreate.length - insertedStudentIds.length;
+      } else {
+        throw err;
+      }
+    }
+
+    result.enrolled = insertedStudentIds.length;
+
+    // Fire secondary operations in parallel for all enrolled students
+    await Promise.allSettled(
+      insertedStudentIds.flatMap((studentId) => [
         clearBatchEnrollmentExclusion(studentId, batchMongoId),
         createAuditLog("ENROLLMENT_CREATED", createdBy, "Enrollment", batchMongoId),
         cacheDel(CACHE_KEYS.studentCourses(studentId)),
-        shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId).then((skip) => {
-          if (!skip) {
-            return issueInvoiceForEnrollment({
-              enrollmentId: String(doc._id),
-              studentId,
-              batchId: batchMongoId,
-              courseId: defaultCourseId,
-              createdBy,
-            });
-          }
-        }),
-      ]);
-      result.enrolled += 1;
-    } catch (err) {
-      if ((err as { code?: number })?.code === 11000) {
-        result.skipped += 1;
-      } else {
-        result.errors.push({
-          identifier: studentId,
-          message: err instanceof Error ? err.message : "Failed to enroll",
-        });
-      }
+      ])
+    );
+
+    // Issue invoices for enrolled students (non-blocking batch)
+    const skipInvoice = await shouldSkipEnrollmentInvoice(batchMongoId, defaultCourseId);
+    if (!skipInvoice) {
+      // Fire invoice creation in parallel — these are non-critical for enrollment success
+      const enrollments = await EnrollmentModel.find({
+        studentId: { $in: insertedStudentIds },
+        batchId: batchMongoId,
+      }).select("_id studentId").lean().exec();
+
+      await Promise.allSettled(
+        enrollments.map((doc) =>
+          issueInvoiceForEnrollment({
+            enrollmentId: String(doc._id),
+            studentId: String(doc.studentId),
+            batchId: batchMongoId,
+            courseId: defaultCourseId,
+            createdBy,
+          })
+        )
+      );
     }
   }
 

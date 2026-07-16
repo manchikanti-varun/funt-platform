@@ -104,21 +104,40 @@ export async function ensureDemoEnrollmentsForStudent(studentId: string): Promis
   const sid = String(studentId ?? "").trim();
   if (!sid) return 0;
   const [batches, excludedBatches] = await Promise.all([listBatchesWithDemoCourses(), excludedBatchIdsForStudent(sid)]);
+  if (batches.length === 0) return 0;
+
+  const batchMongoIds = batches
+    .map((b) => String(b._id))
+    .filter((id) => !excludedBatches.has(id));
+  if (batchMongoIds.length === 0) return 0;
+
+  // Batch-check all existing enrollments in one query instead of N sequential findOne calls
+  const existingEnrollments = await EnrollmentModel.find({
+    studentId: sid,
+    batchId: { $in: batchMongoIds },
+  }).select("batchId").lean().exec();
+  const alreadyEnrolledSet = new Set(existingEnrollments.map((e) => String(e.batchId)));
+
+  const toEnroll = batchMongoIds.filter((id) => !alreadyEnrolledSet.has(id));
+  if (toEnroll.length === 0) return 0;
+
   let created = 0;
-  for (const batch of batches) {
-    const batchMongoId = String(batch._id);
-    if (excludedBatches.has(batchMongoId)) continue;
-    const existing = await EnrollmentModel.findOne({ studentId: sid, batchId: batchMongoId }).exec();
-    if (existing) continue;
-    try {
-      await EnrollmentModel.create({
-        studentId: sid,
-        batchId: batchMongoId,
-        status: ENROLLMENT_STATUS.ACTIVE,
-      });
-      created += 1;
-    } catch (err) {
-      if (!isDuplicateKeyError(err)) throw err;
+  const docs = toEnroll.map((batchMongoId) => ({
+    studentId: sid,
+    batchId: batchMongoId,
+    status: ENROLLMENT_STATUS.ACTIVE,
+  }));
+
+  try {
+    const result = await EnrollmentModel.insertMany(docs, { ordered: false });
+    created = result.length;
+  } catch (err) {
+    // With ordered:false, some may succeed even if others hit duplicate key
+    if ((err as { code?: number })?.code === 11000) {
+      const bulkErr = err as { insertedDocs?: unknown[] };
+      created = bulkErr.insertedDocs?.length ?? 0;
+    } else {
+      throw err;
     }
   }
   return created;

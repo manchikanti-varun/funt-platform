@@ -329,19 +329,49 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
   const key = rawKey.trim();
   if (!key) throw new AppError("License key is required", 400);
 
-  const license = await LicenseKeyModel.findOne({ key }).exec();
-  if (!license) throw new AppError("Invalid license key", 400);
-  if (license.usedByStudentId) throw new AppError("This license key has already been used", 400);
+  // Validate key format: must be FUNT- prefix + 24 hex uppercase chars
+  if (!/^FUNT-[A-F0-9]{24}$/i.test(key)) {
+    throw new AppError("Invalid license key format", 400);
+  }
+
+  // Atomically claim the key — prevents TOCTOU race condition where two concurrent
+  // requests both pass the "is it used?" check and double-redeem a single-use key.
+  const license = await LicenseKeyModel.findOneAndUpdate(
+    { key, usedByStudentId: { $exists: false } },
+    { $set: { usedByStudentId: studentId, usedAt: new Date() } },
+    { new: true }
+  ).exec();
+
+  if (!license) {
+    // Either key doesn't exist or was already used — check which
+    const exists = await LicenseKeyModel.findOne({ key }).select("usedByStudentId").lean().exec();
+    if (!exists) throw new AppError("Invalid license key", 400);
+    throw new AppError("This license key has already been used", 400);
+  }
 
   const batchId = license.batchId;
   if (!batchId) throw new AppError("License is misconfigured (no batch)", 500);
 
   const batch = await BatchModel.findById(batchId).lean().exec();
-  if (!batch) throw new AppError("Batch no longer exists", 400);
+  if (!batch) {
+    // Rollback: unclaim the key since we can't complete the enrollment
+    await LicenseKeyModel.updateOne(
+      { _id: license._id },
+      { $unset: { usedByStudentId: 1, usedAt: 1 } }
+    ).exec();
+    throw new AppError("Batch no longer exists", 400);
+  }
 
   const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
   const allowed = snaps.some((s) => (s as { courseId?: string }).courseId === license.courseId);
-  if (!allowed) throw new AppError("License does not match course offering", 400);
+  if (!allowed) {
+    // Rollback: unclaim the key
+    await LicenseKeyModel.updateOne(
+      { _id: license._id },
+      { $unset: { usedByStudentId: 1, usedAt: 1 } }
+    ).exec();
+    throw new AppError("License does not match course offering", 400);
+  }
 
   const existing = await EnrollmentModel.findOne({ studentId, batchId }).exec();
   const alreadyEnrolled = existing && (existing.status === ENROLLMENT_STATUS.ACTIVE || existing.status === ENROLLMENT_STATUS.COMPLETED);
@@ -349,24 +379,32 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
   const targetMilestoneIds = (license as { targetMilestoneIds?: string[] }).targetMilestoneIds ?? [];
   const isMilestoneKey = licenseType && licenseType !== LICENSE_KEY_TYPE.COURSE_ACCESS;
 
-  // If already enrolled and this is a course-level key, reject
+  // If already enrolled and this is a course-level key, rollback and reject
   if (alreadyEnrolled && !isMilestoneKey) {
+    await LicenseKeyModel.updateOne(
+      { _id: license._id },
+      { $unset: { usedByStudentId: 1, usedAt: 1 } }
+    ).exec();
     throw new AppError("You are already enrolled in this batch", 400);
   }
 
   // If not enrolled, create enrollment
   if (!alreadyEnrolled) {
-    await createEnrollment({
-      studentId,
-      batchId,
-      createdBy: studentId,
-    });
+    try {
+      await createEnrollment({
+        studentId,
+        batchId,
+        createdBy: studentId,
+      });
+    } catch (enrollErr) {
+      // Rollback: unclaim the key if enrollment fails
+      await LicenseKeyModel.updateOne(
+        { _id: license._id },
+        { $unset: { usedByStudentId: 1, usedAt: 1 } }
+      ).exec();
+      throw enrollErr;
+    }
   }
-
-  await LicenseKeyModel.updateOne(
-    { _id: license._id },
-    { $set: { usedByStudentId: studentId, usedAt: new Date() } }
-  ).exec();
 
   // Audit: license redeemed
   await createAuditLog("LICENSE_KEY_REDEEMED", studentId, "LicenseKey", String(license._id), {

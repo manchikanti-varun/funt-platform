@@ -21,19 +21,25 @@ export default function EnrollLicensePage() {
       return;
     }
     setLoading(true);
-    const res = await api<{ batchId?: string; message?: string }>("/api/student/enroll/license", {
-      method: "POST",
-      body: JSON.stringify({ licenseKey: trimmed }),
-    });
-    setLoading(false);
-    if (res.success) {
-      setMsg({ type: "ok", text: res.message ?? "You are now enrolled. Opening your courses…" });
-      setTimeout(() => {
+    const controller = new AbortController();
+    try {
+      const res = await api<{ batchId?: string; message?: string }>("/api/student/enroll/license", {
+        method: "POST",
+        body: JSON.stringify({ licenseKey: trimmed }),
+        signal: controller.signal,
+      });
+      if (res.success) {
+        setMsg({ type: "ok", text: res.message ?? "You are now enrolled. Opening your courses…" });
         router.refresh();
         router.push("/courses");
-      }, 1500);
-    } else {
-      setMsg({ type: "err", text: res.message ?? "Could not redeem this key." });
+      } else {
+        setMsg({ type: "err", text: res.message ?? "Could not redeem this key." });
+      }
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
+      setMsg({ type: "err", text: "Something went wrong. Please try again." });
+    } finally {
+      setLoading(false);
     }
   }
 

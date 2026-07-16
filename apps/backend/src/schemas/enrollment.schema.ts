@@ -2,13 +2,13 @@ import { z } from "zod";
 import { objectIdSchema } from "./common.schema.js";
 
 export const createEnrollmentSchema = z.object({
-  studentId: objectIdSchema,
-  batchId: objectIdSchema,
+  studentId: z.string().min(1, "studentId or username is required").max(100),
+  batchId: z.string().min(1, "batchId is required").max(100),
 });
 
 export const bulkEnrollSchema = z.object({
-  batchId: objectIdSchema,
-  studentUsernames: z.array(z.string().min(1)).min(1, "At least one username is required").max(500),
+  batchId: z.string().min(1, "batchId is required").max(100),
+  studentUsernames: z.array(z.string().min(1).max(100)).min(1, "At least one username is required").max(500),
 });
 
 export const markChapterCompleteSchema = z.object({

@@ -308,7 +308,10 @@ export const respondToEnrollmentRequest = asyncHandler(async (req: Request, res:
   const requestId = req.params.id;
   const { action } = req.body ?? {};
   if (!requestId) throw new AppError("Request ID is required", 400);
-  const normalizedAction = String(action).toUpperCase() === "REJECT" ? "REJECT" : "APPROVE";
+  const normalizedAction = String(action).toUpperCase();
+  if (normalizedAction !== "APPROVE" && normalizedAction !== "REJECT") {
+    throw new AppError("action must be either APPROVE or REJECT", 400);
+  }
   const isSuperAdmin = !!req.user?.roles?.includes(ROLE.SUPER_ADMIN);
   const data = await enrollmentRequestService.respondToEnrollmentRequest(requestId, normalizedAction, adminId, isSuperAdmin);
   successRes(res, data, data.message, 200);

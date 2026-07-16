@@ -54,6 +54,18 @@ export async function createEnrollmentRequest(studentId: string, batchIdOrCourse
         message: sameCourseRequest ? "Request already sent" : "A request for this batch is already pending",
       };
     }
+    // Cooldown: don't allow re-submission within 24 hours of rejection
+    if (existing.status === "REJECTED" && existing.respondedAt) {
+      const cooldownMs = 24 * 60 * 60 * 1000; // 24 hours
+      const elapsed = Date.now() - new Date(existing.respondedAt).getTime();
+      if (elapsed < cooldownMs) {
+        const hoursRemaining = Math.ceil((cooldownMs - elapsed) / (60 * 60 * 1000));
+        throw new AppError(
+          `Your previous request was declined. You can re-apply in ${hoursRemaining} hour${hoursRemaining === 1 ? "" : "s"}.`,
+          429
+        );
+      }
+    }
     existing.status = "PENDING";
     existing.requestedAt = new Date();
     existing.respondedAt = undefined;
