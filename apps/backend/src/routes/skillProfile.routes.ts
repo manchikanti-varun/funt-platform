@@ -10,6 +10,6 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get("/me", requireRoles(ROLE.STUDENT), getMySkillProfile);
-router.get("/:studentId", getSkillProfile);
+router.get("/:studentId", requireRoles(ROLE.STUDENT, ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.TRAINER), getSkillProfile);
 
 export const skillProfileRoutes = router;

@@ -71,8 +71,24 @@ function ChangePasswordSection() {
       setMessage({ type: "error", text: "New password and confirmation do not match." });
       return;
     }
-    if (newPassword.length < 6) {
-      setMessage({ type: "error", text: "New password must be at least 6 characters." });
+    if (newPassword.length < 8) {
+      setMessage({ type: "error", text: "New password must be at least 8 characters." });
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setMessage({ type: "error", text: "New password must contain at least one uppercase letter." });
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setMessage({ type: "error", text: "New password must contain at least one lowercase letter." });
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setMessage({ type: "error", text: "New password must contain at least one number." });
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(newPassword)) {
+      setMessage({ type: "error", text: "New password must contain at least one special character." });
       return;
     }
     setLoading(true);
@@ -105,8 +121,6 @@ function ChangePasswordSection() {
             type="password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            onCopy={(e) => e.preventDefault()}
-            onCut={(e) => e.preventDefault()}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
             autoComplete="current-password"
@@ -119,11 +133,9 @@ function ChangePasswordSection() {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            onCopy={(e) => e.preventDefault()}
-            onCut={(e) => e.preventDefault()}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
           />
         </div>
@@ -134,11 +146,9 @@ function ChangePasswordSection() {
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            onCopy={(e) => e.preventDefault()}
-            onCut={(e) => e.preventDefault()}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-funt-gold focus:outline-none focus:ring-1 focus:ring-funt-gold"
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
           />
         </div>

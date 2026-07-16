@@ -104,6 +104,8 @@ export default function PeopleInsightsPage() {
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [studentPreview, setStudentPreview] = useState<PersonRow | null>(null);
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<PersonRow | null>(null);
+  const [deleteConfirmResolve, setDeleteConfirmResolve] = useState<((value: boolean) => void) | null>(null);
 
   const canSeeSuperAdminTab = isSuperAdmin;
   const tabs = useMemo(() => ROLE_TABS.filter((t) => canSeeSuperAdminTab || t.id !== "SUPER_ADMIN"), [canSeeSuperAdminTab]);
@@ -154,17 +156,30 @@ export default function PeopleInsightsPage() {
       setMessage({ type: "error", text: "Select at least one row for bulk download." });
       return;
     }
-    const res = await fetch(downloadUrl("/api/admin/people/bulk-download"), {
+    const res = await api<Blob>("/api/admin/people/bulk-download", {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role, userIds: selectedIds, format: "csv" }),
     });
-    if (!res.ok) {
+    if (!res.success) {
+      setMessage({ type: "error", text: res.message ?? "Bulk download failed." });
+      return;
+    }
+    // The api() helper returns JSON — for CSV download we need raw fetch with credentials + CSRF
+    const apiBase = apiUrl("");
+    const csrfToken = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("_csrf") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+    const rawRes = await fetch(`${apiBase}/api/admin/people/bulk-download`, {
+      method: "POST",
+      credentials: "include",
+      headers,
+      body: JSON.stringify({ role, userIds: selectedIds, format: "csv" }),
+    });
+    if (!rawRes.ok) {
       setMessage({ type: "error", text: "Bulk download failed." });
       return;
     }
-    const blob = await res.blob();
+    const blob = await rawRes.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -370,14 +385,17 @@ export default function PeopleInsightsPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                            if (!window.confirm(`⚠️ DELETE "${r.name}" (@${r.username})?\n\nThis cannot be undone.`)) return;
-                            if (!window.confirm(`Are you sure? This will permanently remove this account.`)) return;
+                            const confirmed = await new Promise<boolean>((resolve) => {
+                              setDeleteConfirmUser(r);
+                              setDeleteConfirmResolve(() => resolve);
+                            });
+                            if (!confirmed) return;
                             const res = await api(`/api/admin/users/${r.id}`, { method: "DELETE" });
                             if (res.success) {
                               setRows((prev) => prev.filter((row) => row.id !== r.id));
-                              alert(`Deleted: ${r.username}`);
+                              setMessage({ type: "success", text: `Deleted: ${r.username}` });
                             } else {
-                              alert((res as { message?: string }).message ?? "Failed to delete");
+                              setMessage({ type: "error", text: (res as { message?: string }).message ?? "Failed to delete" });
                             }
                           }}
                           title="Delete account"
@@ -436,6 +454,54 @@ export default function PeopleInsightsPage() {
           </div>
         </div>
       </FormPanel>
+      {/* Delete confirmation dialog */}
+      {deleteConfirmUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Delete user account</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700">
+              Permanently delete <strong className="text-slate-900">{deleteConfirmUser.name}</strong>{" "}
+              (<span className="font-mono text-slate-600">@{deleteConfirmUser.username}</span>)?
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              All enrollments, progress, and associated data will be removed. This cannot be reversed.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  deleteConfirmResolve?.(false);
+                  setDeleteConfirmUser(null);
+                  setDeleteConfirmResolve(null);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteConfirmResolve?.(true);
+                  setDeleteConfirmUser(null);
+                  setDeleteConfirmResolve(null);
+                }}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+              >
+                Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {studentPreview && role === "STUDENT" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">

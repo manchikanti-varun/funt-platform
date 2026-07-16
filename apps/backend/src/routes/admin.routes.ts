@@ -138,12 +138,14 @@ router.delete("/users/:userId", requireRoles(ROLE.SUPER_ADMIN), async (req, res,
     const { AppError } = await import("../utils/AppError.js");
     const { UserModel } = await import("../models/User.model.js");
     const { EnrollmentModel } = await import("../models/Enrollment.model.js");
+    const { ChapterProgressModel } = await import("../models/ModuleProgress.model.js");
     const { createAuditLog } = await import("../services/audit.service.js");
     const { successRes } = await import("../utils/response.js");
+    const { cacheDel, CACHE_KEYS } = await import("../utils/cache.js");
 
     const targetId = req.params.userId;
     const performedBy = req.user?.userId;
-    if (!targetId) throw new AppError("userId is required", 400);
+    if (!targetId || !/^[a-fA-F0-9]{24}$/.test(targetId)) throw new AppError("Valid userId is required", 400);
 
     const user = await UserModel.findById(targetId).select("username name roles").exec();
     if (!user) throw new AppError("User not found", 404);
@@ -156,13 +158,23 @@ router.delete("/users/:userId", requireRoles(ROLE.SUPER_ADMIN), async (req, res,
       throw new AppError("Cannot delete a Super Admin account. Demote first.", 400);
     }
 
-    // Delete associated enrollments
-    await EnrollmentModel.deleteMany({ studentId: targetId }).exec();
+    // Delete associated data across collections
+    const { EnrollmentRequestModel } = await import("../models/EnrollmentRequest.model.js");
+    const { NotificationModel } = await import("../models/Notification.model.js");
+
+    await Promise.allSettled([
+      EnrollmentModel.deleteMany({ studentId: targetId }).exec(),
+      ChapterProgressModel.deleteMany({ studentId: targetId }).exec(),
+      EnrollmentRequestModel.deleteMany({ studentId: targetId }).exec(),
+      NotificationModel.deleteMany({ userId: targetId }).exec(),
+      cacheDel(CACHE_KEYS.studentCourses(targetId)),
+      cacheDel(CACHE_KEYS.user(targetId)),
+    ]);
 
     // Delete the user
     await UserModel.deleteOne({ _id: targetId }).exec();
 
-    await createAuditLog("USER_CREATED" as Parameters<typeof createAuditLog>[0], performedBy ?? "unknown", "User", targetId, {
+    await createAuditLog("USER_DELETED" as Parameters<typeof createAuditLog>[0], performedBy ?? "unknown", "User", targetId, {
       action: "DELETED",
       deletedUsername: user.username,
       deletedName: user.name,

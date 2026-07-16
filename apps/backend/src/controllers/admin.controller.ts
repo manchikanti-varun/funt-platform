@@ -204,14 +204,12 @@ export const createStudentHandler = asyncHandler(async (req: Request, res: Respo
     string,
     unknown
   >;
-  if (!name || !mobile || !password || !username || age == null) {
-    throw new AppError("name, mobile, password, username, and age are required", 400);
-  }
+  // Zod schema (createStudentSchema) validates all required fields before this handler runs.
   const result = await createStudent({
     name: String(name),
     email: email != null ? String(email) : undefined,
     mobile: String(mobile),
-    password: String(password),
+    password: password != null ? String(password) : undefined,
     username: String(username),
     age: Number(age),
     address: address != null ? String(address) : undefined,
@@ -279,6 +277,7 @@ export const resetLoginHandler = asyncHandler(async (req: Request, res: Response
   const { newPassword } = req.body as { newPassword?: string };
   if (!username?.trim()) throw new AppError("username is required", 400);
   if (!newPassword?.trim()) throw new AppError("newPassword is required", 400);
+  if (newPassword.length > 200) throw new AppError("Password is too long", 400);
   await resetLoginAttemptsByUsername(username, newPassword, req.user?.roles);
   const performedBy = req.user?.userId ?? "unknown";
   await createAuditLog("USER_PASSWORD_RESET", performedBy, "User", username, { username }).catch(() => {});
@@ -295,10 +294,16 @@ export const patchUserIdentityHandler = asyncHandler(async (req: Request, res: R
     status?: string;
   };
 
-  // Handle status change separately with audit logging
+  const user = await UserModel.findById(userId).select("status roles").lean().exec();
+  if (!user) throw new AppError("User not found", 404);
+
+  // Handle identity field changes FIRST (these can fail on uniqueness constraints)
+  if (username || email || mobile) {
+    await updateUserIdentityByAdmin(userId, { username, email, mobile }, req.user?.roles);
+  }
+
+  // Handle status change AFTER identity — if identity failed, we won't reach here
   if (status && ["ACTIVE", "SUSPENDED", "ARCHIVED"].includes(status)) {
-    const user = await UserModel.findById(userId).select("status").lean().exec();
-    if (!user) throw new AppError("User not found", 404);
     const oldStatus = (user as { status?: string }).status;
     if (oldStatus !== status) {
       await UserModel.updateOne({ _id: userId }, { $set: { status } }).exec();
@@ -307,12 +312,10 @@ export const patchUserIdentityHandler = asyncHandler(async (req: Request, res: R
         status === "SUSPENDED" ? "USER_SUSPENDED" :
         status === "ARCHIVED" ? "USER_ARCHIVED" : "USER_ACTIVATED";
       await createAuditLog(auditAction, performedBy, "User", userId, { oldStatus, newStatus: status }).catch(() => {});
+      // Invalidate user cache so auth middleware picks up the status change immediately
+      const { cacheDel, CACHE_KEYS } = await import("../utils/cache.js");
+      await cacheDel(CACHE_KEYS.user(userId));
     }
-  }
-
-  // Handle identity field changes
-  if (username || email || mobile) {
-    await updateUserIdentityByAdmin(userId, { username, email, mobile }, req.user?.roles);
   }
 
   successRes(res, null, "User identity updated");
