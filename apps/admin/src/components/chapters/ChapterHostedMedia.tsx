@@ -128,7 +128,7 @@ export function ChapterHostedMedia({ youtubeUrl, videoUrl }: ChapterHostedMediaP
                 title="Video preview"
                 src={drivePreview}
                 className="h-full w-full min-h-[220px]"
-                sandbox="allow-scripts allow-same-origin"
+                sandbox="allow-scripts allow-popups"
                 allow="autoplay; fullscreen"
                 allowFullScreen
               />

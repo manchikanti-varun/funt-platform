@@ -1012,6 +1012,10 @@ export async function verifyPaymentAndEnroll(
     try {
       const doc = await PaymentSubmissionModel.findById(paymentId).select("studentId kind").lean().exec();
       if (doc) {
+        // Invalidate student's cached course list so access change is immediate
+        const { cacheDel, CACHE_KEYS } = await import("../utils/cache.js");
+        await cacheDel(CACHE_KEYS.studentCourses(String(doc.studentId)));
+
         await createNotification({
           userId: String(doc.studentId),
           title: "Payment Approved ✅",

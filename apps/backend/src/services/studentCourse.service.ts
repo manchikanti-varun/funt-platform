@@ -151,31 +151,33 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
 
   const snapshotCourseId = snapshot.courseId ?? batchMongoId;
 
-  const enrollment = await EnrollmentModel.findOne({
-    studentId,
-    batchId: batchMongoId,
-    status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
-  }).exec();
+  // Parallelize independent DB queries for enrollment, payment state, and license check
+  const enrollmentPriceInPaise = Math.max(
+    0,
+    Math.floor(Number((snapshot as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0))
+  );
+  const needsPaymentCheck = enrollmentPriceInPaise >= 100;
+
+  const [enrollment, payState, hasLicenseKey] = await Promise.all([
+    EnrollmentModel.findOne({
+      studentId,
+      batchId: batchMongoId,
+      status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
+    }).exec(),
+    needsPaymentCheck ? getLatestCoursePaymentState(studentId, batchMongoId, snapshotCourseId) : Promise.resolve(null),
+    needsPaymentCheck ? hasLicenseKeyEnrollment(studentId, batchMongoId) : Promise.resolve(false),
+  ]);
 
   const blocked = !!(enrollment as { accessBlocked?: boolean } | null)?.accessBlocked;
   const courseBlocked = isCourseBlockedInEnrollment(
     enrollment as ({ courseAccessBlocked?: Map<string, boolean> | Record<string, boolean> } & Record<string, unknown>) | null,
     snapshotCourseId
   );
-  const enrollmentPriceInPaise = Math.max(
-    0,
-    Math.floor(Number((snapshot as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0))
-  );
   let hasVerifiedCoursePayment = false;
-  if (!!enrollment && !blocked && enrollmentPriceInPaise >= 100) {
-    const payState = await getLatestCoursePaymentState(studentId, batchMongoId, snapshotCourseId);
-    hasVerifiedCoursePayment = payState?.status === "VERIFIED";
-    // License key enrollment bypasses payment requirement
-    if (!hasVerifiedCoursePayment) {
-      hasVerifiedCoursePayment = await hasLicenseKeyEnrollment(studentId, batchMongoId);
-    }
+  if (!!enrollment && !blocked && needsPaymentCheck) {
+    hasVerifiedCoursePayment = payState?.status === "VERIFIED" || hasLicenseKey;
   }
-  const hasAccess = !!enrollment && !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedCoursePayment);
+  const hasAccess = !!enrollment && !blocked && !courseBlocked && (!needsPaymentCheck || hasVerifiedCoursePayment);
 
   const rawModules = snapshot?.modules ?? [];
 

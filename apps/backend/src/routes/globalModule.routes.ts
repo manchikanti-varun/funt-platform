@@ -2,7 +2,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import { createGlobalModuleSchema, updateGlobalModuleSchema } from "../schemas/globalModule.schema.js";
 import {
   createModule,
   listModules,
@@ -20,11 +22,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), createModule);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createGlobalModuleSchema), createModule);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listModules);
 router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteModules);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getModule);
-router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateModule);
+router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(updateGlobalModuleSchema), updateModule);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveModule);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveModule);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteModule);
@@ -36,8 +38,10 @@ router.get("/:id/export-doc", requireRoles(ROLE.SUPER_ADMIN), async (req, res, n
   try {
     const { exportChapterAsDoc } = await import("../services/chapterExport.service.js");
     const { html, filename } = await exportChapterAsDoc(req.params.id);
+    // Sanitize filename for Content-Disposition header (prevent header injection)
+    const safeFilename = filename.replace(/[^\w\s.-]/g, "_").replace(/\s+/g, "_").slice(0, 100);
     res.setHeader("Content-Type", "application/vnd.ms-word");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
     res.send(html);
   } catch (err) { next(err); }
 });

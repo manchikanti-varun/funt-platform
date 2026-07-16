@@ -36,6 +36,7 @@ interface VideoUploadFieldProps {
 }
 
 const ALLOWED_TYPES = new Set(["video/mp4"]);
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
 
 /** Format bytes as a human-readable string, e.g. "1.4 GB". */
 function formatBytes(bytes: number): string {
@@ -80,6 +81,10 @@ export function VideoUploadField({
     async (file: File) => {
       if (!ALLOWED_TYPES.has(file.type)) {
         reportError("Only MP4 video files are supported.");
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        reportError(`File is too large (${formatBytes(file.size)}). Maximum size is ${formatBytes(MAX_FILE_SIZE_BYTES)}.`);
         return;
       }
       if (!courseId.trim() || !moduleId.trim()) {

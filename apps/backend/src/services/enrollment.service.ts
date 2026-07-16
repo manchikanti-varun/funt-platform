@@ -191,6 +191,8 @@ export async function setEnrollmentAccessBlocked(enrollmentId: string, blocked: 
     { new: true }
   ).exec();
   if (!doc) throw new AppError("Enrollment not found", 404);
+  // Invalidate student's cached course list so the access change is reflected immediately
+  await cacheDel(CACHE_KEYS.studentCourses(String(doc.studentId)));
   return doc;
 }
 
@@ -220,6 +222,8 @@ export async function setEnrollmentCourseAccessBlocked(
   (enrollment as { courseAccessBlocked: Map<string, boolean> }).courseAccessBlocked = next;
   enrollment.markModified("courseAccessBlocked");
   await enrollment.save();
+  // Invalidate student's cached course list so the access change is reflected immediately
+  await cacheDel(CACHE_KEYS.studentCourses(String(enrollment.studentId)));
   return enrollment;
 }
 

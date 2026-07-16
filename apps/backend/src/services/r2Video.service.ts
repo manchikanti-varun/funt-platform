@@ -61,9 +61,19 @@ export const ALLOWED_VIDEO_MIME_TYPES = new Set(["video/mp4"]);
 /**
  * Build the canonical R2 object key for a video.
  * Example: courses/abc123/module456/lesson789.mp4
+ *
+ * Path components are sanitized to prevent directory traversal.
  */
 export function buildVideoKey(courseId: string, moduleId: string, lessonId: string): string {
-  return `courses/${courseId}/${moduleId}/${lessonId}.mp4`;
+  const sanitize = (input: string) =>
+    input.replace(/\.\./g, "").replace(/[/\\:*?"<>|]/g, "_").trim().slice(0, 100);
+  const safeCourse = sanitize(courseId);
+  const safeModule = sanitize(moduleId);
+  const safeLesson = sanitize(lessonId);
+  if (!safeCourse || !safeModule || !safeLesson) {
+    throw new AppError("Invalid path component for video key", 400);
+  }
+  return `courses/${safeCourse}/${safeModule}/${safeLesson}.mp4`;
 }
 
 /**
