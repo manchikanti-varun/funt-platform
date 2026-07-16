@@ -132,11 +132,14 @@ const TOOLBAR_ACTIONS = {
 
 const EMPTY_DOC: JSONContent = { type: "doc", content: [{ type: "paragraph" }] };
 
-/** Allow https images and embedded uploads (data:image) through DOMPurify. */
+/** Hosts allowed for iframe embeds (video providers, Google Drive). Shared between paste and output sanitization. */
+const ALLOWED_EMBED_HOSTS = ["youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "player.vimeo.com", "drive.google.com", "docs.google.com"];
+
+/** Allow https images, embedded uploads (data:image), blob, and r2:// through DOMPurify. */
 const RTE_PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
   USE_PROFILES: { html: true },
   FORBID_TAGS: ["script", "style"],
-  FORBID_ATTR: ["onerror", "onload", "onclick"],
+  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur", "onchange", "onsubmit"],
   ADD_ATTR: [
     "style",
     "data-indent",
@@ -148,7 +151,8 @@ const RTE_PURIFY_CONFIG: Parameters<typeof DOMPurify.sanitize>[1] = {
     "data-render-kind",
     "class",
   ],
-  ALLOWED_URI_REGEXP: /^(?:(?:https?|data:image\/|data:video\/|blob:)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  // Strict allowlist: only http(s), data:image/*, data:video/*, blob:, r2://, and relative paths
+  ALLOWED_URI_REGEXP: /^(?:https?:\/\/|data:image\/|data:video\/|blob:|r2:\/\/|\/|#|mailto:)/i,
 };
 const ICONS = {
   bold: "bold",
@@ -248,7 +252,7 @@ function inferRenderKind(src: string): MediaRenderKind {
   return "embed";
 }
 
-/** Returns true if the text looks like a single video URL that should be embedded. */
+/** Returns true if the text looks like a single video URL from an allowed embed host. */
 function isPastedVideoUrl(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed || trimmed.includes("\n") || trimmed.includes(" ")) return false;
@@ -260,6 +264,7 @@ function isPastedVideoUrl(text: string): boolean {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
   const host = url.hostname.toLowerCase();
+  // Only auto-embed URLs from trusted video hosting providers
   if (host.includes("youtube.com") || host.includes("youtu.be")) return true;
   if (host.includes("vimeo.com")) return true;
   if (host.includes("drive.google.com") || host.includes("docs.google.com")) return true;
@@ -478,6 +483,7 @@ export class RichTextEditor implements RichTextEditorApi {
   private statsBar: HTMLDivElement | null = null;
   private floatingInlineBar: HTMLDivElement | null = null;
   private changeCallbacks = new Set<(payload: { html: string; json: JSONContent }) => void>();
+  private changeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private options: Required<Omit<RichTextEditorOptions, "content" | "uploadImage" | "uploadVideo">> &
     Pick<RichTextEditorOptions, "content" | "uploadImage" | "uploadVideo">;
 
@@ -645,11 +651,8 @@ export class RichTextEditor implements RichTextEditorApi {
         this.updateToolbarState();
         this.updateStatsBar();
         this.updateInlineToolbarPosition();
-        const payload = {
-          html: this.getUnsafeHTML(),
-          json: editor.getJSON()
-        };
-        this.changeCallbacks.forEach((callback) => callback(payload));
+        // Debounce onChange callbacks to reduce DOMPurify overhead on rapid typing
+        this.scheduleChangeCallback(editor);
       },
       onSelectionUpdate: () => {
         this.updateToolbarState();
@@ -690,7 +693,6 @@ export class RichTextEditor implements RichTextEditorApi {
   private filterUnsafeEmbeds(html: string): string {
     if (typeof window === "undefined") return html;
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const allowedHosts = ["youtube.com", "youtu.be", "youtube-nocookie.com", "vimeo.com", "player.vimeo.com", "drive.google.com", "docs.google.com"];
     doc.querySelectorAll("iframe").forEach((frame) => {
       const src = frame.getAttribute("src")?.trim() ?? "";
       // Always keep iframes marked as RTE video nodes (editor manages these)
@@ -698,7 +700,7 @@ export class RichTextEditor implements RichTextEditorApi {
       let keep = false;
       try {
         const host = new URL(src).hostname.toLowerCase();
-        keep = allowedHosts.some((item) => host === item || host.endsWith(`.${item}`));
+        keep = ALLOWED_EMBED_HOSTS.some((item) => host === item || host.endsWith(`.${item}`));
       } catch {
         keep = false;
       }
@@ -746,8 +748,25 @@ export class RichTextEditor implements RichTextEditorApi {
     return () => this.changeCallbacks.delete(callback);
   }
 
+  private scheduleChangeCallback(editor: Editor): void {
+    if (this.changeDebounceTimer) clearTimeout(this.changeDebounceTimer);
+    this.changeDebounceTimer = setTimeout(() => {
+      this.changeDebounceTimer = null;
+      if (!this.editor) return;
+      const payload = {
+        html: this.getUnsafeHTML(),
+        json: editor.getJSON()
+      };
+      this.changeCallbacks.forEach((callback) => callback(payload));
+    }, 150);
+  }
+
   destroy(): void {
     dismissRteDialogs();
+    if (this.changeDebounceTimer) {
+      clearTimeout(this.changeDebounceTimer);
+      this.changeDebounceTimer = null;
+    }
     this.editor?.destroy();
     this.editor = null;
     this.changeCallbacks.clear();
@@ -1970,36 +1989,60 @@ export class RichTextEditor implements RichTextEditorApi {
       return;
     }
     const compressed = await this.compressImageForEmbed(file);
-    const dataUrl = await this.fileToDataUrl(compressed);
-    const { from } = this.editor.state.selection;
-    this.editor
-      .chain()
-      .focus()
-      .insertContent({ type: "image", attrs: { src: dataUrl, alt: compressed.name, widthPct: 80, align: "center" } })
-      .run();
 
     if (this.options.uploadImage) {
+      // Upload-first approach: show a placeholder text, upload, then insert the final URL.
+      // This avoids the race condition of base64 → async replace, and ensures the editor
+      // never stores base64 data that the backend would reject.
+      const placeholderText = `[Uploading ${compressed.name}…]`;
+      const { from } = this.editor.state.selection;
+      this.editor.chain().focus().insertContent(placeholderText).run();
+      const placeholderEnd = from + placeholderText.length;
+
       try {
         const uploaded = await this.options.uploadImage(compressed);
-        const doc = this.editor.state.doc;
-        doc.descendants((node, pos) => {
-          if (node.type.name === "image" && node.attrs.src === dataUrl) {
-            this.editor!.commands.command(({ tr }) => {
-              tr.setNodeMarkup(pos, undefined, {
-                ...node.attrs,
-                src: uploaded.url,
-                alt: uploaded.alt ?? compressed.name,
-              });
-              return true;
-            });
-            return false;
-          }
-          return true;
-        });
+        // Remove the placeholder text and insert the uploaded image
+        const currentDoc = this.editor.state.doc;
+        // Try to replace at the original position range
+        const actualEnd = Math.min(placeholderEnd, currentDoc.content.size);
+        const textAtPos = currentDoc.textBetween(from, actualEnd, "");
+        if (textAtPos.includes("Uploading")) {
+          this.editor.commands.command(({ tr }) => {
+            tr.delete(from, actualEnd);
+            return true;
+          });
+        }
+        this.editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: "image",
+            attrs: { src: uploaded.url, alt: uploaded.alt ?? compressed.name, widthPct: 80, align: "center" },
+          })
+          .run();
       } catch (err) {
+        // Remove the placeholder on failure — don't leave broken state
+        try {
+          const currentDoc = this.editor.state.doc;
+          const actualEnd = Math.min(placeholderEnd, currentDoc.content.size);
+          this.editor.commands.command(({ tr }) => {
+            tr.delete(from, actualEnd);
+            return true;
+          });
+        } catch { /* best effort cleanup */ }
         console.error("Image upload failed", err);
-        this.editor.commands.setTextSelection(from);
+        void this.showEditorAlert(
+          "Image upload failed. Please try again or paste an image URL instead."
+        );
       }
+    } else {
+      // No upload function — insert as base64 data URL (fallback for editors without R2 upload)
+      const dataUrl = await this.fileToDataUrl(compressed);
+      this.editor
+        .chain()
+        .focus()
+        .insertContent({ type: "image", attrs: { src: dataUrl, alt: compressed.name, widthPct: 80, align: "center" } })
+        .run();
     }
   }
 
@@ -2118,16 +2161,16 @@ export class RichTextEditor implements RichTextEditorApi {
     this.slashMenu.style.top = `${state.coords.top}px`;
     this.slashMenu.style.left = `${state.coords.left}px`;
     if (!state.items.length) {
-      this.slashMenu.innerHTML = `<div class="rte-slash-empty">No commands for "${state.query ?? ""}"</div>`;
+      this.slashMenu.innerHTML = `<div class="rte-slash-empty">No commands for "${this.escapeHtml(state.query ?? "")}"</div>`;
       return;
     }
     this.slashMenu.innerHTML = state.items
       .map((item, idx) => {
-        const group = item.group ? `<span class="group">${item.group}</span>` : "";
-        const icon = item.icon ? `<span class="icon"><i data-lucide="${item.icon}" aria-hidden="true"></i></span>` : "";
-        return `<button class="rte-slash-item ${idx === state.index ? "active" : ""}" data-id="${item.id}">
-            <span class="title">${icon}<span class="label">${item.label}</span>${group}</span>
-            <span class="desc">${item.description ?? ""}</span>
+        const group = item.group ? `<span class="group">${this.escapeHtml(item.group)}</span>` : "";
+        const icon = item.icon ? `<span class="icon"><i data-lucide="${this.escapeHtml(item.icon)}" aria-hidden="true"></i></span>` : "";
+        return `<button class="rte-slash-item ${idx === state.index ? "active" : ""}" data-id="${this.escapeHtml(item.id)}">
+            <span class="title">${icon}<span class="label">${this.escapeHtml(item.label)}</span>${group}</span>
+            <span class="desc">${this.escapeHtml(item.description ?? "")}</span>
           </button>`;
       })
       .join("");
@@ -2135,4 +2178,12 @@ export class RichTextEditor implements RichTextEditorApi {
       attrs: { width: "15", height: "15", "stroke-width": "2" },
     });
   };
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 }

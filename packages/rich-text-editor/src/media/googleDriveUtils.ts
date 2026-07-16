@@ -111,7 +111,7 @@ export function resolveImageEmbedUrl(input: string, size: 220 | 400 | 800 = 800)
 function driveIframeFromAttrs(attrs: string, rest: string, quote: string, preview: string): string {
   const merged = `${attrs}${rest}`.replace(/\scontrols\b/i, "");
   const isDrive = preview.includes("drive.google.com");
-  const sandboxAttr = isDrive ? ' sandbox="allow-scripts allow-same-origin"' : "";
+  const sandboxAttr = isDrive ? ' sandbox="allow-scripts allow-popups"' : "";
   if (isDrive) {
     // Use a transparent pointer-events overlay to block the Drive pop-out button
     // without showing a visible black square.
@@ -227,7 +227,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-popups" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
@@ -242,7 +242,7 @@ export function rewriteEmbeddedMediaInHtml(html: string): string {
       const embedSrc = toEmbeddableIframeSrc(trimmedHref);
       const isDrive = embedSrc.includes("drive.google.com");
       if (isDrive) {
-        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
+        return `<div class="rte-drive-video-wrap rte-video-align-center" style="position:relative;width:80%;aspect-ratio:16/9;overflow:hidden;margin:0 auto;"><iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="autoplay; fullscreen" allowfullscreen frameborder="0" sandbox="allow-scripts allow-popups" style="width:100%;height:100%;border:none;" class="rte-video rte-video-embed rte-video-align-center"></iframe><div style="position:absolute;top:0;right:0;width:80px;height:80px;z-index:10;background:transparent;pointer-events:all;"></div></div>`;
       }
       return `<iframe src="${embedSrc}" data-rte-video="true" data-render-kind="embed" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen frameborder="0" style="width:80%;aspect-ratio:16/9;" class="rte-video rte-video-embed rte-video-align-center"></iframe>`;
     }
