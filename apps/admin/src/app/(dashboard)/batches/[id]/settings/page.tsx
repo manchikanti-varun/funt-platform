@@ -70,7 +70,22 @@ export default function BatchSettingsHubPage() {
         <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-6 py-6">
           <h1 className="text-xl font-bold tracking-tight text-slate-900">Batch settings</h1>
           <p className="mt-1 text-sm text-slate-600">{batch?.name ?? ""}</p>
-          <p className="mt-2 text-sm text-slate-500">Choose an action below.</p>
+          {/* Show active designation badges so the admin always knows the current state */}
+          {batch?.isGlobalOnlineBatch && (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-teal-300 bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">
+              <span className="h-2 w-2 rounded-full bg-teal-500" />
+              Global Online Batch
+            </span>
+          )}
+          {batch?.isNotEnrolledBatch && (
+            <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Not Enrolled Students Batch
+            </span>
+          )}
+          {!batch?.isGlobalOnlineBatch && !batch?.isNotEnrolledBatch && (
+            <p className="mt-2 text-sm text-slate-500">Choose an action below.</p>
+          )}
         </div>
 
         <div className="p-6">
@@ -128,34 +143,44 @@ export default function BatchSettingsHubPage() {
               )}
 
               <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleSetGlobalOnline}
-                  disabled={settingGlobal || batch?.isGlobalOnlineBatch}
-                  className={`rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:opacity-50 ${
-                    batch?.isGlobalOnlineBatch
-                      ? "border-teal-300 bg-teal-100 text-teal-900"
-                      : "border-slate-300 bg-white text-slate-800 hover:bg-teal-50 hover:border-teal-300"
-                  }`}
-                >
-                  {batch?.isGlobalOnlineBatch ? "✓ Global Online Batch" : settingGlobal ? "Setting…" : "Mark as Global Online Batch"}
-                </button>
+                <div className="flex flex-col items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSetGlobalOnline}
+                    disabled={settingGlobal || batch?.isGlobalOnlineBatch}
+                    className={`rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-default ${
+                      batch?.isGlobalOnlineBatch
+                        ? "border-teal-400 bg-teal-100 text-teal-900 ring-2 ring-teal-300"
+                        : "border-slate-300 bg-white text-slate-800 hover:bg-teal-50 hover:border-teal-300 disabled:opacity-50"
+                    }`}
+                  >
+                    {batch?.isGlobalOnlineBatch ? "✓ Global Online Batch (Active)" : settingGlobal ? "Setting…" : "Mark as Global Online Batch"}
+                  </button>
+                  {batch?.isGlobalOnlineBatch && (
+                    <span className="text-xs font-medium text-teal-700">This batch is currently the Global Online Batch</span>
+                  )}
+                </div>
 
-                <button
-                  type="button"
-                  onClick={handleSetNotEnrolled}
-                  disabled={settingNotEnrolled || batch?.isNotEnrolledBatch}
-                  className={`rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:opacity-50 ${
-                    batch?.isNotEnrolledBatch
-                      ? "border-amber-300 bg-amber-100 text-amber-900"
-                      : "border-slate-300 bg-white text-slate-800 hover:bg-amber-50 hover:border-amber-300"
-                  }`}
-                >
-                  {batch?.isNotEnrolledBatch ? "✓ Not Enrolled Students Batch" : settingNotEnrolled ? "Setting…" : "Mark as Not Enrolled Students Batch"}
-                </button>
+                <div className="flex flex-col items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSetNotEnrolled}
+                    disabled={settingNotEnrolled || batch?.isNotEnrolledBatch}
+                    className={`rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-default ${
+                      batch?.isNotEnrolledBatch
+                        ? "border-amber-400 bg-amber-100 text-amber-900 ring-2 ring-amber-300"
+                        : "border-slate-300 bg-white text-slate-800 hover:bg-amber-50 hover:border-amber-300 disabled:opacity-50"
+                    }`}
+                  >
+                    {batch?.isNotEnrolledBatch ? "✓ Not Enrolled Students Batch (Active)" : settingNotEnrolled ? "Setting…" : "Mark as Not Enrolled Students Batch"}
+                  </button>
+                  {batch?.isNotEnrolledBatch && (
+                    <span className="text-xs font-medium text-amber-700">This batch is currently the Not Enrolled Students Batch</span>
+                  )}
+                </div>
               </div>
 
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-4 text-xs text-slate-500">
                 <strong>Global Online Batch:</strong> Students who skip batch ID during first course enrollment are auto-assigned here.
                 <br />
                 <strong>Not Enrolled Students Batch:</strong> Students who create an account without a batch ID are placed here until their first enrollment.
