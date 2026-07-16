@@ -17,7 +17,14 @@ function getUserId(req: Request): string {
 
 export const createQuiz = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const data = await quizService.createQuiz({ ...req.body, createdBy });
+  // Only pass validated schema fields — don't spread raw body
+  const { title, description, type, status, questions, passingScore, maxAttempts,
+    timeLimitMinutes, shuffleQuestions, shuffleOptions, questionsPerAttempt, requiredForCertificate } = req.body;
+  const data = await quizService.createQuiz({
+    title, description, type, status, questions, passingScore, maxAttempts,
+    timeLimitMinutes, shuffleQuestions, shuffleOptions, questionsPerAttempt, requiredForCertificate,
+    createdBy,
+  });
   successRes(res, data, "Quiz created", 201);
 });
 

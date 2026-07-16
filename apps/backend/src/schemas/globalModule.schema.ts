@@ -14,6 +14,7 @@ export const createGlobalModuleSchema = z.object({
   videoUrl: videoUrlField,
   resourceLinkUrl: z.string().max(2048).optional().or(z.literal("")),
   linkedAssignmentId: z.string().max(100).optional().or(z.literal("")),
+  linkedQuizId: z.string().max(100).optional().or(z.literal("")),
 });
 
 export const updateGlobalModuleSchema = createGlobalModuleSchema.partial();

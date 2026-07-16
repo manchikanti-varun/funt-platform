@@ -19,7 +19,11 @@ const questionInputSchema = z.object({
   options: z
     .array(optionInputSchema)
     .min(2, "At least 2 options are required")
-    .max(10, "Maximum 10 options allowed"),
+    .max(10, "Maximum 10 options allowed")
+    .refine(
+      (options) => options.filter((o) => o.isCorrect).length === 1,
+      { message: "Exactly one option must be marked as correct" }
+    ),
   explanation: z.string().optional().default(""),
   marks: z.coerce.number().min(0).default(1),
   order: z.coerce.number().int().min(0).default(0),

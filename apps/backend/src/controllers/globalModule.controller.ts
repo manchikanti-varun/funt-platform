@@ -12,7 +12,7 @@ function getUserId(req: Request): string {
 
 export const createModule = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId } = req.body ?? {};
+  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedQuizId } = req.body ?? {};
   const data = await service.createModule({
     title,
     description,
@@ -21,6 +21,7 @@ export const createModule = asyncHandler(async (req: Request, res: Response): Pr
     videoUrl,
     resourceLinkUrl,
     linkedAssignmentId,
+    linkedQuizId,
     createdBy,
   });
   successRes(res, data, "Chapter created", 201);
@@ -49,10 +50,10 @@ export const updateModule = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Chapter ID is required", 400);
-  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId } = req.body ?? {};
+  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedQuizId } = req.body ?? {};
   const data = await service.updateModule(
     id,
-    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId },
+    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, linkedAssignmentId, linkedQuizId },
     performedBy
   );
   successRes(res, data, "Chapter updated");

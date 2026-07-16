@@ -26,6 +26,7 @@ export interface CreateModuleInput {
   videoUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
+  linkedQuizId?: string;
   createdBy: string;
 }
 
@@ -37,6 +38,7 @@ export interface UpdateModuleInput {
   videoUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
+  linkedQuizId?: string;
 }
 
 function nextVersion(current: number): number {
@@ -44,7 +46,7 @@ function nextVersion(current: number): number {
 }
 
 function contentChanged(
-  existing: { title: string; description: string; content?: string | null; youtubeUrl?: string | null; videoUrl?: string | null; resourceLinkUrl?: string | null; linkedAssignmentId?: string | null },
+  existing: { title: string; description: string; content?: string | null; youtubeUrl?: string | null; videoUrl?: string | null; resourceLinkUrl?: string | null; linkedAssignmentId?: string | null; linkedQuizId?: string | null },
   input: UpdateModuleInput
 ): boolean {
   if (input.title !== undefined && input.title !== existing.title) return true;
@@ -54,6 +56,7 @@ function contentChanged(
   if (input.videoUrl !== undefined && (input.videoUrl || null) !== (existing.videoUrl ?? null)) return true;
   if (input.resourceLinkUrl !== undefined && (input.resourceLinkUrl || null) !== ((existing as { resourceLinkUrl?: string | null }).resourceLinkUrl ?? null)) return true;
   if (input.linkedAssignmentId !== undefined && (input.linkedAssignmentId || null) !== (existing.linkedAssignmentId ?? null)) return true;
+  if (input.linkedQuizId !== undefined && (input.linkedQuizId || null) !== (existing.linkedQuizId ?? null)) return true;
   return false;
 }
 
@@ -119,6 +122,7 @@ export async function createModule(input: CreateModuleInput) {
     videoUrl: input.videoUrl?.trim() || undefined,
     resourceLinkUrl: input.resourceLinkUrl?.trim() || undefined,
     linkedAssignmentId: input.linkedAssignmentId || undefined,
+    linkedQuizId: input.linkedQuizId || undefined,
     version: 1,
     status: MODULE_STATUS.ACTIVE,
     createdBy: input.createdBy,
@@ -286,6 +290,7 @@ export async function updateModule(
   (existing as { videoUrl?: string }).videoUrl = input.videoUrl !== undefined ? input.videoUrl.trim() || undefined : (existing as { videoUrl?: string }).videoUrl;
   (existing as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl !== undefined ? input.resourceLinkUrl.trim() || undefined : (existing as { resourceLinkUrl?: string }).resourceLinkUrl;
   existing.linkedAssignmentId = input.linkedAssignmentId !== undefined ? input.linkedAssignmentId || undefined : existing.linkedAssignmentId;
+  (existing as { linkedQuizId?: string }).linkedQuizId = input.linkedQuizId !== undefined ? input.linkedQuizId || undefined : (existing as { linkedQuizId?: string }).linkedQuizId;
   existing.version = newVersion;
   await existing.save();
 

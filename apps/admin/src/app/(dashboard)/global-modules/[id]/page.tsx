@@ -31,6 +31,7 @@ interface Chapter {
   videoUrl?: string;
   resourceLinkUrl?: string;
   linkedAssignmentId?: string;
+  linkedQuizId?: string;
   version: number;
   status: string;
   versionSnapshots?: VersionSnapshot[];
@@ -39,6 +40,14 @@ interface Chapter {
 interface AssignmentOption {
   id: string;
   title: string;
+}
+
+interface QuizOption {
+  _id: string;
+  quizId?: string;
+  title: string;
+  type: string;
+  questionCount?: number;
 }
 
 export default function EditGlobalChapterPage() {
@@ -53,7 +62,9 @@ export default function EditGlobalChapterPage() {
   const [videoUrl, setVideoUrl] = useState("");
   const [resourceLinkUrl, setResourceLinkUrl] = useState("");
   const [linkedAssignmentId, setLinkedAssignmentId] = useState("");
+  const [linkedQuizId, setLinkedQuizId] = useState("");
   const [assignments, setAssignments] = useState<AssignmentOption[]>([]);
+  const [quizOptions, setQuizOptions] = useState<QuizOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -172,11 +183,15 @@ export default function EditGlobalChapterPage() {
     setVideoUrl(data.videoUrl ?? "");
     setResourceLinkUrl(data.resourceLinkUrl ?? "");
     setLinkedAssignmentId(data.linkedAssignmentId ?? "");
+    setLinkedQuizId(data.linkedQuizId ?? "");
   }
 
   useEffect(() => {
     api<{ id: string; title: string }[]>("/api/global-assignments").then((r) => {
       if (r.success && Array.isArray(r.data)) setAssignments(r.data);
+    });
+    api<QuizOption[]>("/api/quizzes/for-linking?type=CHAPTER").then((r) => {
+      if (r.success && Array.isArray(r.data)) setQuizOptions(r.data);
     });
   }, []);
 
@@ -210,6 +225,7 @@ export default function EditGlobalChapterPage() {
     if ((videoUrl || "") !== (chapter?.videoUrl ?? "")) body.videoUrl = videoUrl || undefined;
     if ((resourceLinkUrl || "") !== (chapter?.resourceLinkUrl ?? "")) body.resourceLinkUrl = resourceLinkUrl || undefined;
     if ((linkedAssignmentId || "") !== (chapter?.linkedAssignmentId ?? "")) body.linkedAssignmentId = linkedAssignmentId || undefined;
+    if ((linkedQuizId || "") !== (chapter?.linkedQuizId ?? "")) body.linkedQuizId = linkedQuizId || undefined;
     const res = await api(`/api/global-chapters/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
@@ -411,6 +427,27 @@ export default function EditGlobalChapterPage() {
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-slate-500">Optional. Select an assignment or keep None.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Linked Quiz</label>
+                <select
+                  value={linkedQuizId}
+                  onChange={(e) => setLinkedQuizId(e.target.value)}
+                  className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="">None — no quiz linked</option>
+                  {quizOptions.map((q) => (
+                    <option key={q._id} value={q.quizId ?? q._id}>
+                      {q.title} ({q.questionCount ?? 0} questions)
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Optional. Link a chapter quiz — students must pass it to complete this chapter.{" "}
+                  <a href="/quizzes/new" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:underline">
+                    Create a new quiz →
+                  </a>
+                </p>
               </div>
             </div>
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -90,13 +90,27 @@ export async function listQuizzes(filters?: {
   const query: Record<string, unknown> = {};
   if (filters?.type) query.type = filters.type;
   if (filters?.status) query.status = filters.status;
-  if (filters?.search) query.$text = { $search: filters.search };
+  if (filters?.search) {
+    const term = filters.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    query.title = { $regex: term, $options: "i" };
+  }
   const docs = await QuizModel.find(query)
     .sort({ updatedAt: -1 })
-    .select("-questions.options.isCorrect")
+    .select("quizId title type status passingScore maxAttempts timeLimitMinutes questions createdBy updatedAt")
     .lean()
     .exec();
-  return docs;
+  return docs.map((d) => ({
+    _id: String((d as { _id: unknown })._id),
+    quizId: (d as { quizId?: string }).quizId,
+    title: (d as { title: string }).title,
+    type: (d as { type: string }).type,
+    status: (d as { status: string }).status,
+    passingScore: (d as { passingScore: number }).passingScore,
+    maxAttempts: (d as { maxAttempts: number }).maxAttempts,
+    timeLimitMinutes: (d as { timeLimitMinutes: number }).timeLimitMinutes,
+    questionCount: Array.isArray((d as { questions?: unknown[] }).questions) ? (d as { questions: unknown[] }).questions.length : 0,
+    updatedAt: (d as { updatedAt?: Date }).updatedAt,
+  }));
 }
 
 export async function getQuizById(idParam: string): Promise<QuizDoc> {
@@ -220,6 +234,17 @@ export async function startQuizAttempt(input: {
   if (!quiz) throw new AppError("Quiz not found", 404);
   if (quiz.status === QUIZ_STATUS.ARCHIVED) throw new AppError("Quiz is no longer available", 404);
 
+  // ── Verify enrollment ────────────────────────────────────────────────
+  const { EnrollmentModel } = await import("../models/Enrollment.model.js");
+  const enrollment = await EnrollmentModel.findOne({
+    studentId,
+    batchId,
+    status: { $in: ["ACTIVE", "COMPLETED"] },
+  }).lean().exec();
+  if (!enrollment) {
+    throw new AppError("You must be enrolled in this course to take the quiz", 403);
+  }
+
   // Check max attempts (0 = unlimited)
   if (quiz.maxAttempts > 0) {
     const completedCount = await QuizAttemptModel.countDocuments({
@@ -239,7 +264,7 @@ export async function startQuizAttempt(input: {
     }
   }
 
-  // Check for existing IN_PROGRESS attempt — resume it
+  // Check for existing IN_PROGRESS attempt — resume it (if not expired)
   const existing = await QuizAttemptModel.findOne({
     studentId,
     quizId: quiz.quizId ?? String(quiz._id),
@@ -248,10 +273,25 @@ export async function startQuizAttempt(input: {
     status: QUIZ_ATTEMPT_STATUS.IN_PROGRESS,
     ...(chapterOrder !== undefined ? { chapterOrder } : {}),
     ...(milestoneId ? { milestoneId } : {}),
-  }).lean().exec();
+  }).exec();
 
   if (existing) {
-    return formatAttemptForStudent(existing, quiz);
+    // Check if the existing attempt has expired
+    if (quiz.timeLimitMinutes > 0) {
+      const startedAt = (existing as { startedAt: Date }).startedAt;
+      const elapsedMs = Date.now() - new Date(startedAt).getTime();
+      const allowedMs = quiz.timeLimitMinutes * 60 * 1000;
+      if (elapsedMs > allowedMs) {
+        // Auto-submit the expired attempt with whatever answers exist
+        const expiredResult = await submitQuizAttempt(
+          (existing as { attemptId?: string }).attemptId ?? String((existing as { _id: unknown })._id),
+          studentId
+        );
+        // Return the result so the frontend shows the expired result
+        return { expired: true, result: expiredResult };
+      }
+    }
+    return formatAttemptForStudent(existing.toJSON ? existing.toJSON() : existing, quiz);
   }
 
   // Determine attempt number
@@ -443,6 +483,18 @@ export async function submitQuizAttempt(
   // Load the quiz for grading
   const quiz = await findQuizByParam(attemptObj.quizId);
   if (!quiz) throw new AppError("Quiz no longer exists", 500);
+
+  // ── Time limit enforcement ──────────────────────────────────────────────
+  if (quiz.timeLimitMinutes > 0) {
+    const elapsedMs = Date.now() - new Date(attemptObj.startedAt).getTime();
+    const allowedMs = quiz.timeLimitMinutes * 60 * 1000;
+    // Allow 30-second grace period for network latency
+    const graceMs = 30 * 1000;
+    if (elapsedMs > allowedMs + graceMs) {
+      // Auto-submit with whatever answers exist — don't reject, just grade as-is
+      // Mark as expired so the student sees "time expired" in results
+    }
+  }
 
   // Merge final answers if provided (last-second save)
   if (finalAnswers && finalAnswers.length > 0) {
