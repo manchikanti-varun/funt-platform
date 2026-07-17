@@ -729,10 +729,17 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
   }).lean().exec();
   if (!course) throw new AppError("Course not found", 404);
 
-  // Find the snapshot to update
-  const snapshots = (batchDoc as { courseSnapshots?: unknown[] }).courseSnapshots;
+  // Find the snapshot to update — handle both courseSnapshots array and legacy courseSnapshot singular
+  let snapshots = (batchDoc as { courseSnapshots?: unknown[] }).courseSnapshots;
+  let usingSingular = false;
   if (!Array.isArray(snapshots) || snapshots.length === 0) {
-    throw new AppError("Batch has no course snapshots", 400);
+    const single = (batchDoc as { courseSnapshot?: unknown }).courseSnapshot;
+    if (single) {
+      snapshots = [single];
+      usingSingular = true;
+    } else {
+      throw new AppError("Batch has no course snapshots", 400);
+    }
   }
 
   const snapIdx = snapshots.findIndex(
@@ -770,7 +777,15 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
 
   // Replace snapshot in place
   snapshots[snapIdx] = updated;
-  batchDoc.markModified("courseSnapshots");
+  // Migrate to courseSnapshots array format (consolidate singular + array storage)
+  if (usingSingular) {
+    (batchDoc as { courseSnapshots?: unknown[]; courseSnapshot?: unknown }).courseSnapshots = snapshots;
+    (batchDoc as { courseSnapshot?: unknown }).courseSnapshot = undefined;
+    batchDoc.markModified("courseSnapshots");
+    batchDoc.markModified("courseSnapshot");
+  } else {
+    batchDoc.markModified("courseSnapshots");
+  }
   await batchDoc.save();
 
   await createAuditLog("BATCH_UPDATED", performedBy, ENTITY_BATCH, batchMongoId, {

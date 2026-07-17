@@ -230,7 +230,7 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
           return;
         }
         setData(null);
-        setLoadError(r.message ?? "Course not found in this batch.");
+        setLoadError(r.message ?? "Could not load this course. Please try again.");
       })
       .catch(() => {
         setData(null);
