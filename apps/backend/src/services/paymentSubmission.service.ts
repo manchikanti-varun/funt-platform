@@ -946,10 +946,12 @@ export async function verifyPaymentAndEnroll(
         // ── Batch Assignment Engine: handle first enrollment transfer ──
         // If this is the student's first course enrollment, transfer them from
         // "Not Enrolled Students" batch to the appropriate batch.
+        // The batchId from the payment record is the student's choice during checkout.
         if (enrollmentCreated) {
           try {
             const { assignBatchOnFirstEnrollment } = await import("./batchAssignment.service.js");
-            await assignBatchOnFirstEnrollment(doc.studentId, undefined);
+            const studentBatchChoice = (doc as { batchId?: string }).batchId || undefined;
+            await assignBatchOnFirstEnrollment(doc.studentId, studentBatchChoice);
           } catch (batchErr) {
             console.error(
               `[verifyPaymentAndEnroll] batch assignment on first enrollment failed for student ${doc.studentId}:`,

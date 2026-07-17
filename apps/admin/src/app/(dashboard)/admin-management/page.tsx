@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
-import { api } from "@/lib/api";
+import { api, apiUrl } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { AppPageShell, FormPanel, PageSection, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
@@ -510,7 +510,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       setUsernameStatus((s) => ({ ...s, checking: true }));
       let res: Response;
       try {
-        res = await fetch(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}`, {
+        res = await fetch(apiUrl(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}`), {
           credentials: "include",
           signal: controller.signal,
         });
@@ -829,7 +829,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
       setUsernameStatus((s) => ({ ...s, checking: true }));
       let res: Response;
       try {
-        res = await fetch(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}&role=trainer`, {
+        res = await fetch(apiUrl(`/api/auth/username-availability?username=${encodeURIComponent(candidate)}&role=trainer`), {
           credentials: "include",
           signal: controller.signal,
         });
