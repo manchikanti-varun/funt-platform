@@ -36,17 +36,56 @@ function LoginForm() {
   // Initialize CSRF token for the login POST
   useEffect(() => { void ensureCsrfToken(); }, []);
 
+  // Device blocked state
+  const [deviceBlocked, setDeviceBlocked] = useState(false);
+  const [existingDevice, setExistingDevice] = useState<{ deviceName: string; os: string; linkedAt: string } | null>(null);
+  const [requestingChange, setRequestingChange] = useState(false);
+  const [changeRequested, setChangeRequested] = useState(false);
+
+  function getDeviceFingerprint(): string {
+    // Simple fingerprint based on available browser properties
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx?.fillText("fp", 2, 2);
+    const parts = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + "x" + screen.height,
+      screen.colorDepth,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency ?? 0,
+      canvas.toDataURL().slice(-32),
+    ];
+    // Simple hash
+    let hash = 0;
+    const str = parts.join("|");
+    for (let i = 0; i < str.length; i++) {
+      const chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return "fp-" + Math.abs(hash).toString(36) + "-" + str.length.toString(36);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setDeviceBlocked(false);
     setLoading(true);
-    const res = await api<{ user: { roles: string[] } }>("/api/auth/login", {
+    const fingerprint = getDeviceFingerprint();
+    const res = await api<{ user: { roles: string[] }; deviceBlocked?: boolean; existingDevice?: { deviceName: string; os: string; linkedAt: string }; deviceType?: string; message?: string }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: username.trim(), password, portal: "lms" }),
+      body: JSON.stringify({ username: username.trim(), password, portal: "lms", deviceFingerprint: fingerprint }),
     });
     setLoading(false);
     if (!res.success || !res.data?.user) {
       setError(res.message ?? "Invalid username or password");
+      return;
+    }
+    // Check if device is blocked
+    if (res.data.deviceBlocked) {
+      setDeviceBlocked(true);
+      setExistingDevice(res.data.existingDevice ?? null);
       return;
     }
     const roles = res.data.user.roles ?? [];
@@ -64,6 +103,64 @@ function LoginForm() {
     markClientLoggedIn();
     router.push(from);
     router.refresh();
+  }
+
+  async function handleRequestDeviceChange() {
+    setRequestingChange(true);
+    const fingerprint = getDeviceFingerprint();
+    const res = await api("/api/student/devices/request-change", {
+      method: "POST",
+      body: JSON.stringify({
+        fingerprint,
+        deviceType: /android|iphone|ipad|mobile/i.test(navigator.userAgent) ? "MOBILE" : "DESKTOP",
+        reason: "Requesting from new device during login",
+      }),
+    });
+    setRequestingChange(false);
+    if (res.success) setChangeRequested(true);
+    else setError(res.message ?? "Failed to submit request.");
+  }
+
+  // Device blocked modal
+  if (deviceBlocked) {
+    return (
+      <div className="relative flex h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-4 py-3">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+              <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Untrusted Device</h2>
+              <p className="text-xs text-slate-500">This account is already linked to another trusted device.</p>
+            </div>
+          </div>
+          {existingDevice && (
+            <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+              <div className="flex justify-between text-sm"><span className="text-slate-500">Device Name</span><span className="font-medium text-slate-800">{existingDevice.deviceName}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-500">Operating System</span><span className="font-medium text-slate-800">{existingDevice.os}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-slate-500">Linked Date</span><span className="font-medium text-slate-800">{new Date(existingDevice.linkedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span></div>
+            </div>
+          )}
+          {changeRequested ? (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-sm font-medium text-emerald-800">Device change request submitted!</p>
+              <p className="mt-1 text-xs text-emerald-600">An administrator will review your request. You&apos;ll be able to login from this device once approved.</p>
+            </div>
+          ) : (
+            <p className="mb-5 text-sm text-slate-600">For security, each account can only be accessed from one registered device per type. Request a device change if you&apos;ve switched devices.</p>
+          )}
+          <div className="mt-5 flex gap-3">
+            <button onClick={() => { setDeviceBlocked(false); setExistingDevice(null); }} className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">Cancel</button>
+            {!changeRequested && (
+              <button onClick={handleRequestDeviceChange} disabled={requestingChange} className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50">{requestingChange ? "Submitting..." : "Request Device Change"}</button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

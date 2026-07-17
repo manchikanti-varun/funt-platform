@@ -38,6 +38,7 @@ import { r2VideoRoutes } from "./routes/r2Video.routes.js";
 import { r2ImageRoutes } from "./routes/r2Image.routes.js";
 import { r2FileRoutes } from "./routes/r2File.routes.js";
 import { studentFileRoutes } from "./routes/studentFile.routes.js";
+import { studentDeviceRoutes, adminSecurityRoutes } from "./routes/trustedDevice.routes.js";
 import {
   contentProtectionConfigRoutes,
   contentProtectionStudentRoutes,
@@ -147,6 +148,8 @@ app.use("/api/admin/videos", r2VideoRoutes);
 app.use("/api/admin/images", r2ImageRoutes);
 app.use("/api/admin/files", r2FileRoutes);
 app.use("/api/student/files", studentFileRoutes);
+app.use("/api/student/devices", studentDeviceRoutes);
+app.use("/api/admin", adminSecurityRoutes);
 app.use("/api/config/content-protection", contentProtectionConfigRoutes);
 app.use("/api/student/content-protection", contentProtectionStudentRoutes);
 app.use("/api/leaves", leaveRoutes);

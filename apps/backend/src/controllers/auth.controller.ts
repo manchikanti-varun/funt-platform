@@ -309,7 +309,7 @@ export const logout = asyncHandler(async (req: Request, res: Response): Promise<
 });
 
 export const login = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { username, email, password, portal } = req.body as { username?: string; email?: string; password: string; portal?: string };
+  const { username, email, password, portal, deviceFingerprint } = req.body as { username?: string; email?: string; password: string; portal?: string; deviceFingerprint?: string };
   const ident = (username ?? "").trim();
   if (!password || !ident) {
     throw new AppError("Username and password are required", 400);
@@ -348,6 +348,30 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       );
     }
   }
+
+  // ── Trusted Device Check (LMS students only) ────────────────────────────────
+  let deviceCheckResult: { trusted: boolean; isOffice?: boolean; autoRegistered?: boolean; existingDevice?: { deviceName: string; os: string; linkedAt: Date }; deviceType?: string } | null = null;
+  if (portalLower === "lms" && roles.includes(ROLE.STUDENT) && deviceFingerprint) {
+    try {
+      const { checkDeviceTrust } = await import("../services/trustedDevice.service.js");
+      deviceCheckResult = await checkDeviceTrust(result.user.id, deviceFingerprint, userAgent ?? "", ip ?? "");
+      if (!deviceCheckResult.trusted) {
+        // Don't block login — return device info for the frontend popup
+        successRes(res, {
+          user: result.user,
+          deviceBlocked: true,
+          existingDevice: deviceCheckResult.existingDevice,
+          deviceType: deviceCheckResult.deviceType,
+          message: "This account is already linked to another trusted device.",
+        });
+        return;
+      }
+    } catch (err) {
+      // Non-critical — don't block login if device check fails
+      console.error("[login] device trust check failed:", err instanceof Error ? err.message : err);
+    }
+  }
+
   setAuthCookie(res, result.token, maxAgeMs, cookiePortal);
   setIdleCookie(res, cookiePortal, maxAgeMs);
   clearLegacyAuthCookie(res);
@@ -356,7 +380,14 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
       console.error("[demo] auto-enroll on login:", err instanceof Error ? err.message : err)
     );
   }
-  successRes(res, { user: result.user });
+  successRes(res, {
+    user: result.user,
+    deviceCheckResult: deviceCheckResult ? {
+      trusted: deviceCheckResult.trusted,
+      isOffice: deviceCheckResult.isOffice,
+      autoRegistered: deviceCheckResult.autoRegistered,
+    } : undefined,
+  });
 });
 
 export const signupStudent = asyncHandler(async (req: Request, res: Response): Promise<void> => {

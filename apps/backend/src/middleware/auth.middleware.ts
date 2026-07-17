@@ -64,6 +64,15 @@ export async function authMiddleware(
     }
 
     if (user.status !== ACCOUNT_STATUS.ACTIVE) {
+      if (user.status === "INACTIVE") {
+        throw new AppError("Your account has been marked as inactive. Please contact support or request reactivation.", 403);
+      }
+      if (user.status === "BANNED") {
+        throw new AppError("Your account has been banned. Please contact support for assistance.", 403);
+      }
+      if (user.status === "PENDING_VERIFICATION") {
+        throw new AppError("Your account is pending verification. Please complete the verification process.", 403);
+      }
       throw new AppError("Account is suspended or archived", 403);
     }
     const expectedTokenVersion = Number(user.tokenVersion ?? 0);

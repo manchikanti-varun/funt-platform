@@ -433,6 +433,15 @@ export async function login(
   }
 
   if (user.status !== ACCOUNT_STATUS.ACTIVE) {
+    if (user.status === "INACTIVE") {
+      throw new AppError("Your account has been marked as inactive due to long-term inactivity. Please contact support or request reactivation.", 403);
+    }
+    if (user.status === "BANNED") {
+      throw new AppError("Your account has been banned due to suspicious activity. Please contact support.", 403);
+    }
+    if (user.status === "PENDING_VERIFICATION") {
+      throw new AppError("Your account is pending verification. Please complete the verification process.", 403);
+    }
     // Use generic message to avoid revealing that the account exists
     throw new AppError("Invalid username or password", 401);
   }

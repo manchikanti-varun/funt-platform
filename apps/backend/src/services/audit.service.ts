@@ -152,7 +152,11 @@ export type AuditAction =
   | "LETTER_UPDATED"
   | "LETTER_VERIFY_ACCESSED"
   | "LETTER_DELETED"
-  | "USER_DELETED";
+  | "USER_DELETED"
+  | "DEVICE_CHANGE_APPROVED"
+  | "DEVICE_CHANGE_REJECTED"
+  | "ACCOUNT_MARKED_INACTIVE"
+  | "ACCOUNT_REACTIVATED";
 
 export async function createAuditLog(
   action: AuditAction,
