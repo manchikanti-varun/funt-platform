@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ROLE } from "@funt-platform/constants";
 import { api } from "@/lib/api";
 import { useAdminUser } from "@/contexts/AdminUserContext";
-import { AppPageShell } from "@/components/ui";
+import { AppPageShell, useAppDialog } from "@/components/ui";
 import Link from "next/link";
 
 interface ProfileUser {
@@ -102,6 +102,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfileSearchPage() {
   const { roles } = useAdminUser();
+  const dialog = useAppDialog();
   const router = useRouter();
   const searchParams = useSearchParams();
   const qFromUrl = searchParams.get("q") ?? "";
@@ -113,18 +114,29 @@ export default function ProfileSearchPage() {
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
   async function handleDeleteUser(userId: string, name: string, username: string) {
-    const confirmed = window.confirm(`⚠️ PERMANENTLY DELETE "${name}" (@${username})?\n\nThis will remove their account and all enrollments. This cannot be undone.`);
+    const confirmed = await dialog.confirm({
+      title: "Permanently Delete User",
+      message: `This will permanently delete "${name}" (@${username}) and remove all their enrollments.\n\nThis action cannot be undone.`,
+      confirmLabel: "Delete Account",
+      variant: "danger",
+    });
     if (!confirmed) return;
-    const doubleConfirm = window.confirm(`Are you absolutely sure? Type OK to confirm deletion of ${username}.`);
+
+    const doubleConfirm = await dialog.confirm({
+      title: "Are you absolutely sure?",
+      message: `Confirm deletion of @${username}. All data will be lost permanently.`,
+      confirmLabel: "Yes, Delete",
+      variant: "danger",
+    });
     if (!doubleConfirm) return;
 
     const res = await api(`/api/admin/users/${userId}`, { method: "DELETE" });
     if (res.success) {
       setProfile(null);
       setError("");
-      alert(`Account "${username}" has been deleted.`);
+      await dialog.alert({ title: "Account Deleted", message: `Account "${username}" has been deleted.` });
     } else {
-      alert(res.message ?? "Failed to delete account");
+      await dialog.alert({ title: "Error", message: res.message ?? "Failed to delete account" });
     }
   }
 

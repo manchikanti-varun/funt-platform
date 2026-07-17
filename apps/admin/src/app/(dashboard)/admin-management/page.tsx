@@ -247,9 +247,11 @@ function RegistrationRequestsTab({ onMessage }: { onMessage: (type: "success" | 
       const username = res.data?.username ?? "";
       const tempPwd = res.data?.temporaryPassword ?? "";
       const msg = res.data?.message ?? `Account created.`;
-      // Show alert with copyable username
       if (username) {
-        window.alert(`✅ Account Created!\n\nUsername: ${username}${tempPwd ? `\nTemporary Password: ${tempPwd}` : ""}\n\nShare these credentials with the user.`);
+        await dialog.alert({
+          title: "Account Created",
+          message: `Username: ${username}${tempPwd ? `\nTemporary Password: ${tempPwd}` : ""}\n\nShare these credentials with the user.`,
+        });
       }
       onMessage("success", msg);
       load();
@@ -471,6 +473,7 @@ function PasswordInput({
 }
 
 function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -613,7 +616,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     if (res.success) {
       const u = res.data?.username;
       const msg = u ? `Student created. Username: ${u}` : "Student created.";
-      if (u) window.alert(`✅ Student Created!\n\nUsername: ${u}\n\nShare this with the student.`);
+      if (u) await dialog.alert({ title: "Student Created", message: `Username: ${u}\n\nShare this with the student.` });
       onSuccess(msg);
       setUsername(""); setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword(""); setAge("10");
@@ -795,6 +798,7 @@ function CreateStudentForm({ onSuccess, onError }: { onSuccess: (m: string) => v
 }
 
 function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -913,7 +917,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
     if (res.success) {
       const u = res.data?.username;
       const msg = u ? `Trainer created. Username: ${u}` : "Trainer created.";
-      if (u) window.alert(`✅ Trainer Created!\n\nUsername: ${u}\n\nShare this with the trainer.`);
+      if (u) await dialog.alert({ title: "Trainer Created", message: `Username: ${u}\n\nShare this with the trainer.` });
       onSuccess(msg);
       // Reset form after successful creation
       setUsername("");
@@ -1021,6 +1025,7 @@ function CreateTrainerForm({ onSuccess, onError }: { onSuccess: (m: string) => v
 }
 
 function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -1056,7 +1061,7 @@ function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string)
     setLoading(false);
     if (res.success) {
       const u = res.data?.username ?? username;
-      window.alert(`✅ Support Agent Created!\n\nUsername: ${u}\n\nThey can log in at support.funt.in`);
+      await dialog.alert({ title: "Support Agent Created", message: `Username: ${u}\n\nThey can log in at support.funt.in` });
       onSuccess(`Support agent created. Username: ${u}`);
       setUsername(""); setName(""); setEmail(""); setMobileNumber(""); setPassword(""); setConfirmPassword("");
     } else onError(res.message ?? "Failed to create support agent.");
@@ -1119,6 +1124,7 @@ function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string)
 }
 
 function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
@@ -1155,7 +1161,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
     if (res.success) {
       const u = res.data?.username;
       const msg = u ? `Admin created. Username: ${u}` : "Admin created.";
-      if (u) window.alert(`✅ Admin Created!\n\nUsername: ${u}`);
+      if (u) await dialog.alert({ title: "Admin Created", message: `Username: ${u}` });
       onSuccess(msg);
       setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword("");
@@ -1228,6 +1234,7 @@ function CreateAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => voi
 }
 
 function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
@@ -1264,7 +1271,7 @@ function CreateSuperAdminForm({ onSuccess, onError }: { onSuccess: (m: string) =
     if (res.success) {
       const u = res.data?.username;
       const msg = u ? `Super Admin created. Username: ${u}` : "Super Admin created.";
-      if (u) window.alert(`✅ Super Admin Created!\n\nUsername: ${u}`);
+      if (u) await dialog.alert({ title: "Super Admin Created", message: `Username: ${u}` });
       onSuccess(msg);
       setName(""); setEmail(""); setCountryCode("+91");
       setMobileNumber(""); setPassword(""); setConfirmPassword("");

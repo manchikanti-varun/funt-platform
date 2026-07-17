@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { AppPageShell, EmptyState } from "@/components/ui";
+import { AppPageShell, EmptyState, useAppDialog } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { ROLE } from "@funt-platform/constants";
@@ -39,6 +39,7 @@ const TYPE_OPTIONS = [
 ];
 
 export default function LettersPage() {
+  const dialog = useAppDialog();
   const [letters, setLetters] = useState<LetterRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -82,6 +83,18 @@ export default function LettersPage() {
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
     if (r.success) load();
+  }
+
+  async function handleRejectApproval(id: string) {
+    const reason = await dialog.prompt({
+      title: "Reject Approval",
+      label: "Rejection reason",
+      placeholder: "Explain why this letter is being rejected...",
+      confirmLabel: "Reject",
+      optional: true,
+    });
+    if (reason === null) return;
+    await handleAction(id, "reject-approval", { reason });
   }
 
   function handleDownloadPdf(id: string) {
@@ -230,6 +243,7 @@ export default function LettersPage() {
           onExperience={setExpId}
           onPreview={setPreviewId}
           onDelete={setDeleteTarget}
+          onRejectApproval={handleRejectApproval}
         />
       )}
 

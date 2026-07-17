@@ -16,9 +16,10 @@ interface Props {
   onExperience: (id: string) => void;
   onPreview: (id: string) => void;
   onDelete: (letter: LetterRow) => void;
+  onRejectApproval: (id: string) => void;
 }
 
-export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onDelete }: Props) {
+export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onDelete, onRejectApproval }: Props) {
   return (
     <div className="panel-data overflow-x-auto">
       <table className="w-full min-w-[900px] text-sm">
@@ -85,10 +86,7 @@ export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExte
                         <ShieldCheck className="h-3.5 w-3.5" />
                       </ActionBtn>
                       <ActionBtn
-                        onClick={() => {
-                          const r = prompt("Rejection reason:");
-                          if (r) onAction(l._id || l.letterId, "reject-approval", { reason: r });
-                        }}
+                        onClick={() => onRejectApproval(l._id || l.letterId)}
                         title="Reject"
                         cls="border-red-200 text-red-500 hover:bg-red-50"
                       >
