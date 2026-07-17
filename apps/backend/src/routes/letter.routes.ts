@@ -19,6 +19,7 @@ import {
   updateLetterHandler,
   createExperienceFromOfferHandler,
   listPendingApprovalsHandler,
+  deleteLetterHandler,
 } from "../controllers/letter.controller.js";
 
 const router = Router();
@@ -54,6 +55,7 @@ router.put("/settings/template", requireRoles(ROLE.SUPER_ADMIN), async (req, res
 
 router.get("/:letterId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getLetter);
 router.patch("/:letterId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateLetterHandler);
+router.delete("/:letterId", requireRoles(ROLE.SUPER_ADMIN), deleteLetterHandler);
 router.get("/:letterId/pdf", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadLetterPdf);
 
 // ── Approval Workflow ─────────────────────────────────────────────────────────

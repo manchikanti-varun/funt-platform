@@ -180,6 +180,14 @@ export const listPendingApprovalsHandler = asyncHandler(async (_req: Request, re
   successRes(res, data);
 });
 
+export const deleteLetterHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const deletedBy = getUserId(req);
+  const letterId = req.params.letterId;
+  if (!letterId) throw new AppError("letterId is required", 400);
+  const data = await service.deleteLetter(letterId, deletedBy);
+  successRes(res, data, "Letter deleted");
+});
+
 // ── Public Verification (no auth — called from verify routes) ─────────────────
 
 export const verifyLetterPublic = asyncHandler(async (req: Request, res: Response): Promise<void> => {

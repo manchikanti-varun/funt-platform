@@ -437,6 +437,27 @@ export async function createExperienceFromOffer(offerLetterId: string, input: {
 
 // ─── List & Get ───────────────────────────────────────────────────────────────
 
+export async function deleteLetter(letterMongoId: string, deletedBy: string) {
+  // Allow deletion only for DRAFT letters (not yet issued)
+  let letter = await LetterModel.findById(letterMongoId).exec();
+  if (!letter && /^[a-f\d]{24}$/i.test(letterMongoId)) {
+    letter = await LetterModel.findOne({ letterId: letterMongoId.trim().toUpperCase() }).exec();
+  }
+  if (!letter) throw new AppError("Letter not found", 404);
+  if (letter.status !== LETTER_STATUS.DRAFT) {
+    throw new AppError("Only DRAFT letters can be deleted. Use revoke for issued letters.", 400);
+  }
+  await letter.deleteOne();
+  await createAuditLog({
+    action: "LETTER_DELETED",
+    entityType: "letter",
+    entityId: letter._id.toString(),
+    performedBy: deletedBy,
+    details: { recipientName: letter.recipientName, designation: letter.designation },
+  });
+  return { deleted: true };
+}
+
 export async function getLetterById(letterId: string) {
   // Try by letterId first (for approved letters), then by _id (for drafts)
   let letter = await LetterModel.findOne({ letterId: letterId.trim().toUpperCase() }).lean().exec();

@@ -5,3 +5,5 @@ export { StatusBadge } from "./StatusBadge";
 export { RevokeModal } from "./RevokeModal";
 export { ExtendModal } from "./ExtendModal";
 export { ExperienceModal } from "./ExperienceModal";
+export { DeleteModal } from "./DeleteModal";
+export { LetterPreviewPanel } from "./LetterPreviewPanel";

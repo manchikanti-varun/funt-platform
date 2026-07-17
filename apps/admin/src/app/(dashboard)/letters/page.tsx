@@ -15,6 +15,8 @@ import { LetterCreateForm } from "./components/LetterCreateForm";
 import { RevokeModal } from "./components/RevokeModal";
 import { ExtendModal } from "./components/ExtendModal";
 import { ExperienceModal } from "./components/ExperienceModal";
+import { DeleteModal } from "./components/DeleteModal";
+import { LetterPreviewPanel } from "./components/LetterPreviewPanel";
 import type { LetterRow } from "./types";
 
 const STATUS_OPTIONS = [
@@ -48,6 +50,8 @@ export default function LettersPage() {
   const [revokeId, setRevokeId] = useState("");
   const [extendId, setExtendId] = useState("");
   const [expId, setExpId] = useState("");
+  const [previewId, setPreviewId] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<LetterRow | null>(null);
 
   const load = useCallback(async () => {
     const qs = new URLSearchParams();
@@ -224,6 +228,8 @@ export default function LettersPage() {
           onRevoke={setRevokeId}
           onExtend={setExtendId}
           onExperience={setExpId}
+          onPreview={setPreviewId}
+          onDelete={setDeleteTarget}
         />
       )}
 
@@ -250,6 +256,21 @@ export default function LettersPage() {
           letterId={expId}
           onDone={() => { setExpId(""); load(); }}
           onClose={() => setExpId("")}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteModal
+          letterId={deleteTarget._id || deleteTarget.letterId}
+          recipientName={deleteTarget.recipientName}
+          onDeleted={() => { setDeleteTarget(null); load(); }}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
+      {previewId && (
+        <LetterPreviewPanel
+          letterId={previewId}
+          onClose={() => setPreviewId("")}
+          onDownloadPdf={handleDownloadPdf}
         />
       )}
     </AppPageShell>

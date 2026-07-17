@@ -2,7 +2,7 @@
 
 import {
   Download, Send, ShieldCheck, XCircle, UserCheck, UserX,
-  Ban, CalendarPlus, Award, FileText,
+  Ban, CalendarPlus, Award, FileText, Eye, Trash2,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { LetterRow } from "../types";
@@ -14,9 +14,11 @@ interface Props {
   onRevoke: (id: string) => void;
   onExtend: (id: string) => void;
   onExperience: (id: string) => void;
+  onPreview: (id: string) => void;
+  onDelete: (letter: LetterRow) => void;
 }
 
-export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience }: Props) {
+export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onDelete }: Props) {
   return (
     <div className="panel-data overflow-x-auto">
       <table className="w-full min-w-[900px] text-sm">
@@ -57,6 +59,11 @@ export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExte
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1">
+                  {/* Preview */}
+                  <ActionBtn onClick={() => onPreview(l._id || l.letterId)} title="Preview" cls="border-slate-200 text-slate-500 hover:bg-slate-100">
+                    <Eye className="h-3.5 w-3.5" />
+                  </ActionBtn>
+
                   {/* Download PDF */}
                   {l.letterId && (
                     <ActionBtn onClick={() => onDownloadPdf(l.letterId)} title="Download PDF" cls="border-slate-200 text-slate-500 hover:bg-slate-100">
@@ -123,6 +130,13 @@ export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExte
                   {(l.status === "ACCEPTED" || l.status === "ACTIVE") && (
                     <ActionBtn onClick={() => onRevoke(l.letterId)} title="Revoke" cls="border-red-200 text-red-500 hover:bg-red-50">
                       <XCircle className="h-3.5 w-3.5" />
+                    </ActionBtn>
+                  )}
+
+                  {/* Delete (drafts only) */}
+                  {l.status === "DRAFT" && (
+                    <ActionBtn onClick={() => onDelete(l)} title="Delete Draft" cls="border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600">
+                      <Trash2 className="h-3.5 w-3.5" />
                     </ActionBtn>
                   )}
                 </div>
