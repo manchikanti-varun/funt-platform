@@ -106,6 +106,7 @@ export default function LettersPage() {
   const [revokeReason, setRevokeReason] = useState("");
   const [extendLetterId, setExtendLetterId] = useState("");
   const [extendMonths, setExtendMonths] = useState("3");
+  const [extendStipend, setExtendStipend] = useState("");
   const [extendLoading, setExtendLoading] = useState(false);
   const [experienceLetterId, setExperienceLetterId] = useState("");
   const [experienceEndDate, setExperienceEndDate] = useState("");
@@ -178,12 +179,19 @@ export default function LettersPage() {
   }
 
   async function downloadPdf(letterId: string) {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${letterId}/pdf`, { credentials: "include" });
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `${letterId}.pdf`; a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${letterId}/pdf`, { credentials: "include" });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${letterId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
   }
 
   return (
@@ -205,14 +213,18 @@ export default function LettersPage() {
 
       {/* Create Form */}
       {showForm && (
-        <DataPanel className="mt-4 p-6">
-          <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-4">
-            <FileText className="h-5 w-5 text-indigo-600" />
-            Generate Offer Letter
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-5 max-w-3xl">
-            {/* Row 1: Name + Email + Gender */}
-            <div className="grid gap-4 sm:grid-cols-3">
+        <DataPanel className="mt-4 overflow-hidden">
+          <div className="border-b border-slate-200 bg-gradient-to-r from-indigo-50/60 via-white to-slate-50 px-6 py-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              Generate Offer Letter
+            </h3>
+            <p className="mt-0.5 text-xs text-slate-500">Fill in the intern details. The PDF will be generated matching your template settings.</p>
+          </div>
+          <form onSubmit={handleSubmit} className="p-6 space-y-6 max-w-4xl">
+            {/* Section: Intern Details */}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Intern Details</p>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
               <div>
                 <label className="label-sm">Recipient Name *</label>
                 <input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} className="input mt-1" placeholder="Full name" />
@@ -228,8 +240,9 @@ export default function LettersPage() {
                 </select>
               </div>
             </div>
-            {/* Row 2: Designation + Dept + Type */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* Section: Position & Role */}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 mt-2">Position &amp; Role</p>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
               <div>
                 <label className="label-sm">Designation *</label>
                 <input value={designation} onChange={(e) => setDesignation(e.target.value)} className="input mt-1" placeholder="e.g. Robotics Trainer" />
@@ -248,8 +261,9 @@ export default function LettersPage() {
               </div>
             </div>
 
-            {/* Row 3: Dates + Duration */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* Section: Duration & Dates */}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 mt-2">Duration &amp; Dates</p>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
               <div>
                 <label className="label-sm">Joining Date *</label>
                 <input type="date" value={joiningDate} onChange={(e) => {
@@ -280,8 +294,9 @@ export default function LettersPage() {
                 </div>
               )}
             </div>
-            {/* Row 4: Compensation + Location + Reporting */}
-            <div className="grid gap-4 sm:grid-cols-3">
+            {/* Section: Compensation & Reporting */}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 mt-2">Compensation &amp; Reporting</p>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
               <div>
                 <label className="label-sm">{employmentType === "INTERN" ? "Stipend" : "CTC"}</label>
                 {employmentType === "INTERN"
@@ -302,8 +317,9 @@ export default function LettersPage() {
               <label className="label-sm">Primary Responsibilities</label>
               <input value={responsibilities} onChange={(e) => setResponsibilities(e.target.value)} className="input mt-1 w-full" placeholder="e.g. Training & Electronics tasks" />
             </div>
-            {/* Row 6: Signatory */}
-            <div className="grid gap-4 sm:grid-cols-2 border-t border-slate-100 pt-4">
+            {/* Section: Signatory */}
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 mt-2">Signatory</p>
+              <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
               <div>
                 <label className="label-sm">Signatory Name</label>
                 <input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} className="input mt-1" placeholder={tpl.defaultSignatoryName} />
@@ -329,6 +345,44 @@ export default function LettersPage() {
               {submitting ? "Generating..." : "Generate Letter"}
             </button>
           </form>
+
+          {/* Live Preview */}
+          <div className="border-t border-slate-200 bg-slate-50/50 p-6">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">PDF Preview</p>
+            <div className="mx-auto max-w-2xl rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="p-8 font-serif text-[12.5px] leading-[1.8] text-black">
+                {/* Letterhead */}
+                <div className="flex items-start justify-between mb-1">
+                  <div className="w-20 h-14 bg-slate-100 rounded flex items-center justify-center text-[8px] text-slate-400 font-sans">LOGO</div>
+                  <div className="text-right text-[8.5px] leading-tight text-slate-600">
+                    <p className="font-bold text-black">{tpl.companyName}</p>
+                    <p>{tpl.companyAddress}</p>
+                    <p>Email: {tpl.companyEmail} ; Web: {tpl.companyWeb}</p>
+                  </div>
+                </div>
+                <hr className="border-black mb-6" />
+                <p className="text-right text-[11px] mb-6">{joiningDate ? new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "DD-MM-YYYY"}</p>
+                <p className="mb-5">Dear {recipientName || "________"}</p>
+                <p className="mb-3">Congratulations! {tpl.offerIntro} &ldquo;<strong>{designation || "________"}</strong>&rdquo;</p>
+                {employmentType === "INTERN" && (
+                  <p className="mb-3">This internship is for a period of {duration || "3 Months"}, beginning on <strong>{joiningDate ? new Date(joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "________"}</strong> and ending on <strong>{endDate ? new Date(endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" }) : "________"}</strong>.</p>
+                )}
+                {reportingTo && <p className="mb-3">As an intern, you will be reporting to Mr. {reportingTo.toUpperCase()}. Your primary responsibilities will include assisting in &ldquo;<strong>{responsibilities || "assigned tasks"}</strong>&rdquo;.</p>}
+                {stipend && <p className="mb-3">You will receive a stipend of <strong>INR {stipend}</strong> Per Month.</p>}
+                {employmentType === "INTERN" && <p className="mb-3 text-[11.5px]">{tpl.offerCompletionNote}</p>}
+                <p className="mb-5">{tpl.offerClosing}</p>
+                <p className="mb-4">I, <strong>{recipientName || "________"}</strong>, accept the above offer and agree to join as a {designation || "________"} on {joiningDate ? new Date(joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "________"}.</p>
+                <p className="mb-1">Name: <strong>{recipientName || "________"}</strong></p>
+                <p className="mb-6 text-[11px] text-slate-500">Signature: _______________________&nbsp;&nbsp;&nbsp;&nbsp;Date: _______________________</p>
+                <div className="mt-6 pt-2">
+                  <p className="text-[11px]">With Regards,</p>
+                  <p className="font-bold text-[11.5px]">{signatoryName || tpl.defaultSignatoryName}</p>
+                  <p className="font-bold text-[11.5px]">{signatoryRole || tpl.defaultSignatoryRole}</p>
+                  <p className="font-bold text-[11.5px]">{tpl.companyName}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </DataPanel>
       )}
 
@@ -461,24 +515,32 @@ export default function LettersPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100"><CalendarPlus className="h-5 w-5 text-indigo-600" /></div>
               <div><h3 className="text-base font-bold text-slate-900">Extend Internship</h3><p className="text-xs text-slate-500">Creates a new offer letter continuing from the current end date</p></div>
             </div>
-            <label className="label-sm">Extension Duration</label>
-            <select value={extendMonths} onChange={(e) => setExtendMonths(e.target.value)} className="input mt-1 w-full">
-              <option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option>
-              <option value="4">4 Months</option><option value="6">6 Months</option><option value="12">12 Months</option>
-            </select>
+            <div className="space-y-3">
+              <div>
+                <label className="label-sm">Extension Duration</label>
+                <select value={extendMonths} onChange={(e) => setExtendMonths(e.target.value)} className="input mt-1 w-full">
+                  <option value="1">1 Month</option><option value="2">2 Months</option><option value="3">3 Months</option>
+                  <option value="4">4 Months</option><option value="6">6 Months</option><option value="12">12 Months</option>
+                </select>
+              </div>
+              <div>
+                <label className="label-sm">New Stipend (leave empty to keep same)</label>
+                <input value={extendStipend} onChange={(e) => setExtendStipend(e.target.value)} className="input mt-1 w-full" placeholder="e.g. 8,000 (Eight Thousand Rupees Only)" />
+              </div>
+            </div>
             <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 p-3 text-xs text-indigo-700 space-y-1">
               <p className="font-semibold">What happens:</p>
               <p>New start date = current end date</p>
               <p>New end date = start + {extendMonths} month{parseInt(extendMonths) > 1 ? "s" : ""}</p>
-              <p>Same role, stipend & reporting manager</p>
+              <p>{extendStipend ? `Updated stipend: INR ${extendStipend}` : "Same role, stipend & reporting manager"}</p>
             </div>
             <div className="mt-5 flex gap-2 justify-end">
               <button onClick={() => setExtendLetterId("")} className="btn-secondary px-4 py-2 text-sm">Cancel</button>
               <button onClick={async () => {
                 setExtendLoading(true);
-                const res = await api(`/api/letters/${extendLetterId}/extend`, { method: "POST", body: JSON.stringify({ extensionMonths: parseInt(extendMonths) }) });
+                const res = await api(`/api/letters/${extendLetterId}/extend`, { method: "POST", body: JSON.stringify({ extensionMonths: parseInt(extendMonths), stipend: extendStipend.trim() || undefined }) });
                 setExtendLoading(false);
-                if (res.success) { setExtendLetterId(""); loadLetters(); }
+                if (res.success) { setExtendLetterId(""); setExtendStipend(""); loadLetters(); }
               }} disabled={extendLoading} className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2">
                 {extendLoading ? <RotateCcw className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
                 Extend

@@ -152,18 +152,29 @@ function drawLetterhead(doc: any): void {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function drawFooterQr(doc: any, letterId: string, qrBuffer: Buffer): void {
   const verifyUrl = getVerifyUrl(letterId);
-  const footerY = doc.page.height - 90;
+  
+  // Ensure we have space for the footer — if content is too close to bottom, it's already fine
+  // because the footer is drawn at a fixed position from the page bottom.
+  // Use a position that leaves enough room within the page margins.
+  const bottomMargin = 45;
+  const footerHeight = 55;
+  const footerY = doc.page.height - bottomMargin - footerHeight;
 
-  doc.moveTo(PAGE_MARGIN, footerY).lineTo(doc.page.width - PAGE_MARGIN, footerY)
+  // If current content has already passed the footer zone, let PDFKit handle page break naturally
+  // by just drawing at the current position
+  const currentY = doc.y;
+  const drawY = currentY > footerY ? currentY + 10 : footerY;
+
+  doc.moveTo(PAGE_MARGIN, drawY).lineTo(doc.page.width - PAGE_MARGIN, drawY)
     .strokeColor("#cccccc").lineWidth(0.5).stroke();
 
-  doc.image(qrBuffer, PAGE_MARGIN, footerY + 5, { width: 50 });
+  doc.image(qrBuffer, PAGE_MARGIN, drawY + 5, { width: 50 });
 
   const txtX = PAGE_MARGIN + 58;
-  doc.fontSize(7).fillColor("#666666").font("Helvetica")
-    .text(`Verify: ${verifyUrl}`, txtX, footerY + 8, { width: 380 });
-  doc.text(`Letter ID: ${letterId} | Digitally signed by ${COMPANY_NAME}`, txtX, footerY + 19);
-  doc.text("This is a system-generated document and does not require a physical signature.", txtX, footerY + 30);
+  doc.fontSize(7).fillColor("#666666").font("Helvetica");
+  doc.text(`Verify: ${verifyUrl}`, txtX, drawY + 8, { width: 380, lineBreak: false });
+  doc.text(`Letter ID: ${letterId} | Digitally signed by ${COMPANY_NAME}`, txtX, drawY + 19, { width: 380, lineBreak: false });
+  doc.text("This is a system-generated document and does not require a physical signature.", txtX, drawY + 30, { width: 380, lineBreak: false });
 }
 
 export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buffer> {
@@ -386,6 +397,22 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
 export async function generateExperienceLetterPdf(data: ExperienceLetterData): Promise<Buffer> {
   const qrBuffer = await generateQrBuffer(getVerifyUrl(data.letterId));
 
+  // Pre-fetch signature and stamp images (if URLs provided)
+  let sigImageBuffer: Buffer | null = null;
+  let stampImageBuffer: Buffer | null = null;
+  if (data.signatoryImageUrl) {
+    try {
+      const res = await fetch(data.signatoryImageUrl);
+      if (res.ok) sigImageBuffer = Buffer.from(await res.arrayBuffer());
+    } catch { /* skip */ }
+  }
+  if (data.stampImageUrl) {
+    try {
+      const res = await fetch(data.stampImageUrl);
+      if (res.ok) stampImageBuffer = Buffer.from(await res.arrayBuffer());
+    } catch { /* skip */ }
+  }
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
@@ -449,10 +476,27 @@ export async function generateExperienceLetterPdf(data: ExperienceLetterData): P
     doc.text(`all the best in future endeavours.`);
     doc.moveDown(2);
 
-    // Authority
+    // Authority + Stamp
     doc.font("Helvetica").text("Sincerely,", PAGE_MARGIN);
     doc.moveDown(1.5);
-    doc.font("Helvetica-Bold").text(data.signatoryName || "Human Resources");
+
+    // Signature image (if available)
+    const sigY = doc.y;
+    if (sigImageBuffer) {
+      try {
+        doc.image(sigImageBuffer, PAGE_MARGIN, sigY, { width: 100, height: 40 });
+        doc.y = sigY + 45;
+      } catch { /* skip if image is invalid */ }
+    }
+
+    // Stamp image (if available) — positioned to the right of signature
+    if (stampImageBuffer) {
+      try {
+        doc.image(stampImageBuffer, doc.page.width - PAGE_MARGIN - 90, sigY - 10, { width: 80, height: 80 });
+      } catch { /* skip if image is invalid */ }
+    }
+
+    doc.font("Helvetica-Bold").text(data.signatoryName || "Human Resources", PAGE_MARGIN);
     doc.font("Helvetica").text(data.signatoryRole || "Manager, FUNT ROBOTICS ACADEMY");
 
     // Footer QR

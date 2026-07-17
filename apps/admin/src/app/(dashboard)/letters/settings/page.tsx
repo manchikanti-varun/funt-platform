@@ -32,6 +32,8 @@ interface LetterSettings {
   experienceClosing: string;
   defaultSignatoryName: string;
   defaultSignatoryRole: string;
+  defaultSignatoryImageUrl: string;
+  defaultStampImageUrl: string;
   version: number;
 }
 
@@ -255,8 +257,8 @@ export default function LetterSettingsPage() {
 
         {/* Signatory Tab */}
         {activeTab === "signatory" && (
-          <div className="space-y-4 max-w-2xl">
-            <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2">Default signatory used when no specific signatory is chosen per letter.</p>
+          <div className="space-y-5 max-w-2xl">
+            <p className="text-sm text-slate-600 bg-blue-50 border border-blue-100 rounded-lg px-4 py-2">Default signatory for all letters. Signature and stamp images appear on the experience letter PDF.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700">Default Signatory Name</label>
@@ -266,6 +268,30 @@ export default function LetterSettingsPage() {
                 <label className="block text-sm font-medium text-slate-700">Default Signatory Role</label>
                 <input value={settings.defaultSignatoryRole} onChange={(e) => updateField("defaultSignatoryRole", e.target.value)} className="input mt-1 text-sm" placeholder="e.g. Human Resources" />
               </div>
+            </div>
+
+            {/* Signature Image */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Signature Image URL</label>
+              <input value={settings.defaultSignatoryImageUrl || ""} onChange={(e) => updateField("defaultSignatoryImageUrl", e.target.value)} className="input mt-1 text-sm w-full" placeholder="https://... or paste image URL from R2" />
+              <p className="mt-1 text-xs text-slate-500">PNG with transparent background works best. Will appear on the left side of the signatory section.</p>
+              {settings.defaultSignatoryImageUrl && (
+                <div className="mt-2 inline-block rounded-lg border border-slate-200 bg-white p-2">
+                  <img src={settings.defaultSignatoryImageUrl} alt="Signature preview" className="h-12 object-contain" />
+                </div>
+              )}
+            </div>
+
+            {/* Stamp Image */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Company Stamp Image URL</label>
+              <input value={settings.defaultStampImageUrl || ""} onChange={(e) => updateField("defaultStampImageUrl", e.target.value)} className="input mt-1 text-sm w-full" placeholder="https://... or paste image URL from R2" />
+              <p className="mt-1 text-xs text-slate-500">Round company stamp/seal PNG. Will appear on the right side next to the signature on experience letters.</p>
+              {settings.defaultStampImageUrl && (
+                <div className="mt-2 inline-block rounded-lg border border-slate-200 bg-white p-2">
+                  <img src={settings.defaultStampImageUrl} alt="Stamp preview" className="h-16 object-contain" />
+                </div>
+              )}
             </div>
           </div>
         )}

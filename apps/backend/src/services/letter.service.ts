@@ -3,7 +3,7 @@ import { generateLetterId } from "../utils/funtIdGenerator.js";
 import { generateOfferLetterPdf, generateExperienceLetterPdf } from "../utils/pdfLetter.js";
 import { signLetterPayload, verifyLetterSignatures, getLetterIssuerConfig, type LetterSignablePayload } from "../utils/letterSigning.js";
 import { createAuditLog } from "./audit.service.js";
-import { createSettingsSnapshot } from "./letterSettings.service.js";
+import { createSettingsSnapshot, getLetterSettings } from "./letterSettings.service.js";
 import { AppError } from "../utils/AppError.js";
 import crypto from "crypto";
 
@@ -425,8 +425,8 @@ export async function createExperienceFromOffer(offerLetterId: string, input: {
     reportingTo: offer.reportingTo ?? undefined,
     dutiesDescription: input.dutiesDescription,
     performanceSummary: input.performanceSummary,
-    signatoryName: input.signatoryName,
-    signatoryRole: input.signatoryRole,
+    signatoryName: input.signatoryName || (offer as { signatoryName?: string }).signatoryName || undefined,
+    signatoryRole: input.signatoryRole || (offer as { signatoryRole?: string }).signatoryRole || undefined,
     signatoryImageUrl: input.signatoryImageUrl,
     stampImageUrl: input.stampImageUrl,
     linkedLetterId: offerLetterId,
@@ -513,6 +513,15 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
   }
 
   if (letter.type === LETTER_TYPE.EXPERIENCE_LETTER) {
+    // Fall back to global settings for signature/stamp if not set on the letter
+    const settings = await getLetterSettings();
+    const sigImageUrl = (letter as { signatoryImageUrl?: string }).signatoryImageUrl
+      || (settings as { defaultSignatoryImageUrl?: string }).defaultSignatoryImageUrl
+      || undefined;
+    const stampUrl = (letter as { stampImageUrl?: string }).stampImageUrl
+      || (settings as { defaultStampImageUrl?: string }).defaultStampImageUrl
+      || undefined;
+
     return generateExperienceLetterPdf({
       letterId: letter.letterId!,
       recipientName: letter.recipientName,
@@ -527,8 +536,8 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       issuedAt: new Date(letter.issuedAt!),
       signatoryName: (letter as { signatoryName?: string }).signatoryName,
       signatoryRole: (letter as { signatoryRole?: string }).signatoryRole,
-      signatoryImageUrl: (letter as { signatoryImageUrl?: string }).signatoryImageUrl,
-      stampImageUrl: (letter as { stampImageUrl?: string }).stampImageUrl,
+      signatoryImageUrl: sigImageUrl,
+      stampImageUrl: stampUrl,
     });
   }
 
@@ -633,51 +642,53 @@ export async function acceptLetter(letterId: string, acceptedBy: string) {
 // ─── Extend Internship ────────────────────────────────────────────────────────
 
 /**
- * Creates a new offer letter extending an existing internship.
- * Pre-fills all details from the original, with a new start date (= old end date)
- * and new end date (start + extensionMonths).
+ * Extends an existing internship by updating the end date and duration on the same letter.
+ * No new letter ID is created — the same document is updated in place.
  */
 export async function extendInternship(
   originalLetterId: string,
   extensionMonths: number,
   issuedBy: string,
-  autoApprove: boolean
+  _autoApprove: boolean,
+  newStipend?: string
 ) {
-  const original = await LetterModel.findOne({ letterId: originalLetterId.trim().toUpperCase() }).lean().exec();
-  if (!original) throw new AppError("Original offer letter not found", 404);
-  if (original.type !== LETTER_TYPE.OFFER_LETTER) throw new AppError("Can only extend offer letters", 400);
-  if (original.status !== LETTER_STATUS.ACCEPTED && original.status !== LETTER_STATUS.ACTIVE) {
+  const letter = await LetterModel.findOne({ letterId: originalLetterId.trim().toUpperCase() }).exec();
+  if (!letter) throw new AppError("Offer letter not found", 404);
+  if (letter.type !== LETTER_TYPE.OFFER_LETTER) throw new AppError("Can only extend offer letters", 400);
+  if (letter.status !== LETTER_STATUS.ACCEPTED && letter.status !== LETTER_STATUS.ACTIVE) {
     throw new AppError("Can only extend accepted/active internships", 400);
   }
 
-  const originalEndDate = original.endDate ? new Date(original.endDate) : new Date();
-  const newStartDate = originalEndDate;
-  const newEndDate = new Date(originalEndDate);
+  const currentEndDate = letter.endDate ? new Date(letter.endDate) : new Date();
+  const newEndDate = new Date(currentEndDate);
   newEndDate.setMonth(newEndDate.getMonth() + extensionMonths);
 
-  const durationText = `${extensionMonths} Month${extensionMonths > 1 ? "s" : ""} (Extension)`;
+  // Calculate total duration from joining to new end
+  const joiningDate = new Date(letter.joiningDate);
+  const totalMonths = Math.round((newEndDate.getTime() - joiningDate.getTime()) / (30.44 * 24 * 60 * 60 * 1000));
+  const durationText = `${totalMonths} Months`;
 
-  return createLetter({
-    type: LETTER_TYPE.OFFER_LETTER,
-    recipientName: original.recipientName,
-    recipientEmail: original.recipientEmail ?? undefined,
-    recipientMobile: (original as { recipientMobile?: string }).recipientMobile ?? undefined,
-    recipientGender: (original as { recipientGender?: string }).recipientGender ?? "Mr",
-    employmentType: original.employmentType,
-    department: original.department,
-    designation: original.designation,
-    joiningDate: newStartDate,
+  // Update in place
+  letter.endDate = newEndDate;
+  (letter as unknown as { duration: string }).duration = durationText;
+  if (newStipend?.trim()) {
+    letter.stipend = newStipend.trim();
+  }
+  await letter.save();
+
+  await createAuditLog("LETTER_UPDATED", issuedBy, "Letter", originalLetterId, {
+    action: "extended",
+    extensionMonths,
+    newEndDate: newEndDate.toISOString(),
+    newDuration: durationText,
+    ...(newStipend ? { newStipend } : {}),
+  });
+
+  return {
+    letterId: letter.letterId,
     endDate: newEndDate,
     duration: durationText,
-    stipend: original.stipend ?? undefined,
-    location: original.location ?? undefined,
-    reportingTo: original.reportingTo ?? undefined,
-    responsibilities: (original as { responsibilities?: string }).responsibilities ?? undefined,
-    signatoryName: (original as { signatoryName?: string }).signatoryName ?? undefined,
-    signatoryRole: (original as { signatoryRole?: string }).signatoryRole ?? undefined,
-    signatoryImageUrl: (original as { signatoryImageUrl?: string }).signatoryImageUrl ?? undefined,
-    linkedLetterId: originalLetterId,
-    issuedBy,
-    autoApprove,
-  });
+    stipend: letter.stipend,
+    message: `Internship extended by ${extensionMonths} month${extensionMonths > 1 ? "s" : ""}. New end date: ${newEndDate.toLocaleDateString("en-IN")}.`,
+  };
 }

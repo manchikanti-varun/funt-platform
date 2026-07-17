@@ -148,7 +148,7 @@ export const downloadLetterPdf = asyncHandler(async (req: Request, res: Response
   if (!letterId) throw new AppError("letterId is required", 400);
   const pdf = await service.generateLetterPdf(letterId);
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="${letterId}.pdf"`);
+  res.setHeader("Content-Disposition", `attachment; filename="${letterId}.pdf"`);
   res.send(pdf);
 });
 

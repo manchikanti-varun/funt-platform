@@ -79,11 +79,11 @@ router.post("/:letterId/extend", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), asy
     const userId = req.user?.userId;
     if (!userId) throw new AppError("Unauthorized", 401);
     const letterId = req.params.letterId;
-    const { extensionMonths } = req.body ?? {};
+    const { extensionMonths, stipend } = req.body ?? {};
     if (!letterId) throw new AppError("letterId is required", 400);
     if (!extensionMonths || extensionMonths < 1) throw new AppError("extensionMonths must be at least 1", 400);
     const isSuperAdmin = req.user?.roles?.includes(ROLE.SUPER_ADMIN) ?? false;
-    const data = await extendInternship(letterId, Number(extensionMonths), userId, isSuperAdmin);
+    const data = await extendInternship(letterId, Number(extensionMonths), userId, isSuperAdmin, typeof stipend === "string" ? stipend : undefined);
     successRes(res, data, "Internship extended", 201);
   } catch (err) { next(err); }
 });
