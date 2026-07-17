@@ -3,6 +3,7 @@ import { generateLetterId } from "../utils/funtIdGenerator.js";
 import { generateOfferLetterPdf, generateExperienceLetterPdf } from "../utils/pdfLetter.js";
 import { signLetterPayload, verifyLetterSignatures, getLetterIssuerConfig, type LetterSignablePayload } from "../utils/letterSigning.js";
 import { createAuditLog } from "./audit.service.js";
+import { createSettingsSnapshot } from "./letterSettings.service.js";
 import { AppError } from "../utils/AppError.js";
 import crypto from "crypto";
 
@@ -146,6 +147,7 @@ export async function createLetter(input: CreateLetterInput) {
       issuedAt: now.toISOString(),
     };
     const { documentHash, electronicSignature } = signLetterPayload(signablePayload);
+    const { snapshot, version: templateVersion } = await createSettingsSnapshot();
 
     const letter = await LetterModel.create({
       ...letterData,
@@ -158,6 +160,8 @@ export async function createLetter(input: CreateLetterInput) {
       acceptanceDeadline: input.type === LETTER_TYPE.OFFER_LETTER ? acceptanceDeadline : undefined,
       documentHash,
       electronicSignature,
+      templateSnapshot: snapshot,
+      templateVersion,
     });
 
     await createAuditLog("LETTER_ISSUED", input.issuedBy, "Letter", letterId, {
@@ -168,10 +172,13 @@ export async function createLetter(input: CreateLetterInput) {
   }
 
   // Admin creates — draft status, needs approval
+  const { snapshot, version: templateVersion } = await createSettingsSnapshot();
   const letter = await LetterModel.create({
     ...letterData,
     status: LETTER_STATUS.DRAFT,
     approvalStatus: APPROVAL_STATUS.DRAFT,
+    templateSnapshot: snapshot,
+    templateVersion,
   });
 
   await createAuditLog("LETTER_CREATED_DRAFT", input.issuedBy, "Letter", String(letter._id), {
@@ -621,4 +628,56 @@ function formatLetterResponse(letter: unknown) {
 // Legacy export for backward compatibility
 export async function acceptLetter(letterId: string, acceptedBy: string) {
   return internAcceptLetter(letterId, acceptedBy);
+}
+
+// ─── Extend Internship ────────────────────────────────────────────────────────
+
+/**
+ * Creates a new offer letter extending an existing internship.
+ * Pre-fills all details from the original, with a new start date (= old end date)
+ * and new end date (start + extensionMonths).
+ */
+export async function extendInternship(
+  originalLetterId: string,
+  extensionMonths: number,
+  issuedBy: string,
+  autoApprove: boolean
+) {
+  const original = await LetterModel.findOne({ letterId: originalLetterId.trim().toUpperCase() }).lean().exec();
+  if (!original) throw new AppError("Original offer letter not found", 404);
+  if (original.type !== LETTER_TYPE.OFFER_LETTER) throw new AppError("Can only extend offer letters", 400);
+  if (original.status !== LETTER_STATUS.ACCEPTED && original.status !== LETTER_STATUS.ACTIVE) {
+    throw new AppError("Can only extend accepted/active internships", 400);
+  }
+
+  const originalEndDate = original.endDate ? new Date(original.endDate) : new Date();
+  const newStartDate = originalEndDate;
+  const newEndDate = new Date(originalEndDate);
+  newEndDate.setMonth(newEndDate.getMonth() + extensionMonths);
+
+  const durationText = `${extensionMonths} Month${extensionMonths > 1 ? "s" : ""} (Extension)`;
+
+  return createLetter({
+    type: LETTER_TYPE.OFFER_LETTER,
+    recipientName: original.recipientName,
+    recipientEmail: original.recipientEmail ?? undefined,
+    recipientMobile: (original as { recipientMobile?: string }).recipientMobile ?? undefined,
+    recipientGender: (original as { recipientGender?: string }).recipientGender ?? "Mr",
+    employmentType: original.employmentType,
+    department: original.department,
+    designation: original.designation,
+    joiningDate: newStartDate,
+    endDate: newEndDate,
+    duration: durationText,
+    stipend: original.stipend ?? undefined,
+    location: original.location ?? undefined,
+    reportingTo: original.reportingTo ?? undefined,
+    responsibilities: (original as { responsibilities?: string }).responsibilities ?? undefined,
+    signatoryName: (original as { signatoryName?: string }).signatoryName ?? undefined,
+    signatoryRole: (original as { signatoryRole?: string }).signatoryRole ?? undefined,
+    signatoryImageUrl: (original as { signatoryImageUrl?: string }).signatoryImageUrl ?? undefined,
+    linkedLetterId: originalLetterId,
+    issuedBy,
+    autoApprove,
+  });
 }

@@ -126,6 +126,10 @@ const letterSchema = new Schema(
     // Digital signature
     documentHash: { type: String, required: false },
     electronicSignature: { type: String, required: false },
+    // Template snapshot — preserves the letter template config at creation time
+    // so future template changes don't affect previously issued letters
+    templateSnapshot: { type: Schema.Types.Mixed, required: false },
+    templateVersion: { type: Number, required: false },
   },
   { timestamps: true }
 );

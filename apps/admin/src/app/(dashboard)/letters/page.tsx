@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel, PageSection } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -201,6 +202,10 @@ export default function LettersPage() {
         <button onClick={() => setShowSample((v) => !v)} className="btn-secondary px-4 py-2 text-sm">
           {showSample ? "Hide sample" : "View sample"}
         </button>
+        <Link href="/letters/settings" className="btn-secondary px-4 py-2 text-sm inline-flex items-center gap-1.5">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Template Settings
+        </Link>
       </div>
 
       {showSample && (
@@ -342,7 +347,18 @@ export default function LettersPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700">Joining Date *</label>
-                <input type="date" value={joiningDate} onChange={(e) => setJoiningDate(e.target.value)} className="input mt-1 text-sm" />
+                <input type="date" value={joiningDate} onChange={(e) => {
+                  setJoiningDate(e.target.value);
+                  // Auto-calculate end date for interns based on duration
+                  if (employmentType === "INTERN" && duration && e.target.value) {
+                    const months = parseInt(duration);
+                    if (months > 0) {
+                      const start = new Date(e.target.value);
+                      start.setMonth(start.getMonth() + months);
+                      setEndDate(start.toISOString().split("T")[0]);
+                    }
+                  }
+                }} className="input mt-1 text-sm" />
               </div>
               {formType === "EXPERIENCE_LETTER" && (
                 <div>
@@ -352,25 +368,48 @@ export default function LettersPage() {
               )}
               {formType === "OFFER_LETTER" && (
                 <>
+                  {employmentType === "INTERN" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">Duration *</label>
+                      <select value={duration} onChange={(e) => {
+                        setDuration(e.target.value);
+                        // Auto-calculate end date from joining date + duration
+                        if (joiningDate && e.target.value) {
+                          const months = parseInt(e.target.value);
+                          if (months > 0) {
+                            const start = new Date(joiningDate);
+                            start.setMonth(start.getMonth() + months);
+                            setEndDate(start.toISOString().split("T")[0]);
+                          }
+                        }
+                      }} className="input mt-1 text-sm">
+                        <option value="1 Months">1 Month</option>
+                        <option value="2 Months">2 Months</option>
+                        <option value="3 Months">3 Months</option>
+                        <option value="4 Months">4 Months</option>
+                        <option value="6 Months">6 Months</option>
+                        <option value="12 Months">12 Months</option>
+                      </select>
+                    </div>
+                  )}
+                  {employmentType === "INTERN" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">End Date (auto-calculated)</label>
+                      <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="input mt-1 text-sm" />
+                      {endDate && <p className="mt-1 text-xs text-slate-500">Auto-set from joining + duration. Edit if needed.</p>}
+                    </div>
+                  )}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700">Duration (for interns)</label>
-                    <input value={duration} onChange={(e) => setDuration(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 3 Months" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">End Date</label>
-                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="input mt-1 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">Stipend</label>
-                    <input value={stipend} onChange={(e) => setStipend(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,000 (Six Thousand Rupees Only)" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700">CTC</label>
-                    <input value={ctc} onChange={(e) => setCtc(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,00,000/year" />
+                    <label className="block text-sm font-medium text-slate-700">{employmentType === "INTERN" ? "Stipend" : "CTC"}</label>
+                    {employmentType === "INTERN" ? (
+                      <input value={stipend} onChange={(e) => setStipend(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,000 (Six Thousand Rupees Only)" />
+                    ) : (
+                      <input value={ctc} onChange={(e) => setCtc(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. 6,00,000/year" />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Location</label>
-                    <input value={location} onChange={(e) => setLocation(e.target.value)} className="input mt-1 text-sm" placeholder="Remote" />
+                    <input value={location} onChange={(e) => setLocation(e.target.value)} className="input mt-1 text-sm" placeholder="Hyderabad" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Reporting To</label>
@@ -672,20 +711,38 @@ export default function LettersPage() {
                         </>
                       )}
                       {l.status === "ACCEPTED" && l.type === "OFFER_LETTER" && (
-                        <button type="button" onClick={async () => {
-                          const duties = prompt("Duties performed during internship:");
-                          if (!duties?.trim()) return;
-                          const endDt = prompt("End date (YYYY-MM-DD):");
-                          if (!endDt?.trim()) return;
-                          const res = await api(`/api/letters/${l.letterId}/experience`, {
-                            method: "POST",
-                            body: JSON.stringify({ endDate: endDt, dutiesDescription: duties, signatoryName: signatoryName || undefined, signatoryRole: signatoryRole || undefined }),
-                          });
-                          if (res.success) { loadLetters(); alert("Experience letter created!"); }
-                          else alert(res.message ?? "Failed");
-                        }} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100">
-                          Issue Experience
-                        </button>
+                        <>
+                          <button type="button" onClick={async () => {
+                            const duties = prompt("Duties performed during internship:");
+                            if (!duties?.trim()) return;
+                            const endDt = prompt("End date (YYYY-MM-DD):");
+                            if (!endDt?.trim()) return;
+                            const res = await api(`/api/letters/${l.letterId}/experience`, {
+                              method: "POST",
+                              body: JSON.stringify({ endDate: endDt, dutiesDescription: duties, signatoryName: signatoryName || undefined, signatoryRole: signatoryRole || undefined }),
+                            });
+                            if (res.success) { loadLetters(); alert("Experience letter created!"); }
+                            else alert(res.message ?? "Failed");
+                          }} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100">
+                            Issue Experience
+                          </button>
+                          {l.employmentType === "INTERN" && (
+                            <button type="button" onClick={async () => {
+                              const extMonths = prompt("Extend by how many months?", "3");
+                              if (!extMonths?.trim()) return;
+                              const months = parseInt(extMonths);
+                              if (!months || months < 1) { alert("Enter a valid number of months"); return; }
+                              const res = await api(`/api/letters/${l.letterId}/extend`, {
+                                method: "POST",
+                                body: JSON.stringify({ extensionMonths: months }),
+                              });
+                              if (res.success) { loadLetters(); alert(`Internship extended by ${months} months. New offer letter created.`); }
+                              else alert(res.message ?? "Failed to extend");
+                            }} className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-100">
+                              Extend
+                            </button>
+                          )}
+                        </>
                       )}
                       {(l.status === "ACCEPTED" || l.status === "ACTIVE") && (
                         <button type="button" onClick={() => setRevokeId(l.letterId)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
