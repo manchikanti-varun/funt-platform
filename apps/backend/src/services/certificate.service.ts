@@ -66,6 +66,18 @@ export async function checkEligibility(
   const existing = await CertificateModel.findOne({ studentId, batchId: batchMongoId }).exec();
   if (existing) return { eligible: false, reason: "Certificate already issued for this batch" };
 
+  // Check final quiz requirement (if configured on the course snapshot)
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const firstSnap = snapshots[0] as { finalQuizId?: string; finalQuizRequiredForCertificate?: boolean; courseId?: string } | undefined;
+  if (firstSnap?.finalQuizRequiredForCertificate && firstSnap.finalQuizId) {
+    const { hasStudentPassedQuiz } = await import("./quiz.service.js");
+    const courseId = firstSnap.courseId ?? "";
+    const passed = await hasStudentPassedQuiz(studentId, firstSnap.finalQuizId, batchMongoId, courseId);
+    if (!passed) {
+      return { eligible: false, reason: "Final quiz not passed" };
+    }
+  }
+
   return { eligible: true };
 }
 

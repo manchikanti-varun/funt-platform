@@ -173,6 +173,13 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
   const razorpayConfigured = isRazorpayConfigured() && !!rk;
   const razorpayEnabled =
     razorpayConfigured && pricing.listPaise >= 100 && pricing.allowRazorpayMethod;
+
+  // If the course has a price but no payment method is actually available, warn the student
+  const noPaymentMethodAvailable = pricing.listPaise >= 100 && !pricing.allowUpiManual && !razorpayEnabled;
+  const checkoutError = noPaymentMethodAvailable
+    ? "No payment method is currently available for this course. Please contact support."
+    : undefined;
+
   successRes(res, {
     courseTitle: pricing.courseTitle,
     enrollmentPriceInPaise: pricing.listPaise,
@@ -190,6 +197,7 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
     paymentMethodsLabel: formatPaymentMethodsLabel(pricing.allowedPaymentMethods),
     razorpayEnabled,
     razorpayKeyId: rk ?? undefined,
+    checkoutError,
   });
 });
 

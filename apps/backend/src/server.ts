@@ -46,6 +46,19 @@ async function start(): Promise<void> {
     setInterval(() => {
       expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch(() => {});
     }, 60 * 60 * 1000); // every hour
+
+    // Retry failed milestone initializations (check every 5 minutes)
+    const { retryPendingMilestoneInits } = await import("./services/learningPlan.service.js");
+    retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch(() => {});
+    setInterval(() => {
+      retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch(() => {});
+    }, 5 * 60 * 1000); // every 5 minutes
+
+    // Process scheduled milestone unlocks (DATE_BASED / RELATIVE_DATE) every 10 minutes
+    const { processAllScheduledUnlocks } = await import("./services/learningPlan.service.js");
+    setInterval(() => {
+      processAllScheduledUnlocks().catch(() => {});
+    }, 10 * 60 * 1000); // every 10 minutes
   } catch (err) {
     server.close();
     throw err;

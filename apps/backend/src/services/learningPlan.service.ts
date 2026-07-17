@@ -1401,3 +1401,97 @@ export async function recalculateMilestoneProgressAfterQuiz(
   if (!milestone) return;
   await recalculateMilestoneProgress(studentId, batchId, courseId, milestoneId, milestone);
 }
+
+
+// ─── Background: Retry pending milestone inits ────────────────────────────────
+
+/**
+ * Finds enrollments where milestone initialization failed (`_milestoneInitPending: true`)
+ * and retries the initialization. Called periodically by the server scheduler.
+ */
+export async function retryPendingMilestoneInits(): Promise<number> {
+  const pending = await EnrollmentModel.find({
+    _milestoneInitPending: true,
+    learningPlanActive: true,
+    status: { $in: ["ACTIVE", "COMPLETED"] },
+  })
+    .select("studentId batchId enrolledAt")
+    .limit(50)
+    .lean()
+    .exec();
+
+  if (pending.length === 0) return 0;
+  let retried = 0;
+
+  for (const enrollment of pending) {
+    const { studentId, batchId } = enrollment;
+    const enrolledAt = (enrollment as { enrolledAt?: Date }).enrolledAt ?? new Date();
+    try {
+      const batch = await BatchModel.findById(batchId).lean().exec();
+      if (!batch) continue;
+      const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      for (const snap of snaps) {
+        const snapCourseId = String((snap as { courseId?: string }).courseId ?? "").trim();
+        if (!snapCourseId) continue;
+        if (isLearningPlanActive(snap)) {
+          const milestones = getMilestonesFromSnapshot(snap);
+          await initializeMilestoneProgress(studentId, batchId, snapCourseId, milestones, enrolledAt);
+        }
+      }
+      // Clear the pending flag on success
+      await EnrollmentModel.updateOne(
+        { studentId, batchId },
+        { $unset: { _milestoneInitPending: 1 } }
+      ).exec();
+      retried++;
+    } catch {
+      // Will retry on next cycle
+    }
+  }
+  return retried;
+}
+
+// ─── Background: Process all scheduled milestone unlocks ──────────────────────
+
+/**
+ * Processes DATE_BASED and RELATIVE_DATE milestone unlocks globally.
+ * Called periodically so that students don't have to visit the LMS for their milestones to unlock.
+ */
+export async function processAllScheduledUnlocks(): Promise<number> {
+  const now = new Date();
+  const candidates = await MilestoneProgressModel.find({
+    scheduledUnlockAt: { $lte: now },
+    unlocked: false,
+    locked: false,
+  })
+    .select("studentId batchId courseId milestoneId")
+    .limit(200)
+    .lean()
+    .exec();
+
+  if (candidates.length === 0) return 0;
+  let unlocked = 0;
+
+  for (const doc of candidates) {
+    const { studentId, batchId, courseId, milestoneId } = doc as {
+      studentId: string; batchId: string; courseId: string; milestoneId: string;
+    };
+    try {
+      await MilestoneProgressModel.updateOne(
+        { studentId, batchId, courseId, milestoneId, unlocked: false, locked: false, scheduledUnlockAt: { $lte: now } },
+        {
+          $set: {
+            unlocked: true,
+            unlockedAt: now,
+            unlockSource: MILESTONE_UNLOCK_SOURCE.DATE_AUTO,
+            unlockedBy: "system",
+          },
+        }
+      ).exec();
+      unlocked++;
+    } catch {
+      // Individual failures don't stop processing
+    }
+  }
+  return unlocked;
+}
