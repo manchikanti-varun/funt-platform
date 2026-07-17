@@ -448,13 +448,13 @@ export async function deleteLetter(letterMongoId: string, deletedBy: string) {
     throw new AppError("Only DRAFT letters can be deleted. Use revoke for issued letters.", 400);
   }
   await letter.deleteOne();
-  await createAuditLog({
-    action: "LETTER_DELETED",
-    entityType: "letter",
-    entityId: letter._id.toString(),
-    performedBy: deletedBy,
-    details: { recipientName: letter.recipientName, designation: letter.designation },
-  });
+  await createAuditLog(
+    "LETTER_DELETED",
+    deletedBy,
+    "letter",
+    letter._id.toString(),
+    { recipientName: letter.recipientName, designation: letter.designation }
+  );
   return { deleted: true };
 }
 

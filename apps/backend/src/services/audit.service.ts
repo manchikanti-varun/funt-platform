@@ -151,6 +151,7 @@ export type AuditAction =
   | "LETTER_WITHDRAWN"
   | "LETTER_UPDATED"
   | "LETTER_VERIFY_ACCESSED"
+  | "LETTER_DELETED"
   | "USER_DELETED";
 
 export async function createAuditLog(
