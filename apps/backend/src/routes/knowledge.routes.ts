@@ -33,7 +33,7 @@ import {
   deleteArticleHandler,
 } from "../controllers/knowledge.controller.js";
 
-const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.SUPPORT_AGENT, ROLE.FRANCHISE_ADMIN] as const;
+const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.SUPPORT_AGENT, ROLE.FRANCHISE_ADMIN] as const;
 const ADMIN_ROLES = [ROLE.SUPER_ADMIN] as const;
 
 // ── Reader router (all authenticated users) ────────────────────────────────

@@ -28,7 +28,7 @@ const configRouter = Router();
 configRouter.use(authMiddleware);
 configRouter.get(
   "/",
-  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN),
   getGlobalContentProtection
 );
 configRouter.put(

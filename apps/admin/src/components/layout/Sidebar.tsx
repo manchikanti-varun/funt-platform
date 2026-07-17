@@ -54,9 +54,10 @@ export function Sidebar({ roles }: SidebarProps) {
   const pathname = usePathname();
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
   const isAdmin = roles.includes(ROLE.ADMIN) || isSuperAdmin;
+  const isSubAdmin = roles.includes(ROLE.SUB_ADMIN);
   const isTrainer = roles.includes(ROLE.TRAINER);
   const isFranchiseAdmin = roles.includes(ROLE.FRANCHISE_ADMIN);
-  const showContentAndBatches = isAdmin || isTrainer;
+  const showContentAndBatches = isAdmin || isSubAdmin || isTrainer;
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col overflow-hidden border-r border-slate-200/90 bg-white shadow-xl shadow-slate-300/10 ring-1 ring-slate-100/80">
@@ -77,21 +78,27 @@ export function Sidebar({ roles }: SidebarProps) {
         {showContentAndBatches && (
           <>
             <p className={SECTION_LABEL_CLASS}>Academic</p>
-            <SidebarNavLink href="/courses" isActive={pathname.startsWith("/courses")}>
-              Courses
-            </SidebarNavLink>
+            {!isSubAdmin && (
+              <SidebarNavLink href="/courses" isActive={pathname.startsWith("/courses")}>
+                Courses
+              </SidebarNavLink>
+            )}
             <SidebarNavLink href="/batches" isActive={pathname.startsWith("/batches")}>
               Batches
             </SidebarNavLink>
-            <SidebarNavLink href="/global-modules" isActive={pathname.startsWith("/global-modules")}>
-              Chapters
-            </SidebarNavLink>
-            <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
-              Assignments
-            </SidebarNavLink>
-            <SidebarNavLink href="/quizzes" isActive={pathname.startsWith("/quizzes")}>
-              Quizzes
-            </SidebarNavLink>
+            {!isSubAdmin && (
+              <>
+                <SidebarNavLink href="/global-modules" isActive={pathname.startsWith("/global-modules")}>
+                  Chapters
+                </SidebarNavLink>
+                <SidebarNavLink href="/global-assignments" isActive={pathname.startsWith("/global-assignments")}>
+                  Assignments
+                </SidebarNavLink>
+                <SidebarNavLink href="/quizzes" isActive={pathname.startsWith("/quizzes")}>
+                  Quizzes
+                </SidebarNavLink>
+              </>
+            )}
             <SidebarNavLink href="/assignments" isActive={pathname.startsWith("/assignments")}>
               Assignment reviews
             </SidebarNavLink>
@@ -101,11 +108,26 @@ export function Sidebar({ roles }: SidebarProps) {
             >
               Attendance
             </SidebarNavLink>
-            {isAdmin && (
+            {(isAdmin || isSubAdmin) && (
               <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates") || (pathname.startsWith("/batches") && pathname.includes("/certificates"))}>
                 Certificates
               </SidebarNavLink>
             )}
+          </>
+        )}
+        {/* Sub Admin: limited people section */}
+        {isSubAdmin && !isAdmin && (
+          <>
+            <p className={SECTION_LABEL_CLASS}>People</p>
+            <SidebarNavLink href="/people-insights" isActive={pathname.startsWith("/people-insights")}>
+              People insights
+            </SidebarNavLink>
+            <SidebarNavLink href="/profile-search" isActive={pathname.startsWith("/profile-search")}>
+              Profile search
+            </SidebarNavLink>
+            <SidebarNavLink href="/team-management" isActive={pathname.startsWith("/team-management") || pathname.startsWith("/admin-management")}>
+              Team management
+            </SidebarNavLink>
           </>
         )}
         {isAdmin && (
@@ -137,7 +159,7 @@ export function Sidebar({ roles }: SidebarProps) {
             </SidebarNavLink>
           </>
         )}
-        {isAdmin && (
+        {(isAdmin || isSubAdmin) && (
           <>
             <p className={SECTION_LABEL_CLASS}>Commerce</p>
             <SidebarNavLink href="/payments" isActive={pathname.startsWith("/payments")}>
@@ -146,9 +168,11 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/invoices" isActive={pathname.startsWith("/invoices")}>
               Invoices
             </SidebarNavLink>
-            <SidebarNavLink href="/finance" isActive={pathname.startsWith("/finance")}>
-              Finance dashboard
-            </SidebarNavLink>
+            {isAdmin && (
+              <SidebarNavLink href="/finance" isActive={pathname.startsWith("/finance")}>
+                Finance dashboard
+              </SidebarNavLink>
+            )}
             {isSuperAdmin && (
               <SidebarNavLink href="/coupons" isActive={pathname.startsWith("/coupons")}>
                 Coupons
@@ -175,13 +199,13 @@ export function Sidebar({ roles }: SidebarProps) {
             )}
           </>
         )}
-        {(isAdmin || (isTrainer && !isAdmin)) && (
+        {(isAdmin || isSubAdmin || (isTrainer && !isAdmin)) && (
           <>
             <p className={SECTION_LABEL_CLASS}>Support</p>
             <SidebarNavLink href="/support" isActive={pathname === "/support" || (pathname.startsWith("/support") && !pathname.startsWith("/support-live"))}>
               Support desk
             </SidebarNavLink>
-            {isAdmin && (
+            {(isAdmin || isSubAdmin) && (
               <SidebarNavLink href="/enrollment-requests" isActive={pathname.startsWith("/enrollment-requests")}>
                 Enrollment requests
               </SidebarNavLink>
@@ -193,7 +217,7 @@ export function Sidebar({ roles }: SidebarProps) {
             Knowledge Center
           </SidebarNavLink>
         )}
-        {isAdmin && (
+        {isAdmin && !isSubAdmin && (
           <>
             <p className={SECTION_LABEL_CLASS}>System</p>
             {isSuperAdmin && (

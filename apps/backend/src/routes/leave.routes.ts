@@ -41,8 +41,8 @@ import { createLeaveSchema, leavePolicySchema } from "../schemas/index.js";
 const router = Router();
 router.use(authMiddleware);
 
-const STAFF_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER] as const;
-const ADMIN_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN] as const;
+const STAFF_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER] as const;
+const ADMIN_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN] as const;
 const SUPER_ADMIN_ONLY = [ROLE.SUPER_ADMIN] as const;
 
 // ── Fixed-path routes first (before /:id) ───────────────────────────────────

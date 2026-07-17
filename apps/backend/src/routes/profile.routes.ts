@@ -9,6 +9,6 @@ import { lookupProfile } from "../controllers/profile.controller.js";
 const router = Router();
 
 router.use(authMiddleware);
-router.get("/lookup", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), lookupProfile);
+router.get("/lookup", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), lookupProfile);
 
 export const profileRoutes = router;

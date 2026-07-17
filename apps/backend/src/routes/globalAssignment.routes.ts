@@ -29,9 +29,9 @@ router.use(authMiddleware);
 
 router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createGlobalAssignmentSchema), createAssignment);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listAssignments);
-router.post("/submissions/bulk-review", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkReviewGlobalSubmissions);
-router.patch("/submissions/:subId/review", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(reviewGlobalSubmissionSchema), reviewGlobalSubmission);
-router.get("/:id/submissions", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getSubmissionsForAssignment);
+router.post("/submissions/bulk-review", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), bulkReviewGlobalSubmissions);
+router.patch("/submissions/:subId/review", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), validateBody(reviewGlobalSubmissionSchema), reviewGlobalSubmission);
+router.get("/:id/submissions", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), getSubmissionsForAssignment);
 router.get("/:id/access", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listAssignmentAccess);
 router.post("/:id/access", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addAssignmentAccess);
 router.post("/:id/access/bulk", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkAddAssignmentAccess);

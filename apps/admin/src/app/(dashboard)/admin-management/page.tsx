@@ -9,7 +9,7 @@ import { useAdminUser } from "@/contexts/AdminUserContext";
 import { AppPageShell, FormPanel, PageSection, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 
-type Tab = "requests" | "student" | "trainer" | "supportAgent" | "admin" | "superAdmin" | "reset";
+type Tab = "requests" | "student" | "trainer" | "supportAgent" | "subAdmin" | "admin" | "superAdmin" | "reset";
 
 interface RegistrationRequestRow {
   id: string;
@@ -86,6 +86,7 @@ export default function AdminManagementPage() {
   const searchParams = useSearchParams();
   const { roles } = useAdminUser();
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
+  const isAdmin = roles.includes(ROLE.ADMIN) || isSuperAdmin;
   const [tab, setTab] = useState<Tab>("student");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const hasSetInitialTab = useRef(false);
@@ -107,6 +108,7 @@ export default function AdminManagementPage() {
     { id: "student", label: "Create Student" },
     { id: "trainer", label: "Create Trainer" },
     { id: "supportAgent", label: "Create Support Agent" },
+    { id: "subAdmin", label: "Create Sub Admin", show: isSuperAdmin || isAdmin },
     { id: "admin", label: "Create Admin", show: isSuperAdmin },
     { id: "superAdmin", label: "Create Super Admin", show: isSuperAdmin },
     { id: "reset", label: "Reset Login" },
@@ -181,6 +183,12 @@ export default function AdminManagementPage() {
         )}
         {tab === "supportAgent" && (
           <CreateSupportAgentForm
+            onSuccess={(m) => setMessageAndClear("success", m)}
+            onError={(m) => setMessageAndClear("error", m)}
+          />
+        )}
+        {tab === "subAdmin" && (
+          <CreateSubAdminForm
             onSuccess={(m) => setMessageAndClear("success", m)}
             onError={(m) => setMessageAndClear("error", m)}
           />
@@ -1118,6 +1126,80 @@ function CreateSupportAgentForm({ onSuccess, onError }: { onSuccess: (m: string)
       </div>
       <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5 text-sm disabled:opacity-50">
         {loading ? "Creating..." : "Create Support Agent"}
+      </button>
+    </form>
+  );
+}
+
+function CreateSubAdminForm({ onSuccess, onError }: { onSuccess: (m: string) => void; onError: (m: string) => void }) {
+  const dialog = useAppDialog();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValidEmailFormat(email)) { onError("Enter a valid email address."); return; }
+    if (!/^\d{6,15}$/.test(mobileNumber.trim())) { onError("Enter a valid mobile number."); return; }
+    const pwdErr = validateStrongPassword(password);
+    if (pwdErr) { onError(pwdErr); return; }
+    if (password !== confirmPassword) { onError("Confirm password does not match."); return; }
+    setLoading(true);
+    const res = await api<{ username?: string }>("/api/admin/users/sub-admin", {
+      method: "POST",
+      body: JSON.stringify({ name, email, mobile: `${countryCode}${mobileNumber.trim()}`, password }),
+    });
+    setLoading(false);
+    if (res.success) {
+      const u = res.data?.username;
+      const msg = u ? `Sub Admin created. Username: ${u}` : "Sub Admin created.";
+      if (u) await dialog.alert({ title: "Sub Admin Created", message: `Username: ${u}\n\nThey can log in at admin.funt.in with limited permissions.` });
+      onSuccess(msg);
+      setName(""); setEmail(""); setCountryCode("+91"); setMobileNumber(""); setPassword(""); setConfirmPassword("");
+    } else onError(res.message ?? "Failed to create Sub Admin.");
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-slate-800">Create Sub Admin</h2>
+        <p className="mt-1 text-sm text-slate-500">Add a Sub Admin for day-to-day operations. They can manage students and batches but cannot access finance, content, or system settings.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="sub-admin-name">Name</Label>
+          <input id="sub-admin-name" required className="input text-sm" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div>
+          <Label htmlFor="sub-admin-email">Email</Label>
+          <input id="sub-admin-email" required type="email" className="input text-sm" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          {email.trim() && !isValidEmailFormat(email) ? <p className="mt-1 text-xs text-rose-700">Enter a valid email address</p> : null}
+        </div>
+        <div>
+          <Label htmlFor="sub-admin-mobile">Mobile</Label>
+          <div className="grid grid-cols-[120px,1fr] gap-2">
+            <select id="sub-admin-country-code" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="input text-sm appearance-none pr-9">
+              {COUNTRY_CODES.map((code) => <option key={code} value={code}>{code}</option>)}
+            </select>
+            <input id="sub-admin-mobile" required className="input text-sm" placeholder="9876543210" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))} />
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="sub-admin-password">Password</Label>
+          <PasswordInput id="sub-admin-password" placeholder="Initial password" value={password} onChange={setPassword} />
+          <PasswordRulesHint />
+        </div>
+        <div>
+          <Label htmlFor="sub-admin-confirm-password">Confirm Password</Label>
+          <PasswordInput id="sub-admin-confirm-password" placeholder="Re-enter password" value={confirmPassword} onChange={setConfirmPassword} />
+        </div>
+      </div>
+      <button type="submit" disabled={loading} className="btn-primary">
+        {loading ? "Creating…" : "Create Sub Admin"}
       </button>
     </form>
   );

@@ -18,11 +18,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(markAttendanceSchema), markAttendance);
-router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(markBatchAttendanceByIdsSchema), markBatchAttendanceByUsernames);
-router.post("/batch/:batchId/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(addPresentToBatchSchema), addPresentToBatchSession);
-router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceByStudentsForBatch);
-router.get("/batch/:batchId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceForBatch);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), validateBody(markAttendanceSchema), markAttendance);
+router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), validateBody(markBatchAttendanceByIdsSchema), markBatchAttendanceByUsernames);
+router.post("/batch/:batchId/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), validateBody(addPresentToBatchSchema), addPresentToBatchSession);
+router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), getAttendanceByStudentsForBatch);
+router.get("/batch/:batchId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), getAttendanceForBatch);
 router.get("/me", requireRoles(ROLE.STUDENT), getMyAttendance);
 
 export const attendanceRoutes = router;

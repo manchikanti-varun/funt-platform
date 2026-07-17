@@ -27,4 +27,4 @@ export function RequireRoles({ roles, fallbackHref = "/dashboard" }: RequireRole
   );
 }
 
-export const STAFF_ROLES = [ROLE.ADMIN, ROLE.SUPER_ADMIN] as const;
+export const STAFF_ROLES = [ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN] as const;

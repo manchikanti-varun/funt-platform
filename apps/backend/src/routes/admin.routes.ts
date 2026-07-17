@@ -17,6 +17,7 @@ import {
   createTrainerHandler,
   createSupportAgentHandler,
   createAdminHandler,
+  createSubAdminHandler,
   createSuperAdminHandler,
   resetLoginHandler,
   patchUserIdentityHandler,
@@ -97,15 +98,16 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/users/student", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createStudentSchema), createStudentHandler);
+router.post("/users/student", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), validateBody(createStudentSchema), createStudentHandler);
 router.post("/users/trainer", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createTrainerSchema), createTrainerHandler);
 router.post("/users/support-agent", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createTrainerSchema), createSupportAgentHandler);
+router.post("/users/sub-admin", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createAdminSchema), createSubAdminHandler);
 router.post("/users/admin", requireRoles(ROLE.SUPER_ADMIN), validateBody(createAdminSchema), createAdminHandler);
 router.post("/users/super-admin", requireRoles(ROLE.SUPER_ADMIN), validateBody(createAdminSchema), createSuperAdminHandler);
-router.post("/users/:username/reset-login", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), resetLoginHandler);
+router.post("/users/:username/reset-login", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), resetLoginHandler);
 router.patch("/users/:userId/identity", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(patchUserIdentitySchema), patchUserIdentityHandler);
-router.get("/people", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listPeopleByRoleHandler);
-router.get("/people/:userId", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getPersonDetailsHandler);
+router.get("/people", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), listPeopleByRoleHandler);
+router.get("/people/:userId", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getPersonDetailsHandler);
 router.get("/people/:userId/download", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadPersonDetailsHandler);
 router.post("/people/bulk-download", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), bulkDownloadPeopleHandler);
 
@@ -117,19 +119,19 @@ router.post("/requests/:requestId/reject", requireRoles(ROLE.SUPER_ADMIN), rejec
 
 router.get("/license-keys/audit", requireRoles(ROLE.SUPER_ADMIN), getLicenseKeyAudit);
 router.post("/license-keys", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(generateLicenseKeySchema), postGenerateLicense);
-router.get("/payments/pending", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getPendingPayments);
+router.get("/payments/pending", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getPendingPayments);
 router.get("/payments/finance", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminPaymentsFinance);
 router.get("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceSettings);
 router.patch("/invoices/settings", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchAdminInvoiceSettings);
-router.get("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoices);
+router.get("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getAdminInvoices);
 router.get("/invoices/sample/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadAdminInvoiceSamplePdf);
-router.get("/invoices/:id/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), downloadAdminInvoicePdf);
-router.get("/invoices/:id", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminInvoiceById);
-router.post("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createManualInvoiceSchema), postManualInvoice);
-router.post("/payments/:id/verify", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postVerifyPayment);
-router.post("/payments/:id/reject", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(rejectPaymentSchema), postRejectPayment);
-router.patch("/enrollments/:id/access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchEnrollmentAccess);
-router.patch("/enrollments/:id/course-access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), patchEnrollmentCourseAccess);
+router.get("/invoices/:id/pdf", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), downloadAdminInvoicePdf);
+router.get("/invoices/:id", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getAdminInvoiceById);
+router.post("/invoices", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), validateBody(createManualInvoiceSchema), postManualInvoice);
+router.post("/payments/:id/verify", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), postVerifyPayment);
+router.post("/payments/:id/reject", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), validateBody(rejectPaymentSchema), postRejectPayment);
+router.patch("/enrollments/:id/access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), patchEnrollmentAccess);
+router.patch("/enrollments/:id/course-access", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), patchEnrollmentCourseAccess);
 router.patch("/users/:userId/username", requireRoles(ROLE.SUPER_ADMIN), patchUserUsername);
 
 // Delete user account (Super Admin only)
@@ -185,25 +187,25 @@ router.delete("/users/:userId", requireRoles(ROLE.SUPER_ADMIN), async (req, res,
   } catch (err) { next(err); }
 });
 
-router.get("/staff-picker", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getStaffPickersList);
+router.get("/staff-picker", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), getStaffPickersList);
 
-router.get("/shop/products", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listShopProductsAdmin);
+router.get("/shop/products", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), listShopProductsAdmin);
 router.post("/shop/products", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(createShopProductSchema), postShopProduct);
 router.patch("/shop/products/:productId", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(updateShopProductSchema), patchShopProduct);
 router.delete("/shop/products/:productId", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), deleteShopProduct);
-router.get("/shop/orders", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), listShopOrdersAdmin);
-router.patch("/shop/orders/:orderId/status", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), validateBody(updateShopOrderStatusSchema), patchShopOrderStatus);
-router.get("/shop/stock-insights", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getShopStockInsightsAdmin);
+router.get("/shop/orders", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), listShopOrdersAdmin);
+router.patch("/shop/orders/:orderId/status", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), validateBody(updateShopOrderStatusSchema), patchShopOrderStatus);
+router.get("/shop/stock-insights", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getShopStockInsightsAdmin);
 
 router.get("/coupons", requireRoles(ROLE.SUPER_ADMIN), listCoupons);
 router.get("/coupons/audit", requireRoles(ROLE.SUPER_ADMIN), getCouponAudit);
 router.post("/coupons", requireRoles(ROLE.SUPER_ADMIN), validateBody(createCouponSchema), postCoupon);
 router.patch("/coupons/:id", requireRoles(ROLE.SUPER_ADMIN), validateBody(updateCouponSchema), patchCoupon);
-router.post("/generate-qr", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postGeneratePaymentQr);
+router.post("/generate-qr", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), postGeneratePaymentQr);
 router.get("/qr-history", requireRoles(ROLE.SUPER_ADMIN), getPaymentQrHistory);
-router.get("/payment-upi/config", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), getAdminPaymentUpiConfig);
+router.get("/payment-upi/config", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getAdminPaymentUpiConfig);
 router.patch("/payment-upi/config", requireRoles(ROLE.SUPER_ADMIN), patchAdminPaymentUpiConfig);
-router.post("/payment-upi/change-requests", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postAdminPaymentUpiChangeRequest);
+router.post("/payment-upi/change-requests", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), postAdminPaymentUpiChangeRequest);
 router.get("/payment-upi/change-requests", requireRoles(ROLE.SUPER_ADMIN), getAdminPaymentUpiChangeRequests);
 router.post("/payment-upi/change-requests/:id/approve", requireRoles(ROLE.SUPER_ADMIN), postApproveAdminPaymentUpiChangeRequest);
 router.post("/payment-upi/change-requests/:id/reject", requireRoles(ROLE.SUPER_ADMIN), postRejectAdminPaymentUpiChangeRequest);

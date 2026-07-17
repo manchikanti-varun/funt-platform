@@ -5,6 +5,7 @@ import {
   createStudent,
   createTrainer,
   createAdmin,
+  createSubAdmin,
   createSuperAdmin,
   resetLoginAttemptsByUsername,
   updateUserIdentityByAdmin,
@@ -263,6 +264,13 @@ export const createAdminHandler = asyncHandler(async (req: Request, res: Respons
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createAdmin({ name, email, mobile, password });
   successRes(res, result, "Admin created", 201);
+});
+
+export const createSubAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { name, email, mobile, password } = req.body;
+  if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
+  const result = await createSubAdmin({ name, email, mobile, password });
+  successRes(res, result, "Sub Admin created", 201);
 });
 
 export const createSuperAdminHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {

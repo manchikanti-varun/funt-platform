@@ -16,10 +16,10 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createGeneralAttendanceSchema), createGeneralAttendance);
-router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listGeneralAttendance);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), validateBody(createGeneralAttendanceSchema), createGeneralAttendance);
+router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), listGeneralAttendance);
 router.get("/me", requireRoles(ROLE.STUDENT), getMyGeneralAttendance);
-router.patch("/:id/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(addPresentToGeneralAttendanceSchema), addPresentToGeneralAttendance);
-router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getGeneralAttendanceById);
+router.patch("/:id/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), validateBody(addPresentToGeneralAttendanceSchema), addPresentToGeneralAttendance);
+router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), getGeneralAttendanceById);
 
 export const generalAttendanceRoutes = router;

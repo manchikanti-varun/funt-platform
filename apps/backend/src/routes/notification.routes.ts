@@ -13,7 +13,7 @@ router.use(authMiddleware);
 
 // All authenticated roles can read their own notifications
 // (students receive ticket reply notifications, staff receive assignment/leave alerts)
-const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.SUPPORT_AGENT, ROLE.FRANCHISE_ADMIN] as const;
+const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.SUPPORT_AGENT, ROLE.FRANCHISE_ADMIN] as const;
 
 router.get("/", requireRoles(...ALL_ROLES), getNotifications);
 router.patch("/read-all", requireRoles(...ALL_ROLES), patchMarkAllRead);

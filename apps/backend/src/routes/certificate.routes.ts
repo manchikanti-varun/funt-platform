@@ -18,20 +18,20 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.get("/eligibility", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.STUDENT), checkEligibility);
-router.post("/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), generateCertificate);
+router.get("/eligibility", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.STUDENT), checkEligibility);
+router.post("/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), generateCertificate);
 
-router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listBatchCertificateStatus);
-router.post("/batch/:batchId/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), bulkGenerateBatchCertificates);
-router.get("/batch/:batchId/zip", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadBatchCertificatesZip);
+router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), listBatchCertificateStatus);
+router.post("/batch/:batchId/generate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), bulkGenerateBatchCertificates);
+router.get("/batch/:batchId/zip", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), downloadBatchCertificatesZip);
 router.patch(
   "/:certificateId/coin-reward",
-  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN),
   patchCertificateCoinReward
 );
 router.post(
   "/:certificateId/grant-coins",
-  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN),
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN),
   grantCertificateCoins
 );
 router.get("/:certificateId/pdf", downloadCertificatePdf);

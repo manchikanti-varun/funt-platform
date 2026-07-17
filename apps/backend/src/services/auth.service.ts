@@ -288,6 +288,22 @@ export async function createAdmin(input: CreateAdminInput): Promise<{ id: string
   return { id: String(user._id), username: user.username! };
 }
 
+export async function createSubAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
+  validateStrongPassword(input.password);
+  const passwordHash = await hashPassword(input.password);
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email,
+    mobile: input.mobile,
+    passwordHash,
+    roles: [ROLE.SUB_ADMIN],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
 export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; username: string }> {
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
