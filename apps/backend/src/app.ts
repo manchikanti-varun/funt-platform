@@ -131,10 +131,8 @@ app.use("/api/general-attendance", generalAttendanceRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/letters", letterRoutes);
 app.use("/api/global-modules", globalModuleRoutes);
-// Legacy alias /api/global-chapters — removed after sunset date 2025-12-31. Returns 410 Gone.
-app.use("/api/global-chapters", (_req, res) => {
-  res.status(410).json({ success: false, message: "This endpoint has been removed. Use /api/global-modules instead." });
-});
+// Legacy alias — prefer /api/global-modules. Still used by the admin frontend.
+app.use("/api/global-chapters", globalModuleRoutes);
 app.use("/api/global-assignments", globalAssignmentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/progress", progressRoutes);
