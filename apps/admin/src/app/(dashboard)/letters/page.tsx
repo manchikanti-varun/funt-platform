@@ -33,6 +33,7 @@ const DEPARTMENTS = [
 ];
 
 interface LetterRow {
+  _id?: string;
   letterId: string;
   type: string;
   recipientName: string;
@@ -41,7 +42,12 @@ interface LetterRow {
   department: string;
   employmentType: string;
   status: string;
+  approvalStatus?: string;
+  internResponse?: string;
+  internRejectReason?: string;
+  linkedLetterId?: string;
   issuedAt: string;
+  createdAt?: string;
 }
 
 export default function LettersPage() {
@@ -71,6 +77,10 @@ export default function LettersPage() {
   const [reportingTo, setReportingTo] = useState("");
   const [responsibilities, setResponsibilities] = useState("");
   const [performanceSummary, setPerformanceSummary] = useState("");
+  const [dutiesDescription, setDutiesDescription] = useState("");
+  const [signatoryName, setSignatoryName] = useState("");
+  const [signatoryRole, setSignatoryRole] = useState("Human Resources");
+  const [recipientGender, setRecipientGender] = useState("Mr");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState("");
@@ -111,6 +121,7 @@ export default function LettersPage() {
         type: formType,
         recipientName: recipientName.trim(),
         recipientEmail: recipientEmail.trim() || undefined,
+        recipientGender,
         employmentType: finalEmploymentType,
         department: finalDepartment,
         designation: designation.trim(),
@@ -123,6 +134,9 @@ export default function LettersPage() {
         reportingTo: reportingTo.trim() || undefined,
         responsibilities: responsibilities.trim() || undefined,
         performanceSummary: performanceSummary.trim() || undefined,
+        dutiesDescription: dutiesDescription.trim() || undefined,
+        signatoryName: signatoryName.trim() || undefined,
+        signatoryRole: signatoryRole.trim() || undefined,
       }),
     });
     setSubmitting(false);
@@ -174,7 +188,7 @@ export default function LettersPage() {
 
   return (
     <AppPageShell className="w-full">
-      <RequireRoles roles={[ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
+      <RequireRoles roles={[ROLE.SUPER_ADMIN, ROLE.ADMIN]} fallbackHref="/dashboard" />
       <PageHeader
         title="Letters"
         subtitle="Generate offer letters and experience letters. Anyone can verify them publicly."
@@ -371,10 +385,34 @@ export default function LettersPage() {
             </div>
             {formType === "EXPERIENCE_LETTER" && (
               <div>
-                <label className="block text-sm font-medium text-slate-700">Performance Summary</label>
-                <textarea value={performanceSummary} onChange={(e) => setPerformanceSummary(e.target.value)} rows={3} className="input mt-1 text-sm w-full" placeholder="Brief summary of their contribution..." />
+                <label className="block text-sm font-medium text-slate-700">Duties Description *</label>
+                <textarea value={dutiesDescription} onChange={(e) => setDutiesDescription(e.target.value)} rows={3} className="input mt-1 text-sm w-full" placeholder="e.g. Handling Digital and offline marketing initiatives" />
               </div>
             )}
+            {formType === "EXPERIENCE_LETTER" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Performance Summary</label>
+                <textarea value={performanceSummary} onChange={(e) => setPerformanceSummary(e.target.value)} rows={3} className="input mt-1 text-sm w-full" placeholder="e.g. rendered his services satisfactorily" />
+              </div>
+            )}
+            <div className="grid gap-4 sm:grid-cols-2 border-t border-slate-200 pt-4 mt-2">
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Gender/Title</label>
+                <select value={recipientGender} onChange={(e) => setRecipientGender(e.target.value)} className="input mt-1 text-sm">
+                  <option value="Mr">Mr</option>
+                  <option value="Ms">Ms</option>
+                  <option value="Mrs">Mrs</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Signatory Name</label>
+                <input value={signatoryName} onChange={(e) => setSignatoryName(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. Govind Raj or Srikar Reddy" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Signatory Role</label>
+                <input value={signatoryRole} onChange={(e) => setSignatoryRole(e.target.value)} className="input mt-1 text-sm" placeholder="e.g. Human Resources / Manager" />
+              </div>
+            </div>
             {formError && <p className="text-sm text-red-600">{formError}</p>}
             {formSuccess && (
               <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -510,10 +548,14 @@ export default function LettersPage() {
           </select>
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input text-sm">
             <option value="">All statuses</option>
-            <option value="PENDING_ACCEPTANCE">Pending</option>
+            <option value="DRAFT">Draft</option>
+            <option value="PENDING_APPROVAL">Pending Approval</option>
+            <option value="PENDING_ACCEPTANCE">Pending Acceptance</option>
             <option value="ACCEPTED">Accepted</option>
+            <option value="REJECTED_BY_INTERN">Rejected by Intern</option>
             <option value="EXPIRED">Expired</option>
             <option value="WITHDRAWN">Withdrawn</option>
+            <option value="ACTIVE">Active</option>
             <option value="REVOKED">Revoked</option>
           </select>
         </div>
@@ -546,46 +588,104 @@ export default function LettersPage() {
                   <td className="px-4 py-3 text-slate-600">{l.department}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                      l.status === "ACCEPTED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      l.status === "ACCEPTED" || l.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
                       l.status === "PENDING_ACCEPTANCE" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                      l.status === "EXPIRED" ? "bg-slate-100 text-slate-600 border border-slate-200" :
+                      l.status === "DRAFT" ? "bg-slate-100 text-slate-600 border border-slate-200" :
+                      l.status === "PENDING_APPROVAL" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                      l.status === "REJECTED_BY_INTERN" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                      l.status === "EXPIRED" ? "bg-slate-100 text-slate-500 border border-slate-200" :
                       l.status === "WITHDRAWN" ? "bg-orange-50 text-orange-700 border border-orange-200" :
                       "bg-red-50 text-red-700 border border-red-200"
                     }`}>
-                      {l.status === "PENDING_ACCEPTANCE" ? "Pending" : l.status}
+                      {l.status === "PENDING_ACCEPTANCE" ? "Awaiting Intern" :
+                       l.status === "PENDING_APPROVAL" ? "Awaiting Approval" :
+                       l.status === "REJECTED_BY_INTERN" ? "Intern Declined" :
+                       l.status === "DRAFT" ? "Draft" :
+                       l.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : "—"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">{l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : l.createdAt ? new Date(l.createdAt).toLocaleDateString() : "—"}</td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${l.letterId}/pdf`, { credentials: "include" });
-                            if (!res.ok) return;
-                            const blob = await res.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `${l.letterId}.pdf`;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          } catch { /* ignore */ }
-                        }}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        PDF
-                      </button>
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
+                      {l.letterId && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472"}/api/letters/${l.letterId}/pdf`, { credentials: "include" });
+                              if (!res.ok) return;
+                              const blob = await res.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${l.letterId}.pdf`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            } catch { /* ignore */ }
+                          }}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          PDF
+                        </button>
+                      )}
+                      {l.status === "DRAFT" && (
+                        <button type="button" onClick={async () => {
+                          const res = await api(`/api/letters/${l._id || l.letterId}/submit-approval`, { method: "POST" });
+                          if (res.success) loadLetters();
+                        }} className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
+                          Submit for Approval
+                        </button>
+                      )}
+                      {l.status === "PENDING_APPROVAL" && (
+                        <>
+                          <button type="button" onClick={async () => {
+                            const res = await api(`/api/letters/${l._id || l.letterId}/approve`, { method: "POST" });
+                            if (res.success) loadLetters();
+                          }} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                            Approve
+                          </button>
+                          <button type="button" onClick={async () => {
+                            const reason = prompt("Reason for rejection:");
+                            if (!reason?.trim()) return;
+                            const res = await api(`/api/letters/${l._id || l.letterId}/reject-approval`, { method: "POST", body: JSON.stringify({ reason }) });
+                            if (res.success) loadLetters();
+                          }} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
+                            Reject
+                          </button>
+                        </>
+                      )}
                       {l.status === "PENDING_ACCEPTANCE" && (
                         <>
                           <button type="button" onClick={() => handleAccept(l.letterId)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
-                            Accept
+                            Intern Accepted
+                          </button>
+                          <button type="button" onClick={async () => {
+                            const reason = prompt("Reason intern declined (optional):");
+                            const res = await api(`/api/letters/${l.letterId}/intern-reject`, { method: "PATCH", body: JSON.stringify({ reason: reason || "" }) });
+                            if (res.success) loadLetters();
+                          }} className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100">
+                            Intern Declined
                           </button>
                           <button type="button" onClick={() => handleWithdraw(l.letterId)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-700 hover:bg-orange-100">
                             Withdraw
                           </button>
                         </>
+                      )}
+                      {l.status === "ACCEPTED" && l.type === "OFFER_LETTER" && (
+                        <button type="button" onClick={async () => {
+                          const duties = prompt("Duties performed during internship:");
+                          if (!duties?.trim()) return;
+                          const endDt = prompt("End date (YYYY-MM-DD):");
+                          if (!endDt?.trim()) return;
+                          const res = await api(`/api/letters/${l.letterId}/experience`, {
+                            method: "POST",
+                            body: JSON.stringify({ endDate: endDt, dutiesDescription: duties, signatoryName: signatoryName || undefined, signatoryRole: signatoryRole || undefined }),
+                          });
+                          if (res.success) { loadLetters(); alert("Experience letter created!"); }
+                          else alert(res.message ?? "Failed");
+                        }} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-100">
+                          Issue Experience
+                        </button>
                       )}
                       {(l.status === "ACCEPTED" || l.status === "ACTIVE") && (
                         <button type="button" onClick={() => setRevokeId(l.letterId)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">
