@@ -70,9 +70,11 @@ interface MilestoneLike {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getCourseDoc(courseIdParam: string) {
-  const doc = await CourseModel.findOne({
-    $or: [{ courseId: courseIdParam }, { _id: /^[a-f\d]{24}$/i.test(courseIdParam) ? courseIdParam : "000000000000" }],
-  }).exec();
+  const query: Record<string, unknown>[] = [{ courseId: courseIdParam }];
+  if (/^[a-f\d]{24}$/i.test(courseIdParam)) {
+    query.push({ _id: courseIdParam });
+  }
+  const doc = await CourseModel.findOne({ $or: query }).exec();
   if (!doc) throw new AppError("Course not found", 404);
   return doc;
 }
