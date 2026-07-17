@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
 import { AppPageShell, BackLink } from "@/components/ui";
@@ -415,7 +416,7 @@ export default function FAQsPage() {
                             {/* Content */}
                             <div
                               className="prose prose-sm prose-slate max-w-none leading-relaxed prose-headings:text-sm prose-headings:font-bold prose-p:text-slate-600 prose-li:text-slate-600 prose-strong:text-slate-700 prose-code:rounded prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:text-indigo-700"
-                              dangerouslySetInnerHTML={{ __html: faq.content }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(faq.content) }}
                             />
 
                             {/* Tags */}

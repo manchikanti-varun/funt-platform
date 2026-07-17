@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { AppPageShell, PageSection } from "@/components/ui";
 import {
   IconAssignment,
@@ -480,7 +481,7 @@ function DynamicFaqAccordion({ faq, isOpen, onToggle }: { faq: DynamicFaq; isOpe
         <div className="border-t border-[#f0e6cc] px-4 pb-5 pt-3 sm:px-5">
           <div
             className="prose prose-sm max-w-none leading-relaxed text-black/70 prose-headings:text-sm prose-headings:font-bold prose-headings:text-funt-ink prose-p:text-black/70 prose-li:text-black/70 prose-strong:text-black/80 prose-code:rounded prose-code:bg-[#fff8e8] prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:text-[#7a5f0c]"
-            dangerouslySetInnerHTML={{ __html: faq.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(faq.content) }}
           />
           {faq.tags && faq.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">

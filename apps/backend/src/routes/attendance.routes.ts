@@ -2,7 +2,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import { markAttendanceSchema, markBatchAttendanceByIdsSchema, addPresentToBatchSchema } from "../schemas/index.js";
 import {
   markAttendance,
   markBatchAttendanceByUsernames,
@@ -16,9 +18,9 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), markAttendance);
-router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), markBatchAttendanceByUsernames);
-router.post("/batch/:batchId/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), addPresentToBatchSession);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(markAttendanceSchema), markAttendance);
+router.post("/batch/:batchId/mark-by-ids", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(markBatchAttendanceByIdsSchema), markBatchAttendanceByUsernames);
+router.post("/batch/:batchId/add-present", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), validateBody(addPresentToBatchSchema), addPresentToBatchSession);
 router.get("/batch/:batchId/students", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceByStudentsForBatch);
 router.get("/batch/:batchId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getAttendanceForBatch);
 router.get("/me", requireRoles(ROLE.STUDENT), getMyAttendance);

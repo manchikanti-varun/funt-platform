@@ -125,13 +125,17 @@ export function sanitizeRichText(html: string | undefined | null): string {
     return sanitize(trimmed, SANITIZE_OPTIONS);
   } catch (err) {
     // sanitize-html can crash on certain complex HTML (deeply nested styles, unusual entities).
-    // Since the frontend already sanitizes with DOMPurify, store as-is as a fallback.
-    console.error("[sanitizeRichText] sanitize-html crashed, storing raw HTML:", err instanceof Error ? err.message : err);
-    // Do a minimal strip of dangerous tags as fallback
+    // Fallback: strip all tags as a nuclear option rather than storing potentially unsafe content.
+    console.error("[sanitizeRichText] sanitize-html crashed, applying nuclear strip:", err instanceof Error ? err.message : err);
     return trimmed
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
-      .replace(/\son\w+="[^"]*"/gi, "")
-      .replace(/\son\w+='[^']*'/gi, "");
+      .replace(/<object[\s\S]*?<\/object>/gi, "")
+      .replace(/<embed[^>]*\/?>/gi, "")
+      .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+      .replace(/\son\w+\s*=\s*"[^"]*"/gi, "")
+      .replace(/\son\w+\s*=\s*'[^']*'/gi, "")
+      .replace(/javascript\s*:/gi, "")
+      .replace(/data\s*:\s*text\/html/gi, "");
   }
 }

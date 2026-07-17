@@ -54,6 +54,7 @@ import { knowledgeReaderRouter, knowledgeAdminRouter } from "./routes/knowledge.
 import { paymentPromiseRoutes } from "./routes/paymentPromise.routes.js";
 import { quizAdminRoutes, quizStudentRoutes } from "./routes/quiz.routes.js";
 import { franchiseAdminRoutes, franchiseRoutes } from "./routes/franchise.routes.js";
+import { referralRoutes } from "./routes/referral.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -130,13 +131,10 @@ app.use("/api/general-attendance", generalAttendanceRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/letters", letterRoutes);
 app.use("/api/global-modules", globalModuleRoutes);
-// Legacy alias — prefer /api/global-modules. Will be removed in a future version.
-app.use("/api/global-chapters", (_req, res, next) => {
-  res.setHeader("Deprecation", "true");
-  res.setHeader("Sunset", "2025-12-31");
-  res.setHeader("Link", '</api/global-modules>; rel="successor-version"');
-  next();
-}, globalModuleRoutes);
+// Legacy alias /api/global-chapters — removed after sunset date 2025-12-31. Returns 410 Gone.
+app.use("/api/global-chapters", (_req, res) => {
+  res.status(410).json({ success: false, message: "This endpoint has been removed. Use /api/global-modules instead." });
+});
 app.use("/api/global-assignments", globalAssignmentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/progress", progressRoutes);
@@ -164,7 +162,6 @@ app.use("/api/quizzes", quizAdminRoutes);
 app.use("/api/student/quizzes", quizStudentRoutes);
 app.use("/api/franchise/admin", franchiseAdminRoutes);
 app.use("/api/franchise", franchiseRoutes);
-import { referralRoutes } from "./routes/referral.routes.js";
 app.use("/api/referral", referralRoutes);
 app.use("/verify", verifyRoutes);
 

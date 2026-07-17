@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import { createLetterSchema } from "../schemas/index.js";
 import {
   createLetter,
   listLetters,
@@ -16,7 +18,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN), createLetter);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN), validateBody(createLetterSchema), createLetter);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), listLetters);
 router.get("/:letterId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getLetter);
 router.get("/:letterId/pdf", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), downloadLetterPdf);

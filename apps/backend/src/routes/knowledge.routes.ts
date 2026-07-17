@@ -18,7 +18,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import { createKnowledgeArticleSchema, updateKnowledgeArticleSchema } from "../schemas/index.js";
 import {
   getArticles,
   getArticle,
@@ -31,7 +33,7 @@ import {
   deleteArticleHandler,
 } from "../controllers/knowledge.controller.js";
 
-const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT] as const;
+const ALL_ROLES = [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER, ROLE.STUDENT, ROLE.PARENT, ROLE.SUPPORT_AGENT, ROLE.FRANCHISE_ADMIN] as const;
 const ADMIN_ROLES = [ROLE.SUPER_ADMIN] as const;
 
 // ── Reader router (all authenticated users) ────────────────────────────────
@@ -49,6 +51,6 @@ export const knowledgeAdminRouter = Router();
 knowledgeAdminRouter.use(authMiddleware, requireRoles(...ADMIN_ROLES));
 
 knowledgeAdminRouter.get("/", adminGetArticles);
-knowledgeAdminRouter.post("/", postArticle);
-knowledgeAdminRouter.put("/:articleId", putArticle);
+knowledgeAdminRouter.post("/", validateBody(createKnowledgeArticleSchema), postArticle);
+knowledgeAdminRouter.put("/:articleId", validateBody(updateKnowledgeArticleSchema), putArticle);
 knowledgeAdminRouter.delete("/:articleId", deleteArticleHandler);

@@ -13,7 +13,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import { updateContentProtectionSchema } from "../schemas/index.js";
 import {
   getGlobalContentProtection,
   updateGlobalContentProtection,
@@ -32,6 +34,7 @@ configRouter.get(
 configRouter.put(
   "/",
   requireRoles(ROLE.SUPER_ADMIN),
+  validateBody(updateContentProtectionSchema),
   updateGlobalContentProtection
 );
 export const contentProtectionConfigRoutes = configRouter;

@@ -33,6 +33,7 @@ coverage
 scripts/full-app-test.mjs
 scripts/prod-health-check.mjs
 apps/backend/src/scripts/test*.ts
+_test*.pdf
 
 # Misc
 *.tsbuildinfo

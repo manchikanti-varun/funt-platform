@@ -9,7 +9,24 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { validateBody } from "../middleware/validate.middleware.js";
 import { ROLE } from "@funt-platform/constants";
+import {
+  createFranchiseCenterSchema,
+  updateFranchiseCenterSchema,
+  createPayoutSchema,
+  approveKeyRequestSchema,
+  rejectKeyRequestSchema,
+  directAllocateKeysSchema,
+  franchiseCreateBatchSchema,
+  franchiseRegisterEnrollSchema,
+  franchiseEnrollExistingSchema,
+  franchiseRecordOfflinePaymentSchema,
+  franchiseRequestKeysSchema,
+  franchiseAssignKeySchema,
+  franchiseCreateTrainerSchema,
+  franchiseUpdateTrainerStatusSchema,
+} from "../schemas/index.js";
 import {
   // Super Admin: center management
   createFranchiseCenter,
@@ -51,17 +68,17 @@ const adminRouter = Router();
 adminRouter.use(authMiddleware);
 adminRouter.use(requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN));
 
-adminRouter.post("/centers", createFranchiseCenter);
+adminRouter.post("/centers", validateBody(createFranchiseCenterSchema), createFranchiseCenter);
 adminRouter.get("/centers", listFranchiseCenters);
 adminRouter.get("/centers/:franchiseId", getFranchiseCenter);
-adminRouter.put("/centers/:franchiseId", updateFranchiseCenter);
+adminRouter.put("/centers/:franchiseId", validateBody(updateFranchiseCenterSchema), updateFranchiseCenter);
 adminRouter.delete("/centers/:franchiseId", deleteFranchiseCenter);
-adminRouter.post("/centers/:franchiseId/payouts", createPayout);
+adminRouter.post("/centers/:franchiseId/payouts", validateBody(createPayoutSchema), createPayout);
 adminRouter.get("/centers/:franchiseId/payouts", listPayouts);
 adminRouter.get("/key-requests", listPendingKeyRequests);
-adminRouter.post("/key-requests/:requestId/approve", approveKeyRequest);
-adminRouter.post("/key-requests/:requestId/reject", rejectKeyRequest);
-adminRouter.post("/centers/:franchiseId/allocate-keys", directAllocateKeys);
+adminRouter.post("/key-requests/:requestId/approve", validateBody(approveKeyRequestSchema), approveKeyRequest);
+adminRouter.post("/key-requests/:requestId/reject", validateBody(rejectKeyRequestSchema), rejectKeyRequest);
+adminRouter.post("/centers/:franchiseId/allocate-keys", validateBody(directAllocateKeysSchema), directAllocateKeys);
 
 // Franchise report download
 adminRouter.get("/centers/:franchiseId/report", async (req, res, next) => {
@@ -81,20 +98,20 @@ franchiseRouter.use(requireRoles(ROLE.FRANCHISE_ADMIN));
 
 franchiseRouter.get("/dashboard", getMyDashboard);
 franchiseRouter.get("/courses", listGlobalCourses);
-franchiseRouter.post("/batches", createBatch);
+franchiseRouter.post("/batches", validateBody(franchiseCreateBatchSchema), createBatch);
 franchiseRouter.get("/batches", listMyBatches);
-franchiseRouter.post("/students/register-enroll", registerAndEnrollStudent);
-franchiseRouter.post("/students/enroll", enrollExistingStudent);
+franchiseRouter.post("/students/register-enroll", validateBody(franchiseRegisterEnrollSchema), registerAndEnrollStudent);
+franchiseRouter.post("/students/enroll", validateBody(franchiseEnrollExistingSchema), enrollExistingStudent);
 franchiseRouter.get("/students", listMyStudents);
 franchiseRouter.get("/earnings", getMyEarnings);
-franchiseRouter.post("/payments/offline", recordOfflinePayment);
+franchiseRouter.post("/payments/offline", validateBody(franchiseRecordOfflinePaymentSchema), recordOfflinePayment);
 franchiseRouter.get("/key-pool", getMyKeyPools);
-franchiseRouter.post("/key-requests", requestKeys);
+franchiseRouter.post("/key-requests", validateBody(franchiseRequestKeysSchema), requestKeys);
 franchiseRouter.get("/key-requests", listMyKeyRequests);
 franchiseRouter.post("/upload-proof", getPaymentProofUploadUrl);
-franchiseRouter.post("/students/assign-key", assignKeyToStudent);
-franchiseRouter.post("/trainers", createTrainer);
+franchiseRouter.post("/students/assign-key", validateBody(franchiseAssignKeySchema), assignKeyToStudent);
+franchiseRouter.post("/trainers", validateBody(franchiseCreateTrainerSchema), createTrainer);
 franchiseRouter.get("/trainers", listTrainers);
-franchiseRouter.patch("/trainers/:trainerId/status", updateTrainerStatus);
+franchiseRouter.patch("/trainers/:trainerId/status", validateBody(franchiseUpdateTrainerStatusSchema), updateTrainerStatus);
 
 export { adminRouter as franchiseAdminRoutes, franchiseRouter as franchiseRoutes };
