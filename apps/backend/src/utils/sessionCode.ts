@@ -19,11 +19,16 @@ const CODE_LENGTH = 32; // 32 bytes → 64 hex chars
 /**
  * Generates a single-use session code and stores the associated JWT.
  * Returns the opaque code (safe to embed in URLs).
+ * Returns null if the storage backend (Redis) is unavailable — caller should fall back to raw token.
  */
-export async function createSessionCode(jwt: string): Promise<string> {
+export async function createSessionCode(jwt: string): Promise<string | null> {
   const code = crypto.randomBytes(CODE_LENGTH).toString("hex");
   const key = `${CODE_PREFIX}${code}`;
-  await cacheSet(key, jwt, CODE_TTL_SECONDS);
+  const stored = await cacheSet(key, jwt, CODE_TTL_SECONDS);
+  if (!stored) {
+    // Redis not available — return null so caller can fall back to embedding the token directly
+    return null;
+  }
   return code;
 }
 

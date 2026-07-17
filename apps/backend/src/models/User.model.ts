@@ -65,6 +65,13 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function () {
+  // Normalize empty email to undefined so the sparse unique index works correctly.
+  // Without this, two users with email="" would violate the unique constraint.
+  const email = this.get("email");
+  if (typeof email === "string" && !email.trim()) {
+    this.set("email", undefined);
+  }
+
   if (!this.isNew) return;
   if (this.get("funtId")) return;
   this.set("funtId", await generateUserFuntId());

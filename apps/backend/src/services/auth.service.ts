@@ -211,7 +211,7 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
   const user = await UserModel.create({
     username: normalizedUsername,
     name: input.name,
-    email: input.email,
+    email: input.email?.trim() || undefined,
     mobile: input.mobile,
     passwordHash,
     roles: [ROLE.TRAINER],

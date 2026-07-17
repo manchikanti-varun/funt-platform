@@ -340,7 +340,7 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     }
   } else {
     const staffAllowed =
-      roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN) || roles.includes(ROLE.TRAINER) || roles.includes(ROLE.SUPPORT_AGENT);
+      roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN) || roles.includes(ROLE.TRAINER) || roles.includes(ROLE.SUPPORT_AGENT) || roles.includes(ROLE.FRANCHISE_ADMIN);
     if (!staffAllowed) {
       throw new AppError(
         "FUNT Admin is for staff (Admin, Super Admin, or Trainer). Use FUNT Learn for students and parents.",
@@ -666,7 +666,10 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
   }
   const frontBase = (state.app === "lms" ? frontendLmsUrl : frontendAdminUrl).replace(/\/$/, "");
   const sessionCode = await createSessionCode(result.token);
-  const callbackUrl = `${frontBase}/auth/callback?code=${encodeURIComponent(sessionCode)}`;
+  // If Redis is unavailable, fall back to embedding the token directly (legacy behavior)
+  const callbackUrl = sessionCode
+    ? `${frontBase}/auth/callback?code=${encodeURIComponent(sessionCode)}`
+    : `${frontBase}/auth/callback?token=${encodeURIComponent(result.token)}`;
   res.redirect(302, callbackUrl);
 });
 
