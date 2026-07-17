@@ -30,6 +30,18 @@ const globalModuleSchema = new Schema(
     youtubeUrl: { type: String, required: false },
     videoUrl: { type: String, required: false },
     resourceLinkUrl: { type: String, required: false },
+    /** Downloadable file attachments — array of { fileKey, filename, size, mimeType } */
+    downloadableFiles: {
+      type: [{
+        fileKey: { type: String, required: true },
+        filename: { type: String, required: true },
+        size: { type: Number, required: false },
+        mimeType: { type: String, required: false },
+        _id: false,
+      }],
+      required: false,
+      default: [],
+    },
     version: { type: Number, required: true, default: 1 },
     linkedAssignmentId: { type: String, required: false },
     linkedQuizId: { type: String, required: false },

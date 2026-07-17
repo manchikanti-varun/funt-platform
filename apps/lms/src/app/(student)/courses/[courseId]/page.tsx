@@ -24,6 +24,7 @@ interface ChapterItem {
   /** True for Google Drive / embed-only URLs that must use an iframe player. */
   videoIsEmbed?: boolean;
   resourceLinkUrl?: string;
+  downloadableFiles?: Array<{ fileKey: string; filename: string; size?: number; mimeType?: string }>;
   linkedAssignmentId?: string;
   unlocked: boolean;
   completed: boolean;
@@ -949,6 +950,24 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
                               <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                               Open resource
                             </a>
+                          </div>
+                        )}
+                        {selected.downloadableFiles && selected.downloadableFiles.length > 0 && (
+                          <div className="px-6 py-6">
+                            <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Downloads</p>
+                            <div className="space-y-2">
+                              {selected.downloadableFiles.map((f, i) => (
+                                <a
+                                  key={i}
+                                  href={`${API_URL}/api/student/files/download?key=${encodeURIComponent(f.fileKey)}&name=${encodeURIComponent(f.filename)}`}
+                                  className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50"
+                                >
+                                  <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                  <span className="flex-1 truncate">{f.filename}</span>
+                                  {f.size && <span className="shrink-0 text-xs text-slate-400">{f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}</span>}
+                                </a>
+                              ))}
+                            </div>
                           </div>
                         )}
                         {hasAssignments && (

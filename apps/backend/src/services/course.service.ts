@@ -128,6 +128,7 @@ export interface UpdateCourseModuleInput {
   youtubeUrl?: string;
   videoUrl?: string;
     resourceLinkUrl?: string;
+  downloadableFiles?: Array<{ fileKey: string; filename: string; size?: number; mimeType?: string }>;
   linkedAssignmentId?: string;
     linkedAssignmentTitleOverride?: string;
     linkedAssignmentInstructionsOverride?: string;
@@ -461,6 +462,7 @@ export async function updateCourseModule(
   if (input.youtubeUrl !== undefined) mod.youtubeUrl = input.youtubeUrl?.trim() || undefined;
   if (input.videoUrl !== undefined) mod.videoUrl = input.videoUrl?.trim() || undefined;
   if (input.resourceLinkUrl !== undefined) (mod as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl?.trim() || undefined;
+  if (input.downloadableFiles !== undefined) (mod as { downloadableFiles?: Array<{ fileKey: string; filename: string; size?: number; mimeType?: string }> }).downloadableFiles = Array.isArray(input.downloadableFiles) ? input.downloadableFiles : [];
   if (input.linkedAssignmentId !== undefined) mod.linkedAssignmentId = input.linkedAssignmentId?.trim() || undefined;
   if (input.linkedAssignmentTitleOverride !== undefined) (mod as { linkedAssignmentTitleOverride?: string }).linkedAssignmentTitleOverride = input.linkedAssignmentTitleOverride?.trim() || undefined;
   if (input.linkedAssignmentInstructionsOverride !== undefined) {

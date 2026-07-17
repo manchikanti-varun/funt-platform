@@ -10,6 +10,7 @@ import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
+import { ChapterFileAttachments } from "@/components/chapters/ChapterFileAttachments";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
@@ -21,6 +22,7 @@ interface CourseModule {
   youtubeUrl?: string;
   videoUrl?: string;
     resourceLinkUrl?: string;
+  downloadableFiles?: Array<{ fileKey: string; filename: string; size?: number; mimeType?: string }>;
   linkedAssignmentId?: string;
     linkedAssignmentTitleOverride?: string;
     linkedAssignmentInstructionsOverride?: string;
@@ -205,6 +207,7 @@ export default function EditCoursePage() {
       youtubeUrl: m.youtubeUrl ?? "",
       videoUrl: m.videoUrl ?? "",
       resourceLinkUrl: m.resourceLinkUrl ?? "",
+      downloadableFiles: m.downloadableFiles ?? [],
       linkedAssignmentId: m.linkedAssignmentId ?? "",
       linkedAssignmentTitleOverride: m.linkedAssignmentTitleOverride ?? "",
       linkedAssignmentInstructionsOverride: m.linkedAssignmentInstructionsOverride ?? "",
@@ -234,6 +237,7 @@ export default function EditCoursePage() {
           youtubeUrl: moduleEdit.youtubeUrl || undefined,
           videoUrl: moduleEdit.videoUrl || undefined,
           resourceLinkUrl: moduleEdit.resourceLinkUrl || undefined,
+          downloadableFiles: moduleEdit.downloadableFiles ?? [],
           linkedAssignmentId: moduleEdit.linkedAssignmentId || undefined,
           linkedAssignmentTitleOverride: moduleEdit.linkedAssignmentTitleOverride || undefined,
           linkedAssignmentInstructionsOverride: decodeEncodedRichText(moduleEdit.linkedAssignmentInstructionsOverride) || undefined,
@@ -651,6 +655,16 @@ export default function EditCoursePage() {
                           />
                           <p className="mt-1 text-xs text-slate-500">Share Drive folders, slides, or other resources. Students see this as a link in the chapter.</p>
                         </div>
+                      </div>
+                      {/* ── Downloadable File Attachments ── */}
+                      <div className="border-t border-slate-100 pt-4">
+                        <ChapterFileAttachments
+                          courseId={course.courseId ?? id}
+                          moduleId={course.modules[editingIndex]?.originalGlobalModuleId ?? String(editingIndex)}
+                          files={moduleEdit.downloadableFiles ?? []}
+                          onChange={(files) => setModuleEdit((p) => ({ ...p, downloadableFiles: files }))}
+                          disabled={savingModule}
+                        />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">Linked assignment ID (optional)</label>
