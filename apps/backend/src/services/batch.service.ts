@@ -9,7 +9,7 @@ import { CertificateModel } from "../models/Certificate.model.js";
 import { AssignmentSubmissionModel } from "../models/AssignmentSubmission.model.js";
 import { AttendanceModel } from "../models/Attendance.model.js";
 import { ModuleProgressModel } from "../models/ModuleProgress.model.js";
-import { BATCH_STATUS, COURSE_STATUS, COURSE_DELIVERY_MODE } from "@funt-platform/constants";
+import { BATCH_STATUS, COURSE_STATUS, COURSE_DELIVERY_MODE, ROLE } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { cacheDel, cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
@@ -143,7 +143,12 @@ function ensureAllowedCompletionBadges(
   }
 }
 
-function assertCanEditBatch(userId: string, batch: { createdBy?: string | null; moderatorIds?: string[] | null; trainerId?: string | null }) {
+async function assertCanEditBatch(userId: string, batch: { createdBy?: string | null; moderatorIds?: string[] | null; trainerId?: string | null }) {
+  // Super Admins and Admins can always edit any batch
+  const user = await UserModel.findById(userId).select("roles").lean().exec();
+  const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
+  if (userRoles.includes(ROLE.SUPER_ADMIN) || userRoles.includes(ROLE.ADMIN)) return;
+
   const createdBy = batch.createdBy ?? "";
   const mods = batch.moderatorIds ?? [];
   const trainerId = batch.trainerId ?? "";
@@ -152,7 +157,10 @@ function assertCanEditBatch(userId: string, batch: { createdBy?: string | null; 
   }
 }
 
-function assertCanArchiveBatch(userId: string, batch: { createdBy?: string }) {
+async function assertCanArchiveBatch(userId: string, batch: { createdBy?: string }) {
+  const user = await UserModel.findById(userId).select("roles").lean().exec();
+  const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
+  if (userRoles.includes(ROLE.SUPER_ADMIN) || userRoles.includes(ROLE.ADMIN)) return;
   if ((batch.createdBy ?? "") !== userId) {
     throw new AppError("Forbidden: only the creator can archive this batch", 403);
   }
@@ -515,7 +523,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
   if (!existing) throw new AppError("Batch not found", 404);
   const doc = await BatchModel.findById(existing._id).exec();
   if (!doc) throw new AppError("Batch not found", 404);
-  assertCanEditBatch(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
+  await assertCanEditBatch(performedBy, doc as { createdBy?: string; moderatorIds?: string[] });
   const hadTrainer = doc.trainerId;
   if (input.name !== undefined) doc.name = input.name.trim();
   if (input.trainerId !== undefined) doc.trainerId = await resolveStaffUserId(input.trainerId);
@@ -744,9 +752,13 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
     }
   }
 
-  const snapIdx = snapshots.findIndex(
-    (s) => (s as { courseId?: string }).courseId === courseId
-  );
+  const courseMongoId = String(course._id);
+  const courseHumanId = (course as { courseId?: string }).courseId ?? "";
+
+  const snapIdx = snapshots.findIndex((s) => {
+    const snapCourseId = (s as { courseId?: string }).courseId ?? "";
+    return snapCourseId === courseId || snapCourseId === courseMongoId || snapCourseId === courseHumanId;
+  });
   if (snapIdx === -1) throw new AppError("Course not found in this batch", 400);
 
   const existingSnap = snapshots[snapIdx] as Record<string, unknown>;
@@ -761,7 +773,7 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
 
   // Build updated snapshot from source course
   const updated = {
-    courseId: (course as { courseId?: string }).courseId ?? String(course._id),
+    courseId: (existingSnap.courseId as string) || (course as { courseId?: string }).courseId || String(course._id),
     title: course.title,
     description: course.description,
     headerImageUrl: String((course as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
@@ -803,7 +815,7 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
   const source = await findBatchByParam(sourceId);
   if (!source) throw new AppError("Batch not found", 404);
   const src = source as BatchDoc;
-  assertCanEditBatch(input.performedBy, src);
+  await assertCanEditBatch(input.performedBy, src);
   const courseSnapshots = JSON.parse(JSON.stringify(getBatchCourseSnapshots(src)));
   if (courseSnapshots.length === 0) throw new AppError("Batch has no courses to duplicate", 400);
   const batchId = await generateBatchId();
@@ -838,7 +850,7 @@ export async function duplicateBatch(sourceId: string, input: DuplicateBatchInpu
 export async function archiveBatch(id: string, performedBy: string) {
   const existing = await findBatchByParam(id);
   if (!existing) throw new AppError("Batch not found", 404);
-  assertCanArchiveBatch(performedBy, existing as { createdBy?: string });
+  await assertCanArchiveBatch(performedBy, existing as { createdBy?: string });
   const doc = await BatchModel.findByIdAndUpdate(
     existing._id,
     { status: BATCH_STATUS.ARCHIVED },
@@ -854,7 +866,7 @@ export async function archiveBatch(id: string, performedBy: string) {
 export async function unarchiveBatch(id: string, performedBy: string) {
   const existing = await findBatchByParam(id);
   if (!existing) throw new AppError("Batch not found", 404);
-  assertCanArchiveBatch(performedBy, existing as { createdBy?: string });
+  await assertCanArchiveBatch(performedBy, existing as { createdBy?: string });
   if ((existing as { status?: string }).status !== BATCH_STATUS.ARCHIVED) {
     throw new AppError("Batch is not archived", 400);
   }

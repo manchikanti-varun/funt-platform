@@ -88,6 +88,7 @@ export const franchiseAssignKeySchema = z.object({
 });
 
 export const franchiseCreateTrainerSchema = z.object({
+  username: z.string().min(3).max(55).optional(),
   name: z.string().min(1, "Trainer name is required").max(200),
   mobile: z.string().min(10).max(15),
   email: z.string().email().optional().or(z.literal("")),

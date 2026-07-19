@@ -96,8 +96,11 @@ const ROLE_LABELS: Record<string, string> = {
   [ROLE.STUDENT]: "Student",
   [ROLE.TRAINER]: "Trainer",
   [ROLE.ADMIN]: "Admin",
+  [ROLE.SUB_ADMIN]: "Sub Admin",
   [ROLE.SUPER_ADMIN]: "Super Admin",
+  [ROLE.SUPPORT_AGENT]: "Support Agent",
   [ROLE.PARENT]: "Parent",
+  [ROLE.FRANCHISE_ADMIN]: "Franchise Admin",
 };
 
 export default function ProfileSearchPage() {
@@ -112,6 +115,33 @@ export default function ProfileSearchPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [savingUsername, setSavingUsername] = useState(false);
+
+  async function handleChangeUsername() {
+    if (!profile || !newUsername.trim()) return;
+    const confirmed = await dialog.confirm({
+      title: "Change Username",
+      message: `Change username from "${profile.user.username}" to "${newUsername.trim()}"?\n\nThis will update the username everywhere it is referenced (invoices, parent links, etc.).`,
+      confirmLabel: "Change Username",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+    setSavingUsername(true);
+    const res = await api(`/api/admin/users/${profile.user.id}/username`, {
+      method: "PATCH",
+      body: JSON.stringify({ username: newUsername.trim() }),
+    });
+    setSavingUsername(false);
+    if (res.success) {
+      setProfile((prev) => prev ? { ...prev, user: { ...prev.user, username: newUsername.trim().toLowerCase() } } : prev);
+      setEditingUsername(false);
+      setNewUsername("");
+    } else {
+      setError(res.message ?? "Failed to change username");
+    }
+  }
 
   async function handleDeleteUser(userId: string, name: string, username: string) {
     const confirmed = await dialog.confirm({
@@ -208,7 +238,41 @@ export default function ProfileSearchPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{profile.user.name}</h2>
-                <p className="mt-1 font-mono text-sm text-slate-600">{profile.user.username}</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="font-mono text-sm text-slate-600">{profile.user.username}</p>
+                  {isSuperAdmin && !editingUsername && (
+                    <button
+                      onClick={() => { setEditingUsername(true); setNewUsername(profile.user.username); }}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition"
+                    >
+                      Change
+                    </button>
+                  )}
+                </div>
+                {editingUsername && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-mono"
+                      placeholder="New username"
+                    />
+                    <button
+                      onClick={handleChangeUsername}
+                      disabled={savingUsername || !newUsername.trim() || newUsername.trim().toLowerCase() === profile.user.username}
+                      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 transition"
+                    >
+                      {savingUsername ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => { setEditingUsername(false); setNewUsername(""); }}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
                   {profile.user.roles.map((r) => (
                     <span

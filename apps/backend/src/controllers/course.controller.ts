@@ -90,11 +90,11 @@ export const updateCourseModule = asyncHandler(async (req: Request, res: Respons
   if (!id) throw new AppError("Course ID is required", 400);
   const moduleIndex = indexParam != null ? parseInt(indexParam, 10) : NaN;
   if (Number.isNaN(moduleIndex) || moduleIndex < 0) throw new AppError("Valid chapter index is required", 400);
-  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, downloadableFiles, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride, xpReward } = req.body ?? {};
+  const { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, downloadableFiles, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride, linkedQuizId, xpReward } = req.body ?? {};
   const data = await service.updateCourseModule(
     id,
     moduleIndex,
-    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, downloadableFiles, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride: Array.isArray(linkedAssignmentSkillTagsOverride) ? linkedAssignmentSkillTagsOverride : undefined, xpReward },
+    { title, description, content, youtubeUrl, videoUrl, resourceLinkUrl, downloadableFiles, linkedAssignmentId, linkedAssignmentTitleOverride, linkedAssignmentInstructionsOverride, linkedAssignmentSubmissionTypeOverride, linkedAssignmentSkillTagsOverride: Array.isArray(linkedAssignmentSkillTagsOverride) ? linkedAssignmentSkillTagsOverride : undefined, linkedQuizId, xpReward },
     performedBy
   );
   successRes(res, data, "Chapter snapshot updated");

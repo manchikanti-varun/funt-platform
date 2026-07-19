@@ -23,15 +23,15 @@ export const createStudentSchema = z.object({
 });
 
 export const createTrainerSchema = z.object({
-  username: z.string().min(3).max(40),
+  username: z.string().min(3).max(55).optional().or(z.literal("")),
   name: z.string().min(1).max(200),
   email: z.string().email().max(200).optional().or(z.literal("")),
   mobile: mobileSchema,
-  password: z.string().min(8, "Password must be at least 8 characters").max(128).optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
 });
 
 export const createAdminSchema = z.object({
-  username: z.string().min(3).max(40),
+  username: z.string().min(3).max(55),
   name: z.string().min(1).max(200),
   email: z.string().email().max(200).optional().or(z.literal("")),
   mobile: mobileSchema,

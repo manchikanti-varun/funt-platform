@@ -20,9 +20,12 @@ interface OnboardingArticle {
 const ROLE_LABELS: Record<string, string> = {
   [ROLE.SUPER_ADMIN]: "Super Admin",
   [ROLE.ADMIN]: "Admin",
+  [ROLE.SUB_ADMIN]: "Sub Admin",
   [ROLE.TRAINER]: "Trainer",
+  [ROLE.SUPPORT_AGENT]: "Support Agent",
   [ROLE.STUDENT]: "Student",
   [ROLE.PARENT]: "Parent",
+  [ROLE.FRANCHISE_ADMIN]: "Franchise Admin",
 };
 
 export default function OnboardingPage() {

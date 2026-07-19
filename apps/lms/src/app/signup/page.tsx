@@ -289,7 +289,7 @@ function SignupForm() {
       };
       if (res.ok) {
         markClientLoggedIn();
-        router.replace("/dashboard");
+        router.replace("/courses");
         router.refresh();
       } else {
         setSubmitError(data.message ?? data.error ?? `Sign up failed (${res.status}). Try again.`);

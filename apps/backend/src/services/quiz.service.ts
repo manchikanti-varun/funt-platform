@@ -129,6 +129,34 @@ export async function updateQuiz(
 ): Promise<unknown> {
   const quiz = await findQuizByParam(idParam);
   if (!quiz) throw new AppError("Quiz not found", 404);
+
+  // Validate questions when activating a quiz
+  const targetStatus = updates.status ?? quiz.status;
+  const questions = updates.questions ?? quiz.questions ?? [];
+  if (targetStatus === QUIZ_STATUS.ACTIVE && Array.isArray(questions)) {
+    if (questions.length === 0) {
+      throw new AppError("Cannot activate a quiz with no questions", 400);
+    }
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i] as { text?: string; options?: Array<{ text?: string; isCorrect?: boolean }> };
+      if (!q.text?.trim()) {
+        throw new AppError(`Question ${i + 1} has no text`, 400);
+      }
+      if (!Array.isArray(q.options) || q.options.length < 2) {
+        throw new AppError(`Question ${i + 1} must have at least 2 options`, 400);
+      }
+      const correctCount = q.options.filter((o) => o.isCorrect).length;
+      if (correctCount !== 1) {
+        throw new AppError(`Question ${i + 1} must have exactly one correct option`, 400);
+      }
+      for (let j = 0; j < q.options.length; j++) {
+        if (!q.options[j].text?.trim()) {
+          throw new AppError(`Question ${i + 1}, option ${j + 1} has no text`, 400);
+        }
+      }
+    }
+  }
+
   const updated = await QuizModel.findByIdAndUpdate(
     quiz._id,
     { $set: updates },

@@ -37,9 +37,12 @@ const ARTICLE_TYPES = [
 const ALL_ROLES = [
   { value: ROLE.SUPER_ADMIN, label: "Super Admin" },
   { value: ROLE.ADMIN, label: "Admin" },
+  { value: ROLE.SUB_ADMIN, label: "Sub Admin" },
   { value: ROLE.TRAINER, label: "Trainer" },
+  { value: ROLE.SUPPORT_AGENT, label: "Support Agent" },
   { value: ROLE.STUDENT, label: "Student" },
   { value: ROLE.PARENT, label: "Parent" },
+  { value: ROLE.FRANCHISE_ADMIN, label: "Franchise Admin" },
 ];
 
 interface ArticleFormProps {

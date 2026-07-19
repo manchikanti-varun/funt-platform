@@ -28,6 +28,8 @@ interface Batch {
   zoomLink?: string;
   visibility?: "PUBLIC" | "PRIVATE";
   status: string;
+  isGlobalOnlineBatch?: boolean;
+  isNotEnrolledBatch?: boolean;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
   courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
@@ -156,6 +158,8 @@ export default function EditBatchPage() {
         const ids = Array.isArray(r.data.courseSnapshots) && r.data.courseSnapshots.length > 0
           ? r.data.courseSnapshots.map((s) => s.courseId ?? "").filter(Boolean)
           : (r.data.courseSnapshot?.courseId ? [r.data.courseSnapshot.courseId] : []);
+        // courseSnapshots store the human-readable courseId or MongoDB _id;
+        // normalize to MongoDB _id for checkbox matching once courses are loaded
         setSelectedCourseIds(ids);
         setTrainerId(r.data.trainerId);
         setStartDate(r.data.startDate ? r.data.startDate.slice(0, 10) : "");
@@ -219,7 +223,56 @@ export default function EditBatchPage() {
       .catch(() => setBadgeOptions([]));
   }, []);
 
-  function courseIsDemo(id: string) {
+  // Normalize selectedCourseIds: batch snapshots may store human-readable courseId
+  // but checkboxes use MongoDB _id. Reconcile once courses list is available.
+  useEffect(() => {
+    if (courses.length === 0 || selectedCourseIds.length === 0) return;
+    const normalized = selectedCourseIds.map((sid) => {
+      // If sid already matches a course's MongoDB _id, keep it
+      if (courses.some((c) => c.id === sid)) return sid;
+      // Otherwise try matching by human-readable courseId
+      const match = courses.find((c) => c.courseId === sid);
+      return match ? match.id : sid;
+    });
+    // Only update if something changed to avoid infinite loop
+    if (normalized.some((n, i) => n !== selectedCourseIds[i])) {
+      // Also remap the price/payment/coins maps to use the new IDs
+      const idMap: Record<string, string> = {};
+      selectedCourseIds.forEach((old, i) => { if (old !== normalized[i]) idMap[old] = normalized[i]; });
+      setSelectedCourseIds(normalized);
+      if (Object.keys(idMap).length > 0) {
+        setEnrollmentInrByCourseId((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            if (next[oldId] !== undefined) { next[newId] = next[oldId]; delete next[oldId]; }
+          }
+          return next;
+        });
+        setPaymentByCourseId((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            if (next[oldId] !== undefined) { next[newId] = next[oldId]; delete next[oldId]; }
+          }
+          return next;
+        });
+        setCompletionCoinsByCourseId((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            if (next[oldId] !== undefined) { next[newId] = next[oldId]; delete next[oldId]; }
+          }
+          return next;
+        });
+        setCompletionBadgesByCourseId((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            if (next[oldId] !== undefined) { next[newId] = next[oldId]; delete next[oldId]; }
+          }
+          return next;
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courses]);  function courseIsDemo(id: string) {
     const c = courses.find((x) => x.id === id || x.courseId === id);
     return !!c?.isDemo;
   }
@@ -328,6 +381,18 @@ export default function EditBatchPage() {
             >
               {batch.status === BATCH_STATUS.ARCHIVED ? "Archived" : "Active"}
             </span>
+            {batch.isGlobalOnlineBatch && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-teal-300 bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                Global Online Batch
+              </span>
+            )}
+            {batch.isNotEnrolledBatch && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Not Enrolled Batch
+              </span>
+            )}
             <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
               Snapshot context
             </span>

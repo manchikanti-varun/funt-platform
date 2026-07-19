@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const optionInputSchema = z.object({
   optionId: z.string().min(1),
-  text: z.string().min(1, "Option text is required"),
+  text: z.string(),
   imageUrl: z.string().optional(),
   isCorrect: z.boolean(),
 });
@@ -14,16 +14,9 @@ const optionInputSchema = z.object({
 const questionInputSchema = z.object({
   questionId: z.string().min(1),
   type: z.enum(["SINGLE_SELECT"]).default("SINGLE_SELECT"),
-  text: z.string().min(1, "Question text is required"),
+  text: z.string(),
   imageUrl: z.string().optional(),
-  options: z
-    .array(optionInputSchema)
-    .min(2, "At least 2 options are required")
-    .max(10, "Maximum 10 options allowed")
-    .refine(
-      (options) => options.filter((o) => o.isCorrect).length === 1,
-      { message: "Exactly one option must be marked as correct" }
-    ),
+  options: z.array(optionInputSchema).max(10),
   explanation: z.string().optional().default(""),
   marks: z.coerce.number().min(0).default(1),
   order: z.coerce.number().int().min(0).default(0),

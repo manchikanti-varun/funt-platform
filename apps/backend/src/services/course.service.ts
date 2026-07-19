@@ -1,9 +1,10 @@
 
 import { CourseModel } from "../models/Course.model.js";
 import { BatchModel } from "../models/Batch.model.js";
+import { UserModel } from "../models/User.model.js";
 import { GlobalModuleModel } from "../models/GlobalModule.model.js";
 import { GlobalAssignmentModel } from "../models/GlobalAssignment.model.js";
-import { COURSE_STATUS, MODULE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { COURSE_STATUS, BATCH_STATUS, MODULE_STATUS, SUBMISSION_TYPE, SKILL_TAG, ROLE } from "@funt-platform/constants";
 import { createAuditLog } from "./audit.service.js";
 import { cacheDel, cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 import { AppError } from "../utils/AppError.js";
@@ -68,6 +69,11 @@ async function assertCanEditCourseAsync(
   userId: string,
   course: { _id: unknown; createdBy: string; moderatorIds?: string[] | null }
 ): Promise<void> {
+  // Super Admins and Admins can always edit any course
+  const user = await UserModel.findById(userId).select("roles").lean().exec();
+  const userRoles = (user as { roles?: string[] } | null)?.roles ?? [];
+  if (userRoles.includes(ROLE.SUPER_ADMIN) || userRoles.includes(ROLE.ADMIN)) return;
+
   const mods = course.moderatorIds ?? [];
   if (course.createdBy === userId || mods.includes(userId)) return;
   const mongoId = String(course._id);
@@ -90,11 +96,7 @@ async function assertCanEditCourseAsync(
   throw new AppError("Forbidden: only the creator, a course moderator, or a batch moderator can edit this course", 403);
 }
 
-function assertCanArchiveCourse(userId: string, course: { createdBy: string }) {
-  if (course.createdBy !== userId) {
-    throw new AppError("Forbidden: only the creator can archive this course", 403);
-  }
-}
+// Archive permission is now handled by assertCanEditCourseAsync (Super Admin/Admin bypass included)
 
 export interface CreateCourseInput {
   title: string;
@@ -134,6 +136,7 @@ export interface UpdateCourseModuleInput {
     linkedAssignmentInstructionsOverride?: string;
     linkedAssignmentSubmissionTypeOverride?: string;
     linkedAssignmentSkillTagsOverride?: string[];
+  linkedQuizId?: string;
   /** XP awarded when a student fully completes this module (captured on new batches from this snapshot). */
   xpReward?: number;
 }
@@ -485,6 +488,7 @@ export async function updateCourseModule(
     }
     (mod as { linkedAssignmentSkillTagsOverride?: string[] }).linkedAssignmentSkillTagsOverride = arr;
   }
+  if (input.linkedQuizId !== undefined) (mod as { linkedQuizId?: string }).linkedQuizId = input.linkedQuizId?.trim() || undefined;
   if (input.xpReward !== undefined) {
     const x = Math.floor(Number(input.xpReward));
     if (!Number.isFinite(x) || x < 0 || x > 100_000) {
@@ -677,7 +681,7 @@ export async function duplicateCourse(id: string, performedBy: string) {
 export async function archiveCourse(id: string, performedBy: string) {
   const existing = await findCourseByParam(id);
   if (!existing) throw new AppError("Course not found", 404);
-  assertCanArchiveCourse(performedBy, existing);
+  await assertCanEditCourseAsync(performedBy, existing);
   const doc = await CourseModel.findByIdAndUpdate(
     existing._id,
     { status: COURSE_STATUS.ARCHIVED },
@@ -692,7 +696,7 @@ export async function archiveCourse(id: string, performedBy: string) {
 export async function unarchiveCourse(id: string, performedBy: string) {
   const existing = await findCourseByParam(id);
   if (!existing) throw new AppError("Course not found", 404);
-  assertCanArchiveCourse(performedBy, existing);
+  await assertCanEditCourseAsync(performedBy, existing);
   if (existing.status !== COURSE_STATUS.ARCHIVED) {
     throw new AppError("Course is not archived", 400);
   }
@@ -723,19 +727,37 @@ export async function deleteCourse(id: string, performedBy: string) {
   const humanId = (existing as { courseId?: string }).courseId;
   const courseIds = [mongoId, ...(humanId ? [humanId] : [])];
 
-  const dependentBatchCount = await BatchModel.countDocuments({
+  // Only block deletion if ACTIVE batches reference this course.
+  // Archived batches should not prevent course deletion.
+  const activeBatchCount = await BatchModel.countDocuments({
+    status: { $ne: BATCH_STATUS.ARCHIVED },
     $or: [
       { "courseSnapshots.courseId": { $in: courseIds } },
       { "courseSnapshot.courseId": { $in: courseIds } },
     ],
   }).exec();
 
-  if (dependentBatchCount > 0) {
+  if (activeBatchCount > 0) {
     throw new AppError(
-      `Cannot delete course — ${dependentBatchCount} batch${dependentBatchCount === 1 ? "" : "es"} still derive from it. Archive the course (or delete the batches) instead.`,
+      `Cannot delete course — ${activeBatchCount} active batch${activeBatchCount === 1 ? "" : "es"} still derive from it. Archive or delete those batches first.`,
       409
     );
   }
+
+  // Remove course references from archived batches so they don't hold stale pointers
+  await BatchModel.updateMany(
+    {
+      status: BATCH_STATUS.ARCHIVED,
+      $or: [
+        { "courseSnapshots.courseId": { $in: courseIds } },
+        { "courseSnapshot.courseId": { $in: courseIds } },
+      ],
+    },
+    {
+      $pull: { courseSnapshots: { courseId: { $in: courseIds } } },
+      $unset: { courseSnapshot: "" },
+    }
+  ).exec();
 
   await CourseModel.deleteOne({ _id: existing._id }).exec();
   await createAuditLog("COURSE_DELETED", performedBy, ENTITY_COURSE, mongoId, {

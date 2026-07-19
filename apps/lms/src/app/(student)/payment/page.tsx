@@ -183,6 +183,9 @@ function PaymentForm() {
           setTimeline(timelineRes.success ? (timelineRes.data ?? null) : null);
           setLastTimelineCheckedAt(new Date().toLocaleTimeString());
         })
+        .catch(() => {
+          // Ensure checking state is cleared even if Promise.all rejects unexpectedly
+        })
         .finally(() => setChecking(false));
       return;
     }
@@ -489,7 +492,7 @@ function PaymentForm() {
           <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{checkoutErr}</p>
         )}
 
-        {checking ? (
+        {checking && !checkout ? (
           <div className="mt-8 flex justify-center py-6">
             <div className="spinner" />
           </div>

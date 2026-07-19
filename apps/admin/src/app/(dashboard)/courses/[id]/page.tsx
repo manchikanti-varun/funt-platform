@@ -28,6 +28,7 @@ interface CourseModule {
     linkedAssignmentInstructionsOverride?: string;
     linkedAssignmentSubmissionTypeOverride?: string;
     linkedAssignmentSkillTagsOverride?: string[];
+  linkedQuizId?: string;
   xpReward?: number;
   order: number;
 }
@@ -59,6 +60,14 @@ interface GlobalChapterOption {
   id: string;
   title: string;
   status: string;
+}
+
+interface QuizOption {
+  _id: string;
+  quizId?: string;
+  title: string;
+  type: string;
+  questionCount?: number;
 }
 
 import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
@@ -97,6 +106,7 @@ export default function EditCoursePage() {
   const [globalChapters, setGlobalChapters] = useState<GlobalChapterOption[]>([]);
   const [chapterSearch, setChapterSearch] = useState("");
   const [addingChapterId, setAddingChapterId] = useState<string | null>(null);
+  const [quizOptions, setQuizOptions] = useState<QuizOption[]>([]);
 
   const roleGuard = <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />;
 
@@ -122,6 +132,13 @@ export default function EditCoursePage() {
       }
     });
   }, [id]);
+
+  // Fetch available quizzes for linking
+  useEffect(() => {
+    api<QuizOption[]>("/api/quizzes/for-linking?type=CHAPTER").then((r) => {
+      if (r.success && Array.isArray(r.data)) setQuizOptions(r.data);
+    });
+  }, []);
 
   // When editing a module with a linked assignment, fetch global assignment so we can show it when overrides are empty
   const linkedId = moduleEdit.linkedAssignmentId?.trim();
@@ -213,6 +230,7 @@ export default function EditCoursePage() {
       linkedAssignmentInstructionsOverride: m.linkedAssignmentInstructionsOverride ?? "",
       linkedAssignmentSubmissionTypeOverride: m.linkedAssignmentSubmissionTypeOverride ?? "",
       linkedAssignmentSkillTagsOverride: Array.isArray(m.linkedAssignmentSkillTagsOverride) ? m.linkedAssignmentSkillTagsOverride : undefined,
+      linkedQuizId: m.linkedQuizId ?? "",
     });
     setEditingIndex(index);
   }
@@ -243,6 +261,7 @@ export default function EditCoursePage() {
           linkedAssignmentInstructionsOverride: decodeEncodedRichText(moduleEdit.linkedAssignmentInstructionsOverride) || undefined,
           linkedAssignmentSubmissionTypeOverride: moduleEdit.linkedAssignmentSubmissionTypeOverride || undefined,
           linkedAssignmentSkillTagsOverride: Array.isArray(moduleEdit.linkedAssignmentSkillTagsOverride) ? moduleEdit.linkedAssignmentSkillTagsOverride : undefined,
+          linkedQuizId: moduleEdit.linkedQuizId || undefined,
           xpReward: moduleEdit.xpReward != null ? Math.floor(Number(moduleEdit.xpReward)) : undefined,
         }),
       });
@@ -273,6 +292,22 @@ export default function EditCoursePage() {
       [indices[clickedIndex], indices[clickedIndex + 1]] = [indices[clickedIndex + 1], indices[clickedIndex]];
       const res = await api(`/api/courses/${id}/reorder-chapters`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
       if (res.success && res.data) setCourse(res.data as Course);
+    }
+  }
+
+  async function removeChapter(chapterIndex: number, chapterTitle: string) {
+    const ok = await dialog.confirm({
+      title: "Remove chapter from course",
+      message: `Remove "${chapterTitle}" from this course?\n\nThis only removes it from the course — the global chapter is not deleted.`,
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const res = await api<Course>(`/api/courses/${id}/chapters/${chapterIndex}`, { method: "DELETE" });
+    if (res.success && res.data) {
+      setCourse(res.data);
+    } else {
+      setError(res.message ?? "Failed to remove chapter.");
     }
   }
 
@@ -563,6 +598,16 @@ export default function EditCoursePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => removeChapter(i, m.title)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100"
+                        title="Remove chapter from course"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                   {editingIndex === i && (
@@ -750,6 +795,28 @@ export default function EditCoursePage() {
                             <p className="mt-1 text-xs text-slate-500">Leave all unchecked to use global assignment’s skill tags.</p>
                           </div>
                         </div>
+                      </div>
+                      {/* Linked Quiz */}
+                      <div className="border-t border-slate-200 pt-4">
+                        <label className="mb-1 block text-xs font-medium text-slate-600">Linked Quiz (optional)</label>
+                        <select
+                          value={moduleEdit.linkedQuizId ?? ""}
+                          onChange={(e) => setModuleEdit((p) => ({ ...p, linkedQuizId: e.target.value }))}
+                          className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        >
+                          <option value="">None — no quiz linked</option>
+                          {quizOptions.map((q) => (
+                            <option key={q._id} value={q.quizId ?? q._id}>
+                              {q.title} ({q.questionCount ?? 0} questions)
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Link a chapter quiz — students must pass it to complete this chapter.{" "}
+                          <a href="/quizzes/new" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:underline">
+                            Create a new quiz →
+                          </a>
+                        </p>
                       </div>
                       <div className="flex gap-2">
                         <button

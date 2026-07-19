@@ -1086,15 +1086,23 @@ export async function franchiseCreateTrainer(input: {
     throw new AppError("Franchise center is not active", 403);
   }
 
-  const { createTrainer } = await import("./auth.service.js");
+  const { createTrainer, createTrainerWithAutoUsername } = await import("./auth.service.js");
 
-  const result = await createTrainer({
-    username: input.username,
-    name: input.name,
-    email: input.email,
-    mobile: input.mobile,
-    password: input.password,
-  });
+  const usernameProvided = input.username.trim();
+  const result = usernameProvided
+    ? await createTrainer({
+        username: usernameProvided,
+        name: input.name,
+        email: input.email,
+        mobile: input.mobile,
+        password: input.password,
+      })
+    : await createTrainerWithAutoUsername({
+        name: input.name,
+        email: input.email,
+        mobile: input.mobile,
+        password: input.password,
+      });
 
   // Tag trainer with franchiseId
   await UserModel.updateOne(

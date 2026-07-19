@@ -8,7 +8,7 @@ import { AppPageShell, FormPanel, PageSection } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 
-type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT";
+type PeopleRole = "STUDENT" | "ADMIN" | "SUB_ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT" | "PARENT" | "FRANCHISE_ADMIN";
 
 type PersonRow = {
   id: string;
@@ -37,8 +37,11 @@ type PeopleResponse = {
 const ROLE_TABS: Array<{ id: PeopleRole; label: string }> = [
   { id: "STUDENT", label: "Students" },
   { id: "ADMIN", label: "Admin" },
+  { id: "SUB_ADMIN", label: "Sub Admin" },
   { id: "TRAINER", label: "Trainer" },
   { id: "SUPPORT_AGENT", label: "Support Agent" },
+  { id: "PARENT", label: "Parent" },
+  { id: "FRANCHISE_ADMIN", label: "Franchise Admin" },
   { id: "SUPER_ADMIN", label: "Super Admin" },
 ];
 
@@ -191,7 +194,7 @@ export default function PeopleInsightsPage() {
 
   return (
     <AppPageShell className="w-full">
-      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN]} fallbackHref="/dashboard" />
+      <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN]} fallbackHref="/dashboard" />
       <PageSection>
         <h1 className="text-2xl font-bold tracking-tight text-slate-800">People Insights</h1>
         <p className="mt-1 text-sm text-slate-600">

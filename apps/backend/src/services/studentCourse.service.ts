@@ -32,14 +32,31 @@ function isDuplicateKeyError(err: unknown): boolean {
 const OBJECT_ID_REGEX = /^[a-fA-F0-9]{24}$/;
 
 /**
- * Returns true when the student enrolled in this batch via a license key.
+ * Returns true when the student has a redeemed license key for this specific course in this batch.
  * License key enrollments bypass the payment gate — the key itself IS the proof of purchase.
  */
-async function hasLicenseKeyEnrollment(studentId: string, batchId: string): Promise<boolean> {
-  const exists = await LicenseKeyModel.exists({
+async function hasLicenseKeyEnrollment(studentId: string, batchId: string, courseId?: string): Promise<boolean> {
+  const query: Record<string, unknown> = {
     batchId,
     usedByStudentId: studentId,
-  }).exec();
+  };
+  if (courseId) {
+    // Match against courseId using both possible formats (human-readable or MongoDB _id)
+    const courseIdVariants = [courseId];
+    if (/^[a-f\d]{24}$/i.test(courseId)) {
+      // It's a MongoDB ObjectId — also try looking up the human-readable courseId
+      const course = await CourseModel.findById(courseId).select("courseId").lean().exec();
+      if (course && (course as { courseId?: string }).courseId) {
+        courseIdVariants.push((course as { courseId?: string }).courseId!);
+      }
+    } else {
+      // It's a human-readable courseId — also try resolving the MongoDB _id
+      const course = await CourseModel.findOne({ courseId }).select("_id").lean().exec();
+      if (course) courseIdVariants.push(String(course._id));
+    }
+    query.courseId = courseIdVariants.length > 1 ? { $in: courseIdVariants } : courseId;
+  }
+  const exists = await LicenseKeyModel.exists(query).exec();
   return !!exists;
 }
 
@@ -179,7 +196,7 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
       status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
     }).exec(),
     needsPaymentCheck ? getLatestCoursePaymentState(studentId, batchMongoId, snapshotCourseId) : Promise.resolve(null),
-    needsPaymentCheck ? hasLicenseKeyEnrollment(studentId, batchMongoId) : Promise.resolve(false),
+    needsPaymentCheck ? hasLicenseKeyEnrollment(studentId, batchMongoId, snapshotCourseId) : Promise.resolve(false),
   ]);
 
   const blocked = !!(enrollment as { accessBlocked?: boolean } | null)?.accessBlocked;
@@ -409,7 +426,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     LicenseKeyModel.find({
       usedByStudentId: studentId,
       batchId: { $in: batchIds },
-    }).select("batchId").lean().exec(),
+    }).select("batchId courseId").lean().exec(),
     ChapterProgressModel.find({
       studentId,
       batchId: { $in: batchIds },
@@ -420,9 +437,12 @@ export async function getMyCoursesForStudent(studentId: string) {
   const verifiedPaymentSet = new Set(
     verifiedPayments.map((p) => `${p.batchId}::${(p as { courseId?: string }).courseId ?? ""}`)
   );
-  const licenseKeyBatchSet = new Set(
-    licenseKeys.map((k) => String((k as { batchId?: string }).batchId ?? ""))
-  );
+  const licenseKeyBatchCourseSet = new Set<string>();
+  for (const k of licenseKeys) {
+    const bId = String((k as { batchId?: string }).batchId ?? "");
+    const cId = String((k as { courseId?: string }).courseId ?? "");
+    if (bId && cId) licenseKeyBatchCourseSet.add(`${bId}::${cId}`);
+  }
   // Group progress by batchId+courseId for percent computation
   const progressByBatchCourse = new Map<string, Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null }>>();
   for (const p of allProgress) {
@@ -466,7 +486,7 @@ export async function getMyCoursesForStudent(studentId: string) {
 
       // Use pre-loaded data instead of per-iteration DB calls
       const hasVerifiedPayment = verifiedPaymentSet.has(`${e.batchId}::${courseId}`);
-      const hasLicenseKey = licenseKeyBatchSet.has(e.batchId);
+      const hasLicenseKey = licenseKeyBatchCourseSet.has(`${e.batchId}::${courseId}`);
       const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedPayment || hasLicenseKey);
       if (!hasCourseAccess) continue;
 

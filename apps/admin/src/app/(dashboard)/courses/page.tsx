@@ -148,7 +148,10 @@ export default function CoursesPage() {
       .then((r) => {
         if (r.success && Array.isArray(r.data)) setList(r.data);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setSelectedIds(new Set());
+      });
   }, [debouncedSearch]);
 
   return (
@@ -236,7 +239,10 @@ export default function CoursesPage() {
                     <th className="w-10 px-3 py-4">
                       <input
                         type="checkbox"
-                        checked={sortedList.length > 0 && selectedIds.size === sortedList.length}
+                        checked={selectedIds.size > 0 && selectedIds.size === sortedList.length}
+                        ref={(el) => {
+                          if (el) el.indeterminate = selectedIds.size > 0 && selectedIds.size < sortedList.length;
+                        }}
                         onChange={(e) =>
                           setSelectedIds(e.target.checked ? new Set(sortedList.map((c) => c.id)) : new Set())
                         }

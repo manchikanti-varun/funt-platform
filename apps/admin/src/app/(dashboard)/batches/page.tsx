@@ -23,6 +23,8 @@ interface BatchItem {
   startDate: string;
   status: string;
   visibility?: "PUBLIC" | "PRIVATE";
+  isGlobalOnlineBatch?: boolean;
+  isNotEnrolledBatch?: boolean;
   courseSnapshot?: { title?: string; courseId?: string };
   courseSnapshots?: Array<{ title?: string; courseId?: string }>;
 }
@@ -306,7 +308,21 @@ export default function BatchesPage() {
                         />
                       </td>
                     )}
-                    <td className="px-5 py-4 text-sm font-medium text-slate-800">{b.name}</td>
+                    <td className="px-5 py-4 text-sm font-medium text-slate-800">
+                      {b.name}
+                      {b.isGlobalOnlineBatch && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                          Global Online
+                        </span>
+                      )}
+                      {b.isNotEnrolledBatch && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          Not Enrolled
+                        </span>
+                      )}
+                    </td>
                     <td className="px-5 py-4 text-sm text-slate-700">
                       {b.trainerName ? (
                         <span>

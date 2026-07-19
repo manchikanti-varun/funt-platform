@@ -220,6 +220,22 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
   return { id: String(user._id), username: user.username! };
 }
 
+export async function createTrainerWithAutoUsername(input: Omit<CreateTrainerInput, "username">): Promise<{ id: string; username: string }> {
+  validateStrongPassword(input.password);
+  const passwordHash = await hashPassword(input.password);
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email?.trim() || undefined,
+    mobile: input.mobile,
+    passwordHash,
+    roles: [ROLE.TRAINER],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
 export async function createSupportAgent(input: CreateTrainerInput): Promise<{ id: string; username: string }> {
   const normalizedUsername = input.username.trim().toLowerCase();
   const uErr = validateAdminUsername(normalizedUsername);
@@ -248,6 +264,22 @@ export async function createSupportAgentWithHash(input: {
     email: input.email,
     mobile: input.mobile,
     passwordHash: input.passwordHash,
+    roles: [ROLE.SUPPORT_AGENT],
+    status: ACCOUNT_STATUS.ACTIVE,
+  });
+  return { id: String(user._id), username: user.username! };
+}
+
+export async function createSupportAgentWithAutoUsername(input: Omit<CreateTrainerInput, "username">): Promise<{ id: string; username: string }> {
+  validateStrongPassword(input.password);
+  const passwordHash = await hashPassword(input.password);
+  const username = await uniqueAdminUsernameFromName(input.name);
+  const user = await UserModel.create({
+    username,
+    name: input.name,
+    email: input.email?.trim() || undefined,
+    mobile: input.mobile,
+    passwordHash,
     roles: [ROLE.SUPPORT_AGENT],
     status: ACCOUNT_STATUS.ACTIVE,
   });
@@ -752,9 +784,11 @@ export async function lookupStudentUsernameByEmail(email: string): Promise<{ use
 export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername: string): Promise<void> {
   const user = await UserModel.findById(targetUserId).exec();
   if (!user) throw new AppError("User not found", 404);
+  const oldUsername = user.username;
   const v = rawUsername.trim().toLowerCase();
+  if (oldUsername === v) return; // No change needed
   const isStaff =
-    user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN) || user.roles?.includes(ROLE.TRAINER);
+    user.roles?.includes(ROLE.ADMIN) || user.roles?.includes(ROLE.SUPER_ADMIN) || user.roles?.includes(ROLE.TRAINER) || user.roles?.includes(ROLE.SUB_ADMIN) || user.roles?.includes(ROLE.SUPPORT_AGENT);
   if (isStaff) {
     const e = validateAdminUsername(v);
     if (e) throw new AppError(e, 400);
@@ -764,7 +798,56 @@ export async function setUsernameBySuperAdmin(targetUserId: string, rawUsername:
   }
   const taken = await UserModel.findOne({ username: v, _id: { $ne: user._id } }).lean().exec();
   if (taken) throw new AppError("Username already taken", 400);
+
+  // Update the user's username
   await UserModel.updateOne({ _id: user._id }, { $set: { username: v } }).exec();
+
+  // Propagate username change across all denormalized references
+  const propagatePromises: Promise<unknown>[] = [];
+
+  // 1. linkedStudentUsernames on parent accounts (if this user is a student linked to a parent)
+  propagatePromises.push(
+    UserModel.updateMany(
+      { linkedStudentUsernames: oldUsername },
+      { $set: { "linkedStudentUsernames.$": v } }
+    ).exec()
+  );
+
+  // 2. Invoice.studentUsername
+  const { default: mongoose } = await import("mongoose");
+  const InvoiceModel = mongoose.models.Invoice;
+  if (InvoiceModel) {
+    propagatePromises.push(
+      InvoiceModel.updateMany(
+        { studentUsername: oldUsername },
+        { $set: { studentUsername: v } }
+      ).exec()
+    );
+  }
+
+  // 3. PaymentPromise.studentUsername
+  const PaymentPromiseModel = mongoose.models.PaymentPromise;
+  if (PaymentPromiseModel) {
+    propagatePromises.push(
+      PaymentPromiseModel.updateMany(
+        { studentUsername: oldUsername },
+        { $set: { studentUsername: v } }
+      ).exec()
+    );
+  }
+
+  // 4. DeviceChangeRequest.username
+  const DeviceChangeRequestModel = mongoose.models.DeviceChangeRequest;
+  if (DeviceChangeRequestModel) {
+    propagatePromises.push(
+      DeviceChangeRequestModel.updateMany(
+        { username: oldUsername },
+        { $set: { username: v } }
+      ).exec()
+    );
+  }
+
+  await Promise.allSettled(propagatePromises);
 }
 
 /**

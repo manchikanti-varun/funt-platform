@@ -404,6 +404,17 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
       ).exec();
       throw enrollErr;
     }
+
+    // Remove from "Not Enrolled Students" batch since student is now enrolled
+    try {
+      const { getNotEnrolledBatch } = await import("./batchAssignment.service.js");
+      const notEnrolledBatch = await getNotEnrolledBatch();
+      if (notEnrolledBatch) {
+        await EnrollmentModel.deleteOne({ studentId, batchId: String(notEnrolledBatch._id) }).exec();
+      }
+    } catch {
+      // Non-critical — don't block license redemption
+    }
   }
 
   // Audit: license redeemed
