@@ -10,7 +10,7 @@
  * - Concurrent session enforcement
  */
 
-import { TrustedDeviceModel, DeviceChangeRequestModel, DEVICE_TYPE, DEVICE_STATUS, DEVICE_CHANGE_STATUS } from "../models/TrustedDevice.model.js";
+import { TrustedDeviceModel, DeviceChangeRequestModel, DEVICE_STATUS, DEVICE_CHANGE_STATUS } from "../models/TrustedDevice.model.js";
 import { SecurityConfigModel } from "../models/SecurityConfig.model.js";
 import { UserModel } from "../models/User.model.js";
 import { AppError } from "../utils/AppError.js";
@@ -22,7 +22,7 @@ export async function getSecurityConfig() {
   let config = await SecurityConfigModel.findOne({ key: "ACTIVE" }).lean().exec();
   if (!config) {
     config = await SecurityConfigModel.create({ key: "ACTIVE" });
-    return config.toObject ? config.toObject() : config;
+    return (config as unknown as { toObject?: () => unknown }).toObject ? (config as unknown as { toObject: () => unknown }).toObject() : config;
   }
   return config;
 }
@@ -385,7 +385,8 @@ export async function markInactiveAccounts(): Promise<number> {
 
   const now = new Date();
   const noLoginCutoff = new Date(now.getTime() - noLoginYears * 365.25 * 24 * 60 * 60 * 1000);
-  const enrollCutoff = new Date(now.getTime() - enrollmentYears * 365.25 * 24 * 60 * 60 * 1000);
+  // enrollCutoff reserved for future use (enrollment-based inactivity detection)
+  void enrollmentYears;
 
   // Find students who haven't logged in for N years
   // (using updatedAt as proxy since loginHistory is select:false and updatedAt gets touched on login)
