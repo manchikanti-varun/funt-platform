@@ -47,6 +47,8 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
   const [loc, setLoc] = useState("Hyderabad");
   const [reportTo, setReportTo] = useState("");
   const [resp, setResp] = useState("");
+  const [timings, setTimings] = useState("");
+  const [terms, setTerms] = useState("");
   const [sigName, setSigName] = useState("");
   const [sigRole, setSigRole] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +106,8 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
         location: loc.trim() || undefined,
         reportingTo: reportTo.trim() || undefined,
         responsibilities: resp.trim() || undefined,
+        timings: timings.trim() || undefined,
+        termsAndConditions: terms.trim() || undefined,
         signatoryName: sigName.trim() || undefined,
         signatoryRole: sigRole.trim() || undefined,
       }),
@@ -274,7 +278,17 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
           </div>
           <div>
             <label className="text-xs font-medium text-slate-600">Responsibilities</label>
-            <textarea value={resp} onChange={(e) => setResp(e.target.value)} rows={2} className="input mt-1" placeholder="Training & Electronics tasks" />
+            <textarea value={resp} onChange={(e) => setResp(e.target.value)} rows={6} className="input mt-1" placeholder="Training & Electronics tasks" />
+            <p className="mt-1 text-xs text-slate-400">Use plain text. Paragraphs will be rendered in the PDF as-is.</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Timings</label>
+            <input value={timings} onChange={(e) => setTimings(e.target.value)} className="input mt-1" placeholder="e.g. 10:00 AM to 6:00 PM, Monday to Saturday" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Terms & Conditions</label>
+            <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={6} className="input mt-1" placeholder="Enter terms and conditions for the offer letter" />
+            <p className="mt-1 text-xs text-slate-400">Use plain text. Paragraphs will be rendered in the PDF as-is.</p>
           </div>
         </fieldset>
 

@@ -10,6 +10,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/components/ui";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
+import { ChapterHostedMedia } from "@/components/chapters/ChapterHostedMedia";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
@@ -397,6 +398,12 @@ export default function EditGlobalChapterPage() {
                       className="input text-xs"
                       placeholder="Or paste an external video URL (e.g. Vimeo)"
                     />
+                  </div>
+                )}
+                {/* Video preview */}
+                {(videoUrl || youtubeUrl) && (
+                  <div className="mt-3">
+                    <ChapterHostedMedia youtubeUrl={youtubeUrl} videoUrl={videoUrl} />
                   </div>
                 )}
               </div>

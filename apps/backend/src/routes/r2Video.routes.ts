@@ -51,7 +51,7 @@ router.post(
  */
 router.get(
   "/preview",
-  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER),
+  requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER),
   getVideoPreview
 );
 

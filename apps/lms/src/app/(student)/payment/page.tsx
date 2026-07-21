@@ -528,6 +528,14 @@ function PaymentForm() {
           </div>
         ) : type === "course" ? (
           <>
+            {checkout && checkout.enrollmentPriceInPaise < 100 && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <p className="font-semibold">Enrollment price not configured</p>
+                <p className="mt-1 text-amber-800">
+                  The fee for this course has not been set by admin yet. Please contact your school or trainer to get access via license key, or wait for the price to be configured.
+                </p>
+              </div>
+            )}
             {checkout && checkout.enrollmentPriceInPaise >= 100 ? (
               <div className="mt-4 rounded-xl border border-black/10 bg-white/90 p-4 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Coupon (optional)</p>

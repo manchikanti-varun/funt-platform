@@ -27,6 +27,8 @@ export interface CreateLetterInput {
   location?: string;
   reportingTo?: string;
   responsibilities?: string;
+  timings?: string;
+  termsAndConditions?: string;
   performanceSummary?: string;
   dutiesDescription?: string;
   signatoryName?: string;
@@ -56,6 +58,8 @@ export interface UpdateLetterInput {
   location?: string;
   reportingTo?: string;
   responsibilities?: string;
+  timings?: string;
+  termsAndConditions?: string;
   performanceSummary?: string;
   dutiesDescription?: string;
   signatoryName?: string;
@@ -116,6 +120,8 @@ export async function createLetter(input: CreateLetterInput) {
     location: input.location?.trim() || "Hyderabad",
     reportingTo: input.reportingTo?.trim() || undefined,
     responsibilities: input.responsibilities?.trim() || undefined,
+    timings: input.timings?.trim() || undefined,
+    termsAndConditions: input.termsAndConditions?.trim() || undefined,
     performanceSummary: input.performanceSummary?.trim() || undefined,
     dutiesDescription: input.dutiesDescription?.trim() || undefined,
     signatoryName: input.signatoryName?.trim() || undefined,
@@ -358,15 +364,19 @@ export async function revokeLetter(letterId: string, revokedBy: string, reason: 
 export async function updateLetter(letterMongoId: string, input: UpdateLetterInput, updatedBy: string) {
   const letter = await LetterModel.findById(letterMongoId).exec();
   if (!letter) throw new AppError("Letter not found", 404);
-  if (letter.approvalStatus !== APPROVAL_STATUS.DRAFT && letter.approvalStatus !== APPROVAL_STATUS.REJECTED_BY_SA) {
-    throw new AppError("Can only edit letters in DRAFT or REJECTED status", 400);
+
+  // Allow editing in DRAFT, REJECTED, or already-issued states (Super Admin can modify issued letters)
+  const blockedStatuses = [LETTER_STATUS.REVOKED, LETTER_STATUS.WITHDRAWN, LETTER_STATUS.EXPIRED];
+  if (blockedStatuses.includes(letter.status as typeof blockedStatuses[number])) {
+    throw new AppError("Cannot edit a revoked, withdrawn, or expired letter", 400);
   }
 
   const fields: Array<keyof UpdateLetterInput> = [
     "recipientName", "recipientEmail", "recipientMobile", "recipientGender",
     "employmentType", "department", "designation", "joiningDate", "endDate",
     "duration", "stipend", "stipendAmount", "ctc", "location", "reportingTo",
-    "responsibilities", "performanceSummary", "dutiesDescription",
+    "responsibilities", "timings", "termsAndConditions",
+    "performanceSummary", "dutiesDescription",
     "signatoryName", "signatoryRole", "signatoryImageUrl", "stampImageUrl",
     "acceptanceDeadlineDays",
   ];
@@ -526,6 +536,8 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       location: letter.location ?? undefined,
       reportingTo: letter.reportingTo ?? undefined,
       responsibilities: (letter as { responsibilities?: string }).responsibilities ?? undefined,
+      timings: (letter as { timings?: string }).timings ?? undefined,
+      termsAndConditions: (letter as { termsAndConditions?: string }).termsAndConditions ?? undefined,
       issuedAt: new Date(letter.issuedAt!),
       signatoryName: (letter as { signatoryName?: string }).signatoryName,
       signatoryRole: (letter as { signatoryRole?: string }).signatoryRole,

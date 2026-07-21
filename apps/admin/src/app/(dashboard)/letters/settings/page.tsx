@@ -272,8 +272,26 @@ export default function LetterSettingsPage() {
 
             {/* Signature Image */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Signature Image URL</label>
-              <input value={settings.defaultSignatoryImageUrl || ""} onChange={(e) => updateField("defaultSignatoryImageUrl", e.target.value)} className="input mt-1 text-sm w-full" placeholder="https://... or paste image URL from R2" />
+              <label className="block text-sm font-medium text-slate-700">Signature Image</label>
+              <div className="mt-1 flex items-center gap-3">
+                <input value={settings.defaultSignatoryImageUrl || ""} onChange={(e) => updateField("defaultSignatoryImageUrl", e.target.value)} className="input text-sm flex-1" placeholder="https://... or upload below" />
+                <label className="shrink-0 cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                  Upload
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { makeUploadImageFn } = await import("@/lib/uploadImageToR2");
+                      const upload = makeUploadImageFn({ courseId: "letters", moduleId: "signatory" });
+                      const { url } = await upload(file);
+                      updateField("defaultSignatoryImageUrl", url);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Upload failed");
+                    }
+                    e.target.value = "";
+                  }} />
+                </label>
+              </div>
               <p className="mt-1 text-xs text-slate-500">PNG with transparent background works best. Will appear on the left side of the signatory section.</p>
               {settings.defaultSignatoryImageUrl && (
                 <div className="mt-2 inline-block rounded-lg border border-slate-200 bg-white p-2">
@@ -284,8 +302,26 @@ export default function LetterSettingsPage() {
 
             {/* Stamp Image */}
             <div>
-              <label className="block text-sm font-medium text-slate-700">Company Stamp Image URL</label>
-              <input value={settings.defaultStampImageUrl || ""} onChange={(e) => updateField("defaultStampImageUrl", e.target.value)} className="input mt-1 text-sm w-full" placeholder="https://... or paste image URL from R2" />
+              <label className="block text-sm font-medium text-slate-700">Company Stamp Image</label>
+              <div className="mt-1 flex items-center gap-3">
+                <input value={settings.defaultStampImageUrl || ""} onChange={(e) => updateField("defaultStampImageUrl", e.target.value)} className="input text-sm flex-1" placeholder="https://... or upload below" />
+                <label className="shrink-0 cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                  Upload
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { makeUploadImageFn } = await import("@/lib/uploadImageToR2");
+                      const upload = makeUploadImageFn({ courseId: "letters", moduleId: "stamp" });
+                      const { url } = await upload(file);
+                      updateField("defaultStampImageUrl", url);
+                    } catch (err) {
+                      alert(err instanceof Error ? err.message : "Upload failed");
+                    }
+                    e.target.value = "";
+                  }} />
+                </label>
+              </div>
               <p className="mt-1 text-xs text-slate-500">Round company stamp/seal PNG. Will appear on the right side next to the signature on experience letters.</p>
               {settings.defaultStampImageUrl && (
                 <div className="mt-2 inline-block rounded-lg border border-slate-200 bg-white p-2">

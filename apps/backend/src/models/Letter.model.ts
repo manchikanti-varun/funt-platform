@@ -75,6 +75,8 @@ const letterSchema = new Schema(
     reportingTo: { type: String, required: false },
     duration: { type: String, required: false },
     responsibilities: { type: String, required: false },
+    timings: { type: String, required: false },
+    termsAndConditions: { type: String, required: false },
 
     // Experience letter fields
     performanceSummary: { type: String, required: false },

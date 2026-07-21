@@ -91,6 +91,8 @@ export interface OfferLetterData {
   location?: string;
   reportingTo?: string;
   responsibilities?: string;
+  timings?: string;
+  termsAndConditions?: string;
   issuedAt: Date;
   signatoryName?: string;
   signatoryRole?: string;
@@ -130,7 +132,7 @@ function drawLetterhead(doc: any): void {
 
   // Logo on the left
   if (logoPath) {
-    doc.image(logoPath, PAGE_MARGIN, PAGE_MARGIN, { width: 100 });
+    doc.image(logoPath, PAGE_MARGIN, PAGE_MARGIN, { width: 130 });
   }
 
   // Company info on the right (right-aligned)
@@ -272,12 +274,27 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
       doc.moveDown(1);
     }
 
+    // Timings (if provided)
+    if (data.timings?.trim()) {
+      doc.font("Helvetica").text("Timings: ", PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP });
+      doc.font("Helvetica-Bold").text(data.timings.trim());
+      doc.moveDown(1);
+    }
+
     // Paragraph 5: Completion note (for interns)
     if (data.employmentType === "INTERN") {
       doc.font("Helvetica").text(
         "Please note that upon successful completion of your internship, you will be eligible for a full-time position or Internship extension with our company, subject to your performance and organizational requirements based on your performance during the internship and the final evaluation process.",
         PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
       );
+      doc.moveDown(1);
+    }
+
+    // Terms & Conditions (if provided)
+    if (data.termsAndConditions?.trim()) {
+      doc.font("Helvetica-Bold").text("Terms & Conditions:", PAGE_MARGIN, doc.y, { width: contentWidth });
+      doc.moveDown(0.5);
+      doc.font("Helvetica").text(data.termsAndConditions.trim(), PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP });
       doc.moveDown(1);
     }
 

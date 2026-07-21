@@ -182,12 +182,9 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
 
   const snapshotCourseId = snapshot.courseId ?? batchMongoId;
 
-  // Parallelize independent DB queries for enrollment, payment state, and license check
-  const enrollmentPriceInPaise = Math.max(
-    0,
-    Math.floor(Number((snapshot as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0))
-  );
-  const needsPaymentCheck = enrollmentPriceInPaise >= 100;
+  const isDemo = !!(snapshot as { isDemo?: boolean }).isDemo;
+  // Non-demo courses always require payment/license, even if price is 0 (not yet configured)
+  const needsPaymentCheck = !isDemo;
 
   const [enrollment, payState, hasLicenseKey] = await Promise.all([
     EnrollmentModel.findOne({
@@ -482,12 +479,14 @@ export async function getMyCoursesForStudent(studentId: string) {
       const courseId = s?.courseId ?? String(batch._id);
       const courseBlocked = !!courseBlockMap.get(courseId);
       const modules = Array.isArray(s?.modules) ? s.modules : [];
-      const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((s as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
 
       // Use pre-loaded data instead of per-iteration DB calls
       const hasVerifiedPayment = verifiedPaymentSet.has(`${e.batchId}::${courseId}`);
       const hasLicenseKey = licenseKeyBatchCourseSet.has(`${e.batchId}::${courseId}`);
-      const hasCourseAccess = !blocked && !courseBlocked && (enrollmentPriceInPaise < 100 || hasVerifiedPayment || hasLicenseKey);
+      const isDemo = !!(s as { isDemo?: boolean }).isDemo;
+      // Only demo courses get free access. Non-demo courses require verified payment or license key,
+      // even if enrollmentPriceInPaise is 0 (price not yet configured by admin).
+      const hasCourseAccess = !blocked && !courseBlocked && (isDemo || hasVerifiedPayment || hasLicenseKey);
       if (!hasCourseAccess) continue;
 
       const isAdminBlocked = blocked || courseBlocked;

@@ -112,12 +112,13 @@ function SignupForm() {
       setPreviewError("");
       try {
         const res = await fetch(`${API_URL}/api/auth/google/signup-preview?token=${encodeURIComponent(token)}`);
-        const data = await res.json().catch(() => ({}));
-        if (!cancelled && res.ok && data.email) {
-          setEmail(data.email);
-          setName(data.name ?? "");
+        const json = await res.json().catch(() => ({}));
+        const payload = json.data ?? json;
+        if (!cancelled && res.ok && payload.email) {
+          setEmail(payload.email);
+          setName(payload.name ?? "");
         } else if (!cancelled) {
-          setPreviewError(data.message ?? "Invalid or expired signup link. Please sign in with Google again.");
+          setPreviewError(json.message ?? "Invalid or expired signup link. Please sign in with Google again.");
         }
       } catch {
         if (!cancelled) setPreviewError("Could not load signup form. Try again.");
