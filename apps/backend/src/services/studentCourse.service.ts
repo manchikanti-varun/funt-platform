@@ -43,16 +43,18 @@ async function hasLicenseKeyEnrollment(studentId: string, batchId: string, cours
   if (courseId) {
     // Match against courseId using both possible formats (human-readable or MongoDB _id)
     const courseIdVariants = [courseId];
-    if (/^[a-f\d]{24}$/i.test(courseId)) {
-      // It's a MongoDB ObjectId — also try looking up the human-readable courseId
-      const course = await CourseModel.findById(courseId).select("courseId").lean().exec();
-      if (course && (course as { courseId?: string }).courseId) {
-        courseIdVariants.push((course as { courseId?: string }).courseId!);
+    try {
+      if (/^[a-f\d]{24}$/i.test(courseId)) {
+        const course = await CourseModel.findById(courseId).select("courseId").lean().exec();
+        if (course && (course as { courseId?: string }).courseId) {
+          courseIdVariants.push((course as { courseId?: string }).courseId!);
+        }
+      } else {
+        const course = await CourseModel.findOne({ courseId }).select("_id").lean().exec();
+        if (course) courseIdVariants.push(String(course._id));
       }
-    } else {
-      // It's a human-readable courseId — also try resolving the MongoDB _id
-      const course = await CourseModel.findOne({ courseId }).select("_id").lean().exec();
-      if (course) courseIdVariants.push(String(course._id));
+    } catch {
+      // If course lookup fails, just use the original courseId
     }
     query.courseId = courseIdVariants.length > 1 ? { $in: courseIdVariants } : courseId;
   }

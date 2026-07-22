@@ -340,10 +340,10 @@ export const login = asyncHandler(async (req: Request, res: Response): Promise<v
     }
   } else {
     const staffAllowed =
-      roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN) || roles.includes(ROLE.TRAINER) || roles.includes(ROLE.SUPPORT_AGENT) || roles.includes(ROLE.FRANCHISE_ADMIN) || roles.includes(ROLE.SUB_ADMIN);
+      roles.includes(ROLE.ADMIN) || roles.includes(ROLE.SUPER_ADMIN) || roles.includes(ROLE.TRAINER) || roles.includes(ROLE.FRANCHISE_ADMIN) || roles.includes(ROLE.SUB_ADMIN);
     if (!staffAllowed) {
       throw new AppError(
-        "FUNT Admin is for staff (Admin, Super Admin, or Trainer). Use FUNT Learn for students and parents.",
+        "FUNT Admin is for Admin, Super Admin, Sub Admin, Trainer, or Franchise Admin only. Support agents should use the Support portal.",
         403
       );
     }

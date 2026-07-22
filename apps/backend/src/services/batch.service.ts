@@ -700,6 +700,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
     }
   }
 
+  doc.markModified("courseSnapshots");
   await doc.save();
   await createAuditLog("BATCH_UPDATED", performedBy, ENTITY_BATCH, String(doc._id));
   await cacheDel(CACHE_KEYS.adminBatches());

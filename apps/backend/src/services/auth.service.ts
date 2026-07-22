@@ -172,11 +172,26 @@ function randomTemporaryPassword(): string {
   return crypto.randomBytes(12).toString("base64url");
 }
 
+/** Check email uniqueness across all user roles. Throws if email is already used. */
+async function assertEmailNotTaken(email: string | undefined | null): Promise<void> {
+  if (!email?.trim()) return;
+  const existing = await UserModel.findOne({ email: email.trim().toLowerCase() }).select("_id roles username").lean().exec();
+  if (existing) {
+    const roles = (existing as { roles?: string[] }).roles ?? [];
+    const roleLabel = roles[0]?.replace(/_/g, " ") ?? "another user";
+    throw new AppError(
+      `This email is already used by ${roleLabel.toLowerCase()} account (${(existing as { username?: string }).username ?? "unknown"}). Each email can only be used for one account.`,
+      409
+    );
+  }
+}
+
 export async function createStudent(input: CreateStudentInput): Promise<{ id: string; username: string }> {
   const uErr = validateStudentUsername(input.username);
   if (uErr) throw new AppError(uErr, 400);
   const uname = normalizeStudentUsername(input.username);
   if (input.age < 7) throw new AppError("Minimum age is 7 years", 400);
+  await assertEmailNotTaken(input.email);
   let passwordHash: string | undefined;
   if (input.password != null && input.password !== "") {
     validateStrongPassword(input.password);
@@ -206,6 +221,7 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
   const normalizedUsername = input.username.trim().toLowerCase();
   const uErr = validateAdminUsername(normalizedUsername);
   if (uErr) throw new AppError(uErr, 400);
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const user = await UserModel.create({
@@ -221,6 +237,7 @@ export async function createTrainer(input: CreateTrainerInput): Promise<{ id: st
 }
 
 export async function createTrainerWithAutoUsername(input: Omit<CreateTrainerInput, "username">): Promise<{ id: string; username: string }> {
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
@@ -240,6 +257,7 @@ export async function createSupportAgent(input: CreateTrainerInput): Promise<{ i
   const normalizedUsername = input.username.trim().toLowerCase();
   const uErr = validateAdminUsername(normalizedUsername);
   if (uErr) throw new AppError(uErr, 400);
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const user = await UserModel.create({
@@ -271,6 +289,7 @@ export async function createSupportAgentWithHash(input: {
 }
 
 export async function createSupportAgentWithAutoUsername(input: Omit<CreateTrainerInput, "username">): Promise<{ id: string; username: string }> {
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
@@ -305,6 +324,7 @@ export async function createSupportAgentWithTempPassword(input: {
 }
 
 export async function createAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
@@ -321,6 +341,7 @@ export async function createAdmin(input: CreateAdminInput): Promise<{ id: string
 }
 
 export async function createSubAdmin(input: CreateAdminInput): Promise<{ id: string; username: string }> {
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);
@@ -337,6 +358,7 @@ export async function createSubAdmin(input: CreateAdminInput): Promise<{ id: str
 }
 
 export async function createSuperAdmin(input: CreateSuperAdminInput): Promise<{ id: string; username: string }> {
+  await assertEmailNotTaken(input.email);
   validateStrongPassword(input.password);
   const passwordHash = await hashPassword(input.password);
   const username = await uniqueAdminUsernameFromName(input.name);

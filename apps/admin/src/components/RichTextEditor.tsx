@@ -1,10 +1,45 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RichTextEditor as RichTextEditorCore, type RichTextEditorApi } from "@funt-platform/rich-text-editor";
+import { api } from "@/lib/api";
 
 const EDITOR_BASE =
   "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition focus-within:border-indigo-400 focus-within:shadow-md focus-within:shadow-indigo-100/60";
+
+/**
+ * Replace r2:// video URLs in HTML with presigned playback URLs for editor display.
+ * Returns a map of presignedUrl → r2Key for reverse mapping on change.
+ */
+async function resolveR2VideoUrls(html: string): Promise<{ resolved: string; urlMap: Map<string, string> }> {
+  const r2Regex = /r2:\/\/[^"'<>\s]+/gi;
+  const keys = [...new Set([...html.matchAll(r2Regex)].map((m) => m[0]))];
+  const urlMap = new Map<string, string>(); // presignedUrl → r2Key
+  if (keys.length === 0) return { resolved: html, urlMap };
+
+  let result = html;
+  for (const r2Key of keys) {
+    try {
+      const res = await api<{ previewUrl: string }>(`/api/admin/videos/preview?key=${encodeURIComponent(r2Key)}`);
+      if (res.success && res.data?.previewUrl) {
+        result = result.replaceAll(r2Key, res.data.previewUrl);
+        urlMap.set(res.data.previewUrl, r2Key);
+      }
+    } catch {
+      // Keep r2:// if preview fails
+    }
+  }
+  return { resolved: result, urlMap };
+}
+
+/** Restore r2:// keys from presigned URLs in emitted HTML. */
+function restoreR2Keys(html: string, urlMap: Map<string, string>): string {
+  let result = html;
+  for (const [presigned, r2Key] of urlMap) {
+    result = result.replaceAll(presigned, r2Key);
+  }
+  return result;
+}
 
 export interface RichTextEditorProps {
   value: string;
@@ -44,6 +79,8 @@ export function RichTextEditor({
   const unsubRef = useRef<(() => void) | null>(null);
   const lastEmittedHtmlRef = useRef(value ?? "");
   const isApplyingExternalRef = useRef(false);
+  const [resolvedContent, setResolvedContent] = useState<string | null>(null);
+  const urlMapRef = useRef<Map<string, string>>(new Map());
   // Keep uploadVideo stable via ref so the editor doesn't need to be recreated
   const uploadVideoRef = useRef(uploadVideo);
   useEffect(() => { uploadVideoRef.current = uploadVideo; }, [uploadVideo]);
@@ -51,12 +88,28 @@ export function RichTextEditor({
   const uploadImageRef = useRef(uploadImage);
   useEffect(() => { uploadImageRef.current = uploadImage; }, [uploadImage]);
 
+  // Resolve r2:// video URLs on initial load
   useEffect(() => {
+    const content = value || "";
+    if (content.includes("r2://")) {
+      resolveR2VideoUrls(content).then(({ resolved, urlMap }) => {
+        urlMapRef.current = urlMap;
+        setResolvedContent(resolved);
+      });
+    } else {
+      setResolvedContent(content);
+    }
+  // Only on first mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (resolvedContent === null) return; // Wait for resolution
     const mount = rootRef.current;
     if (!mount) return;
 
     const editor = new RichTextEditorCore({
-      content: value || "",
+      content: resolvedContent || "",
       placeholder,
       toolbarMode: "top",
       enableSlashCommands,
@@ -80,8 +133,10 @@ export function RichTextEditor({
 
     unsubRef.current = editor.onChange(({ html }) => {
       if (isApplyingExternalRef.current) return;
-      lastEmittedHtmlRef.current = html;
-      onChange(html);
+      // Restore r2:// keys that were replaced with presigned URLs for display
+      const restored = urlMapRef.current.size > 0 ? restoreR2Keys(html, urlMapRef.current) : html;
+      lastEmittedHtmlRef.current = restored;
+      onChange(restored);
     });
     editorRef.current = editor;
 
@@ -93,7 +148,7 @@ export function RichTextEditor({
     };
   // uploadVideo intentionally excluded — handled via ref
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [resolvedContent]);
 
   useEffect(() => {
     const editor = editorRef.current;
