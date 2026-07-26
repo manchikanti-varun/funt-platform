@@ -77,24 +77,21 @@ export default function CoursesPage() {
     Promise.all([
       api<MyCourse[]>("/api/student/courses").then((r) =>
         r.success && Array.isArray(r.data) ? r.data : []
-      ).catch(() => []),
+      ).catch(() => [] as MyCourse[]),
       api<ExploreCourse[]>("/api/student/courses/explore").then((r) => {
         if (!r.success) {
           setExploreError(r.message ?? "Failed to load courses");
           return [];
         }
         return Array.isArray(r.data) ? r.data : [];
-      }).catch(() => {
-        setExploreError("Failed to load courses");
-        return [] as ExploreCourse[];
-      }),
+      }).catch(() => [] as ExploreCourse[]),
     ])
       .then(([myList, exploreList]) => {
-        setMyCoursesList(myList as MyCourse[]);
-        setExploreCoursesList(exploreList as ExploreCourse[]);
+        setMyCoursesList(myList);
+        setExploreCoursesList(exploreList);
       })
-      .catch(() => {
-        setExploreError("Failed to load courses");
+      .catch((err) => {
+        setExploreError(err?.message ?? "Failed to load courses");
       })
       .finally(() => setLoading(false));
   }, []);
