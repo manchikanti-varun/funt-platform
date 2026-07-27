@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -69,7 +69,7 @@ interface QuizResult {
 
 type ViewState = "loading" | "info" | "quiz" | "result" | "error";
 
-export default function QuizPage() {
+function QuizPage() {
   const params = useSearchParams();
   const quizId = params.get("quizId") ?? "";
   const batchId = params.get("batchId") ?? "";
@@ -437,4 +437,12 @@ export default function QuizPage() {
   }
 
   return null;
+}
+
+export default function QuizPageWithSuspense() {
+  return (
+    <Suspense fallback={<div className="flex h-full min-h-0 flex-1 items-center justify-center"><div className="spinner" /></div>}>
+      <QuizPage />
+    </Suspense>
+  );
 }

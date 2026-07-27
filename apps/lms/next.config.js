@@ -1,7 +1,7 @@
 const path = require('path');
 
 const nextConfig = {
-  transpilePackages: ['@funt-platform/types', '@funt-platform/constants', 'qrcode.react'],
+  transpilePackages: ['@funt-platform/types', '@funt-platform/constants', '@funt-platform/rich-text-editor', 'qrcode.react'],
   // Next 16 uses Turbopack by default. This project also customizes the webpack config,
   // so we explicitly provide an empty turbopack config to avoid the startup failure.
   turbopack: {},

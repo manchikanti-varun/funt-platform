@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, resolveMediaPlaybackUrl, API_URL } from "@/lib/api";
@@ -1030,4 +1030,10 @@ export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowC
   );
 }
 
-export default CourseViewerPage;
+export default function CourseViewerPageWithSuspense() {
+  return (
+    <Suspense fallback={<div className="flex h-full min-h-0 flex-1 items-center justify-center"><div className="spinner" /></div>}>
+      <CourseViewerPage />
+    </Suspense>
+  );
+}

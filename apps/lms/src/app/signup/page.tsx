@@ -245,7 +245,8 @@ function SignupForm() {
     setSubmitError("");
     // Google flow allows skipping password entirely (sign in with Google only).
     // Non-Google flow always requires a password.
-    const skipPassword = !!(options?.skipPassword && isGoogleFlow);
+    // If it's a Google flow and the password field is empty, auto-skip validation.
+    const skipPassword = isGoogleFlow && (!!options?.skipPassword || !password.trim());
     if (!skipPassword) {
       const err = validatePassword(password);
       if (err) {

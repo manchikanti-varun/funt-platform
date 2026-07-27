@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -48,7 +48,7 @@ function toSubmissionType(raw: string): SUBMISSION_TYPE {
 const RICH_TEXT_PREVIEW_CLASS =
   "[&_p]:my-0 [&_ul]:my-0 [&_ol]:my-0 [&_li]:my-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-indent-1]:pl-3 [&_.ql-indent-2]:pl-6 [&_.ql-indent-3]:pl-[4.5rem] [&_.ql-indent-4]:pl-[6rem]";
 
-export default function AssignmentsPage() {
+function AssignmentsPageInner() {
   const searchParams = useSearchParams();
   const batchId = searchParams.get("batchId") ?? "";
   const courseIdParam = searchParams.get("courseId") ?? "";
@@ -517,5 +517,13 @@ export default function AssignmentsPage() {
         </section>
       </div>
     </AppPageShell>
+  );
+}
+
+export default function AssignmentsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-full min-h-0 flex-1 items-center justify-center"><div className="spinner" /></div>}>
+      <AssignmentsPageInner />
+    </Suspense>
   );
 }
