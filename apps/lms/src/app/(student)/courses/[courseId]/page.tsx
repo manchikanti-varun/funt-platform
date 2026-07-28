@@ -130,7 +130,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
   const learnMode = searchParams.get("learn") === "1";
   const [data, setData] = useState<BatchCourse | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
-  const [showChapters, setShowChapters] = useState(defaultShowChapters || learnMode);
+  const [showChapters, setShowChapters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [markingComplete, setMarkingComplete] = useState(false);
@@ -256,8 +256,8 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
   const courseRoute = `/courses/${encodeURIComponent(courseId)}${batchQs}`;
 
   useEffect(() => {
-    if (learnMode) setShowChapters(true);
-  }, [learnMode]);
+    if (learnMode || defaultShowChapters) setShowChapters(true);
+  }, [learnMode, defaultShowChapters]);
 
   useEffect(() => {
     if (showChapters && selectedOrder === null && chapters[0]) {
