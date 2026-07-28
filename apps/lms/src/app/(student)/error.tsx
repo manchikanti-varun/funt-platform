@@ -11,16 +11,18 @@ export default function StudentErrorPage({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    console.error("[StudentErrorBoundary]", error?.message, error?.stack);
   }, [error]);
 
   return (
-    <StateScreen
-      tone="error"
-      title="Oops, that page slipped away"
-      description="A temporary issue interrupted this screen. Please try again."
-      actionLabel="Try again"
-      onAction={reset}
-    />
+    <div>
+      <StateScreen
+        tone="error"
+        title="Oops, that page slipped away"
+        description={error?.message || "A temporary issue interrupted this screen. Please try again."}
+        actionLabel="Try again"
+        onAction={reset}
+      />
+    </div>
   );
 }
