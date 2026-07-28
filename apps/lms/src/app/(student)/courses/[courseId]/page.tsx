@@ -246,9 +246,9 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
   }, [data]);
 
   const selected = useMemo(() => {
-    if (chapters.length === 0) return null;
-    if (selectedOrder !== null) return chapters.find((m) => m.order === selectedOrder) ?? chapters[0];
-    return chapters[0];
+    if (!chapters || chapters.length === 0) return null;
+    if (selectedOrder !== null) return chapters.find((m) => m.order === selectedOrder) ?? chapters[0] ?? null;
+    return chapters[0] ?? null;
   }, [chapters, selectedOrder]);
 
   const batchQs = batchIdFromQuery ? `?batchId=${encodeURIComponent(batchIdFromQuery)}` : "";
