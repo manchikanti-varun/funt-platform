@@ -438,7 +438,9 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
     );
   }
 
-  if (!data) {
+  // Guard: if showChapters is true but data hasn't loaded yet, show spinner
+  // This handles the race condition where learn=1 sets showChapters before data arrives
+  if (!data || !data.courseSnapshot) {
     if (shouldRedirectToCourses) {
       return (
         <div className="flex h-full min-h-0 flex-1 items-center justify-center">
@@ -500,14 +502,6 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
   const hasResourceLink = !!selected?.resourceLinkUrl?.trim?.();
   const hasAssignments = !!selected?.linkedAssignmentId;
   const hasQuiz = !!selected?.linkedQuizId;
-
-  // DEBUG: remove after fixing
-  console.log("[CourseViewer] render", {
-    showChapters, learnMode, hasAccess, totalChapters, selectedOrder,
-    selectedTitle: selected?.title, selectedHasContent: selected?.hasContent,
-    downloadableFiles: selected?.downloadableFiles,
-    chaptersType: typeof chapters, chaptersIsArray: Array.isArray(chapters),
-  });
 
   return (
     <AppPageShell className="max-w-7xl pb-8">
