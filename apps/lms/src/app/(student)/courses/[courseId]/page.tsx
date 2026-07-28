@@ -501,6 +501,14 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
   const hasAssignments = !!selected?.linkedAssignmentId;
   const hasQuiz = !!selected?.linkedQuizId;
 
+  // DEBUG: remove after fixing
+  console.log("[CourseViewer] render", {
+    showChapters, learnMode, hasAccess, totalChapters, selectedOrder,
+    selectedTitle: selected?.title, selectedHasContent: selected?.hasContent,
+    downloadableFiles: selected?.downloadableFiles,
+    chaptersType: typeof chapters, chaptersIsArray: Array.isArray(chapters),
+  });
+
   return (
     <AppPageShell className="max-w-7xl pb-8">
       <div className="page-hero flex shrink-0 items-center gap-3 border-slate-200 py-5">
