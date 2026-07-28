@@ -121,7 +121,7 @@ const YT_MSG_ORIGINS = new Set(["https://www.youtube.com", "https://www.youtube-
 /** YT.PlayerState.ENDED */
 const YT_STATE_ENDED = 0;
 
-export function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters?: boolean } = {}) {
+function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters?: boolean } = {}) {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
