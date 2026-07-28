@@ -12,7 +12,7 @@ const courseModuleSnapshotSchema = new Schema(
     originalGlobalModuleId: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
-    content: { type: String, required: true },
+    content: { type: String, required: false, default: "" },
     youtubeUrl: { type: String, required: false },
     videoUrl: { type: String, required: false },
     resourceLinkUrl: { type: String, required: false },
