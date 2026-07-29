@@ -253,6 +253,35 @@ async function syncCourseHeaderImageToBatchSnapshots(courseIds: string[], header
   }
 }
 
+/**
+ * After adding or removing chapters from a course, auto-sync the updated modules
+ * to all batch snapshots that reference this course.
+ */
+async function syncChapterChangeToBatches(doc: { _id: unknown; courseId?: string }, performedBy: string) {
+  const courseMongoId = String(doc._id);
+  const courseHumanId = (doc as { courseId?: string }).courseId ?? "";
+  const courseIds = [courseMongoId, courseHumanId].filter(Boolean);
+  if (courseIds.length === 0) return;
+
+  const { syncCourseContentToBatch } = await import("./batch.service.js");
+  const batches = await BatchModel.find({
+    $or: [
+      { "courseSnapshots.courseId": { $in: courseIds } },
+      { "courseSnapshot.courseId": { $in: courseIds } },
+    ],
+  }).select("_id").lean().exec();
+
+  for (const batch of batches) {
+    const batchId = String(batch._id);
+    try {
+      await syncCourseContentToBatch(batchId, courseMongoId || courseHumanId, performedBy);
+    } catch (err) {
+      // Log but don't block — course update succeeded, batch sync is best-effort
+      console.error(`[course] Failed to auto-sync batch ${batchId}:`, err instanceof Error ? err.message : err);
+    }
+  }
+}
+
 export async function createCourse(input: CreateCourseInput) {
   if (!input.title?.trim()) throw new AppError("title is required", 400);
   if (!input.description?.trim()) throw new AppError("description is required", 400);
@@ -621,6 +650,9 @@ export async function addChapterToCourse(id: string, globalModuleId: string, per
     order: nextOrder,
   });
 
+  // Auto-sync new chapter to all batches using this course
+  await syncChapterChangeToBatches(doc, performedBy);
+
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
 
@@ -650,6 +682,9 @@ export async function removeChapterFromCourse(id: string, chapterIndex: number, 
     action: "chapter_removed",
     chapterIndex,
   });
+
+  // Auto-sync removal to all batches using this course
+  await syncChapterChangeToBatches(doc, performedBy);
 
   return toCourseResponse(doc as unknown as Parameters<typeof toCourseResponse>[0]);
 }
