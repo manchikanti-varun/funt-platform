@@ -688,7 +688,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                       </div>
                     )}
                     {/* ── Learning Plan milestone panel ── */}
-                    {learningPlan && learningPlan.milestones.length > 0 && (
+                    {learningPlan && learningPlan.milestones && learningPlan.milestones.length > 0 && (
                       <div className="mb-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wider text-teal-700">Learning Plan</p>
                         {learningPlan.totalProgramFeeRupees ? (
@@ -816,7 +816,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                             <p className="mt-2 text-sm text-slate-500 max-w-sm">
                               This chapter is part of a locked milestone. Complete and unlock the previous milestone to access this content.
                             </p>
-                            {learningPlan && (
+                            {learningPlan && learningPlan.milestones && (
                               <div className="mt-6 w-full max-w-sm space-y-2">
                                 {learningPlan.milestones
                                   .filter((ms) => !ms.unlocked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId)
