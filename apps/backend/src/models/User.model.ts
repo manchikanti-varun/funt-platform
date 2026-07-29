@@ -15,7 +15,7 @@ const userSchema = new Schema(
   {
     username: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    email: { type: String, required: false },
+    email: { type: String, required: false, lowercase: true, trim: true },
     mobile: { type: String, required: true },
     age: { type: Number, required: false },
     address: { type: String, required: false },
@@ -26,7 +26,7 @@ const userSchema = new Schema(
     studentXp: { type: Number, required: false, default: 0 },
     studentLevel: { type: Number, required: false, default: 1 },
     coursesCompletedCount: { type: Number, required: false, default: 0 },
-    funtCoins: { type: Number, required: false, default: 0 },
+    funtCoins: { type: Number, required: false, default: 0, min: 0 },
     passwordHash: { type: String, required: false, select: false },
     roles: {
       type: [String],
@@ -78,6 +78,7 @@ userSchema.pre("save", async function () {
 });
 
 userSchema.index({ mobile: 1 });
+userSchema.index({ mobile: 1, roles: 1 }, { unique: true, sparse: true });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ roles: 1, status: 1 });
 

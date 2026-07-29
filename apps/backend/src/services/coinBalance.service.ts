@@ -157,13 +157,50 @@ export async function listCoinGrantHistoryForUser(userId: string, limit = 200): 
 export async function spendCoins(userId: string, amount: number, session?: ClientSession): Promise<void> {
   const n = Math.floor(Number(amount));
   if (!Number.isFinite(n) || n < 1) throw new AppError("Invalid spend amount", 400);
-  await expireGrantsForUser(userId, session);
-  await syncLegacyGrants(userId, session);
 
-  const user = await UserModel.findById(userId).select("funtCoins").session(session ?? null).lean().exec();
-  const wallet = Math.max(0, Math.floor((user as { funtCoins?: number } | null)?.funtCoins ?? 0));
-  if (wallet < n) throw new AppError("Not enough FUNT coins", 400);
+  // If caller already provides a session, use it directly
+  if (session) {
+    await _spendCoinsInSession(userId, n, session);
+    return;
+  }
 
+  // Try with transaction for atomicity (requires replica set)
+  const mongoose = (await import("mongoose")).default;
+  try {
+    const txnSession = await mongoose.startSession();
+    try {
+      await txnSession.withTransaction(async () => {
+        await _spendCoinsInSession(userId, n, txnSession);
+      });
+    } finally {
+      await txnSession.endSession();
+    }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg.includes("Transaction") || errMsg.includes("replica set") || errMsg.includes("session")) {
+      // Fallback: non-transactional but still atomic on the wallet decrement
+      await _spendCoinsNoTransaction(userId, n);
+    } else {
+      throw err;
+    }
+  }
+}
+
+async function _spendCoinsNoTransaction(userId: string, n: number): Promise<void> {
+  await expireGrantsForUser(userId);
+  await syncLegacyGrants(userId);
+
+  // Atomically verify and decrement wallet balance
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: userId, funtCoins: { $gte: n } },
+    { $inc: { funtCoins: -n } },
+    { new: true }
+  )
+    .select("funtCoins")
+    .exec();
+  if (!updated) throw new AppError("Not enough FUNT coins", 400);
+
+  // Deduct from grant tranches (oldest-expiring first)
   const now = new Date();
   const grants = await CoinGrantModel.find({
     userId,
@@ -171,7 +208,6 @@ export async function spendCoins(userId: string, amount: number, session?: Clien
     expiresAt: { $gt: now },
   })
     .sort({ expiresAt: 1 })
-    .session(session ?? null)
     .exec();
 
   let left = n;
@@ -181,17 +217,42 @@ export async function spendCoins(userId: string, amount: number, session?: Clien
     const take = Math.min(rem, left);
     g.amountRemaining = rem - take;
     left -= take;
-    await g.save(session ? { session } : undefined);
+    await g.save();
   }
+}
 
-  if (left > 0) throw new AppError("Not enough FUNT coins", 400);
+async function _spendCoinsInSession(userId: string, n: number, session: ClientSession): Promise<void> {
+  await expireGrantsForUser(userId, session);
+  await syncLegacyGrants(userId, session);
 
+  // Atomically verify and decrement wallet balance FIRST
   const updated = await UserModel.findOneAndUpdate(
     { _id: userId, funtCoins: { $gte: n } },
     { $inc: { funtCoins: -n } },
-    { new: true, ...(session ? { session } : {}) }
+    { new: true, session }
   )
     .select("funtCoins")
     .exec();
   if (!updated) throw new AppError("Not enough FUNT coins", 400);
+
+  // Now deduct from grant tranches (oldest-expiring first)
+  const now = new Date();
+  const grants = await CoinGrantModel.find({
+    userId,
+    amountRemaining: { $gt: 0 },
+    expiresAt: { $gt: now },
+  })
+    .sort({ expiresAt: 1 })
+    .session(session)
+    .exec();
+
+  let left = n;
+  for (const g of grants) {
+    if (left <= 0) break;
+    const rem = g.amountRemaining;
+    const take = Math.min(rem, left);
+    g.amountRemaining = rem - take;
+    left -= take;
+    await g.save({ session });
+  }
 }

@@ -83,7 +83,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "16mb" }));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT ?? "2mb" }));
 // Sanitize MongoDB operator injection from user inputs (defense-in-depth).
 // Note: we deliberately exclude req.headers — sanitizing headers breaks
 // Express's req.get() and our CSRF X-CSRF-Token header reading.

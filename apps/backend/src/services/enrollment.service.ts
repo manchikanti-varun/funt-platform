@@ -1,4 +1,5 @@
 
+import mongoose from "mongoose";
 import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { BatchModel } from "../models/Batch.model.js";
 import { UserModel } from "../models/User.model.js";
@@ -60,19 +61,48 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
 
   let doc;
   try {
-    doc = await EnrollmentModel.create({
-      studentId,
-      batchId: batchMongoId,
-      status: ENROLLMENT_STATUS.ACTIVE,
-    });
+    // Try with transaction for atomicity (requires replica set)
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        doc = await EnrollmentModel.create([{
+          studentId,
+          batchId: batchMongoId,
+          status: ENROLLMENT_STATUS.ACTIVE,
+        }], { session }).then((docs) => docs[0]);
+
+        await clearBatchEnrollmentExclusion(studentId, batchMongoId);
+      });
+    } finally {
+      await session.endSession();
+    }
   } catch (err) {
+    // If transaction fails due to no replica set, fall back to non-transactional
     if ((err as { code?: number })?.code === 11000) {
       throw new AppError("Student is already enrolled in this batch", 400);
     }
-    throw err;
+    const errMsg = err instanceof Error ? err.message : String(err);
+    if (errMsg.includes("Transaction") || errMsg.includes("replica set") || errMsg.includes("session")) {
+      // Fallback: create without session (standalone MongoDB)
+      try {
+        doc = await EnrollmentModel.create({
+          studentId,
+          batchId: batchMongoId,
+          status: ENROLLMENT_STATUS.ACTIVE,
+        });
+        await clearBatchEnrollmentExclusion(studentId, batchMongoId);
+      } catch (fallbackErr) {
+        if ((fallbackErr as { code?: number })?.code === 11000) {
+          throw new AppError("Student is already enrolled in this batch", 400);
+        }
+        throw fallbackErr;
+      }
+    } else {
+      throw err;
+    }
   }
 
-  await clearBatchEnrollmentExclusion(studentId, batchMongoId);
+  if (!doc) throw new AppError("Enrollment creation failed", 500);
   await createAuditLog("ENROLLMENT_CREATED", input.createdBy, "Enrollment", String(doc._id));
 
   // Invalidate the student's cached course list so they see the new enrollment immediately

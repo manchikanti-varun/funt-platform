@@ -279,15 +279,21 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
     try {
       const ticket = await TicketModel.findById(ticketId).lean().exec();
       if (!ticket) return;
-      const isOwner = ticket.createdBy === userId || (ticket as { studentId?: string }).studentId === userId;
-      const isAssigned = ticket.assignedTo === userId;
+      const isOwner = String(ticket.createdBy) === String(userId) || String((ticket as { studentId?: string }).studentId ?? "") === String(userId);
+      const isAssigned = String(ticket.assignedTo) === String(userId);
       if (!isOwner && !isAssigned && !isStaff) return;
+
+      // Sanitize message text: strip HTML/script tags to prevent XSS via realtime channel
+      const sanitizedText = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        .replace(/<[^>]*>/g, "")
+        .trim();
+      if (!sanitizedText) return;
 
       const msg = await TicketMessageModel.create({
         ticketId,
         senderId: userId,
         senderRole: isStaff ? (roles.includes("SUPPORT_AGENT") ? "SUPPORT_AGENT" : roles[0] ?? "ADMIN") : "STUDENT",
-        message: text,
+        message: sanitizedText,
       });
 
       // Reset auto-close timer on activity
@@ -299,7 +305,7 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
         senderId: userId,
         senderName: name,
         senderRole: isStaff ? "STAFF" : "STUDENT",
-        text,
+        text: sanitizedText,
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
@@ -516,7 +522,7 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
     try {
       const ticket = await TicketModel.findById(ticketId).lean().exec();
       if (!ticket) return;
-      const isOwner = ticket.createdBy === userId || (ticket as { studentId?: string }).studentId === userId;
+      const isOwner = String(ticket.createdBy) === String(userId) || String((ticket as { studentId?: string }).studentId ?? "") === String(userId);
       if (!isOwner && !isStaff) return;
 
       const messages = await TicketMessageModel.find({ ticketId })

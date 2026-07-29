@@ -14,7 +14,20 @@ const couponSchema = new Schema(
     audience: { type: String, required: false, enum: COUPON_AUDIENCE },
     shopScope: { type: String, required: false, enum: SHOP_SCOPE, default: "ALL_ORDERS" },
     discountType: { type: String, required: true, enum: DISCOUNT_TYPES },
-    discountValue: { type: Number, required: true, min: 0 },
+    discountValue: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+      validate: {
+        validator: function (this: { discountType?: string }, v: number) {
+          // PERCENT type must be between 0 and 100
+          if (this.discountType === "PERCENT") return v >= 0 && v <= 100;
+          return v >= 0;
+        },
+        message: "Percent discount must be between 0 and 100",
+      },
+    },
     maxRedemptions: { type: Number, required: false, default: null },
     redemptionCount: { type: Number, required: true, default: 0 },
     perStudentLimit: { type: Number, required: true, default: 1 },

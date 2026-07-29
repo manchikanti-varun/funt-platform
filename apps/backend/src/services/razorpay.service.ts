@@ -96,9 +96,9 @@ export function verifyRazorpayPaymentSignature(orderId: string, paymentId: strin
   if (!cred) return false;
   const body = `${orderId}|${paymentId}`;
   const expected = crypto.createHmac("sha256", cred.keySecret).update(body).digest("hex");
-  try {
-    return crypto.timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8"));
-  } catch {
-    return expected === signature;
-  }
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const signatureBuf = Buffer.from(signature, "utf8");
+  // Length mismatch means invalid signature — return false without timing leak
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }

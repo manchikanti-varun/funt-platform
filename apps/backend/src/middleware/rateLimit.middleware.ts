@@ -11,10 +11,17 @@ function getWindowMs(): number {
 /**
  * Returns a Redis-backed store if REDIS_URL is configured and the connection is live.
  * Falls back to the default in-memory store (fine for single-instance deployments).
+ * Logs a warning in production when falling back to in-memory.
  */
 function getStore(prefix: string): Partial<Options> {
   const client = getRedisClient();
-  if (!client) return {};
+  if (!client) {
+    const { isProduction } = getEnv();
+    if (isProduction) {
+      console.warn(`[rate-limit] Redis not available for "${prefix}" limiter — using in-memory store. Rate limiting will NOT be shared across instances.`);
+    }
+    return {};
+  }
   return {
     store: new RedisStore({
       // Use sendCommand for ioredis compatibility with rate-limit-redis v4

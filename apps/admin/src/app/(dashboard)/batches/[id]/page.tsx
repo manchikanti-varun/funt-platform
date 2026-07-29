@@ -92,6 +92,7 @@ export default function EditBatchPage() {
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [name, setName] = useState("");
   const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
+  const [initialCourseIds, setInitialCourseIds] = useState<string[]>([]);
   const [courseSearch, setCourseSearch] = useState("");
   const [trainerId, setTrainerId] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -161,6 +162,7 @@ export default function EditBatchPage() {
         // courseSnapshots store the human-readable courseId or MongoDB _id;
         // normalize to MongoDB _id for checkbox matching once courses are loaded
         setSelectedCourseIds(ids);
+        setInitialCourseIds(ids);
         setTrainerId(r.data.trainerId);
         setStartDate(r.data.startDate ? r.data.startDate.slice(0, 10) : "");
         setEndDate(r.data.endDate ? r.data.endDate.slice(0, 10) : "");
@@ -311,7 +313,11 @@ export default function EditBatchPage() {
     }
     const body: Record<string, unknown> = {
       name,
-      courseIds: selectedCourseIds.length > 0 ? selectedCourseIds : undefined,
+      // Only send courseIds if the course selection actually changed — sending courseIds
+      // triggers a full snapshot regeneration on the backend which overwrites existing module data
+      ...(JSON.stringify([...selectedCourseIds].sort()) !== JSON.stringify([...initialCourseIds].sort())
+        ? { courseIds: selectedCourseIds }
+        : {}),
       trainerId,
       startDate: startDate || undefined,
       endDate: endDate || undefined,

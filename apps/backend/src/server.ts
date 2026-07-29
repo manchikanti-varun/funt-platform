@@ -34,30 +34,32 @@ function listen(): Promise<http.Server> {
 
 
 async function start(): Promise<void> {
+  // Connect to database FIRST — ensures requests won't hit an unconnected DB
+  await connectDb(mongoUri);
+
   const server = await listen();
   try {
-    await connectDb(mongoUri);
     // Start the weekly git backup scheduler (if configured)
     const { startBackupScheduler } = await import("./services/gitBackup.service.js");
     startBackupScheduler();
     // Auto-expire overdue offer letters (check every hour)
     const { expireOverdueLetters } = await import("./services/letter.service.js");
-    expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch(() => {});
+    expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch((e) => { console.error("[letters] Expiry check failed:", e instanceof Error ? e.message : e); });
     setInterval(() => {
-      expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch(() => {});
+      expireOverdueLetters().then((n) => { if (n > 0) console.log(`[letters] Expired ${n} overdue offer letter(s)`); }).catch((e) => { console.error("[letters] Expiry check failed:", e instanceof Error ? e.message : e); });
     }, 60 * 60 * 1000); // every hour
 
     // Retry failed milestone initializations (check every 5 minutes)
     const { retryPendingMilestoneInits } = await import("./services/learningPlan.service.js");
-    retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch(() => {});
+    retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch((e) => { console.error("[milestones] Retry failed:", e instanceof Error ? e.message : e); });
     setInterval(() => {
-      retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch(() => {});
+      retryPendingMilestoneInits().then((n) => { if (n > 0) console.log(`[milestones] Retried ${n} pending milestone init(s)`); }).catch((e) => { console.error("[milestones] Retry failed:", e instanceof Error ? e.message : e); });
     }, 5 * 60 * 1000); // every 5 minutes
 
     // Process scheduled milestone unlocks (DATE_BASED / RELATIVE_DATE) every 10 minutes
     const { processAllScheduledUnlocks } = await import("./services/learningPlan.service.js");
     setInterval(() => {
-      processAllScheduledUnlocks().catch(() => {});
+      processAllScheduledUnlocks().catch((e) => { console.error("[milestones] Scheduled unlock failed:", e instanceof Error ? e.message : e); });
     }, 10 * 60 * 1000); // every 10 minutes
   } catch (err) {
     server.close();

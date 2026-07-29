@@ -42,6 +42,22 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
   // ── Authentication middleware ─────────────────────────────────────
   io.use(async (socket, next) => {
     try {
+      // Validate origin to prevent Cross-Site WebSocket Hijacking (CSWSH)
+      const origin = socket.handshake.headers.origin;
+      if (corsOrigins.length > 0 && origin) {
+        const isAllowed = corsOrigins.some((allowed) => allowed === origin);
+        if (!isAllowed) {
+          return next(new Error("Origin not allowed"));
+        }
+      } else if (corsOrigins.length > 0 && !origin) {
+        // In production, reject connections without an origin header (non-browser clients
+        // should use token auth without cookies and don't need CORS/origin)
+        // Allow if token is provided via handshake.auth (explicit, not cookie-based)
+        if (!socket.handshake.auth?.token) {
+          return next(new Error("Origin header required"));
+        }
+      }
+
       // Try auth token from handshake
       const token =
         socket.handshake.auth?.token ||

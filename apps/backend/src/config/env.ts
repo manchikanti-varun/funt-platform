@@ -52,7 +52,7 @@ const LOCAL_CORS_ORIGINS = [
 
 function getCorsOrigins(): string[] {
   const raw = process.env.CORS_ORIGINS?.trim();
-  const configured = raw ? raw.split(",").map((o) => o.trim()).filter(Boolean) : [];
+  const configured = raw ? raw.split(",").map((o) => o.trim().replace(/\/$/, "")).filter(Boolean) : [];
 
   if (!isProduction) {
     if (configured.length === 0) return LOCAL_CORS_ORIGINS;
