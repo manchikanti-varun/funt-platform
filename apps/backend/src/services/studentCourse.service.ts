@@ -122,7 +122,7 @@ type ProgressDoc = {
 
 function moduleParts(m: ModuleSnapshot): { hasContent: boolean; hasVideo: boolean; hasYoutube: boolean; hasAssignment: boolean; hasQuiz: boolean } {
   return {
-    hasContent: !!((m.content as string)?.trim?.() ?? ""),
+    hasContent: !!((m.content as string)?.trim?.() ?? "") || !!((m.description as string)?.trim?.() ?? ""),
     hasVideo: !!((m.videoUrl as string)?.trim?.() ?? ""),
     hasYoutube: !!((m.youtubeUrl as string)?.trim?.() ?? ""),
     hasAssignment: !!((m.linkedAssignmentId as string)?.trim?.() ?? ""),
