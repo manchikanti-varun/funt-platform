@@ -76,11 +76,6 @@ export default function InstagramPostsPage() {
     fetchPosts();
   }
 
-  function getShortcode(url: string): string {
-    const match = url.match(/\/(p|reel|reels)\/([^/?]+)/);
-    return match?.[2] ?? "";
-  }
-
   function getType(url: string): "post" | "reel" {
     return url.includes("/reel") ? "reel" : "post";
   }
