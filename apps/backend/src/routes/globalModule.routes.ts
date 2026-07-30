@@ -3,6 +3,7 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
+import { largeJsonBody } from "../middleware/largeBody.middleware.js";
 import { ROLE } from "@funt-platform/constants";
 import { createGlobalModuleSchema, updateGlobalModuleSchema } from "../schemas/globalModule.schema.js";
 import {
@@ -22,11 +23,11 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createGlobalModuleSchema), createModule);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), largeJsonBody(), validateBody(createGlobalModuleSchema), createModule);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listModules);
 router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteModules);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getModule);
-router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(updateGlobalModuleSchema), updateModule);
+router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), largeJsonBody(), validateBody(updateGlobalModuleSchema), updateModule);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveModule);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveModule);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteModule);

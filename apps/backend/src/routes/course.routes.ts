@@ -3,6 +3,7 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
+import { largeJsonBody } from "../middleware/largeBody.middleware.js";
 import { ROLE } from "@funt-platform/constants";
 import { createCourseSchema, updateCourseSchema } from "../schemas/index.js";
 import {
@@ -26,13 +27,13 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(createCourseSchema), createCourse);
+router.post("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), largeJsonBody(), validateBody(createCourseSchema), createCourse);
 router.get("/", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), listCourses);
 router.post("/bulk-delete", requireRoles(ROLE.SUPER_ADMIN), bulkDeleteCourses);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getCourse);
-router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), validateBody(updateCourseSchema), updateCourse);
+router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), largeJsonBody(), validateBody(updateCourseSchema), updateCourse);
 router.patch("/:id/reorder-chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), reorderChapters);
-router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), updateCourseChapter);
+router.patch("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), largeJsonBody(), updateCourseChapter);
 router.post("/:id/chapters", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), addChapter);
 router.delete("/:id/chapters/:index", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), removeChapter);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateCourse);

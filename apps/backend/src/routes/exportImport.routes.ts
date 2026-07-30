@@ -13,6 +13,7 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
+import { largeJsonBody } from "../middleware/largeBody.middleware.js";
 import { ROLE } from "@funt-platform/constants";
 import { postExport, postImportPreview, postImport } from "../controllers/exportImport.controller.js";
 
@@ -22,8 +23,8 @@ router.use(authMiddleware);
 // Export — ADMIN can export Level 1-2, SUPER_ADMIN can export all
 router.post("/export", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postExport);
 
-// Import — preview is allowed for both, execution requires SUPER_ADMIN for Level 3-4
-router.post("/import/preview", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postImportPreview);
-router.post("/import", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), postImport);
+// Import — uses streaming body parser (payloads can be very large)
+router.post("/import/preview", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), largeJsonBody(), postImportPreview);
+router.post("/import", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN), largeJsonBody(), postImport);
 
 export const exportImportRoutes = router;

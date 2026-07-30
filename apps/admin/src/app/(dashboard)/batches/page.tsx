@@ -155,7 +155,7 @@ export default function BatchesPage() {
     const start = (safePage - 1) * pageSize;
     return sortedList.slice(start, start + pageSize);
   }, [sortedList, safePage, pageSize]);
-  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, statusFilter, visibilityFilter]);
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, visibilityFilter]);
 
   function handleSort(key: string) {
     if (sortKey === key) {
