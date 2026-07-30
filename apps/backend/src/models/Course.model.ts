@@ -103,6 +103,26 @@ const courseSchema = new Schema(
     learningOutcomes: { type: [String], required: false, default: [] },
     /** Course overview / detailed description (rich text) */
     overview: { type: String, required: false, default: "" },
+    /** Short description for course card (plain text, 2-3 lines) */
+    cardDescription: { type: String, required: false, default: "" },
+    /** "Includes" bullet points shown on the course card */
+    cardIncludes: { type: [String], required: false, default: [] },
+    /** Original price in paise (shown with strikethrough on cards) */
+    originalPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
+    /** Current/discounted price in paise */
+    enrollmentPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
+    /** Gallery images for course page (3-4 images) */
+    courseImages: { type: [String], required: false, default: [] },
+    /** Manual FAQs for course page [{question, answer}] */
+    courseFaqs: {
+      type: [{
+        question: { type: String, required: true },
+        answer: { type: String, required: true },
+        _id: false,
+      }],
+      required: false,
+      default: [],
+    },
     /** Pricing tiers: [{label, price, note}] shown on explore page */
     pricingTiers: {
       type: [{

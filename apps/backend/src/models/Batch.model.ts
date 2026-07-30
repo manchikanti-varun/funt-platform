@@ -167,6 +167,8 @@ const batchSchema = new Schema(
     autoEnrollAllStudents: { type: Boolean, required: false, default: false },
     /** Marks this batch as the Global Online Batch (only one can be active at a time). Super Admin only. */
     isGlobalOnlineBatch: { type: Boolean, required: false, default: false },
+    /** Marks this batch as the Global Centre Batch (only one can be active at a time). Super Admin only. */
+    isGlobalCentreBatch: { type: Boolean, required: false, default: false },
     /** Marks this batch as the "Not Enrolled Students" batch (only one can be active at a time). Super Admin only. */
     isNotEnrolledBatch: { type: Boolean, required: false, default: false },
     /** Franchise center that owns this batch (null = parent org batch) */

@@ -734,6 +734,7 @@ export async function listCoursesForExplore() {
       chapterCount: number;
       moduleCount: number;
       enrollmentPriceInPaise: number;
+      originalPriceInPaise: number;
       paymentOptionsLabel: string;
       courseHeaderImageUrl?: string;
       isDemo?: boolean;
@@ -742,12 +743,19 @@ export async function listCoursesForExplore() {
       certification?: string;
       paymentNote?: string;
       learningOutcomes: string[];
+      cardDescription?: string;
+      cardIncludes: string[];
       overview?: string;
       pricingTiers: unknown[];
+      courseImages: string[];
+      courseFaqs: unknown[];
+      batchType: string;
     }
   >();
   for (const batch of batches) {
     const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+    const batchFlags = batch as { isGlobalOnlineBatch?: boolean; isGlobalCentreBatch?: boolean; isNotEnrolledBatch?: boolean };
+    const batchType = batchFlags.isGlobalOnlineBatch ? "GLOBAL_ONLINE" : batchFlags.isGlobalCentreBatch ? "GLOBAL_CENTRE" : batchFlags.isNotEnrolledBatch ? "NOT_ENROLLED" : "PRIVATE";
     for (const snap of snapshots) {
       const s = snap as { courseId?: string; title?: string; description?: string; modules?: unknown[] };
       const courseId = s?.courseId ?? String(batch._id);
@@ -767,6 +775,7 @@ export async function listCoursesForExplore() {
         chapterCount: Array.isArray(s?.modules) ? s.modules.length : 0,
         moduleCount: Array.isArray(s?.modules) ? s.modules.length : 0,
         enrollmentPriceInPaise,
+        originalPriceInPaise: Math.max(0, Math.floor(Number((s as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
         paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
         isDemo: !!(s as { isDemo?: boolean }).isDemo,
@@ -775,8 +784,13 @@ export async function listCoursesForExplore() {
         certification: String((s as { certification?: string }).certification ?? "").trim() || undefined,
         paymentNote: String((s as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
         learningOutcomes: Array.isArray((s as { learningOutcomes?: string[] }).learningOutcomes) ? (s as { learningOutcomes: string[] }).learningOutcomes : [],
+        cardDescription: String((s as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
+        cardIncludes: Array.isArray((s as { cardIncludes?: string[] }).cardIncludes) ? (s as { cardIncludes: string[] }).cardIncludes : [],
         overview: String((s as { overview?: string }).overview ?? "").trim() || undefined,
         pricingTiers: Array.isArray((s as { pricingTiers?: unknown[] }).pricingTiers) ? (s as { pricingTiers: unknown[] }).pricingTiers : [],
+        courseImages: Array.isArray((s as { courseImages?: string[] }).courseImages) ? (s as { courseImages: string[] }).courseImages : [],
+        courseFaqs: Array.isArray((s as { courseFaqs?: unknown[] }).courseFaqs) ? (s as { courseFaqs: unknown[] }).courseFaqs : [],
+        batchType,
       });
     }
   }
@@ -794,6 +808,7 @@ export async function listCoursesForExplore() {
       batchId: v.batchId,
       batchName: v.batchName,
       enrollmentPriceInPaise: v.enrollmentPriceInPaise,
+      originalPriceInPaise: v.originalPriceInPaise,
       paymentOptionsLabel: v.paymentOptionsLabel,
       courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
       isDemo: v.isDemo,
@@ -802,8 +817,13 @@ export async function listCoursesForExplore() {
       certification: v.certification,
       paymentNote: v.paymentNote,
       learningOutcomes: v.learningOutcomes,
+      cardDescription: v.cardDescription,
+      cardIncludes: v.cardIncludes,
       overview: v.overview,
       pricingTiers: v.pricingTiers,
+      courseImages: v.courseImages,
+      courseFaqs: v.courseFaqs,
+      batchType: v.batchType,
     };
   });
 }
