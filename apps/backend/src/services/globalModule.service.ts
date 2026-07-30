@@ -51,7 +51,14 @@ function contentChanged(
 ): boolean {
   if (input.title !== undefined && input.title !== existing.title) return true;
   if (input.description !== undefined && input.description !== existing.description) return true;
-  if (input.content !== undefined && input.content !== (existing.content ?? "")) return true;
+  if (input.content !== undefined && input.content !== (existing.content ?? "")) {
+    // Don't consider it a "change" if the input is empty but existing has content
+    // — this is an accidental wipe that will be blocked later anyway.
+    const hasExistingContent = !!((existing.content ?? "").trim());
+    const inputIsEmpty = !(input.content ?? "").trim();
+    if (hasExistingContent && inputIsEmpty) return false;
+    return true;
+  }
   if (input.youtubeUrl !== undefined && (input.youtubeUrl || null) !== (existing.youtubeUrl ?? null)) return true;
   if (input.videoUrl !== undefined && (input.videoUrl || null) !== (existing.videoUrl ?? null)) return true;
   if (input.resourceLinkUrl !== undefined && (input.resourceLinkUrl || null) !== ((existing as { resourceLinkUrl?: string | null }).resourceLinkUrl ?? null)) return true;
@@ -288,7 +295,21 @@ export async function updateModule(
 
   existing.title = input.title !== undefined ? input.title.trim() : existing.title;
   existing.description = input.description !== undefined ? input.description.trim() : existing.description;
-  existing.content = input.content !== undefined ? sanitizeRichText(input.content) : (existing.content ?? "");
+  // Protect against accidental content wipe — if the chapter already has content,
+  // don't overwrite it with an empty string (likely a frontend timing bug).
+  // To intentionally clear content, pass a single space or use the clear action.
+  if (input.content !== undefined) {
+    const newContent = sanitizeRichText(input.content);
+    const hasExistingContent = !!(existing.content ?? "").trim();
+    const isIntentionalClear = input.content === " " || input.content === "<p></p>" || input.content === "<br>";
+    if (newContent.trim() || !hasExistingContent || isIntentionalClear) {
+      existing.content = newContent;
+    } else {
+      // Content wipe was blocked — log it for debugging
+      console.warn(`[updateModule] Blocked empty content save for module ${id}. Existing content length: ${(existing.content ?? "").length}. Input was empty/whitespace.`);
+    }
+    // If newContent is empty but existing has content, skip — prevents accidental wipe
+  } 
   existing.youtubeUrl = input.youtubeUrl !== undefined ? input.youtubeUrl.trim() || undefined : existing.youtubeUrl;
   (existing as { videoUrl?: string }).videoUrl = input.videoUrl !== undefined ? input.videoUrl.trim() || undefined : (existing as { videoUrl?: string }).videoUrl;
   (existing as { resourceLinkUrl?: string }).resourceLinkUrl = input.resourceLinkUrl !== undefined ? input.resourceLinkUrl.trim() || undefined : (existing as { resourceLinkUrl?: string }).resourceLinkUrl;

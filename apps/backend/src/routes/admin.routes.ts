@@ -266,23 +266,47 @@ router.get("/analytics/revenue", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), get
 // ── Data Migration: Fix chapters with content in description field ────────────
 router.post("/migrate/chapter-content", requireRoles(ROLE.SUPER_ADMIN), asyncHandler(async (_req: Request, res: Response) => {
   const { GlobalModuleModel } = await import("../models/GlobalModule.model.js");
-  const chapters = await GlobalModuleModel.find({
+
+  // Case 1: Content in description but not in content field
+  const descChapters = await GlobalModuleModel.find({
     $or: [{ content: { $exists: false } }, { content: "" }, { content: null }],
     description: { $regex: /<[a-z][\s\S]*>/i },
   }).exec();
 
-  let updated = 0;
-  for (const ch of chapters) {
+  let migratedFromDesc = 0;
+  for (const ch of descChapters) {
     const desc = String(ch.description ?? "").trim();
     if (!desc) continue;
     const plainSummary = desc.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
     ch.content = desc;
     ch.description = plainSummary || ch.title;
     await ch.save();
-    updated++;
+    migratedFromDesc++;
   }
 
-  res.json({ success: true, data: { found: chapters.length, migrated: updated } });
+  // Case 2: Content was accidentally wiped — list affected chapters (don't auto-restore)
+  const emptyContentChapters = await GlobalModuleModel.find({
+    $or: [{ content: "" }, { content: null }],
+    "versionSnapshots.content": { $regex: /<[a-z][\s\S]*>/i },
+  }).select("_id moduleId title").lean().exec();
+
+  const wipedChapters = emptyContentChapters.map((ch) => ({
+    id: String(ch._id),
+    moduleId: (ch as { moduleId?: string }).moduleId,
+    title: ch.title,
+  }));
+
+  res.json({
+    success: true,
+    data: {
+      migratedFromDesc,
+      wipedChaptersFound: wipedChapters.length,
+      wipedChapters: wipedChapters.slice(0, 20),
+      note: wipedChapters.length > 0
+        ? "These chapters have empty content but version history has data. Use 'Restore version' on each chapter's edit page to recover."
+        : "No accidentally wiped chapters found.",
+    },
+  });
 }));
 
 export const adminRoutes = router;

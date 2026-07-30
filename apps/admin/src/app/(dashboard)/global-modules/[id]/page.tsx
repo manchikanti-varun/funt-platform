@@ -57,6 +57,7 @@ export default function EditGlobalChapterPage() {
   const router = useRouter();
   const id = params.id as string;
   const [chapter, setChapter] = useState<Chapter | null>(null);
+  const [chapterLoaded, setChapterLoaded] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -185,6 +186,7 @@ export default function EditGlobalChapterPage() {
     setResourceLinkUrl(data.resourceLinkUrl ?? "");
     setLinkedAssignmentId(data.linkedAssignmentId ?? "");
     setLinkedQuizId(data.linkedQuizId ?? "");
+    setChapterLoaded(true);
   }
 
   useEffect(() => {
@@ -206,6 +208,10 @@ export default function EditGlobalChapterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!chapterLoaded) {
+      setError("Chapter data is still loading. Please wait.");
+      return;
+    }
     if (uploadsInProgress > 0) {
       setError("Please wait for image uploads to finish before saving.");
       return;
@@ -213,6 +219,16 @@ export default function EditGlobalChapterPage() {
     // Block submit if content still contains any base64 images or videos
     if (content.includes("data:image/") || content.includes("data:video/")) {
       setError("Images/videos are still being uploaded to storage. Please wait a few seconds and try again.");
+      return;
+    }
+    // Prevent accidental content wipe — if the chapter had content but the
+    // editor state is empty (e.g. editor not yet hydrated, or user cleared it
+    // unintentionally), block the save.
+    const chapterHadContent = !!((chapter?.content ?? "").trim());
+    const currentContentEmpty = !content.trim();
+    if (chapterHadContent && currentContentEmpty) {
+      setError("Content appears to be empty. If you intentionally want to clear the content, please contact support.");
+      setLoading(false);
       return;
     }
     setLoading(true);
