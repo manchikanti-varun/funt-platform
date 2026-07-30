@@ -135,7 +135,7 @@ export default function FranchiseDashboardPage() {
                   </div>
                 </div>
                 {p.available === 0 && (
-                  <p className="mt-2 text-xs text-red-500 font-medium">⚠ No keys remaining</p>
+                  <p className="mt-2 text-xs text-red-500 font-medium">No keys remaining</p>
                 )}
               </div>
             ))}

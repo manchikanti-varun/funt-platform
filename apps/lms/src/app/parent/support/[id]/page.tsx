@@ -56,7 +56,7 @@ export default function ParentTicketDetailPage() {
     </div>
   );
   if (!ticket) return (
-    <div className="p-6"><Link href="/parent/support" className="text-sm text-indigo-600 hover:underline">← Back</Link><p className="mt-4 text-slate-600">Ticket not found.</p></div>
+    <div className="p-6"><Link href="/parent/support" className="text-sm text-indigo-600 hover:underline">Back</Link><p className="mt-4 text-slate-600">Ticket not found.</p></div>
   );
 
   const isClosed = ticket.status === "CLOSED";

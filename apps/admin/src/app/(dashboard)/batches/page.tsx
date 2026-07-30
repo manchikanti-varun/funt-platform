@@ -254,6 +254,7 @@ export default function BatchesPage() {
             </Link>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             {isSuperAdmin && selectedIds.size > 0 && (
               <div className="flex items-center gap-3 border-b border-rose-100 bg-rose-50 px-5 py-3">
@@ -442,6 +443,7 @@ export default function BatchesPage() {
               </div>
             </div>
           )}
+          </>
         )}
       </DataPanel>
     </AppPageShell>

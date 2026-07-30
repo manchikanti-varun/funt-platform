@@ -246,7 +246,7 @@ export function QuizForm({ initialData, onSave, saving }: Props) {
                     placeholder="Image URL"
                   />
                   {q.options.length > 2 && (
-                    <button type="button" onClick={() => removeOption(qIdx, oIdx)} className="text-xs text-red-500 hover:text-red-700">✕</button>
+                    <button type="button" onClick={() => removeOption(qIdx, oIdx)} className="text-xs text-red-500 hover:text-red-700">&times;</button>
                   )}
                 </div>
               ))}

@@ -300,7 +300,7 @@ export default function StudentTicketDetailPage() {
                   disabled={closing}
                   className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
                 >
-                  {closing ? "Closing…" : "✓ Mark as Closed"}
+                  {closing ? "Closing…" : "Mark as Closed"}
                 </button>
               )}
               <span className="text-xs text-slate-400">Ctrl+Enter to send</span>

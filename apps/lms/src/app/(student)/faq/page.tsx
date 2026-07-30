@@ -432,7 +432,7 @@ function FaqAccordion({ item, isOpen, onToggle }: { item: FaqItem; isOpen: boole
                     className="inline-flex items-center gap-1.5 rounded-full border border-[#e5d8b3] bg-white px-3.5 py-2 text-xs font-bold text-funt-ink shadow-sm transition hover:bg-[#fff8e8]"
                   >
                     {action.label}
-                    <span aria-hidden className="text-[#b8942a]">→</span>
+                    <span aria-hidden className="text-[#b8942a]"><svg className="inline h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></span>
                   </Link>
                 )
               )}

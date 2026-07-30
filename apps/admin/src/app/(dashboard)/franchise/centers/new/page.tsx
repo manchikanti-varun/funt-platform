@@ -60,7 +60,7 @@ export default function OnboardFranchisePage() {
       <AppPageShell>
         <PageHeader title="Franchise Onboarded!" backHref="/franchise/centers" backLabel="Back" />
         <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-          <p className="text-lg font-semibold text-emerald-800">✓ Franchise center created successfully</p>
+          <p className="text-lg font-semibold text-emerald-800">Franchise center created successfully</p>
           <div className="mt-4 space-y-2 text-sm text-emerald-700">
             <p><strong>Franchise Code:</strong> {result.franchiseCode}</p>
             <p><strong>Login Username:</strong> {result.ownerUsername}</p>

@@ -719,11 +719,11 @@ export default function ParentDashboardPage() {
                         ? "border-indigo-200 bg-indigo-50 text-indigo-900"
                         : "border-slate-200 bg-slate-50 text-slate-600";
                     const statusLabel = ms.completed
-                      ? "✓ Completed"
+                      ? "Completed"
                       : ms.unlocked
                         ? `In Progress — ${ms.completionPct}%`
                         : ms.paymentStatus === "OVERDUE"
-                          ? "⚠ Payment Overdue"
+                          ? "Payment Overdue"
                           : ms.eligibleForNext
                             ? "Eligible (Payment Pending)"
                             : "Locked";

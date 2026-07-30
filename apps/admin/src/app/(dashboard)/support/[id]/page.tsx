@@ -178,7 +178,7 @@ export default function TicketDetailPage() {
               {ticket.attachments.map((url, i) => (
                 <a key={i} href={url} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
-                  📎 Attachment {i + 1}
+                  Attachment {i + 1}
                 </a>
               ))}
             </div>
@@ -218,7 +218,7 @@ export default function TicketDetailPage() {
                           : "Trainer";
                         return (
                           <option key={s.id} value={s.id}>
-                            {isSelf ? "👤 " : ""}{s.name || s.username} ({primaryRole}){isSelf ? " — Self" : ""}
+                            {isSelf ? "" : ""}{s.name || s.username} ({primaryRole}){isSelf ? " — Self" : ""}
                           </option>
                         );
                       })}
@@ -306,7 +306,7 @@ export default function TicketDetailPage() {
                   className="btn-danger text-xs px-3 py-1.5"
                   title="Flag this ticket as urgent — moves it to Admin/Super Admin attention"
                 >
-                  🚨 Escalate to Admin
+                  Escalate to Admin
                 </button>
               )}
               {canReopen && (isResolved || isClosed) && (
@@ -318,7 +318,7 @@ export default function TicketDetailPage() {
               {isResolved && (
                 <button onClick={() => void doAction("close", {}, "Ticket closed.")} disabled={actionLoading}
                   className="btn-secondary text-xs px-3 py-1.5">
-                  ✓ Close Ticket
+                  Close Ticket
                 </button>
               )}
             </div>
@@ -381,7 +381,7 @@ export default function TicketDetailPage() {
                             : "Student"}
                         </span>
                         {m.isInternalNote && (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">🔒 Internal Note</span>
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Internal Note</span>
                         )}
                         <span className="text-xs text-slate-400">{new Date(m.createdAt).toLocaleString()}</span>
                       </div>
@@ -404,7 +404,7 @@ export default function TicketDetailPage() {
               <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800 transition hover:bg-amber-100">
                 <input type="checkbox" checked={isInternalNote} onChange={(e) => setIsInternalNote(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-amber-300 text-amber-500 focus:ring-amber-400" />
-                🔒 Internal note (staff only)
+                Internal note (staff only)
               </label>
             </div>
             <textarea

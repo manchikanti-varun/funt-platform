@@ -248,7 +248,7 @@ export default function LetterSettingsPage() {
                   rows={3}
                   className="input text-sm flex-1"
                 />
-                <button type="button" onClick={() => removeAnnexureItem(idx)} className="shrink-0 mt-1 text-red-500 hover:text-red-700 text-xs font-bold">✕</button>
+                <button type="button" onClick={() => removeAnnexureItem(idx)} className="shrink-0 mt-1 text-red-500 hover:text-red-700 text-xs font-bold">&times;</button>
               </div>
             ))}
             <button type="button" onClick={addAnnexureItem} className="btn-secondary text-sm px-4 py-2">+ Add Item</button>

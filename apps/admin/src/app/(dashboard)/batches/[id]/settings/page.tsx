@@ -154,7 +154,7 @@ export default function BatchSettingsHubPage() {
                         : "border-slate-300 bg-white text-slate-800 hover:bg-teal-50 hover:border-teal-300 disabled:opacity-50"
                     }`}
                   >
-                    {batch?.isGlobalOnlineBatch ? "✓ Global Online Batch (Active)" : settingGlobal ? "Setting…" : "Mark as Global Online Batch"}
+                    {batch?.isGlobalOnlineBatch ? "Global Online Batch (Active)" : settingGlobal ? "Setting…" : "Mark as Global Online Batch"}
                   </button>
                   {batch?.isGlobalOnlineBatch && (
                     <span className="text-xs font-medium text-teal-700">This batch is currently the Global Online Batch</span>
@@ -172,7 +172,7 @@ export default function BatchSettingsHubPage() {
                         : "border-slate-300 bg-white text-slate-800 hover:bg-amber-50 hover:border-amber-300 disabled:opacity-50"
                     }`}
                   >
-                    {batch?.isNotEnrolledBatch ? "✓ Not Enrolled Students Batch (Active)" : settingNotEnrolled ? "Setting…" : "Mark as Not Enrolled Students Batch"}
+                    {batch?.isNotEnrolledBatch ? "Not Enrolled Students Batch (Active)" : settingNotEnrolled ? "Setting…" : "Mark as Not Enrolled Students Batch"}
                   </button>
                   {batch?.isNotEnrolledBatch && (
                     <span className="text-xs font-medium text-amber-700">This batch is currently the Not Enrolled Students Batch</span>

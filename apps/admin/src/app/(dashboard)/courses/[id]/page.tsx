@@ -438,7 +438,7 @@ export default function EditCoursePage() {
               href={`/courses/${id}/learning-plan`}
               className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
             >
-              🗺 Learning Plan
+              Learning Plan
             </Link>
           </>
         }

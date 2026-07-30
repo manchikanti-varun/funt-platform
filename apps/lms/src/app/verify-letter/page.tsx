@@ -149,7 +149,7 @@ function VerifyLetterContent() {
             {/* Signature status */}
             {result.signatureValid && (
               <p className="mt-2 text-center text-xs font-medium text-emerald-700">
-                ✓ Digitally signed by {result.signedBy || "FUNT Robotics Academy"}
+                Digitally signed by {result.signedBy || "FUNT Robotics Academy"}
               </p>
             )}
 

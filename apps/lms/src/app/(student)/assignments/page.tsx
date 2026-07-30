@@ -492,7 +492,7 @@ function AssignmentsPageInner() {
                               {sub.status === "PENDING" ? "Pending" : sub.status === "APPROVED" ? "Approved" : "Rejected"}
                             </span>
                             {sub.type === "chapter" && sub.rating != null && (
-                              <span className="ml-1.5 text-slate-500">★ {sub.rating}</span>
+                              <span className="ml-1.5 text-slate-500"><svg className="inline h-3.5 w-3.5 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg> {sub.rating}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-slate-600">{new Date(sub.submittedAt).toLocaleDateString()}</td>

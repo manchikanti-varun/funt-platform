@@ -873,7 +873,7 @@ function MilestoneCard({
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">Inactive</span>
             )}
             {milestone.certificateEligible && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">🏅 Certificate</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">Certificate</span>
             )}
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
               {UNLOCK_TYPE_LABELS[milestone.unlockType] ?? milestone.unlockType}

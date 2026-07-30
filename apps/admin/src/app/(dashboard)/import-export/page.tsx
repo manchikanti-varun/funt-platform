@@ -553,7 +553,7 @@ function RestorePanel() {
 
       {/* Warning banner */}
       <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3">
-        <p className="text-xs font-bold text-amber-800">⚠️ Destructive Operation</p>
+        <p className="text-xs font-bold text-amber-800">⚠ Destructive Operation</p>
         <p className="mt-1 text-xs text-amber-700">
           Restoring will <strong>replace all data</strong> in each collection with the backup data.
           Active sessions are preserved but all other data will be overwritten.

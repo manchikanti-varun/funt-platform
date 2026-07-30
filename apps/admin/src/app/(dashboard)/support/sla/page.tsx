@@ -102,7 +102,7 @@ export default function SlaPage() {
       {/* Breached */}
       <div className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
         <div className="border-b border-red-100 bg-red-50 px-6 py-4">
-          <h2 className="text-sm font-semibold text-red-800">⚠ SLA Breached ({data.slaBreachCount})</h2>
+          <h2 className="text-sm font-semibold text-red-800">SLA Breached ({data.slaBreachCount})</h2>
         </div>
         <TicketTable tickets={data.breachedTickets} emptyMsg="No SLA breaches — great!" />
       </div>

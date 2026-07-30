@@ -105,7 +105,7 @@ export function PlatformUpiCheckoutSummary({
       <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">UPI ID</p>
       {fieldShell(<span className="break-all font-mono text-[13px]">{state.upiId}</span>)}
       <Link href={UPI_CENTER_HREF} className="mt-3 inline-block text-xs font-semibold text-teal-700 hover:underline">
-        Report a problem or request a change →
+        Report a problem or request a change
       </Link>
     </div>
   );

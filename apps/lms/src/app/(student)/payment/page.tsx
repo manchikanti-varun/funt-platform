@@ -436,7 +436,7 @@ function PaymentForm() {
           href={`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
           className="text-sm font-medium text-funt-gold-deep hover:underline"
         >
-          ← Course
+          Course
         </Link>
         <div className="surface-blocked mt-4">
           <p className="label-overline text-rose-800/90">Payment</p>
@@ -453,7 +453,7 @@ function PaymentForm() {
         href={type === "shop" ? "/shop" : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
         className="text-sm font-medium text-funt-gold-deep hover:underline"
       >
-        ← Back
+        Back
       </Link>
       <FormPanel className="mt-4 border-funt-gold/35 bg-gradient-to-br from-white via-funt-butter/80 to-funt-honey/30 p-8 shadow-xl shadow-black/10 ring-funt-gold/20">
         <h1 className="text-xl font-semibold tracking-tight text-funt-ink">

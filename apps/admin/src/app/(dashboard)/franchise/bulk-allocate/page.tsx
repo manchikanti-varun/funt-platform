@@ -119,7 +119,7 @@ export default function BulkAllocatePage() {
                     </td>
                     <td className="py-2">
                       {rows.length > 1 && (
-                        <button onClick={() => removeRow(i)} className="text-red-400 hover:text-red-600 text-sm">✕</button>
+                        <button onClick={() => removeRow(i)} className="text-red-400 hover:text-red-600 text-sm">&times;</button>
                       )}
                     </td>
                   </tr>

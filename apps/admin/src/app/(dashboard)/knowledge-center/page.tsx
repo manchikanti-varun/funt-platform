@@ -198,7 +198,7 @@ export default function KnowledgeCenterPage() {
               href="/knowledge-center/search"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
             >
-              View all →
+              View all
             </Link>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -248,7 +248,7 @@ export default function KnowledgeCenterPage() {
               href="/knowledge-center/search?type=FAQ"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
             >
-              All FAQs →
+              All FAQs
             </Link>
           </div>
           <div className="mt-4 space-y-2">

@@ -171,7 +171,7 @@ function QuizPage() {
         <div className="mt-12 text-center">
           <p className="text-lg font-semibold text-red-600">{error || "Something went wrong"}</p>
           <Link href={backUrl} className="mt-4 inline-block text-sm font-semibold text-indigo-600 hover:underline">
-            ← Back to course
+            <svg className="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg> Back to course
           </Link>
         </div>
       </AppPageShell>
@@ -310,7 +310,7 @@ function QuizPage() {
               disabled={currentIdx === 0}
               className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-40"
             >
-              ← Previous
+              <svg className="inline h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg> Previous
             </button>
             {currentIdx < totalQuestions - 1 ? (
               <button
@@ -318,7 +318,7 @@ function QuizPage() {
                 onClick={() => setCurrentIdx((i) => Math.min(totalQuestions - 1, i + 1))}
                 className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500"
               >
-                Next →
+                Next <svg className="inline h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
               </button>
             ) : (
               <button
@@ -387,7 +387,7 @@ function QuizPage() {
                         return (
                           <div key={o.optionId} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${style}`}>
                             {isStudentPick && <span className="text-xs font-bold text-slate-500">Your answer</span>}
-                            {isCorrectOpt && <span className="text-xs font-bold text-emerald-600">✓</span>}
+                            {isCorrectOpt && <span className="text-xs font-bold text-emerald-600"><svg className="inline h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg></span>}
                             <span className="text-slate-700">{o.text}</span>
                           </div>
                         );

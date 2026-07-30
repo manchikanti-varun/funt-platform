@@ -198,6 +198,7 @@ export default function GlobalAssignmentsPage() {
             </Link>
           </div>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
@@ -293,6 +294,7 @@ export default function GlobalAssignmentsPage() {
               </div>
             </div>
           )}
+          </>
         )}
       </DataPanel>
     </AppPageShell>

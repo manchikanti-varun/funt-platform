@@ -82,7 +82,7 @@ export default function ReferralPage() {
             <span className="font-mono text-2xl font-black text-indigo-700 tracking-wide">{data.code}</span>
             <button onClick={copyCode}
               className="rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition">
-              {copied ? "✓ Copied" : "Copy"}
+              {copied ? "Copied" : "Copy"}
             </button>
           </div>
           <p className="mt-2 text-xs text-slate-500">Share this code with friends. When they sign up and use it, you both get rewards!</p>
