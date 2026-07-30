@@ -1,0 +1,23 @@
+{
+  "name": "@funt-platform/design-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./tokens.css",
+    "./components.css": "./components.css",
+    "./styles": "./styles.css"
+  },
+  "files": ["src", "tokens.css", "components.css", "styles.css"],
+  "dependencies": {},
+  "peerDependencies": {
+    "next": ">=14",
+    "react": ">=18"
+  },
+  "scripts": {
+    "build": "echo 'no build needed - source-only package'"
+  }
+}

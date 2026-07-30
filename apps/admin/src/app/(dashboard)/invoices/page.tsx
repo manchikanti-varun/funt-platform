@@ -94,6 +94,17 @@ export default function InvoicesPage() {
     });
   }, [invoices, search]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedInvoices = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return filteredInvoices.slice(start, start + pageSize);
+  }, [filteredInvoices, safePage, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [search, filterBatchId]);
+
   async function generateInvoice(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
@@ -280,7 +291,7 @@ export default function InvoicesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredInvoices.map((inv) => (
+                    {paginatedInvoices.map((inv) => (
                       <tr key={inv.id} className="hover:bg-slate-50/80">
                         <td className="px-4 py-3">
                           <span className="badge-info font-mono !rounded-md !px-2 !py-0.5 !text-[11px]">
@@ -312,6 +323,28 @@ export default function InvoicesPage() {
                   </tbody>
                 </table>
               </div>
+              {filteredInvoices.length > pageSize && (
+                <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 px-5 py-3">
+                  <div className="flex items-center gap-4 text-sm text-slate-600">
+                    <span>{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? "s" : ""}</span>
+                    <label className="inline-flex items-center gap-2">
+                      <span>Show</span>
+                      <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/25">
+                        {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Previous page">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <span className="px-3 text-sm font-medium text-slate-700">Page {safePage} of {totalPages}</span>
+                    <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Next page">
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </PageSection>

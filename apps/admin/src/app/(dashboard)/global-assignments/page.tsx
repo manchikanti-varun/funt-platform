@@ -58,6 +58,16 @@ export default function GlobalAssignmentsPage() {
     });
   }, [list, sortKey, sortDir]);
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const totalPages = Math.max(1, Math.ceil(sortedList.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedList = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return sortedList.slice(start, start + pageSize);
+  }, [sortedList, safePage, pageSize]);
+
   function handleSort(key: string) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -200,7 +210,7 @@ export default function GlobalAssignmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {sortedList.map((a) => (
+                {paginatedList.map((a) => (
                   <tr key={a.id} className="transition hover:bg-slate-50/80">
                     <td className="px-5 py-4 text-sm font-medium text-slate-800">{a.title}</td>
                     <td className="px-5 py-4 text-sm text-slate-600">{a.type === "general" ? "General" : "Chapter"}</td>
@@ -261,6 +271,28 @@ export default function GlobalAssignmentsPage() {
               </tbody>
             </table>
           </div>
+          {sortedList.length > pageSize && (
+            <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 px-5 py-3">
+              <div className="flex items-center gap-4 text-sm text-slate-600">
+                <span>{sortedList.length} assignment{sortedList.length !== 1 ? "s" : ""}</span>
+                <label className="inline-flex items-center gap-2">
+                  <span>Show</span>
+                  <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm font-medium text-slate-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/25">
+                    {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={safePage <= 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Previous page">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <span className="px-3 text-sm font-medium text-slate-700">Page {safePage} of {totalPages}</span>
+                <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={safePage >= totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed" aria-label="Next page">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </div>
+            </div>
+          )}
         )}
       </DataPanel>
     </AppPageShell>

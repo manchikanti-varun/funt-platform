@@ -1,3 +1,5 @@
+@import "../../../../packages/design-system/tokens.css";
+@import "../../../../packages/design-system/components.css";
 @import "../../../../packages/rich-text-editor/src/styles.css";
 
 @tailwind base;
@@ -290,10 +292,7 @@
     @apply rounded-xl px-4 py-2.5 font-medium text-slate-700 transition duration-200 hover:bg-slate-100;
   }
   .btn-danger {
-    @apply rounded-xl px-4 py-2.5 font-medium shadow-sm transition duration-200;
-    border: 1px solid rgba(248, 113, 113, 0.3);
-    background: rgba(127, 29, 29, 0.25);
-    color: #fecaca;
+    @apply rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-medium text-red-700 shadow-sm transition duration-200 hover:bg-red-100 hover:border-red-300 active:scale-[0.98] disabled:opacity-50;
   }
   .badge {
     @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
@@ -335,7 +334,7 @@
   }
 
   .spinner {
-    @apply h-10 w-10 animate-spin rounded-full border-4 border-black/10 border-t-funt-gold;
+    @apply h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600;
   }
   .spinner--sm {
     @apply h-5 w-5 border-2;

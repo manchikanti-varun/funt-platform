@@ -257,9 +257,9 @@ async function syncCourseHeaderImageToBatchSnapshots(courseIds: string[], header
  * After adding or removing chapters from a course, auto-sync the updated modules
  * to all batch snapshots that reference this course.
  */
-async function syncChapterChangeToBatches(doc: { _id: unknown; courseId?: string }, performedBy: string) {
+async function syncChapterChangeToBatches(doc: { _id: unknown; courseId?: string | null }, performedBy: string) {
   const courseMongoId = String(doc._id);
-  const courseHumanId = (doc as { courseId?: string }).courseId ?? "";
+  const courseHumanId = String(doc.courseId ?? "").trim();
   const courseIds = [courseMongoId, courseHumanId].filter(Boolean);
   if (courseIds.length === 0) return;
 
