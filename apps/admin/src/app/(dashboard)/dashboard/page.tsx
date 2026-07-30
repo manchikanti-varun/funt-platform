@@ -303,6 +303,62 @@ export default function DashboardPage() {
           </div>
         </section>
       )}
+
+      {isSuperAdmin && (
+        <DataToolsSection />
+      )}
     </div>
+  );
+}
+
+function DataToolsSection() {
+  const [migrating, setMigrating] = useState(false);
+  const [result, setResult] = useState<{ found: number; migrated: number } | null>(null);
+  const [error, setError] = useState("");
+
+  async function runMigration() {
+    setMigrating(true);
+    setError("");
+    setResult(null);
+    const res = await api<{ found: number; migrated: number }>("/api/admin/migrate/chapter-content", { method: "POST" });
+    setMigrating(false);
+    if (res.success && res.data) {
+      setResult(res.data);
+    } else {
+      setError(res.message ?? "Migration failed");
+    }
+  }
+
+  return (
+    <section className="rounded-2xl border border-amber-200/80 bg-amber-50/30 p-6 shadow-sm ring-1 ring-amber-100/80">
+      <h2 className="mb-1 text-lg font-semibold text-slate-900">Data Tools</h2>
+      <p className="mb-5 text-sm text-slate-600">One-time migrations and data fixes. Safe to run multiple times.</p>
+      <div className="space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Fix chapter content</p>
+              <p className="mt-0.5 text-xs text-slate-500">Moves rich text from description to content field for old chapters that were created before the content field existed.</p>
+            </div>
+            <button
+              type="button"
+              onClick={runMigration}
+              disabled={migrating}
+              className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {migrating ? "Running..." : "Run migration"}
+            </button>
+          </div>
+          {result && (
+            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+              Done — found {result.found} chapters, migrated {result.migrated}.
+            </p>
+          )}
+          {error && (
+            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-800">{error}</p>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

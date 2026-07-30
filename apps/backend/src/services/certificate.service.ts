@@ -296,11 +296,23 @@ export async function verifyCertificatePublic(certificateId: string) {
     ? (getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { title?: string } | undefined)?.title ?? "Course"
     : "Course";
 
+  const backendUrl = (process.env.BACKEND_PUBLIC_URL || "https://api.funt.in").replace(/\/$/, "");
+  const verifyUrl = `${backendUrl}/verify/${certificateId}`;
+  const shareText = `I completed "${courseName}" at FUNT Robotics Academy! Verify: ${verifyUrl}`;
+  const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`;
+  const whatsAppShareUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+
   return {
     certificateId: cert.certificateId,
     studentName: student?.name ?? "Student",
     courseName,
     issuedAt: cert.issuedAt,
+    verifyUrl,
+    shareLinks: {
+      linkedin: linkedInShareUrl,
+      whatsapp: whatsAppShareUrl,
+      copyText: shareText,
+    },
   };
 }
 

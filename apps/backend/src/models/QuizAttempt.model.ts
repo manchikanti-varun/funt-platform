@@ -44,6 +44,8 @@ const quizAttemptSchema = new Schema(
 
     // ── Attempt metadata ─────────────────────────────────────────────────
     attemptNumber: { type: Number, required: true, default: 1 },
+    /** Practice mode — unlimited retakes, doesn't count toward grade or chapter completion. */
+    isPractice: { type: Boolean, required: false, default: false },
     status: {
       type: String,
       required: true,

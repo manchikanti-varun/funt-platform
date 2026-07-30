@@ -529,6 +529,116 @@ export async function getMyCoursesForStudent(studentId: string) {
   return final;
 }
 
+/**
+ * Get the student's resume point — the most recently active course and the
+ * first incomplete chapter in that course. Used for "Continue where you left off".
+ */
+export async function getResumePoint(studentId: string): Promise<{
+  courseId: string;
+  courseTitle: string;
+  batchId: string;
+  chapterOrder: number;
+  chapterTitle: string;
+  progressPercent: number;
+} | null> {
+  // Get the student's most recently progressed chapter
+  const latestProgress = await ChapterProgressModel.find({ studentId })
+    .sort({ updatedAt: -1 })
+    .limit(5)
+    .lean()
+    .exec();
+
+  if (latestProgress.length === 0) {
+    // No progress at all — find first enrolled course and return chapter 0
+    const enrollment = await EnrollmentModel.findOne({
+      studentId,
+      status: { $in: [ENROLLMENT_STATUS.ACTIVE] },
+    }).sort({ enrolledAt: -1 }).lean().exec();
+    if (!enrollment) return null;
+
+    const batch = await BatchModel.findById(enrollment.batchId).lean().exec();
+    if (!batch) return null;
+    const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+    if (snapshots.length === 0) return null;
+    const snap = snapshots[0] as { courseId?: string; title?: string; modules?: ModuleSnapshot[] };
+    const modules = snap?.modules ?? [];
+    if (modules.length === 0) return null;
+
+    return {
+      courseId: snap.courseId ?? String(batch._id),
+      courseTitle: snap.title ?? "Course",
+      batchId: String(batch._id),
+      chapterOrder: 0,
+      chapterTitle: (modules[0] as { title?: string }).title ?? "Chapter 1",
+      progressPercent: 0,
+    };
+  }
+
+  // Find the batch+course with the most recent activity
+  const recentBatchId = latestProgress[0].batchId;
+  const recentCourseId = (latestProgress[0] as { courseId?: string }).courseId ?? "";
+
+  const batch = await BatchModel.findById(recentBatchId).lean().exec();
+  if (!batch) return null;
+
+  const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+  const snap = (recentCourseId
+    ? snapshots.find((s) => (s as { courseId?: string }).courseId === recentCourseId)
+    : snapshots[0]) as { courseId?: string; title?: string; modules?: ModuleSnapshot[] } | undefined;
+  if (!snap) return null;
+
+  const modules = snap.modules ?? [];
+  if (modules.length === 0) return null;
+
+  // Load all progress for this course
+  const allProgress = await ChapterProgressModel.find({
+    studentId,
+    batchId: recentBatchId,
+    ...(recentCourseId ? { courseId: recentCourseId } : {}),
+  }).lean().exec();
+
+  const progressByOrder = new Map<number, ProgressDoc>();
+  for (const p of allProgress) {
+    progressByOrder.set((p as { moduleOrder: number }).moduleOrder, p as ProgressDoc);
+  }
+
+  // Find first incomplete chapter
+  const sorted = [...modules].sort((a, b) => ((a.order as number) ?? 0) - ((b.order as number) ?? 0));
+  let firstIncomplete: { order: number; title: string } | null = null;
+  let completedCount = 0;
+
+  for (const m of sorted) {
+    const order = (m.order as number) ?? 0;
+    const parts = moduleParts(m);
+    const progress = progressByOrder.get(order) ?? null;
+    if (isModuleFullyCompleted(parts, progress)) {
+      completedCount++;
+    } else if (!firstIncomplete) {
+      firstIncomplete = { order, title: (m as { title?: string }).title ?? `Chapter ${order + 1}` };
+    }
+  }
+
+  const progressPercent = modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0;
+
+  // If all chapters are complete, return the last chapter
+  if (!firstIncomplete) {
+    const last = sorted[sorted.length - 1];
+    firstIncomplete = {
+      order: (last.order as number) ?? sorted.length - 1,
+      title: (last as { title?: string }).title ?? `Chapter ${sorted.length}`,
+    };
+  }
+
+  return {
+    courseId: snap.courseId ?? String(batch._id),
+    courseTitle: snap.title ?? "Course",
+    batchId: recentBatchId,
+    chapterOrder: firstIncomplete.order,
+    chapterTitle: firstIncomplete.title,
+    progressPercent,
+  };
+}
+
 export async function getCourseForStudentByCourseId(studentId: string, courseId: string, batchId?: string) {
   const normalizedCourseId = typeof courseId === "string" ? courseId.split("&")[0].trim() : "";
   if (!normalizedCourseId) throw new AppError("Course not found", 404);

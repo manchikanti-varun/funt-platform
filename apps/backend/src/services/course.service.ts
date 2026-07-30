@@ -559,7 +559,9 @@ export async function updateCourseModule(
         const snapCourseId = s.courseId ?? "";
         if (snapCourseId !== courseMongoId && snapCourseId !== courseHumanId) continue;
         if (!Array.isArray(s.modules)) continue;
-        const snapMod = s.modules[moduleIndex] as Record<string, unknown> | undefined;
+        // Match by module order (not array index) — handles reordered snapshots
+        const targetOrder = mod.order;
+        const snapMod = s.modules.find((m) => Number(m.order ?? -1) === targetOrder) as Record<string, unknown> | undefined;
         if (!snapMod) continue;
         for (const [k, v] of Object.entries(updatedFields)) {
           if (v === null) delete snapMod[k];

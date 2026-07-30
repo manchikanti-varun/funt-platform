@@ -255,8 +255,9 @@ export async function startQuizAttempt(input: {
   courseId: string;
   chapterOrder?: number;
   milestoneId?: string;
+  isPractice?: boolean;
 }): Promise<unknown> {
-  const { studentId, quizId, batchId, courseId, chapterOrder, milestoneId } = input;
+  const { studentId, quizId, batchId, courseId, chapterOrder, milestoneId, isPractice } = input;
 
   const quiz = await findQuizByParam(quizId);
   if (!quiz) throw new AppError("Quiz not found", 404);
@@ -273,14 +274,15 @@ export async function startQuizAttempt(input: {
     throw new AppError("You must be enrolled in this course to take the quiz", 403);
   }
 
-  // Check max attempts (0 = unlimited)
-  if (quiz.maxAttempts > 0) {
+  // Check max attempts (0 = unlimited) — practice mode bypasses this
+  if (quiz.maxAttempts > 0 && !isPractice) {
     const completedCount = await QuizAttemptModel.countDocuments({
       studentId,
       quizId: quiz.quizId ?? String(quiz._id),
       batchId,
       courseId,
       status: QUIZ_ATTEMPT_STATUS.COMPLETED,
+      isPractice: { $ne: true },
       ...(chapterOrder !== undefined ? { chapterOrder } : {}),
       ...(milestoneId ? { milestoneId } : {}),
     }).exec();
@@ -370,6 +372,7 @@ export async function startQuizAttempt(input: {
     chapterOrder,
     milestoneId,
     attemptNumber,
+    isPractice: !!isPractice,
     status: QUIZ_ATTEMPT_STATUS.IN_PROGRESS,
     questionOrder,
     optionOrders,
@@ -502,6 +505,7 @@ export async function submitQuizAttempt(
     chapterOrder?: number;
     milestoneId?: string;
     attemptNumber: number;
+    isPractice?: boolean;
     questionOrder: string[];
     optionOrders: Record<string, string[]> | Map<string, string[]>;
     answers: Array<{ questionId: string; selectedOptionId?: string | null }>;
@@ -587,8 +591,8 @@ export async function submitQuizAttempt(
     }
   ).exec();
 
-  // ── Mark chapter quiz complete on first pass ──────────────────────────
-  if (passed && attemptObj.chapterOrder !== undefined) {
+  // ── Mark chapter quiz complete on first pass (skip for practice mode) ──
+  if (passed && !attemptObj.isPractice && attemptObj.chapterOrder !== undefined) {
     await markQuizPartComplete(
       studentId,
       attemptObj.batchId,
@@ -597,8 +601,8 @@ export async function submitQuizAttempt(
     );
   }
 
-  // ── Milestone quiz: trigger milestone recalculation ───────────────────
-  if (passed && attemptObj.milestoneId) {
+  // ── Milestone quiz: trigger milestone recalculation (skip for practice) ──
+  if (passed && !attemptObj.isPractice && attemptObj.milestoneId) {
     try {
       const { recalculateMilestoneProgressAfterQuiz } = await import("./learningPlan.service.js");
       await recalculateMilestoneProgressAfterQuiz(

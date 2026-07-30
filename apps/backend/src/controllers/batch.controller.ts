@@ -254,6 +254,34 @@ export const syncCourseContent = asyncHandler(async (req: Request, res: Response
   successRes(res, data, "Course content synced to batch");
 });
 
+/** Sync ALL batches for a given course — fixes stale snapshots in bulk. */
+export const syncAllBatchesForCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const performedBy = getUserId(req);
+  const { courseId } = req.body ?? {};
+  if (!courseId) throw new AppError("courseId is required", 400);
+
+  const { BatchModel } = await import("../models/Batch.model.js");
+  const batches = await BatchModel.find({
+    $or: [
+      { "courseSnapshots.courseId": courseId },
+      { "courseSnapshot.courseId": courseId },
+    ],
+  }).select("_id").lean().exec();
+
+  let synced = 0;
+  let failed = 0;
+  for (const batch of batches) {
+    try {
+      await service.syncCourseContentToBatch(String(batch._id), courseId, performedBy);
+      synced++;
+    } catch {
+      failed++;
+    }
+  }
+
+  successRes(res, { courseId, totalBatches: batches.length, synced, failed }, `Synced ${synced} batch(es)`);
+});
+
 export const archiveBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

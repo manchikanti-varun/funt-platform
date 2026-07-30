@@ -1,7 +1,7 @@
 
 import type { Request, Response } from "express";
 import * as enrollmentService from "../services/enrollment.service.js";
-import { getBatchCourseForStudent, getCourseForStudentByCourseId, getMyCoursesForStudent, listCoursesForExplore, markChapterComplete, markChapterPartComplete, type ChapterPart } from "../services/studentCourse.service.js";
+import { getBatchCourseForStudent, getCourseForStudentByCourseId, getMyCoursesForStudent, getResumePoint, listCoursesForExplore, markChapterComplete, markChapterPartComplete, type ChapterPart } from "../services/studentCourse.service.js";
 import * as batchService from "../services/batch.service.js";
 import * as globalAssignmentService from "../services/globalAssignment.service.js";
 import { submitGlobalAssignment, listGeneralSubmissionsByStudentId } from "../services/globalAssignmentSubmission.service.js";
@@ -136,6 +136,12 @@ export const getBatchCourse = asyncHandler(async (req: Request, res: Response): 
 export const getMyCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = getUserId(req);
   const data = await getMyCoursesForStudent(studentId);
+  successRes(res, data);
+});
+
+export const getMyResumePoint = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const studentId = getUserId(req);
+  const data = await getResumePoint(studentId);
   successRes(res, data);
 });
 

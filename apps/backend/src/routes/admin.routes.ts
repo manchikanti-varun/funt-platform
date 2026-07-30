@@ -1,8 +1,9 @@
 
-import express, { Router } from "express";
+import express, { Router, type Request, type Response } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 import { requireRoles } from "../middleware/role.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ROLE } from "@funt-platform/constants";
 import {
   createStudentSchema,
@@ -247,5 +248,41 @@ router.post("/backup/restore-upload", requireRoles(ROLE.SUPER_ADMIN), express.js
     res.json({ success: result.success, data: result, message: result.message });
   } catch (err) { next(err); }
 });
+
+// ── Trainer Feedback ──────────────────────────────────────────────────────────
+import { submitFeedback, getTrainerFeedback, removeFeedback } from "../controllers/trainerFeedback.controller.js";
+router.post("/feedback", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), submitFeedback);
+router.get("/feedback", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getTrainerFeedback);
+router.delete("/feedback/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), removeFeedback);
+
+// ── Batch Analytics ───────────────────────────────────────────────────────────
+import { getBatchAnalyticsHandler } from "../controllers/batchAnalytics.controller.js";
+router.get("/analytics/batch/:batchId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), getBatchAnalyticsHandler);
+
+// ── Revenue Analytics ─────────────────────────────────────────────────────────
+import { getRevenueAnalyticsHandler } from "../controllers/revenueAnalytics.controller.js";
+router.get("/analytics/revenue", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), getRevenueAnalyticsHandler);
+
+// ── Data Migration: Fix chapters with content in description field ────────────
+router.post("/migrate/chapter-content", requireRoles(ROLE.SUPER_ADMIN), asyncHandler(async (_req: Request, res: Response) => {
+  const { GlobalModuleModel } = await import("../models/GlobalModule.model.js");
+  const chapters = await GlobalModuleModel.find({
+    $or: [{ content: { $exists: false } }, { content: "" }, { content: null }],
+    description: { $regex: /<[a-z][\s\S]*>/i },
+  }).exec();
+
+  let updated = 0;
+  for (const ch of chapters) {
+    const desc = String(ch.description ?? "").trim();
+    if (!desc) continue;
+    const plainSummary = desc.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+    ch.content = desc;
+    ch.description = plainSummary || ch.title;
+    await ch.save();
+    updated++;
+  }
+
+  res.json({ success: true, data: { found: chapters.length, migrated: updated } });
+}));
 
 export const adminRoutes = router;

@@ -48,12 +48,22 @@ interface SubmissionItem {
   submittedAt: string;
 }
 
+interface ResumePoint {
+  courseId: string;
+  courseTitle: string;
+  batchId: string;
+  chapterOrder: number;
+  chapterTitle: string;
+  progressPercent: number;
+}
+
 export default function StudentDashboardPage() {
   const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
   const [explore, setExplore] = useState<ExploreCourse[]>([]);
   const [me, setMe] = useState<UserMe | null>(null);
   const [achievements, setAchievements] = useState<AchievementRow[]>([]);
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
+  const [resumePoint, setResumePoint] = useState<ResumePoint | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,13 +76,15 @@ export default function StudentDashboardPage() {
         if (!r.success || !r.data) return [];
         return [...(r.data.chapterSubmissions ?? []), ...(r.data.generalSubmissions ?? [])];
       }),
+      api<ResumePoint>("/api/student/courses/resume").then((r) => (r.success && r.data ? r.data : null)),
     ])
-      .then(([mine, ex, user, badges, subs]) => {
+      .then(([mine, ex, user, badges, subs, resume]) => {
         setMyCourses(mine);
         setExplore(ex);
         setMe(user);
         setAchievements(badges);
         setSubmissions(subs);
+        setResumePoint(resume);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -96,10 +108,14 @@ export default function StudentDashboardPage() {
   const avgProgress = active.length ? Math.round(active.reduce((sum, c) => sum + c.progressPercent, 0) / active.length) : 0;
   const aheadSignal = avgProgress >= 65 ? "Ahead of plan" : avgProgress >= 35 ? "On track" : "Behind pace";
   const streakDays = Math.max(1, Math.min(14, Math.floor((approvedReviews + recentUnlocks.length + level) / 2)));
-  const missionHref = nextCourse ? `/courses/${nextCourse.courseId}?batchId=${nextCourse.batchId}` : "/courses";
-  const missionText = nextCourse
-    ? `Continue ${nextCourse.courseTitle}`
-    : "Pick your first course to start momentum";
+  const missionHref = resumePoint
+    ? `/courses/${encodeURIComponent(resumePoint.courseId)}?batchId=${encodeURIComponent(resumePoint.batchId)}&learn=1`
+    : nextCourse ? `/courses/${nextCourse.courseId}?batchId=${nextCourse.batchId}` : "/courses";
+  const missionText = resumePoint
+    ? `Continue: ${resumePoint.chapterTitle}`
+    : nextCourse
+      ? `Continue ${nextCourse.courseTitle}`
+      : "Pick your first course to start momentum";
   const focusQuestion =
     blocked.length > 0
       ? "Unlock blocked access to avoid losing momentum."

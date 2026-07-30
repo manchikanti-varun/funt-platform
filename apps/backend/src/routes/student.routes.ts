@@ -8,6 +8,7 @@ import {
   getExploreBatches,
   getExploreCourses,
   getMyCourses,
+  getMyResumePoint,
   getCourseByCourseId,
   getStudentMediaPlaybackRedirect,
   getStudentMediaStreamRedirect,
@@ -60,6 +61,7 @@ router.use(authMiddleware, requireRoles(ROLE.STUDENT));
 
 router.get("/batches/:batchId/course", getBatchCourse);
 router.get("/courses", getMyCourses);
+router.get("/courses/resume", getMyResumePoint);
 router.get("/courses/:courseId/checkout", getCourseCheckout);
 router.get("/courses/:courseId", getCourseByCourseId);
 router.post("/batches/:batchId/progress", validateBody(markChapterCompleteSchema), postMarkChapterComplete);
@@ -88,5 +90,16 @@ router.post("/certificates/generate", postGenerateMyCertificate);
 import { linkToFranchise, getMyFranchiseStatus } from "../controllers/franchisePublic.controller.js";
 router.post("/franchise/link", linkToFranchise);
 router.get("/franchise/status", getMyFranchiseStatus);
+
+// ── Chapter Notes ─────────────────────────────────────────────────────────────
+import { saveNote, getNote, getAllNotes, deleteNote } from "../controllers/chapterNote.controller.js";
+router.put("/notes", saveNote);
+router.get("/notes", getNote);
+router.get("/notes/all", getAllNotes);
+router.delete("/notes", deleteNote);
+
+// ── Trainer Feedback (student view) ───────────────────────────────────────────
+import { getMyFeedback } from "../controllers/trainerFeedback.controller.js";
+router.get("/feedback", getMyFeedback);
 
 export const studentRoutes = router;
