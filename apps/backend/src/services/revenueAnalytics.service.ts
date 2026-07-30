@@ -5,7 +5,6 @@
 
 import { PaymentSubmissionModel } from "../models/PaymentSubmission.model.js";
 import { CouponRedemptionModel } from "../models/CouponRedemption.model.js";
-import { InvoiceModel } from "../models/Invoice.model.js";
 
 export async function getRevenueAnalytics(options?: { months?: number }) {
   const monthsBack = Math.min(24, Math.max(1, options?.months ?? 6));
