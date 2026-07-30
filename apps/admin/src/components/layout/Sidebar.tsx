@@ -181,6 +181,9 @@ export function Sidebar({ roles }: SidebarProps) {
             <SidebarNavLink href="/shop" isActive={pathname.startsWith("/shop")}>
               Shop
             </SidebarNavLink>
+            <SidebarNavLink href="/instagram-posts" isActive={pathname.startsWith("/instagram-posts")}>
+              Instagram Posts
+            </SidebarNavLink>
             {isSuperAdmin && (
               <SidebarNavLink href="/license-keys" isActive={pathname.startsWith("/license-keys")}>
                 License keys

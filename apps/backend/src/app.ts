@@ -46,6 +46,7 @@ import {
 import { leaveRoutes } from "./routes/leave.routes.js";
 import { notificationRoutes } from "./routes/notification.routes.js";
 import { ticketRoutes } from "./routes/ticket.routes.js";
+import { instagramPostRoutes } from "./routes/instagramPost.routes.js";
 import {
   courseLearningPlanRouter,
   studentMilestoneRouter,
@@ -122,6 +123,7 @@ app.use("/api/auth", authRateLimiter, authRoutes);
 app.use(apiRateLimiter);
 
 app.use("/api/public", publicRoutes);
+app.use("/api/instagram-posts", instagramPostRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/student", studentRoutes);
