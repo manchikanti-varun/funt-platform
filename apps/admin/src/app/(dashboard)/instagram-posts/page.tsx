@@ -23,6 +23,8 @@ export default function InstagramPostsPage() {
   const [newLabel, setNewLabel] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<InstaPost | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function fetchPosts() {
     const res = await api<InstaPost[]>("/api/instagram-posts");
@@ -70,9 +72,12 @@ export default function InstagramPostsPage() {
     fetchPosts();
   }
 
-  async function deletePost(post: InstaPost) {
-    if (!confirm(`Delete "${post.label || post.postUrl}"?`)) return;
-    await api(`/api/instagram-posts/${post._id}`, { method: "DELETE" });
+  async function deletePost() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await api(`/api/instagram-posts/${deleteTarget._id}`, { method: "DELETE" });
+    setDeleting(false);
+    setDeleteTarget(null);
     fetchPosts();
   }
 
@@ -199,7 +204,7 @@ export default function InstagramPostsPage() {
                     {post.active ? "Active" : "Inactive"}
                   </button>
                   <button
-                    onClick={() => deletePost(post)}
+                    onClick={() => setDeleteTarget(post)}
                     className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
                   >
                     Delete
@@ -210,6 +215,49 @@ export default function InstagramPostsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !deleting && setDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-black/10 p-6 w-full max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-black">Delete Post</h3>
+                <p className="text-sm text-black/60">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="mb-5 p-3 rounded-lg bg-black/[0.03] border border-black/10">
+              <p className="text-xs text-black/50 uppercase font-medium mb-1">
+                {deleteTarget.postUrl.includes('/reel') ? 'Reel' : 'Post'}
+              </p>
+              <p className="text-sm text-black/80 truncate">{deleteTarget.label || deleteTarget.postUrl}</p>
+              <p className="text-xs text-black/40 truncate mt-0.5">{deleteTarget.postUrl}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 rounded-lg border border-black/15 text-sm font-semibold text-black/70 hover:bg-black/[0.03] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deletePost}
+                disabled={deleting}
+                className="flex-1 py-2.5 px-4 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Info box */}
       <div className="shrink-0 mt-6 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
