@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, ensureCsrfToken } from "@/lib/api";
 import { AppPageShell, FormPanel } from "@/components/ui";
 
 interface CheckoutInfo {
@@ -59,7 +59,7 @@ function PaymentMethodTabs({
   courseRejectReason,
   timeline,
   amountDueRupees,
-  amountDuePaise,
+  amountDuePaise: _amountDuePaise,
   payerName,
   setPayerName,
   transactionId,
@@ -285,6 +285,9 @@ function PaymentMethodTabs({
 function PaymentForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Ensure CSRF token is available before any POST — must be awaited
+  useEffect(() => { void ensureCsrfToken(); }, []);
   const type = (searchParams.get("type") ?? "course").toLowerCase() === "shop" ? "shop" : "course";
   const batchId = searchParams.get("batchId") ?? "";
   const courseId = searchParams.get("courseId") ?? "";

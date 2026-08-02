@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel, FormPanel } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -91,6 +92,7 @@ export default function AdminCouponsPage() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CouponRow | null>(null);
 
   const [code, setCode] = useState("");
   const [kind, setKind] = useState<"SHOP" | "COURSE">("SHOP");
@@ -229,15 +231,21 @@ export default function AdminCouponsPage() {
     else setMsg(res.message ?? "Failed");
   }
 
-  async function deleteCouponRow(row: CouponRow) {
-    if (!confirm(`Delete coupon "${row.code}"? This cannot be undone.`)) return;
-    setActingId(row.id);
+  function deleteCouponRow(row: CouponRow) {
+    setDeleteTarget(row);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    setActingId(target.id);
     setMsg(null);
-    const res = await api(`/api/admin/coupons/${encodeURIComponent(row.id)}`, { method: "DELETE" });
+    const res = await api(`/api/admin/coupons/${encodeURIComponent(target.id)}`, { method: "DELETE" });
     setActingId(null);
     if (res.success) {
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
-      setMsg("Coupon deleted.");
+      setRows((prev) => prev.filter((r) => r.id !== target.id));
+      setMsg(`Coupon "${target.code}" deleted.`);
     } else {
       setMsg(res.message ?? "Failed to delete.");
     }
@@ -462,9 +470,10 @@ export default function AdminCouponsPage() {
                   <button
                     type="button"
                     disabled={actingId === r.id}
-                    onClick={() => void deleteCouponRow(r)}
-                    className="rounded-lg px-3 py-1 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    onClick={() => deleteCouponRow(r)}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
                   >
+                    <Trash2 className="h-3.5 w-3.5" />
                     Delete
                   </button>
                 </td>
@@ -474,6 +483,43 @@ export default function AdminCouponsPage() {
         </table>
         {rows.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No coupons yet.</p>}
       </DataPanel>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Delete coupon</h3>
+                <p className="mt-0.5 text-sm text-slate-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="mt-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              Delete coupon <span className="font-mono font-bold text-slate-900">{deleteTarget.code}</span>?
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDelete()}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppPageShell>
   );
 }
