@@ -66,7 +66,8 @@ function PaymentMethodTabs({
   setTransactionId,
   paidAt,
   setPaidAt,
-  msg,
+  upiMsg,
+  razorpayMsg,
   loading,
   handleUpiSubmit,
   openRazorpay,
@@ -88,7 +89,8 @@ function PaymentMethodTabs({
   setTransactionId: (v: string) => void;
   paidAt: string;
   setPaidAt: (v: string) => void;
-  msg: MsgState;
+  upiMsg: MsgState;
+  razorpayMsg: MsgState;
   loading: boolean;
   handleUpiSubmit: (e: React.FormEvent) => void;
   openRazorpay: () => void;
@@ -224,8 +226,8 @@ function PaymentMethodTabs({
               Date &amp; time paid
               <input type="datetime-local" className="input mt-1.5" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} required />
             </label>
-            {msg && (
-              <div className={`rounded-xl px-3 py-2 text-sm font-medium ${msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{msg.text}</div>
+            {upiMsg && (
+              <div className={`rounded-xl px-3 py-2 text-sm font-medium ${upiMsg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{upiMsg.text}</div>
             )}
             <button type="submit" disabled={loading} className="btn-primary w-full py-3">
               {loading ? "Submitting…" : "Submit payment details"}
@@ -253,8 +255,8 @@ function PaymentMethodTabs({
               )}
             </div>
           )}
-          {msg && (
-            <div className={`rounded-xl px-3 py-2 text-sm font-medium ${msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{msg.text}</div>
+          {razorpayMsg && (
+            <div className={`rounded-xl px-3 py-2 text-sm font-medium ${razorpayMsg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{razorpayMsg.text}</div>
           )}
           <button type="button" disabled={loading} onClick={openRazorpay} className="btn-primary w-full py-3">
             {loading ? "Opening…" : "Pay with Razorpay"}
@@ -303,6 +305,8 @@ function PaymentForm() {
   const [courseRejectReason, setCourseRejectReason] = useState("");
   const [shopRejectReason, setShopRejectReason] = useState("");
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [upiMsg, setUpiMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [razorpayMsg, setRazorpayMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [accessBlockedByAdmin, setAccessBlockedByAdmin] = useState(false);
   const [timeline, setTimeline] = useState<PaymentTimeline | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState(0);
@@ -450,11 +454,11 @@ function PaymentForm() {
 
   async function handleUpiSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMsg(null);
+    setUpiMsg(null);
     setLoading(true);
     const parsedPaidAt = new Date(paidAt);
     if (Number.isNaN(parsedPaidAt.getTime())) {
-      setMsg({ type: "err", text: "Enter a valid payment date and time." });
+      setUpiMsg({ type: "err", text: "Enter a valid payment date and time." });
       setLoading(false);
       return;
     }
@@ -465,7 +469,7 @@ function PaymentForm() {
     };
     if (type === "course") {
       if (amountDuePaise == null || !Number.isFinite(amountDuePaise) || amountDuePaise < 0) {
-        setMsg({ type: "err", text: "Could not determine amount due. Refresh the page and try again." });
+        setUpiMsg({ type: "err", text: "Could not determine amount due. Refresh the page and try again." });
         setLoading(false);
         return;
       }
@@ -489,10 +493,8 @@ function PaymentForm() {
     });
     setLoading(false);
     if (res.success) {
-      const okText =
-        res.message ??
-        "Submitted. An administrator will verify your payment and link your license.";
-      setMsg({ type: "ok", text: okText });
+      const okText = res.message ?? "Submitted. An administrator will verify your payment and link your license.";
+      setUpiMsg({ type: "ok", text: okText });
       if (type === "course" && courseId) {
         window.setTimeout(() => {
           router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
@@ -501,7 +503,7 @@ function PaymentForm() {
         window.setTimeout(() => router.push("/shop"), 2000);
       }
     } else {
-      setMsg({ type: "err", text: res.message ?? "Could not submit." });
+      setUpiMsg({ type: "err", text: res.message ?? "Could not submit." });
     }
   }
 
@@ -516,7 +518,7 @@ function PaymentForm() {
   const showRazorpay = !!(checkout?.razorpayEnabled);
 
   async function openRazorpay() {
-    setMsg(null);
+    setRazorpayMsg(null);
     if (!effectiveBatchId || !courseId) return;
     setLoading(true);
     try {
@@ -536,7 +538,7 @@ function PaymentForm() {
         }),
       });
       if (!orderRes.success || !orderRes.data) {
-        setMsg({ type: "err", text: orderRes.message ?? "Could not start checkout." });
+        setRazorpayMsg({ type: "err", text: orderRes.message ?? "Could not start checkout." });
         setLoading(false);
         return;
       }
@@ -568,24 +570,19 @@ function PaymentForm() {
           });
           setLoading(false);
           if (confirm.success) {
-            setMsg({
-              type: "ok",
-              text:
-                confirm.message ??
-                "Payment successful. You are enrolled.",
-            });
+            setRazorpayMsg({ type: "ok", text: confirm.message ?? "Payment successful. You are enrolled." });
             window.setTimeout(() => {
               router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
             }, 2400);
           } else {
-            setMsg({ type: "err", text: confirm.message ?? "Could not confirm payment." });
+            setRazorpayMsg({ type: "err", text: confirm.message ?? "Could not confirm payment." });
           }
         },
       };
       new Razorpay(opts).open();
       setLoading(false);
     } catch (err) {
-      setMsg({ type: "err", text: err instanceof Error ? err.message : "Checkout failed." });
+      setRazorpayMsg({ type: "err", text: err instanceof Error ? err.message : "Checkout failed." });
       setLoading(false);
     }
   }
@@ -832,7 +829,8 @@ function PaymentForm() {
                     setTransactionId={setTransactionId}
                     paidAt={paidAt}
                     setPaidAt={setPaidAt}
-                    msg={msg}
+                    upiMsg={upiMsg}
+                    razorpayMsg={razorpayMsg}
                     loading={loading}
                     handleUpiSubmit={handleUpiSubmit}
                     openRazorpay={() => void openRazorpay()}
@@ -870,13 +868,13 @@ function PaymentForm() {
                 required
               />
             </label>
-            {msg && (
+            {upiMsg && (
               <div
                 className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                  msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"
+                  upiMsg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"
                 }`}
               >
-                {msg.text}
+                {upiMsg.text}
               </div>
             )}
             <button type="submit" disabled={loading} className="btn-primary w-full py-3">
