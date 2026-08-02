@@ -325,6 +325,17 @@ function copyCourseToSnapshot(course: {
   isDemo?: boolean;
   deliveryMode?: string;
   learningPlan?: unknown;
+  ageGroup?: string;
+  certification?: string;
+  paymentNote?: string;
+  learningOutcomes?: string[];
+  overview?: string;
+  cardDescription?: string;
+  cardIncludes?: string[];
+  originalPriceInPaise?: number;
+  courseImages?: string[];
+  courseFaqs?: unknown[];
+  pricingTiers?: unknown[];
 }) {
   const deliveryMode = (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS;
   const learningPlan = (course as { learningPlan?: unknown }).learningPlan;
