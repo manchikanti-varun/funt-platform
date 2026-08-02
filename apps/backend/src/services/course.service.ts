@@ -163,6 +163,7 @@ function toCourseResponse(doc: {
   updatedAt: Date;
 }) {
   const headerImage = String(doc.headerImageUrl ?? "").trim() || undefined;
+  const d = doc as Record<string, unknown>;
   return {
     id: String(doc._id),
     courseId: doc.courseId ?? undefined,
@@ -171,6 +172,17 @@ function toCourseResponse(doc: {
     durationText: doc.durationText ?? "",
     ...(headerImage ? { headerImageUrl: headerImage } : {}),
     ...((doc as { isDemo?: boolean }).isDemo ? { isDemo: true } : {}),
+    ageGroup: String(d.ageGroup ?? "").trim() || undefined,
+    certification: String(d.certification ?? "").trim() || undefined,
+    paymentNote: String(d.paymentNote ?? "").trim() || undefined,
+    learningOutcomes: Array.isArray(d.learningOutcomes) ? d.learningOutcomes : [],
+    overview: String(d.overview ?? "").trim() || undefined,
+    pricingTiers: Array.isArray(d.pricingTiers) ? d.pricingTiers : [],
+    cardDescription: String(d.cardDescription ?? "").trim() || undefined,
+    cardIncludes: Array.isArray(d.cardIncludes) ? d.cardIncludes : [],
+    originalPriceInPaise: Math.max(0, Math.floor(Number(d.originalPriceInPaise ?? 0))),
+    courseImages: Array.isArray(d.courseImages) ? d.courseImages : [],
+    courseFaqs: Array.isArray(d.courseFaqs) ? d.courseFaqs : [],
     modules: doc.modules,
     version: doc.version,
     status: doc.status,
@@ -178,6 +190,9 @@ function toCourseResponse(doc: {
     moderatorIds: doc.moderatorIds ?? [],
     deliveryMode: (doc as { deliveryMode?: string }).deliveryMode ?? "FULL_ACCESS",
     learningPlan: (doc as { learningPlan?: unknown }).learningPlan ?? undefined,
+    finalQuizId: d.finalQuizId,
+    finalQuizRequiredForCertificate: d.finalQuizRequiredForCertificate,
+    enableWatermark: d.enableWatermark ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
