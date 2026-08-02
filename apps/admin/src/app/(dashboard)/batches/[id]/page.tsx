@@ -278,8 +278,11 @@ export default function EditBatchPage() {
         });
       }
     }
+  // enrollmentInrByCourseId included: courses may load before batch data, so we re-run
+  // normalization once prices are populated to correctly remap keys. The inner guard
+  // (normalized.some check) prevents infinite loops.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courses]);  function courseIsDemo(id: string) {
+  }, [courses, enrollmentInrByCourseId]);  function courseIsDemo(id: string) {
     const c = courses.find((x) => x.id === id || x.courseId === id);
     return !!c?.isDemo;
   }
