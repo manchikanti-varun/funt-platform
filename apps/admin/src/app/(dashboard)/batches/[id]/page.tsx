@@ -246,6 +246,7 @@ export default function EditBatchPage() {
       const idMap: Record<string, string> = {};
       selectedCourseIds.forEach((old, i) => { if (old !== normalized[i]) idMap[old] = normalized[i]; });
       setSelectedCourseIds(normalized);
+      setInitialCourseIds(normalized); // keep initial in sync with normalized IDs
       if (Object.keys(idMap).length > 0) {
         setEnrollmentInrByCourseId((m) => {
           const next = { ...m };
