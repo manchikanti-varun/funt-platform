@@ -335,7 +335,6 @@ export default function EditBatchPage() {
     };
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
-    console.log("[batch-save] body:", JSON.stringify(body, null, 2));
     const res = await api(`/api/batches/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
