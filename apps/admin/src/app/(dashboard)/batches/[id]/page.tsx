@@ -208,13 +208,22 @@ export default function EditBatchPage() {
         }
         setCompletionCoinsByCourseId(coinMap);
         setCompletionBadgesByCourseId(badgeMap);
+        // DEBUG: log what we got from API
+        console.log("[BatchEdit] courseSnapshots from API:", r.data.courseSnapshots);
+        console.log("[BatchEdit] selectedCourseIds:", ids);
+        console.log("[BatchEdit] priceMap:", priceMap);
+        console.log("[BatchEdit] coinMap:", coinMap);
       }
     });
   }, [id]);
 
   useEffect(() => {
     api<CourseOption[]>("/api/courses").then((r) => {
-      if (r.success && Array.isArray(r.data)) setCourses(r.data.filter((c) => c.status !== "ARCHIVED"));
+      if (r.success && Array.isArray(r.data)) {
+        const filtered = r.data.filter((c) => c.status !== "ARCHIVED");
+        console.log("[BatchEdit] courses loaded:", filtered.map(c => ({ id: c.id, courseId: c.courseId, title: c.title })));
+        setCourses(filtered);
+      }
     });
     api<BadgeOption[]>("/api/admin/badges")
       .then((r) => {
