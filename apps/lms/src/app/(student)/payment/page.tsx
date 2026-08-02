@@ -304,7 +304,6 @@ function PaymentForm() {
   const [shopRejected, setShopRejected] = useState(false);
   const [courseRejectReason, setCourseRejectReason] = useState("");
   const [shopRejectReason, setShopRejectReason] = useState("");
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [upiMsg, setUpiMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [razorpayMsg, setRazorpayMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [accessBlockedByAdmin, setAccessBlockedByAdmin] = useState(false);
