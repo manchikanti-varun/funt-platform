@@ -208,11 +208,6 @@ export default function EditBatchPage() {
         }
         setCompletionCoinsByCourseId(coinMap);
         setCompletionBadgesByCourseId(badgeMap);
-        // DEBUG: log what we got from API
-        console.log("[BatchEdit] courseSnapshots from API:", r.data.courseSnapshots);
-        console.log("[BatchEdit] selectedCourseIds:", ids);
-        console.log("[BatchEdit] priceMap:", priceMap);
-        console.log("[BatchEdit] coinMap:", coinMap);
       }
     });
   }, [id]);
@@ -220,9 +215,7 @@ export default function EditBatchPage() {
   useEffect(() => {
     api<CourseOption[]>("/api/courses").then((r) => {
       if (r.success && Array.isArray(r.data)) {
-        const filtered = r.data.filter((c) => c.status !== "ARCHIVED");
-        console.log("[BatchEdit] courses loaded:", filtered.map(c => ({ id: c.id, courseId: c.courseId, title: c.title })));
-        setCourses(filtered);
+        setCourses(r.data.filter((c) => c.status !== "ARCHIVED"));
       }
     });
     api<BadgeOption[]>("/api/admin/badges")
@@ -369,10 +362,6 @@ export default function EditBatchPage() {
     };
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
-    console.log("[BatchEdit] submit body:", JSON.stringify(body, null, 2));
-    console.log("[BatchEdit] selectedCourseIds at submit:", selectedCourseIds);
-    console.log("[BatchEdit] initialCourseIds at submit:", initialCourseIds);
-    console.log("[BatchEdit] enrollmentInrByCourseId at submit:", enrollmentInrByCourseId);
     const res = await api(`/api/batches/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
