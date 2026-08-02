@@ -205,6 +205,16 @@ export interface UpdateBatchInput {
   courseCompletionRewardCoins?: Record<string, number>;
   courseCompletionBadgeTypes?: Record<string, string | string[]>;
   visibility?: "PUBLIC" | "PRIVATE";
+  /** Per course: original price in paise for strikethrough display */
+  courseOriginalPrices?: Record<string, number>;
+  /** Per course: short card description (plain text) */
+  courseCardDescriptions?: Record<string, string>;
+  /** Per course: "includes" bullet points for card */
+  courseCardIncludes?: Record<string, string[]>;
+  /** Per course: gallery image URLs (3-4 images) */
+  courseImages?: Record<string, string[]>;
+  /** Per course: FAQs [{question, answer}] */
+  courseFaqs?: Record<string, Array<{ question: string; answer: string }>>;
 }
 
 type BatchDoc = {
@@ -325,6 +335,17 @@ function copyCourseToSnapshot(course: {
     description: course.description,
     headerImageUrl: String(course.headerImageUrl ?? "").trim() || undefined,
     durationText: course.durationText ?? "",
+    ageGroup: String((course as { ageGroup?: string }).ageGroup ?? "").trim() || undefined,
+    certification: String((course as { certification?: string }).certification ?? "").trim() || undefined,
+    paymentNote: String((course as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
+    learningOutcomes: Array.isArray((course as { learningOutcomes?: string[] }).learningOutcomes) ? (course as { learningOutcomes: string[] }).learningOutcomes : [],
+    overview: String((course as { overview?: string }).overview ?? "").trim() || undefined,
+    cardDescription: String((course as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
+    cardIncludes: Array.isArray((course as { cardIncludes?: string[] }).cardIncludes) ? (course as { cardIncludes: string[] }).cardIncludes : [],
+    originalPriceInPaise: Math.max(0, Math.floor(Number((course as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
+    courseImages: Array.isArray((course as { courseImages?: string[] }).courseImages) ? (course as { courseImages: string[] }).courseImages : [],
+    courseFaqs: Array.isArray((course as { courseFaqs?: unknown[] }).courseFaqs) ? (course as { courseFaqs: unknown[] }).courseFaqs : [],
+    pricingTiers: Array.isArray((course as { pricingTiers?: unknown[] }).pricingTiers) ? (course as { pricingTiers: unknown[] }).pricingTiers : [],
     isDemo: !!(course as { isDemo?: boolean }).isDemo,
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
@@ -554,7 +575,12 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
     (input.courseEnrollmentPrices !== undefined ||
       input.coursePaymentMethods !== undefined ||
       input.courseCompletionRewardCoins !== undefined ||
-      input.courseCompletionBadgeTypes !== undefined) &&
+      input.courseCompletionBadgeTypes !== undefined ||
+      input.courseOriginalPrices !== undefined ||
+      input.courseCardDescriptions !== undefined ||
+      input.courseCardIncludes !== undefined ||
+      input.courseImages !== undefined ||
+      input.courseFaqs !== undefined) &&
     input.courseIds === undefined
   ) {
     const snaps = JSON.parse(JSON.stringify(getBatchCourseSnapshots(doc as unknown as BatchDoc))) as Array<{
@@ -563,10 +589,20 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       allowedPaymentMethods?: CoursePaymentMethodCode[];
       completionRewardCoins?: number;
       completionBadgeTypes?: string[];
+      originalPriceInPaise?: number;
+      cardDescription?: string;
+      cardIncludes?: string[];
+      courseImages?: string[];
+      courseFaqs?: Array<{ question: string; answer: string }>;
     }>;
     const priceMap = input.courseEnrollmentPrices ?? {};
     const rewardMap = input.courseCompletionRewardCoins ?? {};
     const badgeMap = input.courseCompletionBadgeTypes ?? {};
+    const origPriceMap = input.courseOriginalPrices ?? {};
+    const cardDescMap = input.courseCardDescriptions ?? {};
+    const cardIncMap = input.courseCardIncludes ?? {};
+    const imgMap = input.courseImages ?? {};
+    const faqMap = input.courseFaqs ?? {};
     const pm = input.coursePaymentMethods;
     for (const s of snaps) {
       const cid = String(s.courseId ?? "");
@@ -593,6 +629,13 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
         const b = badgeMap[cid];
         if (b !== undefined) s.completionBadgeTypes = normalizeCompletionBadgeTypes(b);
       }
+      if (origPriceMap[cid] !== undefined) {
+        s.originalPriceInPaise = Math.max(0, Math.floor(Number(origPriceMap[cid]) * 100));
+      }
+      if (cardDescMap[cid] !== undefined) s.cardDescription = String(cardDescMap[cid]).trim();
+      if (cardIncMap[cid] !== undefined) s.cardIncludes = Array.isArray(cardIncMap[cid]) ? cardIncMap[cid] : [];
+      if (imgMap[cid] !== undefined) s.courseImages = Array.isArray(imgMap[cid]) ? imgMap[cid] : [];
+      if (faqMap[cid] !== undefined) s.courseFaqs = Array.isArray(faqMap[cid]) ? faqMap[cid] : [];
     }
     (doc as { courseSnapshots?: unknown[] }).courseSnapshots = snaps;
   }

@@ -74,6 +74,24 @@ const courseSnapshotSchema = new Schema(
     paymentNote: { type: String, required: false, default: "" },
     learningOutcomes: { type: [String], required: false, default: [] },
     overview: { type: String, required: false, default: "" },
+    /** Short description for course card (plain text) */
+    cardDescription: { type: String, required: false, default: "" },
+    /** "Includes" bullet points shown on the course card */
+    cardIncludes: { type: [String], required: false, default: [] },
+    /** Original price in paise (shown with strikethrough) */
+    originalPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
+    /** Gallery images for course page (3-4 images, URLs) */
+    courseImages: { type: [String], required: false, default: [] },
+    /** Manual FAQs for course page */
+    courseFaqs: {
+      type: [{
+        question: { type: String, required: true },
+        answer: { type: String, required: true },
+        _id: false,
+      }],
+      required: false,
+      default: [],
+    },
     pricingTiers: {
       type: [{
         label: { type: String, required: true },

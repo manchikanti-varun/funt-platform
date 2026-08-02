@@ -25,6 +25,7 @@ import {
   removeBatchStudent,
   transferBatchStudent,
   setGlobalOnlineBatchHandler,
+  setGlobalCentreBatchHandler,
   setNotEnrolledBatchHandler,
 } from "../controllers/batch.controller.js";
 
@@ -42,6 +43,7 @@ router.post("/:id/students/bulk-remove", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADM
 router.delete("/:id/students/:studentId", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN), removeBatchStudent);
 router.post("/:id/students/transfer", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), transferBatchStudent);
 router.post("/:id/set-global-online", requireRoles(ROLE.SUPER_ADMIN), setGlobalOnlineBatchHandler);
+router.post("/:id/set-global-centre", requireRoles(ROLE.SUPER_ADMIN), setGlobalCentreBatchHandler);
 router.post("/:id/set-not-enrolled", requireRoles(ROLE.SUPER_ADMIN), setNotEnrolledBatchHandler);
 router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, ROLE.TRAINER), getBatch);
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), requireBatchOwnership, validateBody(updateBatchSchema), updateBatch);

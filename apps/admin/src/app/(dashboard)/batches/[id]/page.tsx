@@ -29,10 +29,11 @@ interface Batch {
   visibility?: "PUBLIC" | "PRIVATE";
   status: string;
   isGlobalOnlineBatch?: boolean;
+  isGlobalCentreBatch?: boolean;
   isNotEnrolledBatch?: boolean;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
-  courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
+  courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[]; originalPriceInPaise?: number; cardDescription?: string; cardIncludes?: string[] };
   courseSnapshots?: Array<{
     title?: string;
     courseId?: string;
@@ -40,6 +41,9 @@ interface Batch {
     allowedPaymentMethods?: string[];
     completionRewardCoins?: number;
     completionBadgeTypes?: string[];
+    originalPriceInPaise?: number;
+    cardDescription?: string;
+    cardIncludes?: string[];
   }>;
 }
 
@@ -112,6 +116,13 @@ export default function EditBatchPage() {
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
   const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [platformUpiSummary, setPlatformUpiSummary] = useState<PlatformUpiSummaryState>("idle");
+  // New per-course marketing fields
+  const [originalPriceInrByCourseId, setOriginalPriceInrByCourseId] = useState<Record<string, string>>({});
+  const [cardDescByCourseId, setCardDescByCourseId] = useState<Record<string, string>>({});
+  const [cardIncludesByCourseId, setCardIncludesByCourseId] = useState<Record<string, string>>({});
+  // Global batch type state
+  const [settingGlobalType, setSettingGlobalType] = useState<string | null>(null);
+  const isSuperAdmin = roles?.includes("SUPER_ADMIN") ?? false;
 
   const needsPlatformUpiInfo = useMemo(() => {
     return selectedCourseIds.some((sid) => {
@@ -204,6 +215,22 @@ export default function EditBatchPage() {
         }
         setCompletionCoinsByCourseId(coinMap);
         setCompletionBadgesByCourseId(badgeMap);
+        // Load marketing fields
+        const origPriceMap: Record<string, string> = {};
+        const cardDescMap: Record<string, string> = {};
+        const cardIncMap: Record<string, string> = {};
+        for (const s of snaps) {
+          const cid = s.courseId ?? "";
+          if (!cid) continue;
+          const opaise = Math.max(0, Math.floor(Number((s as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0)));
+          origPriceMap[cid] = opaise > 0 ? (opaise / 100).toFixed(2).replace(/\.?0+$/, "") : "";
+          cardDescMap[cid] = (s as { cardDescription?: string }).cardDescription ?? "";
+          const inc = (s as { cardIncludes?: string[] }).cardIncludes;
+          cardIncMap[cid] = Array.isArray(inc) ? inc.join("\n") : "";
+        }
+        setOriginalPriceInrByCourseId(origPriceMap);
+        setCardDescByCourseId(cardDescMap);
+        setCardIncludesByCourseId(cardIncMap);
       }
     });
   }, [id]);
@@ -328,6 +355,24 @@ export default function EditBatchPage() {
       ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
       ...(Object.keys(coursePaymentMethods).length > 0 ? { coursePaymentMethods } : {}),
     };
+    // Marketing fields per course
+    const courseOriginalPrices: Record<string, number> = {};
+    const courseCardDescriptions: Record<string, string> = {};
+    const courseCardIncludes: Record<string, string[]> = {};
+    for (const sid of selectedCourseIds) {
+      const rawOrig = originalPriceInrByCourseId[sid]?.trim();
+      if (rawOrig !== undefined && rawOrig !== "") {
+        const n = Number(rawOrig);
+        if (Number.isFinite(n) && n >= 0) courseOriginalPrices[sid] = n;
+      }
+      const desc = cardDescByCourseId[sid]?.trim();
+      if (desc !== undefined) courseCardDescriptions[sid] = desc;
+      const incRaw = cardIncludesByCourseId[sid] ?? "";
+      courseCardIncludes[sid] = incRaw.split("\n").map((l) => l.trim()).filter(Boolean);
+    }
+    if (Object.keys(courseOriginalPrices).length > 0) body.courseOriginalPrices = courseOriginalPrices;
+    if (Object.keys(courseCardDescriptions).length > 0) body.courseCardDescriptions = courseCardDescriptions;
+    body.courseCardIncludes = courseCardIncludes;
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
     const res = await api(`/api/batches/${id}`, {
@@ -337,6 +382,29 @@ export default function EditBatchPage() {
     setLoading(false);
     if (res.success) router.push("/batches");
     else setError(res.message ?? "Failed to update.");
+  }
+
+  async function setGlobalBatchType(type: "online" | "centre") {
+    const label = type === "online" ? "Global Online Batch" : "Global Centre Batch";
+    const ok = await dialog.confirm({
+      title: `Set as ${label}`,
+      message: `Mark this batch as the ${label}? Only one batch can hold this flag at a time — the current one will be cleared.`,
+      confirmLabel: `Set as ${label}`,
+    });
+    if (!ok) return;
+    setSettingGlobalType(type);
+    const endpoint = type === "online" ? `/api/batches/${id}/set-global-online` : `/api/batches/${id}/set-global-centre`;
+    const res = await api(endpoint, { method: "POST" });
+    setSettingGlobalType(null);
+    if (res.success) {
+      setBatch((prev) => prev ? {
+        ...prev,
+        isGlobalOnlineBatch: type === "online" ? true : false,
+        isGlobalCentreBatch: type === "centre" ? true : false,
+      } : prev);
+    } else {
+      setError(res.message ?? `Failed to set ${label}.`);
+    }
   }
 
   async function archive() {
@@ -393,6 +461,12 @@ export default function EditBatchPage() {
                 Global Online Batch
               </span>
             )}
+            {batch.isGlobalCentreBatch && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                Global Centre Batch
+              </span>
+            )}
             {batch.isNotEnrolledBatch && (
               <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
@@ -430,6 +504,26 @@ export default function EditBatchPage() {
           </Link></>}
         headerAside={
           <>
+            {isSuperAdmin && (
+              <>
+                <button
+                  type="button"
+                  disabled={!!settingGlobalType || batch.isGlobalOnlineBatch}
+                  onClick={() => void setGlobalBatchType("online")}
+                  className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 shadow-sm transition hover:bg-teal-100 disabled:opacity-50"
+                >
+                  {settingGlobalType === "online" ? "Setting…" : batch.isGlobalOnlineBatch ? "✓ Global Online" : "Set Global Online"}
+                </button>
+                <button
+                  type="button"
+                  disabled={!!settingGlobalType || batch.isGlobalCentreBatch}
+                  onClick={() => void setGlobalBatchType("centre")}
+                  className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-800 shadow-sm transition hover:bg-violet-100 disabled:opacity-50"
+                >
+                  {settingGlobalType === "centre" ? "Setting…" : batch.isGlobalCentreBatch ? "✓ Global Centre" : "Set Global Centre"}
+                </button>
+              </>
+            )}
             {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
               <button
                 type="button"
@@ -713,6 +807,51 @@ export default function EditBatchPage() {
                               })}
                             </div>
                             <span className="text-xs text-slate-500">Auto-award on completion of this course.</span>
+                          </div>
+                        </div>
+                        {/* Marketing fields — shown for all courses */}
+                        <div className="w-full border-t border-slate-100 pt-3 mt-1 grid gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Marketing display (shown on Learn at Home / Centre pages)</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-700">
+                                Original price (₹) <span className="text-slate-400 font-normal">— shown with strikethrough</span>
+                              </label>
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                placeholder="e.g. 7000"
+                                value={originalPriceInrByCourseId[sid] ?? ""}
+                                onChange={(e) => setOriginalPriceInrByCourseId((m) => ({ ...m, [sid]: e.target.value }))}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-700">
+                                Card description <span className="text-slate-400 font-normal">— 2–3 lines shown on card</span>
+                              </label>
+                              <textarea
+                                rows={2}
+                                placeholder="Short description shown on the course card..."
+                                value={cardDescByCourseId[sid] ?? ""}
+                                onChange={(e) => setCardDescByCourseId((m) => ({ ...m, [sid]: e.target.value }))}
+                                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm resize-none"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-slate-700">
+                              Includes <span className="text-slate-400 font-normal">— one bullet per line (shown on card)</span>
+                            </label>
+                            <textarea
+                              rows={4}
+                              placeholder={"3hrs/week. Batch timings as per availability\n1:1 Lab kit during class for experiments\nCertification upon completion"}
+                              value={cardIncludesByCourseId[sid] ?? ""}
+                              onChange={(e) => setCardIncludesByCourseId((m) => ({ ...m, [sid]: e.target.value }))}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-mono"
+                            />
+                            <p className="mt-1 text-[11px] text-slate-400">Each line becomes one bullet point on the course card.</p>
                           </div>
                         </div>
                       </li>

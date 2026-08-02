@@ -19,7 +19,7 @@ import { EnrollmentModel } from "../models/Enrollment.model.js";
 import { CertificateModel } from "../models/Certificate.model.js";
 import { FranchiseCenterModel } from "../models/FranchiseCenter.model.js";
 
-type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT";
+type PeopleRole = "STUDENT" | "ADMIN" | "TRAINER" | "SUPER_ADMIN" | "SUPPORT_AGENT" | "PARENT" | "FRANCHISE_ADMIN" | "SUB_ADMIN";
 
 type PersonRow = {
   id: string;
@@ -52,8 +52,9 @@ type PeopleQueryOptions = {
 
 function normalizePeopleRole(value: unknown): PeopleRole {
   const v = String(value ?? "").trim().toUpperCase();
-  if (v === "STUDENT" || v === "ADMIN" || v === "TRAINER" || v === "SUPER_ADMIN" || v === "SUPPORT_AGENT") return v;
-  throw new AppError("role is required and must be one of STUDENT, ADMIN, TRAINER, SUPER_ADMIN, SUPPORT_AGENT", 400);
+  const valid: PeopleRole[] = ["STUDENT", "ADMIN", "SUB_ADMIN", "TRAINER", "SUPER_ADMIN", "SUPPORT_AGENT", "PARENT", "FRANCHISE_ADMIN"];
+  if ((valid as string[]).includes(v)) return v as PeopleRole;
+  throw new AppError(`role is required and must be one of ${valid.join(", ")}`, 400);
 }
 
 function toCsv(rows: PersonRow[]): string {
@@ -287,6 +288,8 @@ export const createAdminHandler = asyncHandler(async (req: Request, res: Respons
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createAdmin({ name, email, mobile, password });
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "ADMIN", username: result.username }).catch(() => {});
   successRes(res, result, "Admin created", 201);
 });
 
@@ -294,6 +297,8 @@ export const createSubAdminHandler = asyncHandler(async (req: Request, res: Resp
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createSubAdmin({ name, email, mobile, password });
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "SUB_ADMIN", username: result.username }).catch(() => {});
   successRes(res, result, "Sub Admin created", 201);
 });
 
@@ -301,6 +306,8 @@ export const createSuperAdminHandler = asyncHandler(async (req: Request, res: Re
   const { name, email, mobile, password } = req.body;
   if (!name || !email || !mobile || !password) throw new AppError("name, email, mobile and password are required", 400);
   const result = await createSuperAdmin({ name, email, mobile, password });
+  const performedBy = req.user?.userId ?? "unknown";
+  await createAuditLog("USER_CREATED", performedBy, "User", result.id, { role: "SUPER_ADMIN", username: result.username }).catch(() => {});
   successRes(res, result, "Super Admin created", 201);
 });
 

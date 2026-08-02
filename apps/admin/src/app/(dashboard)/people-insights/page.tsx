@@ -117,8 +117,14 @@ export default function PeopleInsightsPage() {
     if (!canSeeSuperAdminTab && role === "SUPER_ADMIN") setRole("STUDENT");
   }, [canSeeSuperAdminTab, role]);
 
+  // Clear error message when switching tabs or changing page
+  useEffect(() => {
+    setMessage(null);
+  }, [role, page]);
+
   async function load() {
     setLoading(true);
+    setMessage(null);
     const params = new URLSearchParams({
       role,
       page: String(page),

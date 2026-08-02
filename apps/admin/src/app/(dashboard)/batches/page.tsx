@@ -24,6 +24,7 @@ interface BatchItem {
   status: string;
   visibility?: "PUBLIC" | "PRIVATE";
   isGlobalOnlineBatch?: boolean;
+  isGlobalCentreBatch?: boolean;
   isNotEnrolledBatch?: boolean;
   courseSnapshot?: { title?: string; courseId?: string };
   courseSnapshots?: Array<{ title?: string; courseId?: string }>;
@@ -348,6 +349,12 @@ export default function BatchesPage() {
                         <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-teal-300 bg-teal-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-teal-800">
                           <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
                           Global Online
+                        </span>
+                      )}
+                      {b.isGlobalCentreBatch && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-800">
+                          <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                          Global Centre
                         </span>
                       )}
                       {b.isNotEnrolledBatch && (

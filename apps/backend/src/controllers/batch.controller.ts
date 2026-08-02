@@ -2,7 +2,7 @@
 import type { Request, Response } from "express";
 import * as service from "../services/batch.service.js";
 import * as enrollmentService from "../services/enrollment.service.js";
-import { transferStudentBatch, setGlobalOnlineBatch, setNotEnrolledBatch } from "../services/batchAssignment.service.js";
+import { transferStudentBatch, setGlobalOnlineBatch, setNotEnrolledBatch, setGlobalCentreBatch } from "../services/batchAssignment.service.js";
 import { successRes } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
@@ -209,6 +209,11 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
     coursePaymentMethods,
     courseCompletionRewardCoins,
     courseCompletionBadgeTypes,
+    courseOriginalPrices,
+    courseCardDescriptions,
+    courseCardIncludes,
+    courseImages: courseImagesRaw,
+    courseFaqs: courseFaqsRaw,
     visibility,
   } = body;
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : undefined);
@@ -228,6 +233,11 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
       headerImageUrl: parseBatchHeaderImageForUpdate(body),
       courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
       courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
+      courseOriginalPrices: courseOriginalPrices && typeof courseOriginalPrices === "object" ? courseOriginalPrices as Record<string, number> : undefined,
+      courseCardDescriptions: courseCardDescriptions && typeof courseCardDescriptions === "object" ? courseCardDescriptions as Record<string, string> : undefined,
+      courseCardIncludes: courseCardIncludes && typeof courseCardIncludes === "object" ? courseCardIncludes as Record<string, string[]> : undefined,
+      courseImages: courseImagesRaw && typeof courseImagesRaw === "object" ? courseImagesRaw as Record<string, string[]> : undefined,
+      courseFaqs: courseFaqsRaw && typeof courseFaqsRaw === "object" ? courseFaqsRaw as Record<string, Array<{ question: string; answer: string }>> : undefined,
       visibility: parseBatchVisibility(visibility),
     },
     performedBy
@@ -409,6 +419,13 @@ export const setGlobalOnlineBatchHandler = asyncHandler(async (req: Request, res
   if (!id) throw new AppError("Batch ID is required", 400);
   await setGlobalOnlineBatch(id);
   successRes(res, { batchId: id }, "Batch marked as Global Online Batch");
+});
+
+export const setGlobalCentreBatchHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (!id) throw new AppError("Batch ID is required", 400);
+  await setGlobalCentreBatch(id);
+  successRes(res, { batchId: id }, "Batch marked as Global Centre Batch");
 });
 
 export const setNotEnrolledBatchHandler = asyncHandler(async (req: Request, res: Response): Promise<void> => {

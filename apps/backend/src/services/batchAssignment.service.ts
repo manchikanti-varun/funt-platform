@@ -230,3 +230,14 @@ export async function setNotEnrolledBatch(batchMongoId: string): Promise<void> {
   // Set flag on the specified batch
   await BatchModel.updateOne({ _id: batchMongoId }, { $set: { isNotEnrolledBatch: true } }).exec();
 }
+
+/**
+ * Mark/unmark a batch as the Global Centre Batch (Super Admin only).
+ * Ensures only one batch has this flag at a time.
+ */
+export async function setGlobalCentreBatch(batchMongoId: string): Promise<void> {
+  // Clear flag from any existing batch
+  await BatchModel.updateMany({ isGlobalCentreBatch: true }, { $set: { isGlobalCentreBatch: false } }).exec();
+  // Set flag on the specified batch
+  await BatchModel.updateOne({ _id: batchMongoId }, { $set: { isGlobalCentreBatch: true } }).exec();
+}
