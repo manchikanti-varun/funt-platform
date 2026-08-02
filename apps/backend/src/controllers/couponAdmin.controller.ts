@@ -81,3 +81,10 @@ export const patchCoupon = asyncHandler(async (req: Request, res: Response): Pro
   });
   successRes(res, data, "Coupon updated");
 });
+
+export const deleteCoupon = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  if (!id) throw new AppError("Coupon id required", 400);
+  await service.deleteCouponAdmin(id);
+  successRes(res, { deleted: true }, "Coupon deleted");
+});

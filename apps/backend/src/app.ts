@@ -79,6 +79,9 @@ app.use((req, _res, next) => {
   }
   next();
 });
+// Public image serving — allow any origin so marketing site and LMS can load images
+app.use("/api/admin/images/serve", cors({ origin: "*", credentials: false }));
+
 app.use(cors({
   origin: corsOrigins.length > 0 ? corsOrigins : false,
   credentials: true,

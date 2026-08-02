@@ -102,6 +102,10 @@ export const serveImage = asyncHandler(async (req: Request, res: Response): Prom
     throw new AppError("Invalid image key", 400);
   }
 
+  // Allow any origin — images are public content embedded in courses and marketing site
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
+
   // If R2_PUBLIC_DOMAIN is set, redirect there directly (permanent)
   const publicDomain = process.env.R2_PUBLIC_DOMAIN?.trim().replace(/\/$/, "");
   if (publicDomain) {

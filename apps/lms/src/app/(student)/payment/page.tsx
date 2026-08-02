@@ -45,6 +45,243 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
+// ─── Payment method tabs (UPI / Razorpay side-by-side chooser) ───────────────
+type MsgState = { type: "ok" | "err"; text: string } | null;
+
+function PaymentMethodTabs({
+  showManualUpi,
+  showRazorpay,
+  both,
+  checkout,
+  qrSecondsLeft,
+  checking,
+  courseRejected,
+  courseRejectReason,
+  timeline,
+  amountDueRupees,
+  amountDuePaise,
+  payerName,
+  setPayerName,
+  transactionId,
+  setTransactionId,
+  paidAt,
+  setPaidAt,
+  msg,
+  loading,
+  handleUpiSubmit,
+  openRazorpay,
+}: {
+  showManualUpi: boolean;
+  showRazorpay: boolean;
+  both: boolean;
+  checkout: CheckoutInfo | null;
+  qrSecondsLeft: number;
+  checking: boolean;
+  courseRejected: boolean;
+  courseRejectReason: string;
+  timeline: PaymentTimeline | null;
+  amountDueRupees: number | null;
+  amountDuePaise: number | null;
+  payerName: string;
+  setPayerName: (v: string) => void;
+  transactionId: string;
+  setTransactionId: (v: string) => void;
+  paidAt: string;
+  setPaidAt: (v: string) => void;
+  msg: MsgState;
+  loading: boolean;
+  handleUpiSubmit: (e: React.FormEvent) => void;
+  openRazorpay: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"upi" | "razorpay">(
+    showManualUpi ? "upi" : "razorpay"
+  );
+
+  return (
+    <div className="mt-5 space-y-4">
+      {/* Tab switcher — only shown when both methods are available */}
+      {both && (
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-black/10 bg-slate-100 p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("upi")}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+              activeTab === "upi"
+                ? "bg-white text-funt-ink shadow-sm ring-1 ring-black/10"
+                : "text-black/50 hover:text-black/70"
+            }`}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <path d="M14 14h.01M14 17h.01M17 14h.01M17 17h.01M20 14h.01M20 17h.01M17 20h.01M20 20h.01" strokeLinecap="round" />
+            </svg>
+            Scan &amp; Pay
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("razorpay")}
+            className={`flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+              activeTab === "razorpay"
+                ? "bg-white text-funt-ink shadow-sm ring-1 ring-black/10"
+                : "text-black/50 hover:text-black/70"
+            }`}
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <path d="M2 10h20" />
+            </svg>
+            Pay Online
+          </button>
+        </div>
+      )}
+
+      {/* UPI / Scan & Pay panel */}
+      {showManualUpi && (!both || activeTab === "upi") && (
+        <div className="space-y-4">
+          {!both && <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Scan &amp; pay</p>}
+          {checkout?.upiQrUrl ? (
+            <div className="rounded-xl border border-black/10 bg-white p-4 text-center shadow-sm ring-1 ring-black/5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Scan to pay</p>
+              <img src={checkout.upiQrUrl} alt="UPI QR" className="mx-auto mt-3 max-h-56 w-auto max-w-full object-contain" />
+              {checkout.upiQrRefreshAfterSeconds ? (
+                <div className="mx-auto mt-3 max-w-xs">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full bg-teal-600 transition-all duration-1000"
+                      style={{ width: `${Math.max(0, (qrSecondsLeft / checkout.upiQrRefreshAfterSeconds) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-500">QR refreshes in {qrSecondsLeft}s</p>
+                </div>
+              ) : null}
+              {checkout.upiPaymentLink ? (
+                <p className="mt-2 text-[11px] text-black/50">Use any UPI app to scan and pay.</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-black/15 bg-funt-honey/30 px-3 py-2 text-sm text-black/70">
+              Your school has not uploaded a UPI QR for this batch yet. Ask them to add one in batch settings
+              {showRazorpay ? ", or switch to Pay Online above" : ""}.
+            </p>
+          )}
+          {checkout && checkout.enrollmentPriceInPaise > 0 && (
+            <div className="space-y-1 text-center text-sm text-black">
+              <p>
+                <span className="text-black/60">List price:</span>{" "}
+                <span className="font-semibold">₹{checkout.enrollmentPriceRupees.toFixed(2)}</span>
+              </p>
+              {(checkout.discountPaise ?? 0) > 0 ? (
+                <p>
+                  <span className="text-black/60">After discount:</span>{" "}
+                  <span className="font-bold">₹{(checkout.finalPriceRupees ?? checkout.enrollmentPriceRupees).toFixed(2)}</span>
+                </p>
+              ) : (
+                <p className="font-bold">Amount due: ₹{checkout.enrollmentPriceRupees.toFixed(2)}</p>
+              )}
+            </div>
+          )}
+          {!checking && courseRejected ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-sm font-medium text-amber-950">
+              Previous payment was not approved.
+              {courseRejectReason ? (
+                <span className="mt-1 block font-normal text-amber-900/90">Reason: {courseRejectReason}</span>
+              ) : null}
+            </div>
+          ) : null}
+          {timeline && (timeline.statusHistory?.length ?? 0) > 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Payment review timeline</p>
+              <p className="mt-1 text-xs text-slate-600">Expected review SLA: ~{timeline.expectedSlaHours ?? 24} hours</p>
+              <ul className="mt-2 space-y-2 text-xs text-slate-700">
+                {(timeline.statusHistory ?? []).slice().reverse().slice(0, 4).map((e, idx) => (
+                  <li key={`${e.status}-${idx}`} className="rounded border border-slate-200 bg-white px-2 py-1.5">
+                    <span className="font-semibold">{e.status}</span> - {e.note ?? "Status updated"}
+                    <span className="ml-1 text-slate-500">({new Date(e.at).toLocaleString()})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <form onSubmit={handleUpiSubmit} className="space-y-4">
+            <label className="block text-sm font-medium text-funt-ink">
+              Your name (as on UPI / bank)
+              <input
+                className="input mt-1.5"
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value)}
+                required
+                placeholder="Full name"
+              />
+            </label>
+            <div className="block text-sm font-medium text-funt-ink">
+              <span>Amount to pay (INR)</span>
+              <p className="input mt-1.5 cursor-not-allowed bg-slate-100 font-semibold text-slate-900 tabular-nums">
+                {amountDueRupees != null ? `₹${amountDueRupees.toFixed(2)}` : "—"}
+              </p>
+              <p className="mt-1 text-xs font-normal text-black/55">
+                Fixed after discount — pay exactly this amount, then submit your UTR below.
+              </p>
+            </div>
+            <label className="block text-sm font-medium text-funt-ink">
+              UPI / bank reference (UTR)
+              <input
+                className="input mt-1.5"
+                value={transactionId}
+                onChange={(e) => setTransactionId(e.target.value)}
+                required
+                placeholder="12-digit UTR or reference"
+              />
+            </label>
+            <label className="block text-sm font-medium text-funt-ink">
+              Date &amp; time paid
+              <input
+                type="datetime-local"
+                className="input mt-1.5"
+                value={paidAt}
+                onChange={(e) => setPaidAt(e.target.value)}
+                required
+              />
+            </label>
+            {msg && (
+              <div className={`rounded-xl px-3 py-2 text-sm font-medium ${msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>
+                {msg.text}
+              </div>
+            )}
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3">
+              {loading ? "Submitting…" : "Submit payment details"}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Razorpay panel */}
+      {showRazorpay && (!both || activeTab === "razorpay") && (
+        <div className="space-y-4">
+          {!both && <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Pay online</p>}
+          <p className="text-sm text-black/75">
+            Pay with Razorpay. After a successful payment your enrollment and license key are confirmed automatically.
+            {checkout && checkout.enrollmentPriceInPaise > 0 ? (
+              <span className="mt-1 block font-semibold text-black">
+                You will be charged ₹{(checkout.finalPriceRupees ?? checkout.enrollmentPriceRupees).toFixed(2)}.
+              </span>
+            ) : null}
+          </p>
+          {msg && (
+            <div className={`rounded-xl px-3 py-2 text-sm font-medium ${msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>
+              {msg.text}
+            </div>
+          )}
+          <button type="button" disabled={loading} onClick={openRazorpay} className="btn-primary w-full py-3">
+            {loading ? "Opening…" : "Pay with Razorpay"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PaymentForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -587,152 +824,35 @@ function PaymentForm() {
               <p className="mt-2 text-xs text-black/50">Online checkout is not available yet. Your school has been notified.</p>
             ) : null}
 
-            {showManualUpi ? (
-              <div className="mt-5 space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Scan &amp; pay</p>
-                {checkout?.upiQrUrl ? (
-                  <div className="rounded-xl border border-black/10 bg-white p-4 text-center shadow-sm ring-1 ring-black/5">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Scan to pay</p>
-                    <img src={checkout.upiQrUrl} alt="UPI QR" className="mx-auto mt-3 max-h-56 w-auto max-w-full object-contain" />
-                    {checkout.upiQrRefreshAfterSeconds ? (
-                      <div className="mx-auto mt-3 max-w-xs">
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                          <div
-                            className="h-full bg-teal-600 transition-all duration-1000"
-                            style={{ width: `${Math.max(0, (qrSecondsLeft / checkout.upiQrRefreshAfterSeconds) * 100)}%` }}
-                          />
-                        </div>
-                        <p className="mt-1 text-[11px] text-slate-500">QR refreshes in {qrSecondsLeft}s</p>
-                      </div>
-                    ) : null}
-                    {checkout.upiPaymentLink ? (
-                      <p className="mt-2 text-[11px] text-black/50">Use any UPI app to scan and pay.</p>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="rounded-xl border border-dashed border-black/15 bg-funt-honey/30 px-3 py-2 text-sm text-black/70">
-                    Your school has not uploaded a UPI QR for this batch yet. Ask them to add one in batch settings, or use
-                    Razorpay if available.
-                  </p>
-                )}
-                {checkout && checkout.enrollmentPriceInPaise > 0 && (
-                  <div className="space-y-1 text-center text-sm text-black">
-                    <p>
-                      <span className="text-black/60">List price:</span>{" "}
-                      <span className="font-semibold">₹{checkout.enrollmentPriceRupees.toFixed(2)}</span>
-                    </p>
-                    {(checkout.discountPaise ?? 0) > 0 ? (
-                      <p>
-                        <span className="text-black/60">After discount:</span>{" "}
-                        <span className="font-bold">₹{(checkout.finalPriceRupees ?? checkout.enrollmentPriceRupees).toFixed(2)}</span>
-                      </p>
-                    ) : (
-                      <p className="font-bold">Amount due: ₹{checkout.enrollmentPriceRupees.toFixed(2)}</p>
-                    )}
-                  </div>
-                )}
-                {!checking && courseRejected ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-sm font-medium text-amber-950">
-                    Previous payment was not approved.
-                    {courseRejectReason ? (
-                      <span className="mt-1 block font-normal text-amber-900/90">Reason: {courseRejectReason}</span>
-                    ) : null}
-                  </div>
-                ) : null}
-                {timeline && (timeline.statusHistory?.length ?? 0) > 0 ? (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Payment review timeline</p>
-                    <p className="mt-1 text-xs text-slate-600">Expected review SLA: ~{timeline.expectedSlaHours ?? 24} hours</p>
-                    <ul className="mt-2 space-y-2 text-xs text-slate-700">
-                      {(timeline.statusHistory ?? []).slice().reverse().slice(0, 4).map((e, idx) => (
-                        <li key={`${e.status}-${idx}`} className="rounded border border-slate-200 bg-white px-2 py-1.5">
-                          <span className="font-semibold">{e.status}</span> - {e.note ?? "Status updated"}
-                          <span className="ml-1 text-slate-500">({new Date(e.at).toLocaleString()})</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                <form onSubmit={handleUpiSubmit} className="space-y-4">
-                  <label className="block text-sm font-medium text-funt-ink">
-                    Your name (as on UPI / bank)
-                    <input
-                      className="input mt-1.5"
-                      value={payerName}
-                      onChange={(e) => setPayerName(e.target.value)}
-                      required
-                      placeholder="Full name"
-                    />
-                  </label>
-                  <div className="block text-sm font-medium text-funt-ink">
-                    <span>Amount to pay (INR)</span>
-                    <p className="input mt-1.5 cursor-not-allowed bg-slate-100 font-semibold text-slate-900 tabular-nums">
-                      {amountDueRupees != null ? `₹${amountDueRupees.toFixed(2)}` : "—"}
-                    </p>
-                    <p className="mt-1 text-xs font-normal text-black/55">
-                      Fixed after discount — pay exactly this amount, then submit your UTR below.
-                    </p>
-                  </div>
-                  <label className="block text-sm font-medium text-funt-ink">
-                    UPI / bank reference (UTR)
-                    <input
-                      className="input mt-1.5"
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                      required
-                      placeholder="12-digit UTR or reference"
-                    />
-                  </label>
-                  <label className="block text-sm font-medium text-funt-ink">
-                    Date &amp; time paid
-                    <input
-                      type="datetime-local"
-                      className="input mt-1.5"
-                      value={paidAt}
-                      onChange={(e) => setPaidAt(e.target.value)}
-                      required
-                    />
-                  </label>
-                  {msg && (
-                    <div
-                      className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                        msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                  )}
-                  <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-                    {loading ? "Submitting…" : "Submit payment details"}
-                  </button>
-                </form>
-              </div>
-            ) : null}
-
-            {showRazorpay ? (
-              <div className={`space-y-4 ${showManualUpi ? "mt-8 border-t border-black/10 pt-8" : "mt-5"}`}>
-                <p className="text-xs font-semibold uppercase tracking-wider text-black/50">Pay online</p>
-                <p className="text-sm text-black/75">
-                  Pay with Razorpay. After a successful payment your enrollment and license key are confirmed automatically.
-                  {checkout && checkout.enrollmentPriceInPaise > 0 ? (
-                    <span className="mt-1 block font-semibold text-black">
-                      You will be charged ₹{(checkout.finalPriceRupees ?? checkout.enrollmentPriceRupees).toFixed(2)}.
-                    </span>
-                  ) : null}
-                </p>
-                {msg && (
-                  <div
-                    className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                      msg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {msg.text}
-                  </div>
-                )}
-                <button type="button" disabled={loading} onClick={() => void openRazorpay()} className="btn-primary w-full py-3">
-                  {loading ? "Opening…" : "Pay with Razorpay"}
-                </button>
-              </div>
+            {showManualUpi || showRazorpay ? (
+              (() => {
+                const both = showManualUpi && showRazorpay;
+                return (
+                  <PaymentMethodTabs
+                    showManualUpi={showManualUpi}
+                    showRazorpay={showRazorpay}
+                    both={both}
+                    checkout={checkout}
+                    qrSecondsLeft={qrSecondsLeft}
+                    checking={checking}
+                    courseRejected={courseRejected}
+                    courseRejectReason={courseRejectReason}
+                    timeline={timeline}
+                    amountDueRupees={amountDueRupees}
+                    amountDuePaise={amountDuePaise}
+                    payerName={payerName}
+                    setPayerName={setPayerName}
+                    transactionId={transactionId}
+                    setTransactionId={setTransactionId}
+                    paidAt={paidAt}
+                    setPaidAt={setPaidAt}
+                    msg={msg}
+                    loading={loading}
+                    handleUpiSubmit={handleUpiSubmit}
+                    openRazorpay={() => void openRazorpay()}
+                  />
+                );
+              })()
             ) : null}
           </>
         ) : (

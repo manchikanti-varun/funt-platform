@@ -356,3 +356,10 @@ export async function patchCouponAdmin(
   await doc.save();
   return { id: String(doc._id) };
 }
+
+export async function deleteCouponAdmin(couponId: string) {
+  const doc = await CouponModel.findById(couponId).exec();
+  if (!doc) throw new AppError("Coupon not found", 404);
+  await CouponModel.findByIdAndDelete(couponId).exec();
+  return { deleted: true };
+}

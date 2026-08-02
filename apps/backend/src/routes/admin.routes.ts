@@ -54,7 +54,7 @@ import {
   patchShopOrderStatus,
   getShopStockInsightsAdmin,
 } from "../controllers/shopAdmin.controller.js";
-import { listCoupons, postCoupon, patchCoupon, getCouponAudit } from "../controllers/couponAdmin.controller.js";
+import { listCoupons, postCoupon, patchCoupon, getCouponAudit, deleteCoupon } from "../controllers/couponAdmin.controller.js";
 import { postGeneratePaymentQr, getPaymentQrHistory } from "../controllers/paymentQrAdmin.controller.js";
 import { getStaffPickersList } from "../controllers/staffPicker.controller.js";
 import {
@@ -202,6 +202,7 @@ router.get("/coupons", requireRoles(ROLE.SUPER_ADMIN), listCoupons);
 router.get("/coupons/audit", requireRoles(ROLE.SUPER_ADMIN), getCouponAudit);
 router.post("/coupons", requireRoles(ROLE.SUPER_ADMIN), validateBody(createCouponSchema), postCoupon);
 router.patch("/coupons/:id", requireRoles(ROLE.SUPER_ADMIN), validateBody(updateCouponSchema), patchCoupon);
+router.delete("/coupons/:id", requireRoles(ROLE.SUPER_ADMIN), deleteCoupon);
 router.post("/generate-qr", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), postGeneratePaymentQr);
 router.get("/qr-history", requireRoles(ROLE.SUPER_ADMIN), getPaymentQrHistory);
 router.get("/payment-upi/config", requireRoles(ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN), getAdminPaymentUpiConfig);

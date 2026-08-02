@@ -198,6 +198,7 @@ export default function AdminCouponsPage() {
         batchId: kind === "COURSE" ? selectedBatchId : undefined,
         courseId: kind === "COURSE" ? courseId.trim() : undefined,
         audience: kind === "COURSE" ? courseAudience : undefined,
+        discountType: "PERCENT",
         discountValue: percent,
         validUntil: validUntil.trim() ? new Date(validUntil).toISOString() : undefined,
         notes: notes.trim() || undefined,
@@ -226,6 +227,20 @@ export default function AdminCouponsPage() {
     setActingId(null);
     if (res.success) load();
     else setMsg(res.message ?? "Failed");
+  }
+
+  async function deleteCouponRow(row: CouponRow) {
+    if (!confirm(`Delete coupon "${row.code}"? This cannot be undone.`)) return;
+    setActingId(row.id);
+    setMsg(null);
+    const res = await api(`/api/admin/coupons/${encodeURIComponent(row.id)}`, { method: "DELETE" });
+    setActingId(null);
+    if (res.success) {
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+      setMsg("Coupon deleted.");
+    } else {
+      setMsg(res.message ?? "Failed to delete.");
+    }
   }
 
   if (loading && rows.length === 0) {
@@ -422,6 +437,7 @@ export default function AdminCouponsPage() {
               <th className="px-4 py-3 font-semibold text-slate-700">Discount</th>
               <th className="px-4 py-3 font-semibold text-slate-700">Uses</th>
               <th className="px-4 py-3 font-semibold text-slate-700 w-28">Active</th>
+              <th className="px-4 py-3 font-semibold text-slate-700 w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -440,6 +456,16 @@ export default function AdminCouponsPage() {
                     className={`rounded-lg px-3 py-1 text-xs font-semibold ${r.active ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-600"}`}
                   >
                     {r.active ? "On" : "Off"}
+                  </button>
+                </td>
+                <td className="px-4 py-3">
+                  <button
+                    type="button"
+                    disabled={actingId === r.id}
+                    onClick={() => void deleteCouponRow(r)}
+                    className="rounded-lg px-3 py-1 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    Delete
                   </button>
                 </td>
               </tr>
