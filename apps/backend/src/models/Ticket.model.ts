@@ -75,7 +75,6 @@ const ticketSchema = new Schema(
 ticketSchema.index({ createdBy: 1, status: 1 });
 ticketSchema.index({ assignedTo: 1, status: 1 });
 ticketSchema.index({ status: 1, priority: 1 });
-ticketSchema.index({ ticketNumber: 1 }, { unique: true });
 ticketSchema.index({ slaDueAt: 1, slaBreached: 1 });
 
 export const TicketModel = mongoose.model("Ticket", ticketSchema);

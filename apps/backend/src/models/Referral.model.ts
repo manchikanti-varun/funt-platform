@@ -22,8 +22,6 @@ const referralSchema = new Schema(
   { timestamps: true }
 );
 
-referralSchema.index({ code: 1 }, { unique: true });
-
 export const ReferralModel = mongoose.model("Referral", referralSchema);
 
 /**

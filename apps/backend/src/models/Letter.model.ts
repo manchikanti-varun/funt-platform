@@ -136,7 +136,6 @@ const letterSchema = new Schema(
   { timestamps: true }
 );
 
-letterSchema.index({ letterId: 1 });
 letterSchema.index({ status: 1, type: 1 });
 letterSchema.index({ approvalStatus: 1 });
 letterSchema.index({ recipientEmail: 1 });

@@ -47,8 +47,6 @@ const knowledgeArticleSchema = new Schema(
 knowledgeArticleSchema.index({ roles: 1, type: 1, category: 1, isPublished: 1 });
 // Text search
 knowledgeArticleSchema.index({ title: "text", content: "text", tags: "text", summary: "text" });
-// Slug lookup
-knowledgeArticleSchema.index({ slug: 1 }, { unique: true });
 // Onboarding sequences
 knowledgeArticleSchema.index({ type: 1, onboardingRole: 1, onboardingStep: 1 });
 

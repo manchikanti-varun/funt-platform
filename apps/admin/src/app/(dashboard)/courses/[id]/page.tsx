@@ -603,43 +603,107 @@ export default function EditCoursePage() {
             <div className="mt-6 border-t border-slate-200 pt-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Course Images (3–4 photos for detail page gallery)</h4>
+              </div>
+              <p className="text-xs text-slate-500">Upload images or paste direct https:// URLs. These appear in the gallery on the course detail page.</p>
+
+              {/* Upload button */}
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 hover:bg-teal-100 transition">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Upload image
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    e.target.value = "";
+                    setError("");
+                    try {
+                      const mimeType = file.type || "image/jpeg";
+                      const presignRes = await api<{ uploadUrl: string; imageKey: string; publicUrl: string }>(
+                        "/api/admin/images/presign",
+                        { method: "POST", body: JSON.stringify({ courseId: id || "course-gallery", moduleId: `gallery-${Date.now()}`, mimeType }) }
+                      );
+                      if (!presignRes.success || !presignRes.data?.uploadUrl) throw new Error(presignRes.message ?? "Failed to get upload URL");
+                      const { uploadUrl, imageKey } = presignRes.data;
+                      await new Promise<void>((resolve, reject) => {
+                        const xhr = new XMLHttpRequest();
+                        xhr.addEventListener("load", () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (HTTP ${xhr.status})`)));
+                        xhr.addEventListener("error", () => reject(new Error("Network error uploading image")));
+                        xhr.open("PUT", uploadUrl);
+                        xhr.setRequestHeader("Content-Type", mimeType);
+                        xhr.send(file);
+                      });
+                      const confirmRes = await api<{ imageKey: string; publicUrl: string }>(
+                        "/api/admin/images/confirm",
+                        { method: "POST", body: JSON.stringify({ imageKey }) }
+                      );
+                      if (!confirmRes.success || !confirmRes.data?.publicUrl) throw new Error(confirmRes.message ?? "Upload confirmation failed");
+                      setCourseImages((prev) => [...prev, confirmRes.data!.publicUrl]);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "Failed to upload image");
+                    }
+                  }}
+                />
+              </label>
+
+              {/* Thumbnails grid */}
+              {courseImages.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {courseImages.map((url, i) => (
+                    <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-video bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Gallery image ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setCourseImages(courseImages.filter((_, j) => j !== i))}
+                        className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                        title="Remove image"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {courseImages.length === 0 && (
+                <p className="text-xs text-slate-400">No images yet. Upload photos to show in the course gallery.</p>
+              )}
+
+              {/* Or paste a URL manually */}
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="url"
+                  placeholder="Or paste an image URL (https://...)"
+                  className="input flex-1 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val.startsWith("https://")) {
+                        setCourseImages([...courseImages, val]);
+                        (e.target as HTMLInputElement).value = "";
+                      }
+                    }
+                  }}
+                />
                 <button
                   type="button"
-                  onClick={() => setCourseImages([...courseImages, ""])}
-                  className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                    const val = input.value.trim();
+                    if (val.startsWith("https://")) {
+                      setCourseImages([...courseImages, val]);
+                      input.value = "";
+                    }
+                  }}
                 >
-                  + Add image URL
+                  Add URL
                 </button>
               </div>
-              {courseImages.length === 0 && (
-                <p className="text-xs text-slate-400">No images yet. Add https:// URLs for the detail page gallery.</p>
-              )}
-              {courseImages.map((url, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => {
-                      const next = [...courseImages];
-                      next[i] = e.target.value;
-                      setCourseImages(next);
-                    }}
-                    className="input flex-1 text-sm font-mono"
-                    placeholder="https://..."
-                  />
-                  {url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={url} alt="" className="h-10 w-14 rounded object-cover border border-slate-200" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setCourseImages(courseImages.filter((_, j) => j !== i))}
-                    className="shrink-0 text-red-500 hover:text-red-700 text-xs font-semibold"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
             </div>
 
             {/* ── FAQs ── */}
