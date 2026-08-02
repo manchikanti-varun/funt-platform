@@ -939,3 +939,69 @@ export async function deleteBatch(id: string, performedBy: string) {
   await cacheDel(CACHE_KEYS.adminBatches());
   return { id: mongoId, batchId: humanId, name: (existing as { name?: string }).name, deleted: true };
 }
+
+/**
+ * Force-delete a batch — cascades and removes ALL linked records first.
+ * Use only for test/demo data. SUPER_ADMIN only.
+ *
+ * Deletes: enrollments, enrollment requests, assignment submissions,
+ * attendance records, certificates, module/chapter progress, then the batch.
+ */
+export async function forceDeleteBatch(id: string, performedBy: string) {
+  const existing = await findBatchByParam(id);
+  if (!existing) throw new AppError("Batch not found", 404);
+
+  const mongoId = String(existing._id);
+  const humanId = (existing as { batchId?: string }).batchId;
+  const idsToMatch = [mongoId, ...(humanId ? [humanId] : [])];
+  const batchName = (existing as { name?: string }).name;
+
+  // Cascade delete all linked data
+  const [
+    enrollments,
+    enrollmentRequests,
+    submissions,
+    attendance,
+    certificates,
+    moduleProgress,
+  ] = await Promise.all([
+    EnrollmentModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+    EnrollmentRequestModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+    AssignmentSubmissionModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+    AttendanceModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+    CertificateModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+    ModuleProgressModel.deleteMany({ batchId: { $in: idsToMatch } }).exec(),
+  ]);
+
+  // Now delete the batch itself
+  await BatchModel.deleteOne({ _id: existing._id }).exec();
+
+  await createAuditLog("BATCH_FORCE_DELETED", performedBy, ENTITY_BATCH, mongoId, {
+    batchId: humanId,
+    name: batchName,
+    cascadeDeleted: {
+      enrollments: enrollments.deletedCount,
+      enrollmentRequests: enrollmentRequests.deletedCount,
+      submissions: submissions.deletedCount,
+      attendance: attendance.deletedCount,
+      certificates: certificates.deletedCount,
+      moduleProgress: moduleProgress.deletedCount,
+    },
+  });
+  await cacheDel(CACHE_KEYS.adminBatches());
+
+  return {
+    id: mongoId,
+    batchId: humanId,
+    name: batchName,
+    deleted: true,
+    cascadeDeleted: {
+      enrollments: enrollments.deletedCount,
+      enrollmentRequests: enrollmentRequests.deletedCount,
+      submissions: submissions.deletedCount,
+      attendance: attendance.deletedCount,
+      certificates: certificates.deletedCount,
+      moduleProgress: moduleProgress.deletedCount,
+    },
+  };
+}

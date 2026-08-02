@@ -16,6 +16,7 @@ import {
   archiveBatch,
   unarchiveBatch,
   deleteBatch,
+  forceDeleteBatch,
   bulkDeleteBatches,
   getBatchStudents,
   addBatchStudent,
@@ -49,5 +50,6 @@ router.post("/:id/sync-course", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), sync
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveBatch);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveBatch);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteBatch);
+router.delete("/:id/force", requireRoles(ROLE.SUPER_ADMIN), forceDeleteBatch);
 
 export const batchRoutes = router;

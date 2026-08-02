@@ -306,6 +306,14 @@ export const deleteBatch = asyncHandler(async (req: Request, res: Response): Pro
   successRes(res, data, "Batch deleted");
 });
 
+export const forceDeleteBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = req.params.id;
+  const performedBy = getUserId(req);
+  if (!id) throw new AppError("Batch ID is required", 400);
+  const data = await service.forceDeleteBatch(id, performedBy);
+  successRes(res, data, "Batch and all linked data permanently deleted");
+});
+
 export const bulkDeleteBatches = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const performedBy = getUserId(req);
   const { ids } = req.body ?? {};

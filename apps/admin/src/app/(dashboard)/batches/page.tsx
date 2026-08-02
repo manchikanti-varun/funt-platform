@@ -64,6 +64,28 @@ export default function BatchesPage() {
       setList((prev) => prev.filter((b) => b.id !== batchMongoId));
       return;
     }
+
+    // If blocked by linked data, offer force delete
+    const isBlocked = res.message?.includes("still in use");
+    if (isBlocked) {
+      const forceOk = await dialog.confirm({
+        title: "⚠️ Force Delete?",
+        message: `${res.message}\n\nForce delete will permanently remove the batch AND all linked records (enrollments, progress, attendance, submissions, certificates).\n\nOnly use this for test/demo data. This CANNOT be undone.`,
+        confirmLabel: "Force Delete Everything",
+        variant: "danger",
+      });
+      if (!forceOk) return;
+      setDeletingId(batchMongoId);
+      const forceRes = await api<{ deleted: boolean }>(`/api/batches/${batchMongoId}/force`, { method: "DELETE" });
+      setDeletingId(null);
+      if (forceRes.success) {
+        setList((prev) => prev.filter((b) => b.id !== batchMongoId));
+        return;
+      }
+      await dialog.alert({ title: "Force delete failed", message: forceRes.message ?? "Failed to force delete batch." });
+      return;
+    }
+
     await dialog.alert({ title: "Delete failed", message: res.message ?? "Failed to delete batch." });
   }
 
