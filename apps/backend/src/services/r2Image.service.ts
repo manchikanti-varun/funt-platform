@@ -79,9 +79,14 @@ export function buildImageKey(courseId: string, moduleId: string, mimeType: stri
 
 /**
  * Build the public URL for an image stored in R2.
- * Uses the backend serve endpoint which redirects to a presigned GET URL.
+ * If R2_PUBLIC_DOMAIN is configured, returns a direct public URL (no signing needed).
+ * Otherwise falls back to the backend serve endpoint (redirects to presigned GET URL).
  */
 export function buildImagePublicUrl(objectKey: string): string {
+  const publicDomain = process.env.R2_PUBLIC_DOMAIN?.trim().replace(/\/$/, "");
+  if (publicDomain) {
+    return `${publicDomain}/${objectKey}`;
+  }
   const backendUrl = (getEnv().backendPublicUrl || "").replace(/\/$/, "");
   return `${backendUrl}/api/admin/images/serve/${objectKey}`;
 }

@@ -606,6 +606,36 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       courseImages?: string[];
       courseFaqs?: Array<{ question: string; answer: string }>;
     }>;
+
+    // Build a map: humanCourseId → mongoId and reverse, so we can match
+    // regardless of whether the frontend sent MongoDB _id or human courseId
+    const snapCourseIds = snaps.map((s) => String(s.courseId ?? "")).filter(Boolean);
+    const courseDocsForSnaps = snapCourseIds.length > 0
+      ? await CourseModel.find({
+          $or: [
+            { _id: { $in: snapCourseIds.filter((x) => BATCH_OBJECT_ID_REGEX.test(x)) } },
+            { courseId: { $in: snapCourseIds } },
+          ],
+        }).select("_id courseId").lean().exec()
+      : [];
+    // map: humanId → mongoId, mongoId → humanId
+    const idAliasMap = new Map<string, string>();
+    for (const c of courseDocsForSnaps) {
+      const mongoId = String(c._id);
+      const humanId = (c as { courseId?: string }).courseId ?? "";
+      if (mongoId && humanId) {
+        idAliasMap.set(humanId, mongoId);
+        idAliasMap.set(mongoId, humanId);
+      }
+    }
+
+    function lookupInMap(map: Record<string, unknown>, cid: string): unknown {
+      if (map[cid] !== undefined) return map[cid];
+      const alias = idAliasMap.get(cid);
+      if (alias && map[alias] !== undefined) return map[alias];
+      return undefined;
+    }
+
     const priceMap = input.courseEnrollmentPrices ?? {};
     const rewardMap = input.courseCompletionRewardCoins ?? {};
     const badgeMap = input.courseCompletionBadgeTypes ?? {};
@@ -618,35 +648,40 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
     for (const s of snaps) {
       const cid = String(s.courseId ?? "");
       if (!cid) continue;
-      const raw = priceMap[cid];
+      const raw = lookupInMap(priceMap as Record<string, unknown>, cid) as number | undefined;
       if (raw !== undefined && raw !== null && Number.isFinite(Number(raw))) {
         s.enrollmentPriceInPaise = rupeesToPaiseFromInput(raw);
       }
       const paise = Math.max(0, Math.floor(Number(s.enrollmentPriceInPaise ?? 0)));
       if (pm !== undefined) {
         const mongo = cid;
-        const human = cid;
+        const human = idAliasMap.get(cid) ?? cid;
         s.allowedPaymentMethods = allowedPaymentMethodsForCourse(paise, { mongo, human }, pm);
       } else if (input.courseEnrollmentPrices !== undefined && paise < 100) {
         s.allowedPaymentMethods = [];
       }
       if (input.courseCompletionRewardCoins !== undefined) {
-        const r = rewardMap[cid];
+        const r = lookupInMap(rewardMap as Record<string, unknown>, cid) as number | undefined;
         if (r !== undefined && r !== null && Number.isFinite(Number(r))) {
           s.completionRewardCoins = normalizeCompletionRewardCoins(r);
         }
       }
       if (input.courseCompletionBadgeTypes !== undefined) {
-        const b = badgeMap[cid];
+        const b = lookupInMap(badgeMap as Record<string, unknown>, cid);
         if (b !== undefined) s.completionBadgeTypes = normalizeCompletionBadgeTypes(b);
       }
-      if (origPriceMap[cid] !== undefined) {
-        s.originalPriceInPaise = Math.max(0, Math.floor(Number(origPriceMap[cid]) * 100));
+      const origRaw = lookupInMap(origPriceMap as Record<string, unknown>, cid) as number | undefined;
+      if (origRaw !== undefined) {
+        s.originalPriceInPaise = Math.max(0, Math.floor(Number(origRaw) * 100));
       }
-      if (cardDescMap[cid] !== undefined) s.cardDescription = String(cardDescMap[cid]).trim();
-      if (cardIncMap[cid] !== undefined) s.cardIncludes = Array.isArray(cardIncMap[cid]) ? cardIncMap[cid] : [];
-      if (imgMap[cid] !== undefined) s.courseImages = Array.isArray(imgMap[cid]) ? imgMap[cid] : [];
-      if (faqMap[cid] !== undefined) s.courseFaqs = Array.isArray(faqMap[cid]) ? faqMap[cid] : [];
+      const descRaw = lookupInMap(cardDescMap as Record<string, unknown>, cid);
+      if (descRaw !== undefined) s.cardDescription = String(descRaw).trim();
+      const incRaw = lookupInMap(cardIncMap as Record<string, unknown>, cid);
+      if (incRaw !== undefined) s.cardIncludes = Array.isArray(incRaw) ? incRaw as string[] : [];
+      const imgRaw = lookupInMap(imgMap as Record<string, unknown>, cid);
+      if (imgRaw !== undefined) s.courseImages = Array.isArray(imgRaw) ? imgRaw as string[] : [];
+      const faqRaw = lookupInMap(faqMap as Record<string, unknown>, cid);
+      if (faqRaw !== undefined) s.courseFaqs = Array.isArray(faqRaw) ? faqRaw as Array<{ question: string; answer: string }> : [];
     }
     (doc as { courseSnapshots?: unknown[] }).courseSnapshots = snaps;
   }

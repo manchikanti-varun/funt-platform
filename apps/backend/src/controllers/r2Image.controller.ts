@@ -93,21 +93,37 @@ export const confirmImage = asyncHandler(async (req: Request, res: Response): Pr
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/images/serve/:key(*)
-// Fallback image serving — redirects to a presigned GET URL.
-// Used only when R2_PUBLIC_DOMAIN is not configured.
+// Image serving — streams the image from R2 so no CORS/CSP issues on clients.
 // ---------------------------------------------------------------------------
 export const serveImage = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  // Express wildcard: /serve/* captures everything after /serve/ in req.params[0]
   const key = req.params[0] || "";
 
   if (!key || !key.startsWith("images/")) {
     throw new AppError("Invalid image key", 400);
   }
 
+  // If R2_PUBLIC_DOMAIN is set, redirect there directly (permanent)
+  const publicDomain = process.env.R2_PUBLIC_DOMAIN?.trim().replace(/\/$/, "");
+  if (publicDomain) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.redirect(301, `${publicDomain}/${key}`);
+    return;
+  }
+
+  // Otherwise: stream the image through the backend (avoids CORS/CSP issues)
   const signedUrl = await generateSignedImageUrl(key);
-  // Cache the redirect for 1 hour — the presigned URL is valid for 7 days
+  const upstream = await fetch(signedUrl);
+  if (!upstream.ok) {
+    throw new AppError("Image not found", 404);
+  }
+  const contentType = upstream.headers.get("content-type") ?? "image/jpeg";
+  const contentLength = upstream.headers.get("content-length");
+  res.setHeader("Content-Type", contentType);
   res.setHeader("Cache-Control", "public, max-age=3600");
-  res.redirect(302, signedUrl);
+  if (contentLength) res.setHeader("Content-Length", contentLength);
+  // Stream the response body
+  const buffer = await upstream.arrayBuffer();
+  res.end(Buffer.from(buffer));
 });
 
 // ---------------------------------------------------------------------------
