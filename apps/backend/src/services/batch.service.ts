@@ -305,6 +305,7 @@ function toBatchResponse(doc: BatchDoc, listView = false, staff?: StaffMap) {
     certificatePriceCoins: Math.max(0, Math.floor(Number((doc as { certificatePriceCoins?: number }).certificatePriceCoins ?? 0))),
     visibility: (doc.visibility === "PRIVATE" ? "PRIVATE" : "PUBLIC") as "PUBLIC" | "PRIVATE",
     isGlobalOnlineBatch: !!(doc as { isGlobalOnlineBatch?: boolean }).isGlobalOnlineBatch,
+    isGlobalCentreBatch: !!(doc as { isGlobalCentreBatch?: boolean }).isGlobalCentreBatch,
     isNotEnrolledBatch: !!(doc as { isNotEnrolledBatch?: boolean }).isNotEnrolledBatch,
     ...(listView || !qr ? {} : { manualUpiQrUrl: qr }),
     ...(headerImage ? { headerImageUrl: headerImage } : {}),

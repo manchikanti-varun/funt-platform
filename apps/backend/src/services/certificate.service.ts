@@ -40,11 +40,57 @@ export async function checkEligibility(
   const modules = getFirstSnapshotModules(batch);
   if (modules.length === 0) return { eligible: false, reason: "Batch has no modules" };
 
-  const completedCount = await ChapterProgressModel.countDocuments({
+  // Count chapters that are effectively completed — either have completedAt set,
+  // or have all their required parts done (handles backward-compat where completedAt
+  // may not be set if quiz was added after student already completed other parts).
+  const progressDocs = await ChapterProgressModel.find({
     studentId,
     batchId: batchMongoId,
-    completedAt: { $exists: true, $ne: null },
-  }).exec();
+  }).lean().exec();
+
+  const progressByOrder = new Map(
+    progressDocs.map((p) => [(p as { moduleOrder: number }).moduleOrder, p])
+  );
+
+  let completedCount = 0;
+  for (let order = 0; order < modules.length; order++) {
+    const mod = modules[order] as {
+      linkedAssignmentId?: string;
+      linkedQuizId?: string;
+      content?: string;
+      description?: string;
+      videoUrl?: string;
+      youtubeUrl?: string;
+    };
+    const p = progressByOrder.get(order) as {
+      completedAt?: Date | null;
+      contentCompletedAt?: Date | null;
+      videoCompletedAt?: Date | null;
+      youtubeCompletedAt?: Date | null;
+      assignmentCompletedAt?: Date | null;
+      quizCompletedAt?: Date | null;
+    } | undefined;
+
+    if (!p) continue; // no progress at all
+
+    if (p.completedAt) { completedCount++; continue; }
+
+    // Check parts individually (backward-compat)
+    const hasContent = !!(mod.content?.trim() || mod.description?.trim());
+    const hasVideo = !!mod.videoUrl?.trim();
+    const hasYoutube = !!mod.youtubeUrl?.trim();
+    const hasAssignment = !!mod.linkedAssignmentId?.trim();
+
+    const contentOk = !hasContent || !!p.contentCompletedAt;
+    const videoOk = !hasVideo || !!p.videoCompletedAt;
+    const youtubeOk = !hasYoutube || !!p.youtubeCompletedAt;
+    const assignmentOk = !hasAssignment || !!p.assignmentCompletedAt;
+
+    if (contentOk && videoOk && youtubeOk && assignmentOk) {
+      completedCount++;
+    }
+  }
+
   if (completedCount < modules.length) {
     return { eligible: false, reason: "Not all modules completed" };
   }

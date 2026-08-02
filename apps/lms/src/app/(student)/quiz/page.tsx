@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -86,6 +86,59 @@ function QuizPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // ── Fullscreen state ──────────────────────────────────────────────────
+  const [fsRequested, setFsRequested] = useState(false);
+  const [fsAborted, setFsAborted] = useState(false);
+  const quizContainerRef = useRef<HTMLDivElement>(null);
+
+  // Request fullscreen when quiz starts
+  const enterFullscreen = useCallback(async () => {
+    try {
+      const el = quizContainerRef.current ?? document.documentElement;
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if ((el as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen)
+        await (el as { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+      setFsRequested(true);
+    } catch {
+      // User denied fullscreen — still allow but warn
+      setFsRequested(true);
+    }
+  }, []);
+
+  // Watch for fullscreen exit during quiz — abort if user exits
+  useEffect(() => {
+    if (view !== "quiz") return;
+
+    const handleFsChange = () => {
+      const isFs = !!(
+        document.fullscreenElement ||
+        (document as { webkitFullscreenElement?: Element }).webkitFullscreenElement
+      );
+      if (!isFs && fsRequested && view === "quiz") {
+        // User exited fullscreen — abort quiz
+        setFsAborted(true);
+        setView("error");
+        setError("Quiz aborted: you exited fullscreen mode. Please start again and stay in fullscreen.");
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
+  }, [view, fsRequested]);
+
+  // Exit fullscreen when quiz ends (result or error)
+  useEffect(() => {
+    if (view === "result" || (view === "error" && !fsAborted)) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  }, [view, fsAborted]);
+
   // Load quiz info
   useEffect(() => {
     if (!quizId) { setView("error"); setError("No quiz specified."); return; }
@@ -100,6 +153,11 @@ function QuizPage() {
   // Start attempt
   const handleStart = useCallback(async () => {
     setError("");
+    setFsAborted(false);
+
+    // Request fullscreen first
+    await enterFullscreen();
+
     const body: Record<string, unknown> = { quizId, batchId, courseId };
     if (chapterOrder != null) body.chapterOrder = Number(chapterOrder);
     if (milestoneId) body.milestoneId = milestoneId;
@@ -110,7 +168,6 @@ function QuizPage() {
     });
     if (r.success && r.data) {
       setAttempt(r.data);
-      // Restore saved answers
       const saved: Record<string, string | null> = {};
       for (const q of r.data.questions) {
         if (q.savedAnswer) saved[q.questionId] = q.savedAnswer;
@@ -120,8 +177,9 @@ function QuizPage() {
       setView("quiz");
     } else {
       setError(r.message ?? "Failed to start quiz");
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     }
-  }, [quizId, batchId, courseId, chapterOrder, milestoneId]);
+  }, [quizId, batchId, courseId, chapterOrder, milestoneId, enterFullscreen]);
 
   // Auto-save answer
   const selectOption = useCallback(async (questionId: string, optionId: string) => {
@@ -222,12 +280,16 @@ function QuizPage() {
               </div>
             </div>
             {error && <p className="mt-4 text-sm font-semibold text-red-600">{error}</p>}
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <svg className="inline h-4 w-4 mr-1.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <strong>Fullscreen required.</strong> The quiz will open in fullscreen. If you exit fullscreen at any time, the quiz will be aborted.
+            </div>
             <button
               type="button"
               onClick={handleStart}
-              className="mt-8 w-full rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-bold text-white shadow-lg transition hover:bg-indigo-500"
+              className="mt-6 w-full rounded-xl bg-indigo-600 px-6 py-3.5 text-base font-bold text-white shadow-lg transition hover:bg-indigo-500"
             >
-              Start Quiz
+              Start Quiz (Fullscreen)
             </button>
           </div>
         </div>
@@ -239,6 +301,7 @@ function QuizPage() {
   if (view === "quiz" && attempt && currentQuestion) {
     return (
       <AppPageShell className="max-w-3xl pb-8">
+        <div ref={quizContainerRef}>
         <div className="mt-6">
           {/* Header: progress bar */}
           <div className="mb-6 flex items-center justify-between">
@@ -332,6 +395,7 @@ function QuizPage() {
             )}
           </div>
           {error && <p className="mt-4 text-center text-sm font-semibold text-red-600">{error}</p>}
+        </div>
         </div>
       </AppPageShell>
     );
