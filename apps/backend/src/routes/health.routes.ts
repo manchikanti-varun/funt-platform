@@ -15,6 +15,16 @@ router.get("/ping", (_req, res) => {
   res.status(200).json({ ok: true });
 });
 
+router.get("/razorpay-status", (_req, res) => {
+  const keyId = process.env.RAZORPAY_KEY_ID?.trim() ?? "";
+  const hasSecret = !!(process.env.RAZORPAY_KEY_SECRET?.trim());
+  res.status(200).json({
+    configured: !!(keyId && hasSecret),
+    keyPrefix: keyId ? keyId.slice(0, 14) + "..." : "not set",
+    mode: keyId.startsWith("rzp_live_") ? "live" : keyId.startsWith("rzp_test_") ? "test" : "unknown",
+  });
+});
+
 router.get("/ready", (_req, res) => {
   const state = mongoose.connection.readyState;
   // 1 = connected, 2 = connecting

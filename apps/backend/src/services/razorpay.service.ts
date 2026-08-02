@@ -34,9 +34,11 @@ export async function createRazorpayOrder(amountPaise: number, receipt: string, 
       notes,
     }),
   });
-  const data = (await res.json()) as { id?: string; error?: { description?: string } };
+  const data = (await res.json()) as { id?: string; error?: { description?: string; code?: string } };
   if (!res.ok) {
-    throw new AppError(data.error?.description ?? "Could not create payment order", 502);
+    const desc = data.error?.description ?? "Could not create payment order";
+    const code = data.error?.code ?? res.status;
+    throw new AppError(`Razorpay: ${desc} (${code})`, 502);
   }
   if (!data.id) throw new AppError("Invalid order response from gateway", 502);
   return { orderId: data.id, amount, currency: "INR" as const };
