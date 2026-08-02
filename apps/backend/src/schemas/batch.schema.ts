@@ -27,4 +27,14 @@ export const updateBatchSchema = createBatchBaseSchema.partial().extend({
   /** Allow updating course snapshots */
   courseSnapshots: z.array(z.any()).optional(),
   courseSnapshot: z.any().optional(),
+  /** Per-course pricing and payment method overrides */
+  courseEnrollmentPrices: z.record(z.string(), z.number()).optional(),
+  coursePaymentMethods: z.record(z.string(), z.object({ upiManual: z.boolean(), razorpay: z.boolean() })).optional(),
+  courseCompletionRewardCoins: z.record(z.string(), z.number()).optional(),
+  courseCompletionBadgeTypes: z.record(z.string(), z.array(z.string())).optional(),
+  courseOriginalPrices: z.record(z.string(), z.number()).optional(),
+  courseCardDescriptions: z.record(z.string(), z.string()).optional(),
+  courseCardIncludes: z.record(z.string(), z.array(z.string())).optional(),
+  courseImages: z.record(z.string(), z.array(z.string())).optional(),
+  courseFaqs: z.record(z.string(), z.array(z.object({ question: z.string(), answer: z.string() }))).optional(),
 });
