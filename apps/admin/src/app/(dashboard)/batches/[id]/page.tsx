@@ -278,11 +278,27 @@ export default function EditBatchPage() {
         });
       }
     }
-  // enrollmentInrByCourseId included: courses may load before batch data, so we re-run
-  // normalization once prices are populated to correctly remap keys. The inner guard
-  // (normalized.some check) prevents infinite loops.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courses, enrollmentInrByCourseId]);  function courseIsDemo(id: string) {
+  }, [courses]);
+
+  /**
+   * Resolve a value from a courseId-keyed map using both the MongoDB _id (sid)
+   * and the human-readable courseId. This guards against the race condition where
+   * the batch data arrives before courses load, so the normalization effect hasn't
+   * had a chance to remap keys yet.
+   */
+  function resolveFromMap<T>(map: Record<string, T>, sid: string): T | undefined {
+    if (map[sid] !== undefined) return map[sid];
+    // Fallback: find the course by MongoDB _id and also try its human-readable courseId
+    const course = courses.find((c) => c.id === sid);
+    if (course?.courseId && map[course.courseId] !== undefined) return map[course.courseId];
+    // Also try the reverse: sid might be a human-readable id, look up via courseId field
+    const courseByHuman = courses.find((c) => c.courseId === sid);
+    if (courseByHuman && map[courseByHuman.id] !== undefined) return map[courseByHuman.id];
+    return undefined;
+  }
+
+  function courseIsDemo(id: string) {
     const c = courses.find((x) => x.id === id || x.courseId === id);
     return !!c?.isDemo;
   }
@@ -296,13 +312,13 @@ export default function EditBatchPage() {
     const courseCompletionBadgeTypes: Record<string, string[]> = {};
     for (const sid of selectedCourseIds) {
       if (courseIsDemo(sid)) continue;
-      const raw = enrollmentInrByCourseId[sid]?.trim();
+      const raw = (resolveFromMap(enrollmentInrByCourseId, sid) ?? "").trim();
       const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
       if (raw !== undefined && raw !== "" && Number.isFinite(rupees)) {
         courseEnrollmentPrices[sid] = rupees;
       }
       if (Number.isFinite(rupees) && rupees >= 1) {
-        const pm = paymentByCourseId[sid] ?? { upiManual: true, razorpay: true };
+        const pm = resolveFromMap(paymentByCourseId, sid) ?? { upiManual: true, razorpay: true };
         if (!pm.upiManual && !pm.razorpay) {
           setError("For each paid course (₹1+), enable at least one checkout option: QR + UTR or online checkout.");
           setLoading(false);
@@ -310,12 +326,12 @@ export default function EditBatchPage() {
         }
         coursePaymentMethods[sid] = { upiManual: pm.upiManual, razorpay: pm.razorpay };
       }
-      const badges = (completionBadgesByCourseId[sid] ?? []).map((b) => b.trim()).filter(Boolean);
+      const badges = (resolveFromMap(completionBadgesByCourseId, sid) ?? []).map((b) => b.trim()).filter(Boolean);
       if (badges.length > 0) courseCompletionBadgeTypes[sid] = badges;
     }
     const courseCompletionRewardCoins: Record<string, number> = {};
     for (const sid of selectedCourseIds) {
-      const raw = completionCoinsByCourseId[sid]?.trim();
+      const raw = (resolveFromMap(completionCoinsByCourseId, sid) ?? "").trim();
       const n = raw === undefined || raw === "" ? 0 : Math.floor(Number(raw));
       courseCompletionRewardCoins[sid] = Number.isFinite(n) && n >= 0 ? Math.min(1_000_000, n) : 0;
     }
@@ -659,10 +675,10 @@ export default function EditBatchPage() {
                       courseMeta?.title ??
                       batch?.courseSnapshots?.find((s) => s.courseId === sid)?.title ??
                       sid;
-                    const raw = enrollmentInrByCourseId[sid]?.trim();
+                    const raw = (resolveFromMap(enrollmentInrByCourseId, sid) ?? "").trim();
                     const ru = demo ? 0 : raw === "" || raw === undefined ? NaN : Number(raw);
                     const showPay = !demo && Number.isFinite(ru) && ru >= 1;
-                    const pm = paymentByCourseId[sid] ?? { upiManual: true, razorpay: true };
+                    const pm = resolveFromMap(paymentByCourseId, sid) ?? { upiManual: true, razorpay: true };
                     return (
                       <li key={sid} className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-white/90 px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                         <span className="min-w-[140px] flex-1 text-sm text-slate-700">{title}</span>
@@ -672,7 +688,7 @@ export default function EditBatchPage() {
                             min={0}
                             step="0.01"
                             placeholder="0"
-                            value={demo ? "0" : (enrollmentInrByCourseId[sid] ?? "")}
+                            value={demo ? "0" : (resolveFromMap(enrollmentInrByCourseId, sid) ?? "")}
                             onChange={(e) =>
                               setEnrollmentInrByCourseId((m) => ({ ...m, [sid]: e.target.value }))
                             }
@@ -729,7 +745,7 @@ export default function EditBatchPage() {
                             type="number"
                             min={0}
                             step={1}
-                            value={completionCoinsByCourseId[sid] ?? "0"}
+                            value={resolveFromMap(completionCoinsByCourseId, sid) ?? "0"}
                             onChange={(e) =>
                               setCompletionCoinsByCourseId((m) => ({ ...m, [sid]: e.target.value }))
                             }
@@ -740,7 +756,7 @@ export default function EditBatchPage() {
                             <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">Completion badges</label>
                             <div className="flex flex-wrap gap-2">
                               {badgeOptions.map((b) => {
-                                const selected = (completionBadgesByCourseId[sid] ?? []).includes(b.badgeType);
+                                const selected = (resolveFromMap(completionBadgesByCourseId, sid) ?? []).includes(b.badgeType);
                                 return (
                                   <label
                                     key={b.badgeType}
