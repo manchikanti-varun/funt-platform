@@ -5,6 +5,8 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { useAdminUser } from "@/contexts/AdminUserContext";
+import { ROLE } from "@funt-platform/constants";
 
 interface QuizItem {
   _id: string;
@@ -18,10 +20,14 @@ interface QuizItem {
 }
 
 export default function QuizzesPage() {
+  const { roles } = useAdminUser();
+  const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
+
   const [quizzes, setQuizzes] = useState<QuizItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [activating, setActivating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,15 +43,46 @@ export default function QuizzesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const draftIds = quizzes
+    .filter((q) => q.status === "DRAFT")
+    .map((q) => q.quizId ?? q._id);
+
+  async function activateAllDrafts() {
+    if (draftIds.length === 0) return;
+    if (!confirm(`Activate all ${draftIds.length} draft quiz(zes)?`)) return;
+    setActivating(true);
+    const r = await api("/api/quizzes/bulk-status", {
+      method: "POST",
+      body: JSON.stringify({ ids: draftIds, status: "ACTIVE" }),
+    });
+    setActivating(false);
+    if (r.success) {
+      await load();
+    } else {
+      alert("Failed to activate quizzes. Please try again.");
+    }
+  }
+
   return (
     <>
       <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/dashboard" />
       <AppPageShell>
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Quizzes</h1>
-          <Link href="/quizzes/new" className="btn-primary text-sm">
-            + Create Quiz
-          </Link>
+          <div className="flex items-center gap-2">
+            {isSuperAdmin && draftIds.length > 0 && (
+              <button
+                onClick={activateAllDrafts}
+                disabled={activating}
+                className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition"
+              >
+                {activating ? "Activating…" : `Activate ${draftIds.length} Draft${draftIds.length === 1 ? "" : "s"}`}
+              </button>
+            )}
+            <Link href="/quizzes/new" className="btn-primary text-sm">
+              + Create Quiz
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}

@@ -171,6 +171,20 @@ export async function archiveQuiz(idParam: string): Promise<unknown> {
   return updateQuiz(idParam, { status: QUIZ_STATUS.ARCHIVED } as Partial<QuizDoc>);
 }
 
+export async function bulkUpdateQuizStatus(
+  ids: string[],
+  status: string
+): Promise<{ updated: number; skipped: number }> {
+  if (!Object.values(QUIZ_STATUS).includes(status as QUIZ_STATUS)) {
+    throw new AppError(`Invalid status: ${status}`, 400);
+  }
+  const result = await QuizModel.updateMany(
+    { $or: ids.map((id) => (id.match(/^[a-f\d]{24}$/i) ? { _id: id } : { quizId: id })) },
+    { $set: { status } }
+  ).exec();
+  return { updated: result.modifiedCount, skipped: ids.length - result.modifiedCount };
+}
+
 export async function deleteQuiz(idParam: string): Promise<{ id: string; quizId?: string; title: string; deleted: boolean }> {
   const quiz = await findQuizByParam(idParam);
   if (!quiz) throw new AppError("Quiz not found", 404);

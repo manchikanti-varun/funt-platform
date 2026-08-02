@@ -57,6 +57,14 @@ export const archiveQuiz = asyncHandler(async (req: Request, res: Response): Pro
   successRes(res, data, "Quiz archived");
 });
 
+export const bulkUpdateQuizStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { ids, status } = req.body as { ids?: unknown; status?: unknown };
+  if (!Array.isArray(ids) || ids.length === 0) throw new AppError("ids must be a non-empty array", 400);
+  if (typeof status !== "string") throw new AppError("status is required", 400);
+  const data = await quizService.bulkUpdateQuizStatus(ids as string[], status);
+  successRes(res, data, `Quizzes updated to ${status}`);
+});
+
 export const deleteQuiz = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   if (!id) throw new AppError("Quiz ID is required", 400);

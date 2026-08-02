@@ -63,7 +63,7 @@ const quizSchema = new Schema(
       type: String,
       required: true,
       enum: Object.values(QUIZ_STATUS),
-      default: QUIZ_STATUS.DRAFT,
+      default: QUIZ_STATUS.ACTIVE,
     },
 
     // ── Questions ─────────────────────────────────────────────────────────

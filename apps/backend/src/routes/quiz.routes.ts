@@ -37,6 +37,7 @@ import {
   updateQuiz,
   archiveQuiz,
   deleteQuiz,
+  bulkUpdateQuizStatus,
   listQuizzesForLinking,
   getQuizForStudent,
   startQuizAttempt,
@@ -55,6 +56,7 @@ quizAdminRoutes.use(authMiddleware, requireRoles(...ADMIN_ROLES));
 
 quizAdminRoutes.post("/", validateBody(createQuizSchema), createQuiz);
 quizAdminRoutes.get("/", listQuizzes);
+quizAdminRoutes.post("/bulk-status", bulkUpdateQuizStatus);
 quizAdminRoutes.get("/for-linking", listQuizzesForLinking);
 quizAdminRoutes.get("/:id", getQuiz);
 quizAdminRoutes.put("/:id", validateBody(updateQuizSchema), updateQuiz);

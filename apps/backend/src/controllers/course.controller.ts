@@ -43,7 +43,7 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers } = req.body ?? {};
+  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers, cardDescription, cardIncludes, originalPriceInPaise, courseImages, courseFaqs } = req.body ?? {};
   const body = req.body ?? {};
   const headerPatch =
     "headerImageUrl" in body
@@ -68,6 +68,11 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
       learningOutcomes: Array.isArray(learningOutcomes) ? learningOutcomes.filter((l: unknown) => typeof l === "string" && l.trim()) : undefined,
       overview: typeof overview === "string" ? overview : undefined,
       pricingTiers: Array.isArray(pricingTiers) ? pricingTiers : undefined,
+      cardDescription: typeof cardDescription === "string" ? cardDescription : undefined,
+      cardIncludes: Array.isArray(cardIncludes) ? cardIncludes.filter((l: unknown) => typeof l === "string" && l.trim()) : undefined,
+      originalPriceInPaise: typeof originalPriceInPaise === "number" ? originalPriceInPaise : (originalPriceInPaise !== undefined ? Number(originalPriceInPaise) : undefined),
+      courseImages: Array.isArray(courseImages) ? courseImages.filter((u: unknown) => typeof u === "string" && u.trim()) : undefined,
+      courseFaqs: Array.isArray(courseFaqs) ? courseFaqs : undefined,
     },
     performedBy
   );

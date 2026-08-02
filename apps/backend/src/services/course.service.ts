@@ -121,6 +121,11 @@ export interface UpdateCourseInput {
   learningOutcomes?: string[];
   overview?: string;
   pricingTiers?: { label: string; price: string; note?: string }[];
+  cardDescription?: string;
+  cardIncludes?: string[];
+  originalPriceInPaise?: number;
+  courseImages?: string[];
+  courseFaqs?: { question: string; answer: string }[];
 }
 
 export interface UpdateCourseModuleInput {
@@ -437,6 +442,11 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.learningOutcomes !== undefined) (doc as unknown as Record<string, unknown>).learningOutcomes = input.learningOutcomes;
   if (input.overview !== undefined) (doc as unknown as Record<string, unknown>).overview = input.overview.trim();
   if (input.pricingTiers !== undefined) (doc as unknown as Record<string, unknown>).pricingTiers = input.pricingTiers;
+  if (input.cardDescription !== undefined) (doc as unknown as Record<string, unknown>).cardDescription = input.cardDescription.trim();
+  if (input.cardIncludes !== undefined) (doc as unknown as Record<string, unknown>).cardIncludes = input.cardIncludes;
+  if (input.originalPriceInPaise !== undefined) (doc as unknown as Record<string, unknown>).originalPriceInPaise = Math.max(0, Math.floor(Number(input.originalPriceInPaise)));
+  if (input.courseImages !== undefined) (doc as unknown as Record<string, unknown>).courseImages = input.courseImages;
+  if (input.courseFaqs !== undefined) (doc as unknown as Record<string, unknown>).courseFaqs = input.courseFaqs;
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0

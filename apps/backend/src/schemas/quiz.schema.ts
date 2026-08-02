@@ -28,7 +28,7 @@ export const createQuizSchema = z.object({
   title: z.string().min(1, "Title is required").max(300),
   description: z.string().optional().default(""),
   type: z.enum(["CHAPTER", "MILESTONE", "COURSE_FINAL"]),
-  status: z.enum(["ACTIVE", "DRAFT", "ARCHIVED"]).optional().default("DRAFT"),
+  status: z.enum(["ACTIVE", "DRAFT", "ARCHIVED"]).optional().default("ACTIVE"),
   questions: z.array(questionInputSchema).optional().default([]),
   passingScore: z.coerce.number().min(0).max(100).default(70),
   maxAttempts: z.coerce.number().int().min(0).default(0),

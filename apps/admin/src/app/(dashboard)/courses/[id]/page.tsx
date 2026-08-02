@@ -48,6 +48,11 @@ interface Course {
   learningOutcomes?: string[];
   overview?: string;
   pricingTiers?: { label: string; price: string; note?: string }[];
+  cardDescription?: string;
+  cardIncludes?: string[];
+  originalPriceInPaise?: number;
+  courseImages?: string[];
+  courseFaqs?: { question: string; answer: string }[];
   modules: CourseModule[];
   version: number;
   status: string;
@@ -93,6 +98,11 @@ export default function EditCoursePage() {
   const [learningOutcomes, setLearningOutcomes] = useState("");
   const [overview, setOverview] = useState("");
   const [pricingTiers, setPricingTiers] = useState<{ label: string; price: string; note: string }[]>([]);
+  const [cardDescription, setCardDescription] = useState("");
+  const [cardIncludes, setCardIncludes] = useState("");
+  const [originalPriceInr, setOriginalPriceInr] = useState("");
+  const [courseImages, setCourseImages] = useState<string[]>([]);
+  const [courseFaqs, setCourseFaqs] = useState<{ question: string; answer: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -127,6 +137,12 @@ export default function EditCoursePage() {
         setLearningOutcomes((r.data.learningOutcomes ?? []).join("\n"));
         setOverview(decodeEncodedRichText(r.data.overview ?? ""));
         setPricingTiers((r.data.pricingTiers ?? []).map((t) => ({ label: t.label, price: t.price, note: t.note ?? "" })));
+        setCardDescription((r.data.cardDescription ?? "").trim());
+        setCardIncludes((r.data.cardIncludes ?? []).join("\n"));
+        const opaise = Math.max(0, Math.floor(Number(r.data.originalPriceInPaise ?? 0)));
+        setOriginalPriceInr(opaise > 0 ? (opaise / 100).toFixed(0) : "");
+        setCourseImages(Array.isArray(r.data.courseImages) ? r.data.courseImages : []);
+        setCourseFaqs(Array.isArray(r.data.courseFaqs) ? r.data.courseFaqs : []);
         const wm = r.data.enableWatermark;
         setEnableWatermark(wm === true ? true : wm === false ? false : "inherit");
       }
@@ -204,6 +220,11 @@ export default function EditCoursePage() {
       learningOutcomes: learningOutcomes.split("\n").map((l) => l.trim()).filter(Boolean),
       overview: overview.trim(),
       pricingTiers: pricingTiers.filter((t) => t.label.trim() && t.price.trim()),
+      cardDescription: cardDescription.trim(),
+      cardIncludes: cardIncludes.split("\n").map((l) => l.trim()).filter(Boolean),
+      originalPriceInPaise: originalPriceInr.trim() ? Math.round(Number(originalPriceInr.trim()) * 100) : 0,
+      courseImages: courseImages.filter(Boolean),
+      courseFaqs: courseFaqs.filter((f) => f.question.trim() && f.answer.trim()),
       enableWatermark: enableWatermark === "inherit" ? null : enableWatermark,
     };
     const res = await api(`/api/courses/${id}`, {
@@ -528,6 +549,151 @@ export default function EditCoursePage() {
               ))}
               <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-indigo-700 hover:text-indigo-900">+ Add pricing tier</button>
             </div>
+
+            {/* ── Card display fields ── */}
+            <div className="mt-6 border-t border-slate-200 pt-5 space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Card Display (shown on course cards)</h4>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Original price (₹) <span className="font-normal text-slate-400">— shown with strikethrough</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={originalPriceInr}
+                    onChange={(e) => setOriginalPriceInr(e.target.value)}
+                    className="input"
+                    placeholder="e.g. 7000"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">Set a value here to show ~~₹7,000~~ ₹5,999 on cards.</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Card description <span className="font-normal text-slate-400">— 2–3 lines on the card</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={cardDescription}
+                    onChange={(e) => setCardDescription(e.target.value)}
+                    className="input resize-none"
+                    placeholder="Short description shown on the course card..."
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Includes <span className="font-normal text-slate-400">— one bullet per line (shown on card)</span>
+                </label>
+                <textarea
+                  rows={5}
+                  value={cardIncludes}
+                  onChange={(e) => setCardIncludes(e.target.value)}
+                  className="input font-mono text-sm"
+                  placeholder={"Modular Electronic Maker Kit\nLifetime Access with 1:1 Guidance\nCertification upon completion\nUpto 50+ Projects, no limitation"}
+                />
+                <p className="mt-1 text-xs text-slate-400">Each line = one bullet on the course card.</p>
+              </div>
+            </div>
+
+            {/* ── Course Images (gallery) ── */}
+            <div className="mt-6 border-t border-slate-200 pt-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Course Images (3–4 photos for detail page gallery)</h4>
+                <button
+                  type="button"
+                  onClick={() => setCourseImages([...courseImages, ""])}
+                  className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                >
+                  + Add image URL
+                </button>
+              </div>
+              {courseImages.length === 0 && (
+                <p className="text-xs text-slate-400">No images yet. Add https:// URLs for the detail page gallery.</p>
+              )}
+              {courseImages.map((url, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => {
+                      const next = [...courseImages];
+                      next[i] = e.target.value;
+                      setCourseImages(next);
+                    }}
+                    className="input flex-1 text-sm font-mono"
+                    placeholder="https://..."
+                  />
+                  {url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={url} alt="" className="h-10 w-14 rounded object-cover border border-slate-200" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setCourseImages(courseImages.filter((_, j) => j !== i))}
+                    className="shrink-0 text-red-500 hover:text-red-700 text-xs font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* ── FAQs ── */}
+            <div className="mt-6 border-t border-slate-200 pt-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">FAQs (shown at bottom of course detail page)</h4>
+                <button
+                  type="button"
+                  onClick={() => setCourseFaqs([...courseFaqs, { question: "", answer: "" }])}
+                  className="text-xs font-medium text-indigo-700 hover:text-indigo-900"
+                >
+                  + Add FAQ
+                </button>
+              </div>
+              {courseFaqs.length === 0 && (
+                <p className="text-xs text-slate-400">No FAQs yet. Click "+ Add FAQ" to create question & answer pairs.</p>
+              )}
+              {courseFaqs.map((faq, i) => (
+                <div key={i} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-600">FAQ {i + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setCourseFaqs(courseFaqs.filter((_, j) => j !== i))}
+                      className="text-xs text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <input
+                    value={faq.question}
+                    onChange={(e) => {
+                      const next = [...courseFaqs];
+                      next[i] = { ...next[i], question: e.target.value };
+                      setCourseFaqs(next);
+                    }}
+                    className="input text-sm"
+                    placeholder="Question — e.g. What age group is this course for?"
+                  />
+                  <textarea
+                    rows={2}
+                    value={faq.answer}
+                    onChange={(e) => {
+                      const next = [...courseFaqs];
+                      next[i] = { ...next[i], answer: e.target.value };
+                      setCourseFaqs(next);
+                    }}
+                    className="input resize-none text-sm"
+                    placeholder="Answer..."
+                  />
+                </div>
+              ))}
+            </div>
+
           </div>
           {/* ── Security settings ── */}
           <div className="border-t border-slate-200 pt-6">
