@@ -112,17 +112,20 @@ export default function CoursesPage() {
   const exploreCourses = useMemo(
     () =>
       filterBySearch(
-        exploreCoursesList,
+        // Hide courses the student is already enrolled in — they're shown in My Courses
+        exploreCoursesList.filter((c) => !enrolledKeySet.has(String(c.courseId).trim())),
         searchQuery,
         (c) => c.courseTitle,
         (c) => c.description ?? ""
       ),
-    [exploreCoursesList, searchQuery]
+    [exploreCoursesList, searchQuery, enrolledKeySet]
   );
 
   const enrolledKeySet = useMemo(() => {
+    // Key by courseId only — the student may be enrolled in a different batch
+    // than what the explore listing shows. We don't want to show the same course twice.
     return new Set(
-      myCoursesList.map((c) => `${String(c.courseId).trim()}::${String(c.batchId).trim()}`)
+      myCoursesList.map((c) => String(c.courseId).trim())
     );
   }, [myCoursesList]);
 
@@ -231,7 +234,7 @@ export default function CoursesPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
             {exploreCourses.map((c) => {
-              const enrolled = enrolledKeySet.has(`${String(c.courseId).trim()}::${String(c.batchId).trim()}`);
+              const enrolled = enrolledKeySet.has(String(c.courseId).trim());
               const feeLabel =
                 c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
                   ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`

@@ -68,6 +68,10 @@ function PaymentMethodTabs({
   setPaidAt,
   upiMsg,
   razorpayMsg,
+  enrollStatus,
+  enrolledLicenseKey,
+  setEnrollStatus,
+  setRazorpayMsg,
   loading,
   handleUpiSubmit,
   openRazorpay,
@@ -91,6 +95,10 @@ function PaymentMethodTabs({
   setPaidAt: (v: string) => void;
   upiMsg: MsgState;
   razorpayMsg: MsgState;
+  enrollStatus: "idle" | "paid" | "enrolling" | "enrolled" | "enroll_failed";
+  enrolledLicenseKey: string | null;
+  setEnrollStatus: (s: "idle" | "paid" | "enrolling" | "enrolled" | "enroll_failed") => void;
+  setRazorpayMsg: (m: MsgState) => void;
   loading: boolean;
   handleUpiSubmit: (e: React.FormEvent) => void;
   openRazorpay: () => void;
@@ -256,10 +264,68 @@ function PaymentMethodTabs({
             </div>
           )}
           {razorpayMsg && (
-            <div className={`rounded-xl px-3 py-2 text-sm font-medium ${razorpayMsg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>{razorpayMsg.text}</div>
+            <div className={`rounded-xl px-4 py-3 text-sm font-medium ${razorpayMsg.type === "ok" ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}>
+              {razorpayMsg.text}
+            </div>
           )}
-          <button type="button" disabled={loading} onClick={openRazorpay} className="btn-primary w-full py-3">
-            {loading ? "Opening…" : "Pay with Razorpay"}
+          {/* Step-by-step enrollment status */}
+          {(enrollStatus === "paid" || enrollStatus === "enrolling" || enrollStatus === "enrolled" || enrollStatus === "enroll_failed") && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Enrollment Status</p>
+              <div className="space-y-2">
+                {/* Step 1: Payment */}
+                <div className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
+                  <span className="text-sm font-medium text-emerald-700">Payment received by Razorpay</span>
+                </div>
+                {/* Step 2: Enrolling */}
+                <div className="flex items-center gap-3">
+                  {enrollStatus === "enrolling" ? (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+                    </span>
+                  ) : enrollStatus === "enrolled" ? (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
+                  ) : enrollStatus === "enroll_failed" ? (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700 text-xs font-bold">✗</span>
+                  ) : (
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400 text-xs">2</span>
+                  )}
+                  <span className={`text-sm font-medium ${enrollStatus === "enrolling" ? "text-indigo-700" : enrollStatus === "enrolled" ? "text-emerald-700" : enrollStatus === "enroll_failed" ? "text-red-700" : "text-slate-400"}`}>
+                    {enrollStatus === "enrolling" ? "Activating course access..." : enrollStatus === "enrolled" ? "Course access activated!" : enrollStatus === "enroll_failed" ? "Enrollment failed — contact support" : "Activate course access"}
+                  </span>
+                </div>
+                {/* Step 3: License key (if applicable) */}
+                {enrollStatus === "enrolled" && enrolledLicenseKey && (
+                  <div className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-emerald-700">Your license key</p>
+                    <p className="mt-1 font-mono text-sm font-bold text-emerald-900">{enrolledLicenseKey}</p>
+                  </div>
+                )}
+                {/* Redirect notice */}
+                {enrollStatus === "enrolled" && (
+                  <p className="text-xs text-slate-500">Redirecting to your course in a moment...</p>
+                )}
+                {/* Enroll failed: manual retry */}
+                {enrollStatus === "enroll_failed" && (
+                  <button
+                    type="button"
+                    onClick={() => { setEnrollStatus("idle"); setRazorpayMsg(null); }}
+                    className="mt-2 text-xs font-semibold text-indigo-600 underline"
+                  >
+                    Try again / Contact support
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <button type="button" disabled={loading || enrollStatus === "enrolled" || enrollStatus === "enrolling"} onClick={openRazorpay} className="btn-primary w-full py-3 disabled:opacity-60">
+            {loading || enrollStatus === "enrolling" ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                {enrollStatus === "enrolling" ? "Enrolling..." : "Processing..."}
+              </span>
+            ) : enrollStatus === "enrolled" ? "Enrolled ✓" : "Pay with Razorpay"}
           </button>
         </div>
       )}
@@ -306,6 +372,8 @@ function PaymentForm() {
   const [shopRejectReason, setShopRejectReason] = useState("");
   const [upiMsg, setUpiMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [razorpayMsg, setRazorpayMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [enrollStatus, setEnrollStatus] = useState<"idle" | "paid" | "enrolling" | "enrolled" | "enroll_failed">("idle");
+  const [enrolledLicenseKey, setEnrolledLicenseKey] = useState<string | null>(null);
   const [accessBlockedByAdmin, setAccessBlockedByAdmin] = useState(false);
   const [timeline, setTimeline] = useState<PaymentTimeline | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState(0);
@@ -554,8 +622,14 @@ function PaymentForm() {
         description: courseTitle,
         theme: { color: "#0f766e" },
         handler: async (resp: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+          // Step 1: Payment captured by Razorpay
+          setEnrollStatus("paid");
+          setRazorpayMsg({ type: "ok", text: "✓ Payment received. Enrolling you in the course..." });
           setLoading(true);
-          const confirm = await api("/api/student/payments/razorpay/confirm", {
+
+          // Step 2: Confirm with backend and enroll
+          setEnrollStatus("enrolling");
+          const confirm = await api<{ assignedLicenseKey?: string }>("/api/student/payments/razorpay/confirm", {
             method: "POST",
             body: JSON.stringify({
               batchId: effectiveBatchId,
@@ -568,13 +642,28 @@ function PaymentForm() {
             }),
           });
           setLoading(false);
+
           if (confirm.success) {
-            setRazorpayMsg({ type: "ok", text: confirm.message ?? "Payment successful. You are enrolled." });
+            // Step 3: Enrolled successfully
+            setEnrollStatus("enrolled");
+            const licenseKey = confirm.data?.assignedLicenseKey ?? null;
+            setEnrolledLicenseKey(licenseKey);
+            setRazorpayMsg({
+              type: "ok",
+              text: licenseKey
+                ? `✓ Enrolled! Your license key: ${licenseKey}`
+                : "✓ Payment successful. You are enrolled!",
+            });
             window.setTimeout(() => {
               router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
-            }, 2400);
+            }, 3000);
           } else {
-            setRazorpayMsg({ type: "err", text: confirm.message ?? "Could not confirm payment." });
+            // Step 3 failed: payment went through but enrollment failed
+            setEnrollStatus("enroll_failed");
+            setRazorpayMsg({
+              type: "err",
+              text: `Payment was received but enrollment failed: ${confirm.message ?? "Unknown error"}. Contact support with your payment ID: ${resp.razorpay_payment_id}`,
+            });
           }
         },
       };
@@ -830,6 +919,10 @@ function PaymentForm() {
                     setPaidAt={setPaidAt}
                     upiMsg={upiMsg}
                     razorpayMsg={razorpayMsg}
+                    enrollStatus={enrollStatus}
+                    enrolledLicenseKey={enrolledLicenseKey}
+                    setEnrollStatus={setEnrollStatus}
+                    setRazorpayMsg={setRazorpayMsg}
                     loading={loading}
                     handleUpiSubmit={handleUpiSubmit}
                     openRazorpay={() => void openRazorpay()}

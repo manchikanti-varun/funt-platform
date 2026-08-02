@@ -96,8 +96,8 @@ function QuizPage() {
     try {
       const el = quizContainerRef.current ?? document.documentElement;
       if (el.requestFullscreen) await el.requestFullscreen();
-      else if ((el as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen)
-        await (el as { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
+      else if ((el as unknown as { webkitRequestFullscreen?: () => Promise<void> }).webkitRequestFullscreen)
+        await (el as unknown as { webkitRequestFullscreen: () => Promise<void> }).webkitRequestFullscreen();
       setFsRequested(true);
     } catch {
       // User denied fullscreen — still allow but warn

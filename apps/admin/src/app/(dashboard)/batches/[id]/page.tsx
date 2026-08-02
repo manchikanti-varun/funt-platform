@@ -386,8 +386,8 @@ export default function EditBatchPage() {
     if (res.success) {
       setBatch((prev) => prev ? {
         ...prev,
-        isGlobalOnlineBatch: type === "online" ? true : false,
-        isGlobalCentreBatch: type === "centre" ? true : false,
+        isGlobalOnlineBatch: type === "online" ? true : prev.isGlobalOnlineBatch,
+        isGlobalCentreBatch: type === "centre" ? true : prev.isGlobalCentreBatch,
       } : prev);
     } else {
       setError(res.message ?? `Failed to set ${label}.`);

@@ -218,6 +218,7 @@ export async function setGlobalOnlineBatch(batchMongoId: string): Promise<void> 
   await BatchModel.updateMany({ isGlobalOnlineBatch: true }, { $set: { isGlobalOnlineBatch: false } }).exec();
   // Set flag on the specified batch
   await BatchModel.updateOne({ _id: batchMongoId }, { $set: { isGlobalOnlineBatch: true } }).exec();
+  await cacheDel(CACHE_KEYS.adminBatches());
 }
 
 /**
@@ -229,6 +230,7 @@ export async function setNotEnrolledBatch(batchMongoId: string): Promise<void> {
   await BatchModel.updateMany({ isNotEnrolledBatch: true }, { $set: { isNotEnrolledBatch: false } }).exec();
   // Set flag on the specified batch
   await BatchModel.updateOne({ _id: batchMongoId }, { $set: { isNotEnrolledBatch: true } }).exec();
+  await cacheDel(CACHE_KEYS.adminBatches());
 }
 
 /**
@@ -240,4 +242,5 @@ export async function setGlobalCentreBatch(batchMongoId: string): Promise<void> 
   await BatchModel.updateMany({ isGlobalCentreBatch: true }, { $set: { isGlobalCentreBatch: false } }).exec();
   // Set flag on the specified batch
   await BatchModel.updateOne({ _id: batchMongoId }, { $set: { isGlobalCentreBatch: true } }).exec();
+  await cacheDel(CACHE_KEYS.adminBatches());
 }
