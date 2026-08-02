@@ -323,8 +323,12 @@ export default function EditBatchPage() {
       if (courseIsDemo(sid)) continue;
       const raw = (resolveFromMap(enrollmentInrByCourseId, sid) ?? "").trim();
       const rupees = raw === undefined || raw === "" ? NaN : Number(raw);
+      // Key the price by whichever key actually has the value in the map
+      // so the backend can match it to the snapshot's courseId directly.
+      const priceKey = enrollmentInrByCourseId[sid] !== undefined ? sid
+        : courses.find((c) => c.id === sid)?.courseId ?? sid;
       if (raw !== undefined && raw !== "" && Number.isFinite(rupees)) {
-        courseEnrollmentPrices[sid] = rupees;
+        courseEnrollmentPrices[priceKey] = rupees;
       }
       if (Number.isFinite(rupees) && rupees >= 1) {
         const pm = resolveFromMap(paymentByCourseId, sid) ?? { upiManual: true, razorpay: true };
@@ -333,16 +337,18 @@ export default function EditBatchPage() {
           setLoading(false);
           return;
         }
-        coursePaymentMethods[sid] = { upiManual: pm.upiManual, razorpay: pm.razorpay };
+        coursePaymentMethods[priceKey] = { upiManual: pm.upiManual, razorpay: pm.razorpay };
       }
       const badges = (resolveFromMap(completionBadgesByCourseId, sid) ?? []).map((b) => b.trim()).filter(Boolean);
-      if (badges.length > 0) courseCompletionBadgeTypes[sid] = badges;
+      if (badges.length > 0) courseCompletionBadgeTypes[priceKey] = badges;
     }
     const courseCompletionRewardCoins: Record<string, number> = {};
     for (const sid of selectedCourseIds) {
       const raw = (resolveFromMap(completionCoinsByCourseId, sid) ?? "").trim();
       const n = raw === undefined || raw === "" ? 0 : Math.floor(Number(raw));
-      courseCompletionRewardCoins[sid] = Number.isFinite(n) && n >= 0 ? Math.min(1_000_000, n) : 0;
+      const priceKey = completionCoinsByCourseId[sid] !== undefined ? sid
+        : courses.find((c) => c.id === sid)?.courseId ?? sid;
+      courseCompletionRewardCoins[priceKey] = Number.isFinite(n) && n >= 0 ? Math.min(1_000_000, n) : 0;
     }
     const body: Record<string, unknown> = {
       name,
@@ -363,6 +369,10 @@ export default function EditBatchPage() {
     };
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
+    console.log("[BatchEdit] submit body:", JSON.stringify(body, null, 2));
+    console.log("[BatchEdit] selectedCourseIds at submit:", selectedCourseIds);
+    console.log("[BatchEdit] initialCourseIds at submit:", initialCourseIds);
+    console.log("[BatchEdit] enrollmentInrByCourseId at submit:", enrollmentInrByCourseId);
     const res = await api(`/api/batches/${id}`, {
       method: "PUT",
       body: JSON.stringify(body),
