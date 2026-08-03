@@ -43,7 +43,7 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers, cardDescription, cardIncludes, originalPriceInPaise, courseImages, courseFaqs } = req.body ?? {};
+  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers, cardDescription, cardIncludes, originalPriceInPaise, courseImages, courseFaqs, enableWatermark } = req.body ?? {};
   const body = req.body ?? {};
   const headerPatch =
     "headerImageUrl" in body
@@ -73,6 +73,7 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
       originalPriceInPaise: typeof originalPriceInPaise === "number" ? originalPriceInPaise : (originalPriceInPaise !== undefined ? Number(originalPriceInPaise) : undefined),
       courseImages: Array.isArray(courseImages) ? courseImages.filter((u: unknown) => typeof u === "string" && u.trim()) : undefined,
       courseFaqs: Array.isArray(courseFaqs) ? courseFaqs : undefined,
+      ...("enableWatermark" in body ? { enableWatermark: enableWatermark === true ? true : enableWatermark === false ? false : null } : {}),
     },
     performedBy
   );

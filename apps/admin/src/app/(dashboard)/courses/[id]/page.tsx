@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { COURSE_STATUS, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
+import { COURSE_STATUS, COURSE_DELIVERY_MODE, SUBMISSION_TYPE, SKILL_TAG } from "@funt-platform/constants";
 import { decodeEncodedRichText } from "@/lib/sanitizeHtml";
 
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -13,6 +13,9 @@ import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { ChapterFileAttachments } from "@/components/chapters/ChapterFileAttachments";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 import { makeUploadImageFn } from "@/lib/uploadImageToR2";
+import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
+import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
+import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
 
 interface CourseModule {
   originalGlobalModuleId: string;
@@ -74,11 +77,6 @@ interface QuizOption {
   type: string;
   questionCount?: number;
 }
-
-import { DuplicateIcon } from "@/components/ui/DuplicateIcon";
-import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
-import { CourseCardImageField } from "@/components/courses/CourseCardImageField";
-import { COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 
 export default function EditCoursePage() {
   const dialog = useAppDialog();
@@ -232,7 +230,7 @@ export default function EditCoursePage() {
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.success) router.push("/courses");
+    if (res.success) router.push(`/courses/${id}/view`);
     else setError(res.message ?? "Failed to update.");
   }
 
@@ -340,7 +338,7 @@ export default function EditCoursePage() {
     });
     if (!ok) return;
     const res = await api(`/api/courses/${id}/archive`, { method: "PATCH" });
-    if (res.success) router.push("/courses");
+    if (res.success) router.push(`/courses/${id}/view`);
     else setError(res.message ?? "Failed to archive.");
   }
 
@@ -489,6 +487,7 @@ export default function EditCoursePage() {
             <p className="mt-1 text-xs text-slate-500">Used in certificates for this course.</p>
           </div>
           <CourseCardImageField
+            courseId={course.courseId ?? id}
             value={headerImageDirty ? headerImageDraft : (course?.headerImageUrl ?? "").trim()}
             onChange={(v) => {
               setHeaderImageDraft(v);
@@ -1165,7 +1164,7 @@ export default function EditCoursePage() {
               )}
             </button>
             <Link
-              href="/courses"
+              href={`/courses/${id}/view`}
               className="btn-secondary inline-flex items-center gap-2 text-sm"
             >
               Cancel

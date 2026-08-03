@@ -31,6 +31,18 @@ interface Course {
   durationText?: string;
   headerImageUrl?: string;
   deliveryMode?: string;
+  ageGroup?: string;
+  certification?: string;
+  paymentNote?: string;
+  learningOutcomes?: string[];
+  overview?: string;
+  pricingTiers?: { label: string; price: string; note?: string }[];
+  cardDescription?: string;
+  cardIncludes?: string[];
+  originalPriceInPaise?: number;
+  courseImages?: string[];
+  courseFaqs?: { question: string; answer: string }[];
+  isDemo?: boolean;
   learningPlan?: {
     enabled: boolean;
     autoLockPreviousMilestones: boolean;
@@ -193,6 +205,127 @@ export default function ViewCoursePage() {
       <EntityDetailSection title="Duration">
         <p className="text-sm font-medium text-slate-800">{(course.durationText ?? "").trim() || "Not set"}</p>
       </EntityDetailSection>
+
+      {/* ── Marketing & Catalog Details ── */}
+      {(course.ageGroup || course.certification || course.paymentNote || course.isDemo) && (
+        <EntityDetailSection title="Course Details">
+          <dl className="grid gap-3 sm:grid-cols-2 text-sm">
+            {course.ageGroup && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Age Group</dt>
+                <dd className="mt-0.5 font-medium text-slate-800">{course.ageGroup}</dd>
+              </div>
+            )}
+            {course.certification && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Certification</dt>
+                <dd className="mt-0.5 font-medium text-slate-800">{course.certification}</dd>
+              </div>
+            )}
+            {course.paymentNote && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Note</dt>
+                <dd className="mt-0.5 font-medium text-slate-800">{course.paymentNote}</dd>
+              </div>
+            )}
+            {course.isDemo && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Type</dt>
+                <dd className="mt-0.5">
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Demo Course (Free)</span>
+                </dd>
+              </div>
+            )}
+            {(course.originalPriceInPaise ?? 0) > 0 && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Original Price (strikethrough)</dt>
+                <dd className="mt-0.5 font-medium text-red-500 line-through">₹{((course.originalPriceInPaise ?? 0) / 100).toLocaleString('en-IN')}</dd>
+              </div>
+            )}
+          </dl>
+        </EntityDetailSection>
+      )}
+
+      {course.cardDescription && (
+        <EntityDetailSection title="Card Description">
+          <p className="text-sm text-slate-700">{course.cardDescription}</p>
+        </EntityDetailSection>
+      )}
+
+      {course.cardIncludes && course.cardIncludes.length > 0 && (
+        <EntityDetailSection title="Card Includes">
+          <ul className="space-y-1">
+            {course.cardIncludes.map((inc, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-400 shrink-0" />
+                {inc}
+              </li>
+            ))}
+          </ul>
+        </EntityDetailSection>
+      )}
+
+      {course.learningOutcomes && course.learningOutcomes.length > 0 && (
+        <EntityDetailSection title="What You Learn">
+          <ul className="space-y-1">
+            {course.learningOutcomes.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                <span className="mt-1 text-emerald-500">✓</span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </EntityDetailSection>
+      )}
+
+      {course.overview && (
+        <EntityDetailSection title="Course Overview">
+          <div
+            className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(course.overview) }}
+          />
+        </EntityDetailSection>
+      )}
+
+      {course.pricingTiers && course.pricingTiers.length > 0 && (
+        <EntityDetailSection title="Pricing Tiers">
+          <div className="space-y-2">
+            {course.pricingTiers.map((tier, i) => (
+              <div key={i} className="flex items-baseline gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
+                <span className="text-sm font-medium text-slate-700">{tier.label}</span>
+                <span className="text-base font-bold text-indigo-700">{tier.price}</span>
+                {tier.note && <span className="text-xs text-slate-500">{tier.note}</span>}
+              </div>
+            ))}
+          </div>
+        </EntityDetailSection>
+      )}
+
+      {course.courseImages && course.courseImages.length > 0 && (
+        <EntityDetailSection title="Course Images">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {course.courseImages.map((img, i) => (
+              <div key={i} className="relative h-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img} alt={`Course image ${i + 1}`} className="h-full w-full object-cover" />
+              </div>
+            ))}
+          </div>
+        </EntityDetailSection>
+      )}
+
+      {course.courseFaqs && course.courseFaqs.length > 0 && (
+        <EntityDetailSection title="FAQs">
+          <div className="space-y-3">
+            {course.courseFaqs.map((faq, i) => (
+              <div key={i} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-semibold text-slate-800">{faq.question}</p>
+                <p className="mt-1 text-sm text-slate-600">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </EntityDetailSection>
+      )}
       <EntityDetailSection title={`Chapters (${sortedModules.length})`}>
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
           {sortedModules.map((m, i) => (

@@ -27,8 +27,26 @@ interface Batch {
   visibility?: "PUBLIC" | "PRIVATE";
   headerImageUrl?: string;
   status: string;
-  courseSnapshot?: { title?: string; courseId?: string };
-  courseSnapshots?: Array<{ title?: string; courseId?: string }>;
+  isGlobalOnlineBatch?: boolean;
+  isGlobalCentreBatch?: boolean;
+  isNotEnrolledBatch?: boolean;
+  certificatePriceCoins?: number;
+  courseSnapshot?: {
+    title?: string;
+    courseId?: string;
+    enrollmentPriceInPaise?: number;
+    allowedPaymentMethods?: string[];
+    completionRewardCoins?: number;
+    completionBadgeTypes?: string[];
+  };
+  courseSnapshots?: Array<{
+    title?: string;
+    courseId?: string;
+    enrollmentPriceInPaise?: number;
+    allowedPaymentMethods?: string[];
+    completionRewardCoins?: number;
+    completionBadgeTypes?: string[];
+  }>;
 }
 
 export default function ViewBatchPage() {
@@ -110,6 +128,24 @@ export default function ViewBatchPage() {
           >
             {batch.visibility === "PRIVATE" ? "Private" : "Public"}
           </span>
+          {batch.isGlobalOnlineBatch && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-teal-300 bg-teal-50 px-2.5 py-0.5 text-xs font-bold text-teal-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+              Global Online Batch
+            </span>
+          )}
+          {batch.isGlobalCentreBatch && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-violet-50 px-2.5 py-0.5 text-xs font-bold text-violet-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+              Global Centre Batch
+            </span>
+          )}
+          {batch.isNotEnrolledBatch && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              Not Enrolled Batch
+            </span>
+          )}
         </>
       }
     >
@@ -123,6 +159,12 @@ export default function ViewBatchPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
         >
           Batch access
+        </Link>
+        <Link
+          href={`/batches/${id}/enrollment-requests`}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          Enrollment requests
         </Link>
         <Link
           href={`/batches/${id}/moderators`}
@@ -147,6 +189,12 @@ export default function ViewBatchPage() {
           className="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800 shadow-sm transition hover:bg-violet-100"
         >
           Certificates
+        </Link>
+        <Link
+          href={`/batches/${id}/settings`}
+          className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 shadow-sm transition hover:bg-amber-100"
+        >
+          Settings
         </Link>
       </EntityActionsPanel>
 
@@ -223,10 +271,10 @@ export default function ViewBatchPage() {
               const keyQs = new URLSearchParams({ batchId: id });
               if (c.courseId?.trim()) keyQs.set("courseId", c.courseId.trim());
               return (
-                <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <li key={i} className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     {c.courseId ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link
                           href={`/courses/${c.courseId}/view`}
                           className="text-sm font-medium text-slate-800 transition hover:text-indigo-600"
@@ -238,13 +286,46 @@ export default function ViewBatchPage() {
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-medium text-slate-800">{c.title ?? "Course"}</span>
                         <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
                           Snapshot
                         </span>
                       </div>
                     )}
+                    {/* Enrollment price, payment methods, completion rewards */}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      {(() => {
+                        const paise = Math.max(0, Math.floor(Number(c.enrollmentPriceInPaise ?? 0)));
+                        return paise > 0 ? (
+                          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-800">
+                            ₹{(paise / 100).toLocaleString("en-IN")}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                            Free / Demo
+                          </span>
+                        );
+                      })()}
+                      {Array.isArray(c.allowedPaymentMethods) && c.allowedPaymentMethods.length > 0 && (
+                        <span className="text-[11px] text-slate-500">
+                          via {c.allowedPaymentMethods.map((m) => m === "UPI_MANUAL" ? "UPI" : m === "RAZORPAY" ? "Razorpay" : m).join(" · ")}
+                        </span>
+                      )}
+                      {(() => {
+                        const coins = Math.floor(Number(c.completionRewardCoins ?? 0));
+                        return coins > 0 ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                            🪙 {coins} coins on completion
+                          </span>
+                        ) : null;
+                      })()}
+                      {Array.isArray(c.completionBadgeTypes) && c.completionBadgeTypes.length > 0 && (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800">
+                          🏅 {c.completionBadgeTypes.length} badge{c.completionBadgeTypes.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {c.courseId ? (

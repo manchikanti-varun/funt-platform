@@ -126,6 +126,8 @@ export interface UpdateCourseInput {
   originalPriceInPaise?: number;
   courseImages?: string[];
   courseFaqs?: { question: string; answer: string }[];
+  /** null = inherit global setting, true = watermark on, false = watermark off */
+  enableWatermark?: boolean | null;
 }
 
 export interface UpdateCourseModuleInput {
@@ -523,6 +525,10 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.originalPriceInPaise !== undefined) (doc as unknown as Record<string, unknown>).originalPriceInPaise = Math.max(0, Math.floor(Number(input.originalPriceInPaise)));
   if (input.courseImages !== undefined) (doc as unknown as Record<string, unknown>).courseImages = input.courseImages;
   if (input.courseFaqs !== undefined) (doc as unknown as Record<string, unknown>).courseFaqs = input.courseFaqs;
+  if ("enableWatermark" in input) {
+    const wm = input.enableWatermark;
+    (doc as unknown as Record<string, unknown>).enableWatermark = wm === true ? true : wm === false ? false : null;
+  }
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
       ? input.moderatorIds.length > 0
@@ -533,30 +539,43 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   await doc.save();
   const humanId = (doc as { courseId?: string }).courseId;
   const ids = [String(doc._id), ...(humanId ? [humanId] : [])];
-  // Sync all metadata fields to batch snapshots so the public API always returns fresh data
-  await syncCourseMetadataToBatchSnapshots(ids, {
-    title: input.title !== undefined ? doc.title : undefined,
-    description: input.description !== undefined ? String((doc as unknown as Record<string, unknown>).description ?? "") : undefined,
-    durationText: input.durationText !== undefined ? String((doc as unknown as Record<string, unknown>).durationText ?? "") : undefined,
-    ageGroup: input.ageGroup !== undefined ? String((doc as unknown as Record<string, unknown>).ageGroup ?? "") : undefined,
-    certification: input.certification !== undefined ? String((doc as unknown as Record<string, unknown>).certification ?? "") : undefined,
-    paymentNote: input.paymentNote !== undefined ? String((doc as unknown as Record<string, unknown>).paymentNote ?? "") : undefined,
-    learningOutcomes: input.learningOutcomes !== undefined ? (doc as unknown as Record<string, unknown>).learningOutcomes as string[] : undefined,
-    overview: input.overview !== undefined ? String((doc as unknown as Record<string, unknown>).overview ?? "") : undefined,
-    cardDescription: input.cardDescription !== undefined ? String((doc as unknown as Record<string, unknown>).cardDescription ?? "") : undefined,
-    cardIncludes: input.cardIncludes !== undefined ? (doc as unknown as Record<string, unknown>).cardIncludes as string[] : undefined,
-    originalPriceInPaise: input.originalPriceInPaise !== undefined ? Math.max(0, Math.floor(Number((doc as unknown as Record<string, unknown>).originalPriceInPaise ?? 0))) : undefined,
-    courseImages: input.courseImages !== undefined ? (doc as unknown as Record<string, unknown>).courseImages as string[] : undefined,
-    courseFaqs: input.courseFaqs !== undefined ? (doc as unknown as Record<string, unknown>).courseFaqs as unknown[] : undefined,
-    pricingTiers: input.pricingTiers !== undefined ? (doc as unknown as Record<string, unknown>).pricingTiers as unknown[] : undefined,
-  });
+  // Sync all metadata fields to batch snapshots so the public API always returns fresh data.
+  // Wrapped in try/catch so batch sync failures never block the course save.
+  try {
+    await syncCourseMetadataToBatchSnapshots(ids, {
+      title: input.title !== undefined ? doc.title : undefined,
+      description: input.description !== undefined ? String((doc as unknown as Record<string, unknown>).description ?? "") || undefined : undefined,
+      durationText: input.durationText !== undefined ? String((doc as unknown as Record<string, unknown>).durationText ?? "") : undefined,
+      ageGroup: input.ageGroup !== undefined ? String((doc as unknown as Record<string, unknown>).ageGroup ?? "") : undefined,
+      certification: input.certification !== undefined ? String((doc as unknown as Record<string, unknown>).certification ?? "") : undefined,
+      paymentNote: input.paymentNote !== undefined ? String((doc as unknown as Record<string, unknown>).paymentNote ?? "") : undefined,
+      learningOutcomes: input.learningOutcomes !== undefined ? (doc as unknown as Record<string, unknown>).learningOutcomes as string[] : undefined,
+      overview: input.overview !== undefined ? String((doc as unknown as Record<string, unknown>).overview ?? "") : undefined,
+      cardDescription: input.cardDescription !== undefined ? String((doc as unknown as Record<string, unknown>).cardDescription ?? "") : undefined,
+      cardIncludes: input.cardIncludes !== undefined ? (doc as unknown as Record<string, unknown>).cardIncludes as string[] : undefined,
+      originalPriceInPaise: input.originalPriceInPaise !== undefined ? Math.max(0, Math.floor(Number((doc as unknown as Record<string, unknown>).originalPriceInPaise ?? 0))) : undefined,
+      courseImages: input.courseImages !== undefined ? (doc as unknown as Record<string, unknown>).courseImages as string[] : undefined,
+      courseFaqs: input.courseFaqs !== undefined ? (doc as unknown as Record<string, unknown>).courseFaqs as unknown[] : undefined,
+      pricingTiers: input.pricingTiers !== undefined ? (doc as unknown as Record<string, unknown>).pricingTiers as unknown[] : undefined,
+    });
+  } catch (err) {
+    console.error("[course] Failed to sync metadata to batch snapshots:", err instanceof Error ? err.message : err);
+  }
   if (input.headerImageUrl !== undefined || input.isDemo !== undefined) {
     if (input.headerImageUrl !== undefined) {
       const syncedUrl = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
-      await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
+      try {
+        await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
+      } catch (err) {
+        console.error("[course] Failed to sync header image to batch snapshots:", err instanceof Error ? err.message : err);
+      }
     }
     if (input.isDemo !== undefined) {
-      await syncCourseIsDemoToBatchSnapshots(ids, !!(doc as { isDemo?: boolean }).isDemo, performedBy);
+      try {
+        await syncCourseIsDemoToBatchSnapshots(ids, !!(doc as { isDemo?: boolean }).isDemo, performedBy);
+      } catch (err) {
+        console.error("[course] Failed to sync isDemo to batch snapshots:", err instanceof Error ? err.message : err);
+      }
     }
   }
   await createAuditLog("COURSE_UPDATED", performedBy, ENTITY_COURSE, String(doc._id));

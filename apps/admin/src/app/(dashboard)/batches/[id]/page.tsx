@@ -367,7 +367,7 @@ export default function EditBatchPage() {
       body: JSON.stringify(body),
     });
     setLoading(false);
-    if (res.success) router.push("/batches");
+    if (res.success) router.push(`/batches/${id}/view`);
     else setError(res.message ?? "Failed to update.");
   }
 
@@ -402,7 +402,7 @@ export default function EditBatchPage() {
     });
     if (!ok) return;
     const res = await api(`/api/batches/${id}/archive`, { method: "PATCH" });
-    if (res.success) router.push("/batches");
+    if (res.success) router.push(`/batches/${id}/view`);
     else setError(res.message ?? "Failed to archive.");
   }
 
@@ -925,7 +925,7 @@ export default function EditBatchPage() {
               {loading ? "Saving…" : "Save changes"}
             </button>
             <Link
-              href="/batches"
+              href={`/batches/${id}/view`}
               className="btn-secondary"
             >
               Cancel
