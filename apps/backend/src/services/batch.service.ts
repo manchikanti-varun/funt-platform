@@ -870,6 +870,22 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
     headerImageUrl: String((course as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
     durationText: (course as { durationText?: string }).durationText ?? "",
     isDemo: !!(course as { isDemo?: boolean }).isDemo,
+    ageGroup: String((course as { ageGroup?: string }).ageGroup ?? "").trim() || undefined,
+    certification: String((course as { certification?: string }).certification ?? "").trim() || undefined,
+    paymentNote: String((course as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
+    learningOutcomes: Array.isArray((course as { learningOutcomes?: string[] }).learningOutcomes)
+      ? (course as { learningOutcomes: string[] }).learningOutcomes : [],
+    overview: String((course as { overview?: string }).overview ?? "").trim() || undefined,
+    cardDescription: String((course as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
+    cardIncludes: Array.isArray((course as { cardIncludes?: string[] }).cardIncludes)
+      ? (course as { cardIncludes: string[] }).cardIncludes : [],
+    originalPriceInPaise: Math.max(0, Math.floor(Number((course as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
+    courseImages: Array.isArray((course as { courseImages?: string[] }).courseImages)
+      ? (course as { courseImages: string[] }).courseImages : [],
+    courseFaqs: Array.isArray((course as { courseFaqs?: unknown[] }).courseFaqs)
+      ? (course as { courseFaqs: unknown[] }).courseFaqs : [],
+    pricingTiers: Array.isArray((course as { pricingTiers?: unknown[] }).pricingTiers)
+      ? (course as { pricingTiers: unknown[] }).pricingTiers : [],
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
     deliveryMode: (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS,
