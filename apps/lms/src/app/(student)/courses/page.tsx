@@ -109,6 +109,14 @@ export default function CoursesPage() {
     [myCoursesList, searchQuery]
   );
 
+  const enrolledKeySet = useMemo(() => {
+    // Key by courseId only — the student may be enrolled in a different batch
+    // than what the explore listing shows. We don't want to show the same course twice.
+    return new Set(
+      myCoursesList.map((c) => String(c.courseId).trim())
+    );
+  }, [myCoursesList]);
+
   const exploreCourses = useMemo(
     () =>
       filterBySearch(
@@ -120,14 +128,6 @@ export default function CoursesPage() {
       ),
     [exploreCoursesList, searchQuery, enrolledKeySet]
   );
-
-  const enrolledKeySet = useMemo(() => {
-    // Key by courseId only — the student may be enrolled in a different batch
-    // than what the explore listing shows. We don't want to show the same course twice.
-    return new Set(
-      myCoursesList.map((c) => String(c.courseId).trim())
-    );
-  }, [myCoursesList]);
 
   if (loading) {
     return (
