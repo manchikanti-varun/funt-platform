@@ -551,8 +551,6 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
     pricingTiers: input.pricingTiers !== undefined ? (doc as unknown as Record<string, unknown>).pricingTiers as unknown[] : undefined,
   });
   if (input.headerImageUrl !== undefined || input.isDemo !== undefined) {
-    const humanId = (doc as { courseId?: string }).courseId;
-    const ids = [String(doc._id), ...(humanId ? [humanId] : [])];
     if (input.headerImageUrl !== undefined) {
       const syncedUrl = String((doc as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined;
       await syncCourseHeaderImageToBatchSnapshots(ids, syncedUrl);
