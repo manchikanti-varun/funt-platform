@@ -239,6 +239,67 @@ async function syncCourseIsDemoToBatchSnapshots(courseIds: string[], isDemo: boo
   }
 }
 
+async function syncCourseMetadataToBatchSnapshots(
+  courseIds: string[],
+  fields: {
+    ageGroup?: string;
+    certification?: string;
+    paymentNote?: string;
+    learningOutcomes?: string[];
+    overview?: string;
+    cardDescription?: string;
+    cardIncludes?: string[];
+    originalPriceInPaise?: number;
+    courseImages?: string[];
+    courseFaqs?: unknown[];
+    pricingTiers?: unknown[];
+    durationText?: string;
+    title?: string;
+    description?: string;
+  }
+) {
+  if (!courseIds.length) return;
+  const idSet = new Set(courseIds);
+  const batches = await BatchModel.find({
+    $or: [
+      { "courseSnapshots.courseId": { $in: courseIds } },
+      { "courseSnapshot.courseId": { $in: courseIds } },
+    ],
+  }).exec();
+  for (const batch of batches) {
+    const snapshots = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+    let dirty = false;
+    for (const snap of snapshots) {
+      const cid = String((snap as { courseId?: string }).courseId ?? "").trim();
+      if (!cid || !idSet.has(cid)) continue;
+      const s = snap as Record<string, unknown>;
+      if (fields.title !== undefined) { s.title = fields.title; dirty = true; }
+      if (fields.description !== undefined) { s.description = fields.description; dirty = true; }
+      if (fields.durationText !== undefined) { s.durationText = fields.durationText; dirty = true; }
+      if (fields.ageGroup !== undefined) { s.ageGroup = fields.ageGroup || undefined; dirty = true; }
+      if (fields.certification !== undefined) { s.certification = fields.certification || undefined; dirty = true; }
+      if (fields.paymentNote !== undefined) { s.paymentNote = fields.paymentNote || undefined; dirty = true; }
+      if (fields.learningOutcomes !== undefined) { s.learningOutcomes = fields.learningOutcomes; dirty = true; }
+      if (fields.overview !== undefined) { s.overview = fields.overview || undefined; dirty = true; }
+      if (fields.cardDescription !== undefined) { s.cardDescription = fields.cardDescription || undefined; dirty = true; }
+      if (fields.cardIncludes !== undefined) { s.cardIncludes = fields.cardIncludes; dirty = true; }
+      if (fields.originalPriceInPaise !== undefined) { s.originalPriceInPaise = fields.originalPriceInPaise; dirty = true; }
+      if (fields.courseImages !== undefined) { s.courseImages = fields.courseImages; dirty = true; }
+      if (fields.courseFaqs !== undefined) { s.courseFaqs = fields.courseFaqs; dirty = true; }
+      if (fields.pricingTiers !== undefined) { s.pricingTiers = fields.pricingTiers; dirty = true; }
+    }
+    if (!dirty) continue;
+    if (snapshots.length === 1) {
+      (batch as { courseSnapshot?: unknown; courseSnapshots?: unknown[] }).courseSnapshot = snapshots[0];
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = undefined;
+    } else {
+      (batch as { courseSnapshots?: unknown[] }).courseSnapshots = snapshots;
+      (batch as { courseSnapshot?: unknown }).courseSnapshot = undefined;
+    }
+    await batch.save();
+  }
+}
+
 async function syncCourseHeaderImageToBatchSnapshots(courseIds: string[], headerImageUrl: string | undefined) {
   if (!courseIds.length) return;
   const idSet = new Set(courseIds);
@@ -470,6 +531,25 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
       : [];
   }
   await doc.save();
+  const humanId = (doc as { courseId?: string }).courseId;
+  const ids = [String(doc._id), ...(humanId ? [humanId] : [])];
+  // Sync all metadata fields to batch snapshots so the public API always returns fresh data
+  await syncCourseMetadataToBatchSnapshots(ids, {
+    title: input.title !== undefined ? doc.title : undefined,
+    description: input.description !== undefined ? String((doc as unknown as Record<string, unknown>).description ?? "") : undefined,
+    durationText: input.durationText !== undefined ? String((doc as unknown as Record<string, unknown>).durationText ?? "") : undefined,
+    ageGroup: input.ageGroup !== undefined ? String((doc as unknown as Record<string, unknown>).ageGroup ?? "") : undefined,
+    certification: input.certification !== undefined ? String((doc as unknown as Record<string, unknown>).certification ?? "") : undefined,
+    paymentNote: input.paymentNote !== undefined ? String((doc as unknown as Record<string, unknown>).paymentNote ?? "") : undefined,
+    learningOutcomes: input.learningOutcomes !== undefined ? (doc as unknown as Record<string, unknown>).learningOutcomes as string[] : undefined,
+    overview: input.overview !== undefined ? String((doc as unknown as Record<string, unknown>).overview ?? "") : undefined,
+    cardDescription: input.cardDescription !== undefined ? String((doc as unknown as Record<string, unknown>).cardDescription ?? "") : undefined,
+    cardIncludes: input.cardIncludes !== undefined ? (doc as unknown as Record<string, unknown>).cardIncludes as string[] : undefined,
+    originalPriceInPaise: input.originalPriceInPaise !== undefined ? Math.max(0, Math.floor(Number((doc as unknown as Record<string, unknown>).originalPriceInPaise ?? 0))) : undefined,
+    courseImages: input.courseImages !== undefined ? (doc as unknown as Record<string, unknown>).courseImages as string[] : undefined,
+    courseFaqs: input.courseFaqs !== undefined ? (doc as unknown as Record<string, unknown>).courseFaqs as unknown[] : undefined,
+    pricingTiers: input.pricingTiers !== undefined ? (doc as unknown as Record<string, unknown>).pricingTiers as unknown[] : undefined,
+  });
   if (input.headerImageUrl !== undefined || input.isDemo !== undefined) {
     const humanId = (doc as { courseId?: string }).courseId;
     const ids = [String(doc._id), ...(humanId ? [humanId] : [])];

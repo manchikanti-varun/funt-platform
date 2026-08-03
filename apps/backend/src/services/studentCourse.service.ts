@@ -138,21 +138,7 @@ function isModuleFullyCompleted(parts: ReturnType<typeof moduleParts>, p: Progre
   if (hasVideo && !p.videoCompletedAt) return false;
   if (hasYoutube && !p.youtubeCompletedAt) return false;
   if (hasAssignment && !p.assignmentCompletedAt) return false;
-  // Quiz requirement: only enforce if the student hasn't already completed other parts
-  // before the quiz was linked. If all non-quiz parts are done, don't block on quiz
-  // for backward compatibility with chapters that had quizzes added after student started.
-  if (hasQuiz && !p.quizCompletedAt) {
-    // If the student has completed all other parts, they were likely in progress before
-    // the quiz was added — don't block them. They'll need to pass the quiz for NEW chapters.
-    const otherPartsDone =
-      (!hasContent || !!p.contentCompletedAt) &&
-      (!hasVideo || !!p.videoCompletedAt) &&
-      (!hasYoutube || !!p.youtubeCompletedAt) &&
-      (!hasAssignment || !!p.assignmentCompletedAt);
-    if (!otherPartsDone) return false;
-    // All other parts done but quiz not done — still mark as complete for progression
-    // (quiz can be taken separately). This prevents blocking students who were mid-progress.
-  }
+  if (hasQuiz && !p.quizCompletedAt) return false;
   return true;
 }
 
@@ -355,7 +341,7 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
 /** In-memory progress computation using pre-loaded progress documents (avoids per-course DB query). */
 function computeProgressPercentFromDocs(
   rawModules: ModuleSnapshot[],
-  progressDocs: Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null }>
+  progressDocs: Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null; quizCompletedAt?: Date | null }>
 ): number {
   if (rawModules.length === 0) return 0;
   const progressByOrder = new Map<number, ProgressDoc>();
@@ -441,7 +427,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     if (bId && cId) licenseKeyBatchCourseSet.add(`${bId}::${cId}`);
   }
   // Group progress by batchId+courseId for percent computation
-  const progressByBatchCourse = new Map<string, Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null }>>();
+  const progressByBatchCourse = new Map<string, Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null; quizCompletedAt?: Date | null }>>();
   for (const p of allProgress) {
     const key = `${p.batchId}::${(p as { courseId?: string }).courseId ?? ""}`;
     let arr = progressByBatchCourse.get(key);
