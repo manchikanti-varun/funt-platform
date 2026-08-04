@@ -31,6 +31,7 @@ interface Batch {
   isGlobalOnlineBatch?: boolean;
   isGlobalCentreBatch?: boolean;
   isNotEnrolledBatch?: boolean;
+  autoEnrollAllStudents?: boolean;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
   courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
@@ -537,6 +538,23 @@ export default function EditBatchPage() {
                   {settingGlobalType === "centre" ? "Setting…" : batch.isGlobalCentreBatch ? "✓ Global Centre" : "Set Global Centre"}
                 </button>
               </>
+            )}
+            {!trainerOnly && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const next = !batch.autoEnrollAllStudents;
+                  const res = await api(`/api/batches/${id}`, { method: "PUT", body: JSON.stringify({ autoEnrollAllStudents: next }) });
+                  if (res.success) setBatch((prev) => prev ? { ...prev, autoEnrollAllStudents: next } : prev);
+                }}
+                className={`rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition ${
+                  batch.autoEnrollAllStudents
+                    ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {batch.autoEnrollAllStudents ? "✓ Auto-enroll ON" : "Auto-enroll OFF"}
+              </button>
             )}
             {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
               <button
