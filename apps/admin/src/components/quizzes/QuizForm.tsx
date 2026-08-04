@@ -74,17 +74,19 @@ function ImageUploadCell({
   uploadCtx: { courseId: string; moduleId: string };
 }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadError("");
     try {
       const upload = makeUploadImageFn(uploadCtx);
       const { url } = await upload(file);
       onChange(url);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -109,7 +111,8 @@ function ImageUploadCell({
   }
 
   return (
-    <label className={`inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 transition ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+    <div>
+      <label className={`inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 transition ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
       {uploading ? (
         <>
           <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
@@ -125,6 +128,8 @@ function ImageUploadCell({
       )}
       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" onChange={handleFile} />
     </label>
+    {uploadError && <p className="mt-1 text-xs text-red-600">{uploadError}</p>}
+    </div>
   );
 }
 

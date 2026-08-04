@@ -207,6 +207,8 @@ export interface UpdateBatchInput {
   visibility?: "PUBLIC" | "PRIVATE";
   /** Per course: original price in paise for strikethrough display */
   courseOriginalPrices?: Record<string, number>;
+  /** Per course: EMI "starts at" display text */
+  courseEmiTexts?: Record<string, string>;
   /** Per course: short card description (plain text) */
   courseCardDescriptions?: Record<string, string>;
   /** Per course: "includes" bullet points for card */

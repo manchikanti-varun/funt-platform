@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { ROLE } from "@funt-platform/constants";
@@ -38,6 +38,7 @@ interface LetterSettings {
 }
 
 export default function LetterSettingsPage() {
+  const dialog = useAppDialog();
   const [settings, setSettings] = useState<LetterSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -286,7 +287,7 @@ export default function LetterSettingsPage() {
                       const { url } = await upload(file);
                       updateField("defaultSignatoryImageUrl", url);
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : "Upload failed");
+                      void dialog.alert({ title: "Upload failed", message: err instanceof Error ? err.message : "Upload failed" });
                     }
                     e.target.value = "";
                   }} />
@@ -316,7 +317,7 @@ export default function LetterSettingsPage() {
                       const { url } = await upload(file);
                       updateField("defaultStampImageUrl", url);
                     } catch (err) {
-                      alert(err instanceof Error ? err.message : "Upload failed");
+                      void dialog.alert({ title: "Upload failed", message: err instanceof Error ? err.message : "Upload failed" });
                     }
                     e.target.value = "";
                   }} />

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { AppPageShell, DataPanel } from "@/components/ui";
+import { AppPageShell, DataPanel, useAppDialog } from "@/components/ui";
 import { RequireRoles, STAFF_ROLES } from "@/components/auth/RequireRoles";
 import { useAdminUser } from "@/contexts/AdminUserContext";
 import { ROLE } from "@funt-platform/constants";
@@ -20,6 +20,7 @@ interface QuizItem {
 }
 
 export default function QuizzesPage() {
+  const dialog = useAppDialog();
   const { roles } = useAdminUser();
   const isSuperAdmin = roles.includes(ROLE.SUPER_ADMIN);
 
@@ -49,7 +50,12 @@ export default function QuizzesPage() {
 
   async function activateAllDrafts() {
     if (draftIds.length === 0) return;
-    if (!confirm(`Activate all ${draftIds.length} draft quiz(zes)?`)) return;
+    const ok = await dialog.confirm({
+      title: "Activate drafts",
+      message: `Activate all ${draftIds.length} draft quiz(zes)?`,
+      confirmLabel: "Activate",
+    });
+    if (!ok) return;
     setActivating(true);
     const r = await api("/api/quizzes/bulk-status", {
       method: "POST",
@@ -59,7 +65,7 @@ export default function QuizzesPage() {
     if (r.success) {
       await load();
     } else {
-      alert("Failed to activate quizzes. Please try again.");
+      await dialog.alert({ title: "Error", message: "Failed to activate quizzes. Please try again." });
     }
   }
 
