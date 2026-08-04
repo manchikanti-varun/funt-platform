@@ -16,6 +16,7 @@ interface MyCourse {
   batchId: string;
   batchType?: "online" | "centre" | "other";
   accessBlocked?: boolean;
+  needsPayment?: boolean;
   progressPercent?: number;
   courseHeaderImageUrl?: string;
   isDemo?: boolean;
@@ -174,13 +175,13 @@ export default function CoursesPage() {
             {onlineCourses.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
-                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`}
                 title={c.courseTitle}
                 chapterCount={c.chapterCount ?? c.moduleCount}
-                progressPercent={c.progressPercent ?? 0}
-                locked={!!c.accessBlocked}
+                progressPercent={c.needsPayment ? 0 : (c.progressPercent ?? 0)}
+                locked={!!c.accessBlocked || !!c.needsPayment}
                 imageUrl={c.courseHeaderImageUrl}
-                statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                statusLabel={c.accessBlocked ? "Blocked by admin" : c.needsPayment ? "Pay to unlock" : "Enrolled"}
                 isDemo={!!c.isDemo}
               />
             ))}
@@ -199,13 +200,13 @@ export default function CoursesPage() {
             {centreCourses.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
-                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`}
                 title={c.courseTitle}
                 chapterCount={c.chapterCount ?? c.moduleCount}
-                progressPercent={c.progressPercent ?? 0}
-                locked={!!c.accessBlocked}
+                progressPercent={c.needsPayment ? 0 : (c.progressPercent ?? 0)}
+                locked={!!c.accessBlocked || !!c.needsPayment}
                 imageUrl={c.courseHeaderImageUrl}
-                statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                statusLabel={c.accessBlocked ? "Blocked by admin" : c.needsPayment ? "Pay to unlock" : "Enrolled"}
                 isDemo={!!c.isDemo}
               />
             ))}

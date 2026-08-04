@@ -14,8 +14,10 @@ interface MyCourse {
   chapterCount?: number;
   moduleCount: number;
   batchId: string;
+  batchType?: "online" | "centre" | "other";
   progressPercent: number;
   accessBlocked?: boolean;
+  needsPayment?: boolean;
 }
 
 interface ExploreCourse {
@@ -89,8 +91,10 @@ export default function StudentDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const active = useMemo(() => myCourses.filter((c) => !c.accessBlocked), [myCourses]);
+  const active = useMemo(() => myCourses.filter((c) => !c.accessBlocked && !c.needsPayment), [myCourses]);
   const blocked = useMemo(() => myCourses.filter((c) => c.accessBlocked), [myCourses]);
+  const onlineCourses = useMemo(() => myCourses.filter((c) => c.batchType === "online"), [myCourses]);
+  const centreCourses = useMemo(() => myCourses.filter((c) => c.batchType === "centre"), [myCourses]);
   const sortedByProgress = useMemo(() => [...active].sort((a, b) => b.progressPercent - a.progressPercent), [active]);
   const sortedNeedsAttention = useMemo(() => [...active].sort((a, b) => a.progressPercent - b.progressPercent), [active]);
   const nextCourse = sortedByProgress[0] ?? sortedNeedsAttention[0] ?? null;
@@ -177,6 +181,52 @@ export default function StudentDashboardPage() {
           <p className="mt-1 text-xs text-black/55">{xpIntoLevel}/100 XP to next level · {aheadSignal}</p>
         </PageSection>
       </div>
+
+      {/* Learn at Home / Learn at Centre quick sections */}
+      {(onlineCourses.length > 0 || centreCourses.length > 0) && (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {onlineCourses.length > 0 && (
+            <PageSection title="Learn at Home" subtitle="Course + Kit" className="border-indigo-200 bg-white">
+              <div className="space-y-2">
+                {onlineCourses.slice(0, 3).map((c) => (
+                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-black">{c.courseTitle}</p>
+                      <p className="text-xs font-semibold text-indigo-700">{c.needsPayment ? "Pay" : `${c.progressPercent}%`}</p>
+                    </div>
+                    {!c.needsPayment && (
+                      <div className="mt-2 h-1.5 rounded-full bg-indigo-100">
+                        <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600" style={{ width: `${c.progressPercent}%` }} />
+                      </div>
+                    )}
+                  </Link>
+                ))}
+                <Link href="/courses/online" className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">View all <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>
+              </div>
+            </PageSection>
+          )}
+          {centreCourses.length > 0 && (
+            <PageSection title="Learn at Centre" subtitle="Course only · no kit" className="border-indigo-200 bg-white">
+              <div className="space-y-2">
+                {centreCourses.slice(0, 3).map((c) => (
+                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-black">{c.courseTitle}</p>
+                      <p className="text-xs font-semibold text-indigo-700">{c.needsPayment ? "Pay" : `${c.progressPercent}%`}</p>
+                    </div>
+                    {!c.needsPayment && (
+                      <div className="mt-2 h-1.5 rounded-full bg-indigo-100">
+                        <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600" style={{ width: `${c.progressPercent}%` }} />
+                      </div>
+                    )}
+                  </Link>
+                ))}
+                <Link href="/courses/centre" className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">View all <ArrowRight className="h-3.5 w-3.5" aria-hidden /></Link>
+              </div>
+            </PageSection>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-3">
         <PageSection title="Attention" subtitle="Handle first" className="border-indigo-200 bg-white">

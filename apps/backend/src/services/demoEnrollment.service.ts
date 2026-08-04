@@ -89,12 +89,11 @@ async function excludedStudentIdsForBatch(batchMongoId: string): Promise<Set<str
   return new Set(rows.map((r) => String(r.studentId)));
 }
 
-/** Active batches that contain a demo course AND are marked for auto-enrollment. */
+/** Active batches marked for auto-enrollment (includes demo batches and global batches). */
 export async function listBatchesWithDemoCourses() {
   return BatchModel.find({
     status: BATCH_STATUS.ACTIVE,
     autoEnrollAllStudents: true,
-    $or: [{ "courseSnapshots.isDemo": true }, { "courseSnapshot.isDemo": true }],
   })
     .lean()
     .exec();

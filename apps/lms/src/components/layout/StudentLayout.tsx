@@ -54,6 +54,8 @@ const NAV_SECTIONS: Array<{
     items: [
       { href: "/dashboard", label: "Overview", Icon: IconOverview },
       { href: "/courses", label: "Courses", Icon: IconCourses },
+      { href: "/courses/online", label: "Learn at Home", Icon: IconCourses },
+      { href: "/courses/centre", label: "Learn at Centre", Icon: IconCourses },
       { href: "/assignments", label: "Assignments", Icon: IconAssignment },
       { href: "/attendance", label: "Attendance", Icon: IconAttendance },
       { href: "/enroll-license", label: "License key", Icon: IconKey },

@@ -445,6 +445,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     batchType: "online" | "centre" | "other";
     progressPercent: number;
     accessBlocked: boolean;
+    needsPayment: boolean;
     courseHeaderImageUrl?: string;
     isDemo?: boolean;
   }> = [];
@@ -474,7 +475,11 @@ export async function getMyCoursesForStudent(studentId: string) {
       // Only demo courses get free access. Non-demo courses require verified payment or license key,
       // even if enrollmentPriceInPaise is 0 (price not yet configured by admin).
       const hasCourseAccess = !blocked && !courseBlocked && (isDemo || hasVerifiedPayment || hasLicenseKey);
-      if (!hasCourseAccess) continue;
+      // For global online/centre batches, still show the course in the listing even without payment
+      // so the "Learn at Home" / "Learn at Centre" sections appear. Mark as locked.
+      const isGlobalBatch = !!(batch as { isGlobalOnlineBatch?: boolean }).isGlobalOnlineBatch ||
+        !!(batch as { isGlobalCentreBatch?: boolean }).isGlobalCentreBatch;
+      if (!hasCourseAccess && !isGlobalBatch) continue;
 
       const isAdminBlocked = blocked || courseBlocked;
 
@@ -501,6 +506,7 @@ export async function getMyCoursesForStudent(studentId: string) {
             : "other",
         progressPercent: pct,
         accessBlocked: isAdminBlocked,
+        needsPayment: !hasCourseAccess && !isAdminBlocked,
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
         isDemo: !!(s as { isDemo?: boolean }).isDemo,
       });

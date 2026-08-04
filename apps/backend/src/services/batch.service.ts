@@ -205,6 +205,7 @@ export interface UpdateBatchInput {
   courseCompletionRewardCoins?: Record<string, number>;
   courseCompletionBadgeTypes?: Record<string, string | string[]>;
   visibility?: "PUBLIC" | "PRIVATE";
+  autoEnrollAllStudents?: boolean;
   /** Per course: original price in paise for strikethrough display */
   courseOriginalPrices?: Record<string, number>;
   /** Per course: EMI "starts at" display text */
@@ -309,6 +310,7 @@ function toBatchResponse(doc: BatchDoc, listView = false, staff?: StaffMap) {
     isGlobalOnlineBatch: !!(doc as { isGlobalOnlineBatch?: boolean }).isGlobalOnlineBatch,
     isGlobalCentreBatch: !!(doc as { isGlobalCentreBatch?: boolean }).isGlobalCentreBatch,
     isNotEnrolledBatch: !!(doc as { isNotEnrolledBatch?: boolean }).isNotEnrolledBatch,
+    autoEnrollAllStudents: !!(doc as { autoEnrollAllStudents?: boolean }).autoEnrollAllStudents,
     ...(listView || !qr ? {} : { manualUpiQrUrl: qr }),
     ...(headerImage ? { headerImageUrl: headerImage } : {}),
     createdAt: doc.createdAt,
@@ -566,6 +568,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
   if (input.endDate !== undefined) doc.endDate = input.endDate ? new Date(input.endDate) : undefined;
   if (input.zoomLink !== undefined) doc.zoomLink = input.zoomLink?.trim() || undefined;
   if (input.visibility !== undefined) (doc as { visibility?: "PUBLIC" | "PRIVATE" }).visibility = input.visibility;
+  if (input.autoEnrollAllStudents !== undefined) (doc as { autoEnrollAllStudents?: boolean }).autoEnrollAllStudents = !!input.autoEnrollAllStudents;
   if (input.moderatorIds !== undefined) {
     (doc as { moderatorIds?: string[] }).moderatorIds = Array.isArray(input.moderatorIds)
       ? await resolveStaffUserIds(input.moderatorIds)
