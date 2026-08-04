@@ -385,9 +385,17 @@ export async function getCertificateDataForPdf(certificateId: string) {
     UserModel.findById(cert.studentId).select("name").lean().exec(),
     BatchModel.findById(cert.batchId).select("courseSnapshot courseSnapshots startDate endDate").lean().exec(),
   ]);
-  const courseName = batch
+
+  // For milestone certificates, use milestone title as courseName and milestone duration if set
+  const isMilestoneCert = !!(cert as { milestoneId?: string }).milestoneId;
+  const milestoneTitle = (cert as { milestoneTitle?: string }).milestoneTitle;
+  const milestoneDurationText = (cert as { milestoneDurationText?: string }).milestoneDurationText;
+
+  const batchCourseName = batch
     ? (getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0])[0] as { title?: string } | undefined)?.title ?? "Course"
     : "Course";
+  const courseName = isMilestoneCert && milestoneTitle ? milestoneTitle : batchCourseName;
+
   const snapshotDuration =
     batch
       ? String(
@@ -403,7 +411,9 @@ export async function getCertificateDataForPdf(certificateId: string) {
       : startDate
         ? `From ${new Date(startDate).toLocaleDateString()}`
         : "—";
-  const durationText = snapshotDuration || fallbackDuration;
+  const durationText = isMilestoneCert && milestoneDurationText
+    ? milestoneDurationText
+    : (snapshotDuration || fallbackDuration);
 
   return {
     certificateId: cert.certificateId,

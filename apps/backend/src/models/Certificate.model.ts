@@ -23,6 +23,7 @@ const certificateSchema = new Schema(
     /** When set, this is a milestone certificate (not the full program cert) */
     milestoneId:    { type: String, required: false },
     milestoneTitle: { type: String, required: false },
+    milestoneDurationText: { type: String, required: false },
   },
   { timestamps: false }
 );
@@ -36,5 +37,9 @@ certificateSchema.index(
 );
 // Course-level lookups
 certificateSchema.index({ courseId: 1 });
+// Student certificate listing (sorted by issue date)
+certificateSchema.index({ studentId: 1, status: 1, issuedAt: -1 });
+// Admin batch certificate view
+certificateSchema.index({ batchId: 1, status: 1 });
 
 export const CertificateModel = mongoose.model("Certificate", certificateSchema);

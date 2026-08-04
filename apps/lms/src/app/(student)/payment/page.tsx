@@ -374,6 +374,7 @@ function PaymentForm() {
   const [razorpayMsg, setRazorpayMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [enrollStatus, setEnrollStatus] = useState<"idle" | "paid" | "enrolling" | "enrolled" | "enroll_failed">("idle");
   const [enrolledLicenseKey, setEnrolledLicenseKey] = useState<string | null>(null);
+  const [razorpayOverlay, setRazorpayOverlay] = useState<"verifying" | "activating" | null>(null);
   const [accessBlockedByAdmin, setAccessBlockedByAdmin] = useState(false);
   const [timeline, setTimeline] = useState<PaymentTimeline | null>(null);
   const [qrSecondsLeft, setQrSecondsLeft] = useState(0);
@@ -622,7 +623,8 @@ function PaymentForm() {
         description: courseTitle,
         theme: { color: "#0f766e" },
         handler: async (resp: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-          // Step 1: Payment captured by Razorpay
+          // Step 1: Payment captured by Razorpay — show verifying overlay
+          setRazorpayOverlay("verifying");
           setEnrollStatus("paid");
           setRazorpayMsg({ type: "ok", text: "✓ Payment received. Enrolling you in the course..." });
           setLoading(true);
@@ -644,7 +646,8 @@ function PaymentForm() {
           setLoading(false);
 
           if (confirm.success) {
-            // Step 3: Enrolled successfully
+            // Step 3: Enrolled successfully — show activating overlay
+            setRazorpayOverlay("activating");
             setEnrollStatus("enrolled");
             const licenseKey = confirm.data?.assignedLicenseKey ?? null;
             setEnrolledLicenseKey(licenseKey);
@@ -655,10 +658,12 @@ function PaymentForm() {
                 : "✓ Payment successful. You are enrolled!",
             });
             window.setTimeout(() => {
+              setRazorpayOverlay(null);
               router.push(`/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`);
             }, 3000);
           } else {
             // Step 3 failed: payment went through but enrollment failed
+            setRazorpayOverlay(null);
             setEnrollStatus("enroll_failed");
             setRazorpayMsg({
               type: "err",
@@ -757,6 +762,37 @@ function PaymentForm() {
 
   return (
     <AppPageShell className="max-w-lg">
+      {/* Razorpay payment verification overlay */}
+      {razorpayOverlay && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-100">
+              {razorpayOverlay === "verifying" ? (
+                <svg className="h-7 w-7 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : (
+                <svg className="h-7 w-7 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">
+              {razorpayOverlay === "verifying" ? "Verifying Payment" : "Payment Verified!"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {razorpayOverlay === "verifying"
+                ? "Don\u2019t go back or close \u2014 your payment is being verified."
+                : "Payment verified. Activating your course..."}
+            </p>
+            {razorpayOverlay === "verifying" && (
+              <p className="mt-3 text-xs font-medium text-amber-700">Please wait, this may take a few seconds.</p>
+            )}
+          </div>
+        </div>
+      )}
+
       <Link
         href={type === "shop" ? "/shop" : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
         className="text-sm font-medium text-funt-gold-deep hover:underline"

@@ -38,6 +38,7 @@ export default function BatchesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [unarchivingId, setUnarchivingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [syncing, setSyncing] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -216,15 +217,37 @@ export default function BatchesPage() {
           backLabel="Back to Dashboard"
           actions={
             !trainerOnly ? (
-              <Link
-                href="/batches/new"
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                Create Batch
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={syncing}
+                  onClick={async () => {
+                    setSyncing(true);
+                    const res = await api<{ synced: number; failed: number }>("/api/batches/sync-all", { method: "POST" });
+                    setSyncing(false);
+                    if (res.success && res.data) {
+                      await dialog.alert({ title: "Sync complete", message: `Synced ${res.data.synced} course snapshot(s). ${res.data.failed > 0 ? `${res.data.failed} failed.` : ""}` });
+                    } else {
+                      await dialog.alert({ title: "Sync failed", message: res.message ?? "Failed to sync." });
+                    }
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:opacity-50"
+                >
+                  <svg className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {syncing ? "Syncing…" : "Sync All"}
+                </button>
+                <Link
+                  href="/batches/new"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Batch
+                </Link>
+              </div>
             ) : null
           }
         />

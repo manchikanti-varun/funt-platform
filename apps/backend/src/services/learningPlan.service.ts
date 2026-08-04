@@ -47,6 +47,7 @@ export interface MilestoneInput {
   unlockAfterDays?: number;
   paymentDueInDays?: number;
   certificateEligible?: boolean;
+  certificateDurationText?: string;
   active?: boolean;
   chapterOrders?: number[];
 }
@@ -63,6 +64,7 @@ interface MilestoneLike {
   unlockAfterDays?: number;
   paymentDueInDays?: number;
   certificateEligible: boolean;
+  certificateDurationText?: string;
   active: boolean;
   chapterOrders: number[];
 }
@@ -142,6 +144,7 @@ export async function saveLearningPlan(
       unlockAfterDays: m.unlockAfterDays,
       paymentDueInDays: m.paymentDueInDays,
       certificateEligible: m.certificateEligible ?? false,
+      certificateDurationText: m.certificateDurationText?.trim() || undefined,
       active: m.active ?? true,
       chapterOrders: Array.isArray(m.chapterOrders) ? m.chapterOrders : [],
     });
@@ -189,6 +192,7 @@ export async function upsertMilestone(
     unlockAfterDays: input.unlockAfterDays,
     paymentDueInDays: input.paymentDueInDays,
     certificateEligible: input.certificateEligible ?? false,
+    certificateDurationText: input.certificateDurationText?.trim() || undefined,
     active: input.active ?? true,
     chapterOrders: Array.isArray(input.chapterOrders) ? input.chapterOrders : [],
   };
@@ -605,6 +609,7 @@ async function onMilestoneCompleted(
         coinReward: 0,
         milestoneId,
         milestoneTitle: milestone.title,
+        milestoneDurationText: milestone.certificateDurationText || undefined,
       });
       await MilestoneProgressModel.updateOne(
         { studentId, batchId, courseId, milestoneId },

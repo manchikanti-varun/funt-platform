@@ -589,6 +589,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       input.courseCompletionRewardCoins !== undefined ||
       input.courseCompletionBadgeTypes !== undefined ||
       input.courseOriginalPrices !== undefined ||
+      input.courseEmiTexts !== undefined ||
       input.courseCardDescriptions !== undefined ||
       input.courseCardIncludes !== undefined ||
       input.courseImages !== undefined ||
@@ -641,6 +642,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
     const rewardMap = input.courseCompletionRewardCoins ?? {};
     const badgeMap = input.courseCompletionBadgeTypes ?? {};
     const origPriceMap = input.courseOriginalPrices ?? {};
+    const emiTextMap = input.courseEmiTexts ?? {};
     const cardDescMap = input.courseCardDescriptions ?? {};
     const cardIncMap = input.courseCardIncludes ?? {};
     const imgMap = input.courseImages ?? {};
@@ -674,6 +676,10 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       const origRaw = lookupInMap(origPriceMap as Record<string, unknown>, cid) as number | undefined;
       if (origRaw !== undefined) {
         s.originalPriceInPaise = Math.max(0, Math.floor(Number(origRaw) * 100));
+      }
+      const emiRaw = lookupInMap(emiTextMap as Record<string, unknown>, cid) as string | undefined;
+      if (emiRaw !== undefined) {
+        (s as { emiStartsAtText?: string }).emiStartsAtText = String(emiRaw).trim() || undefined;
       }
       const descRaw = lookupInMap(cardDescMap as Record<string, unknown>, cid);
       if (descRaw !== undefined) s.cardDescription = String(descRaw).trim();

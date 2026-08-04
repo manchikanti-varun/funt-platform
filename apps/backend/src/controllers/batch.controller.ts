@@ -292,6 +292,36 @@ export const syncAllBatchesForCourse = asyncHandler(async (req: Request, res: Re
   successRes(res, { courseId, totalBatches: batches.length, synced, failed }, `Synced ${synced} batch(es)`);
 });
 
+/** Sync ALL courses in ALL active batches — global re-snapshot. */
+export const syncAllCoursesAllBatches = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const performedBy = getUserId(req);
+  const { BatchModel } = await import("../models/Batch.model.js");
+  const { BATCH_STATUS } = await import("@funt-platform/constants");
+
+  const batches = await BatchModel.find({ status: { $ne: BATCH_STATUS.ARCHIVED } })
+    .select("_id courseSnapshots courseSnapshot")
+    .lean()
+    .exec();
+
+  let synced = 0;
+  let failed = 0;
+  for (const batch of batches) {
+    const snapshots = service.getBatchCourseSnapshots(batch as Parameters<typeof service.getBatchCourseSnapshots>[0]);
+    for (const snap of snapshots) {
+      const courseId = (snap as { courseId?: string }).courseId;
+      if (!courseId) continue;
+      try {
+        await service.syncCourseContentToBatch(String(batch._id), courseId, performedBy);
+        synced++;
+      } catch {
+        failed++;
+      }
+    }
+  }
+
+  successRes(res, { totalBatches: batches.length, synced, failed }, `Synced ${synced} course snapshot(s) across ${batches.length} batch(es)`);
+});
+
 export const archiveBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const id = req.params.id;
   const performedBy = getUserId(req);

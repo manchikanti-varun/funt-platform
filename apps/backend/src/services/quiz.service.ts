@@ -576,7 +576,7 @@ export async function submitQuizAttempt(
     const selectedOptionId = studentAnswer?.selectedOptionId ?? null;
 
     const correctOption = question.options.find((o) => o.isCorrect);
-    const isCorrect = !!(selectedOptionId && correctOption && selectedOptionId === correctOption.optionId);
+    const isCorrect = !!(selectedOptionId && correctOption && String(selectedOptionId).trim() === String(correctOption.optionId).trim());
     const marksAwarded = isCorrect ? question.marks : 0;
     scoredMarks += marksAwarded;
 

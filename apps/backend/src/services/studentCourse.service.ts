@@ -442,6 +442,7 @@ export async function getMyCoursesForStudent(studentId: string) {
     chapterCount: number;
     moduleCount: number;
     batchId: string;
+    batchType: "online" | "centre" | "other";
     progressPercent: number;
     accessBlocked: boolean;
     courseHeaderImageUrl?: string;
@@ -493,6 +494,11 @@ export async function getMyCoursesForStudent(studentId: string) {
         chapterCount: modules.length,
         moduleCount: modules.length,
         batchId: String(batch._id),
+        batchType: (batch as { isGlobalOnlineBatch?: boolean }).isGlobalOnlineBatch
+          ? "online"
+          : (batch as { isGlobalCentreBatch?: boolean }).isGlobalCentreBatch
+            ? "centre"
+            : "other",
         progressPercent: pct,
         accessBlocked: isAdminBlocked,
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
@@ -721,6 +727,7 @@ export async function listCoursesForExplore() {
       moduleCount: number;
       enrollmentPriceInPaise: number;
       originalPriceInPaise: number;
+      emiStartsAtText?: string;
       paymentOptionsLabel: string;
       courseHeaderImageUrl?: string;
       isDemo?: boolean;
@@ -762,6 +769,7 @@ export async function listCoursesForExplore() {
         moduleCount: Array.isArray(s?.modules) ? s.modules.length : 0,
         enrollmentPriceInPaise,
         originalPriceInPaise: Math.max(0, Math.floor(Number((s as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
+        emiStartsAtText: String((s as { emiStartsAtText?: string }).emiStartsAtText ?? "").trim() || undefined,
         paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
         isDemo: !!(s as { isDemo?: boolean }).isDemo,
@@ -795,6 +803,7 @@ export async function listCoursesForExplore() {
       batchName: v.batchName,
       enrollmentPriceInPaise: v.enrollmentPriceInPaise,
       originalPriceInPaise: v.originalPriceInPaise,
+      emiStartsAtText: v.emiStartsAtText,
       paymentOptionsLabel: v.paymentOptionsLabel,
       courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
       isDemo: v.isDemo,

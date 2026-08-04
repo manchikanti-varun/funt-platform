@@ -14,6 +14,7 @@ interface MyCourse {
   chapterCount?: number;
   moduleCount: number;
   batchId: string;
+  batchType?: "online" | "centre" | "other";
   accessBlocked?: boolean;
   progressPercent?: number;
   courseHeaderImageUrl?: string;
@@ -109,6 +110,10 @@ export default function CoursesPage() {
     [myCoursesList, searchQuery]
   );
 
+  const onlineCourses = useMemo(() => myCourses.filter((c) => c.batchType === "online"), [myCourses]);
+  const centreCourses = useMemo(() => myCourses.filter((c) => c.batchType === "centre"), [myCourses]);
+  const otherCourses = useMemo(() => myCourses.filter((c) => !c.batchType || c.batchType === "other"), [myCourses]);
+
   const enrolledKeySet = useMemo(() => {
     // Key by courseId only — the student may be enrolled in a different batch
     // than what the explore listing shows. We don't want to show the same course twice.
@@ -158,23 +163,15 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      {/* Enrolled Courses */}
-      <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
-        <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
-          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">My Courses</h2>
-        </div>
-        {myCourses.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 shadow-inner ring-1 ring-slate-100/80">
-            <p className="text-sm text-slate-500">
-              {searchQuery.trim()
-                ? "No enrolled courses match your search."
-                : "You are not enrolled in any course yet. Scroll down to explore available courses."}
-            </p>
+      {/* Learn at Home — Online Batch */}
+      {onlineCourses.length > 0 && (
+        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+          <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Home <span className="text-sm font-normal text-slate-500">(Course + Kit)</span></h2>
           </div>
-        ) : (
           <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-            {myCourses.map((c) => (
+            {onlineCourses.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
                 href={`/courses/${c.courseId}?batchId=${c.batchId}`}
@@ -188,8 +185,75 @@ export default function CoursesPage() {
               />
             ))}
           </div>
-        )}
-      </DataPanel>
+        </DataPanel>
+      )}
+
+      {/* Learn at Centre — Centre Batch */}
+      {centreCourses.length > 0 && (
+        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+          <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Centre <span className="text-sm font-normal text-slate-500">(Course only · no kit)</span></h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+            {centreCourses.map((c) => (
+              <CourseCard
+                key={`${c.courseId}::${c.batchId}`}
+                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                title={c.courseTitle}
+                chapterCount={c.chapterCount ?? c.moduleCount}
+                progressPercent={c.progressPercent ?? 0}
+                locked={!!c.accessBlocked}
+                imageUrl={c.courseHeaderImageUrl}
+                statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                isDemo={!!c.isDemo}
+              />
+            ))}
+          </div>
+        </DataPanel>
+      )}
+
+      {/* Other Batches (custom batches, junior level, etc.) */}
+      {otherCourses.length > 0 && (
+        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+          <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">My Courses</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+            {otherCourses.map((c) => (
+              <CourseCard
+                key={`${c.courseId}::${c.batchId}`}
+                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                title={c.courseTitle}
+                chapterCount={c.chapterCount ?? c.moduleCount}
+                progressPercent={c.progressPercent ?? 0}
+                locked={!!c.accessBlocked}
+                imageUrl={c.courseHeaderImageUrl}
+                statusLabel={c.accessBlocked ? "Blocked by admin" : "Enrolled"}
+                isDemo={!!c.isDemo}
+              />
+            ))}
+          </div>
+        </DataPanel>
+      )}
+
+      {/* No courses at all */}
+      {myCourses.length === 0 && (
+        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+          <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">My Courses</h2>
+          </div>
+          <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 shadow-inner ring-1 ring-slate-100/80">
+            <p className="text-sm text-slate-500">
+              {searchQuery.trim()
+                ? "No enrolled courses match your search."
+                : "You are not enrolled in any course yet. Scroll down to explore available courses."}
+            </p>
+          </div>
+        </DataPanel>
+      )}
 
       {/* Explore Courses */}
       <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">

@@ -116,16 +116,7 @@ export async function assertStudentCanPurchaseCourseEnrollment(studentId: string
   const mongoId = String((batch as { _id: unknown })._id);
   const keys = batchIdKeysForQueries(mongoId, batch as { batchId?: string | null });
 
-  const enrolled = await EnrollmentModel.findOne({
-    studentId,
-    batchId: { $in: keys },
-    status: { $in: [ENROLLMENT_STATUS.ACTIVE, ENROLLMENT_STATUS.COMPLETED] },
-  })
-    .select("_id")
-    .lean()
-    .exec();
-  if (enrolled) throw new AppError("You are already enrolled in this course for this batch.", 400);
-
+  // Check if student already has a verified payment for this specific course in this batch
   const paid = await PaymentSubmissionModel.findOne({
     studentId,
     batchId: { $in: keys },
@@ -137,6 +128,18 @@ export async function assertStudentCanPurchaseCourseEnrollment(studentId: string
     .lean()
     .exec();
   if (paid) throw new AppError("You have already purchased this course for this batch.", 400);
+
+  // Check if student already has a license key for this specific course in this batch
+  const { LicenseKeyModel } = await import("../models/LicenseKey.model.js");
+  const hasKey = await LicenseKeyModel.findOne({
+    usedByStudentId: studentId,
+    batchId: { $in: keys },
+    courseId: courseId.trim(),
+  })
+    .select("_id")
+    .lean()
+    .exec();
+  if (hasKey) throw new AppError("You already have access to this course.", 400);
 }
 
 export async function getEnrollmentCheckoutPricing(

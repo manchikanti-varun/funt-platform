@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -116,6 +116,10 @@ export default function EditCoursePage() {
   const [addingChapterId, setAddingChapterId] = useState<string | null>(null);
   const [quizOptions, setQuizOptions] = useState<QuizOption[]>([]);
 
+  // Drag-and-drop state for chapter reordering
+  const dragItemRef = useRef<number | null>(null);
+  const dragOverItemRef = useRef<number | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const roleGuard = <RequireRoles roles={[...STAFF_ROLES]} fallbackHref="/courses" />;
 
   useEffect(() => {
@@ -312,6 +316,17 @@ export default function EditCoursePage() {
       const res = await api(`/api/courses/${id}/reorder-chapters`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
       if (res.success && res.data) setCourse(res.data as Course);
     }
+  }
+
+  async function handleDragDrop(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || !course?.modules?.length) return;
+    const sorted = [...course.modules].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const indices = sorted.map((_, i) => i);
+    // Remove the dragged item and insert at new position
+    const [removed] = indices.splice(fromIndex, 1);
+    indices.splice(toIndex, 0, removed);
+    const res = await api(`/api/courses/${id}/reorder-chapters`, { method: "PATCH", body: JSON.stringify({ orderedModuleIndices: indices }) });
+    if (res.success && res.data) setCourse(res.data as Course);
   }
 
   async function removeChapter(chapterIndex: number, chapterTitle: string) {
@@ -618,6 +633,7 @@ export default function EditCoursePage() {
                     if (!file) return;
                     e.target.value = "";
                     setError("");
+                    const scrollY = window.scrollY;
                     try {
                       const mimeType = file.type || "image/jpeg";
                       const presignRes = await api<{ uploadUrl: string; imageKey: string; publicUrl: string }>(
@@ -640,6 +656,7 @@ export default function EditCoursePage() {
                       );
                       if (!confirmRes.success || !confirmRes.data?.publicUrl) throw new Error(confirmRes.message ?? "Upload confirmation failed");
                       setCourseImages((prev) => [...prev, confirmRes.data!.publicUrl]);
+                      requestAnimationFrame(() => window.scrollTo(0, scrollY));
                     } catch (err) {
                       setError(err instanceof Error ? err.message : "Failed to upload image");
                     }
@@ -682,8 +699,10 @@ export default function EditCoursePage() {
                       e.preventDefault();
                       const val = (e.target as HTMLInputElement).value.trim();
                       if (val.startsWith("https://")) {
+                        const scrollY = window.scrollY;
                         setCourseImages([...courseImages, val]);
                         (e.target as HTMLInputElement).value = "";
+                        requestAnimationFrame(() => window.scrollTo(0, scrollY));
                       }
                     }
                   }}
@@ -695,8 +714,10 @@ export default function EditCoursePage() {
                     const input = (e.currentTarget.previousSibling as HTMLInputElement);
                     const val = input.value.trim();
                     if (val.startsWith("https://")) {
+                      const scrollY = window.scrollY;
                       setCourseImages([...courseImages, val]);
                       input.value = "";
+                      requestAnimationFrame(() => window.scrollTo(0, scrollY));
                     }
                   }}
                 >
@@ -784,11 +805,31 @@ export default function EditCoursePage() {
           </div>
           <div className="border-t border-slate-200 pt-6">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600">Chapters in this course</h3>
-            <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can edit the chapter copy (title, content, video, etc.) here, or reorder with Up/Down.</p>
+            <p className="mt-1 text-sm text-slate-600">These are copies of global chapters for this course. You can drag & drop to reorder, or use Up/Down buttons.</p>
             <ul className="mt-3 space-y-2">
               {sortedModules.map((m, i) => (
-                <li key={m.originalGlobalModuleId} className="rounded-xl border border-slate-200 bg-slate-50/50 overflow-hidden">
+                <li
+                  key={m.originalGlobalModuleId}
+                  draggable
+                  onDragStart={() => { dragItemRef.current = i; setDragIndex(i); }}
+                  onDragEnter={() => { dragOverItemRef.current = i; }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnd={() => {
+                    if (dragItemRef.current !== null && dragOverItemRef.current !== null && dragItemRef.current !== dragOverItemRef.current) {
+                      handleDragDrop(dragItemRef.current, dragOverItemRef.current);
+                    }
+                    dragItemRef.current = null;
+                    dragOverItemRef.current = null;
+                    setDragIndex(null);
+                  }}
+                  className={`rounded-xl border overflow-hidden transition-all ${dragIndex === i ? "border-indigo-400 bg-indigo-50/50 opacity-60 scale-[0.98]" : "border-slate-200 bg-slate-50/50"}`}
+                >
                   <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="shrink-0 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600" title="Drag to reorder">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+                      </svg>
+                    </span>
                     <span className="w-6 shrink-0 text-sm font-medium text-slate-500">{i + 1}.</span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-slate-800 truncate">{m.title}</span>
                     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
@@ -1120,8 +1161,6 @@ export default function EditCoursePage() {
                                 setAddingChapterId(null);
                                 if (res.success && res.data) {
                                   setCourse(res.data);
-                                  setShowChapterPicker(false);
-                                  setChapterSearch("");
                                 } else {
                                   setError(res.message ?? "Failed to add chapter.");
                                 }

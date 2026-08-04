@@ -274,10 +274,6 @@ function QuizPage() {
                   <p className="text-lg font-bold text-slate-900">{quizInfo.timeLimitMinutes} min</p>
                 </div>
               )}
-              <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-xs font-semibold text-slate-400">Attempts</p>
-                <p className="text-lg font-bold text-slate-900">{quizInfo.maxAttempts === 0 ? "Unlimited" : quizInfo.maxAttempts}</p>
-              </div>
             </div>
             {error && <p className="mt-4 text-sm font-semibold text-red-600">{error}</p>}
             <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -459,7 +455,7 @@ function QuizPage() {
                     </div>
                     {q.explanation && (
                       <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                        <span className="font-semibold">Explanation:</span> {q.explanation}
+                        <span className="font-semibold">Answer:</span> {q.explanation}
                       </div>
                     )}
                     <p className="mt-2 text-xs font-semibold text-slate-500">

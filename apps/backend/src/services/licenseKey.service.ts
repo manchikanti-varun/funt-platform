@@ -379,13 +379,34 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
   const targetMilestoneIds = (license as { targetMilestoneIds?: string[] }).targetMilestoneIds ?? [];
   const isMilestoneKey = licenseType && licenseType !== LICENSE_KEY_TYPE.COURSE_ACCESS;
 
-  // If already enrolled and this is a course-level key, rollback and reject
+  // If already enrolled and this is a course-level key, check if the student already has access to THIS specific course
   if (alreadyEnrolled && !isMilestoneKey) {
-    await LicenseKeyModel.updateOne(
-      { _id: license._id },
-      { $unset: { usedByStudentId: 1, usedAt: 1 } }
-    ).exec();
-    throw new AppError("You are already enrolled in this batch", 400);
+    const keyCourseId = String((license as { courseId?: string }).courseId ?? "").trim();
+    if (keyCourseId) {
+      // Check if student already has a verified payment or another license key for this course
+      const { PaymentSubmissionModel } = await import("../models/PaymentSubmission.model.js");
+      const hasPaid = await PaymentSubmissionModel.findOne({
+        studentId,
+        batchId,
+        courseId: keyCourseId,
+        status: "VERIFIED",
+        $or: [{ kind: "COURSE" }, { kind: { $exists: false } }],
+      }).select("_id").lean().exec();
+      const hasOtherKey = await LicenseKeyModel.findOne({
+        usedByStudentId: studentId,
+        batchId,
+        courseId: keyCourseId,
+        _id: { $ne: license._id },
+      }).select("_id").lean().exec();
+      if (hasPaid || hasOtherKey) {
+        await LicenseKeyModel.updateOne(
+          { _id: license._id },
+          { $unset: { usedByStudentId: 1, usedAt: 1 } }
+        ).exec();
+        throw new AppError("You already have access to this course.", 400);
+      }
+    }
+    // Student is enrolled in batch but doesn't have access to this course yet — allow the key
   }
 
   // If not enrolled, create enrollment

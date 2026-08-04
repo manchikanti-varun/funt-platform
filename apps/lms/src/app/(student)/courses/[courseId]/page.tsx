@@ -8,7 +8,7 @@ import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS, shouldShowChapterDescription } from "@/lib/sanitizeHtml";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { useProtection } from "@/components/security/ProtectionContext";
-import { Check, CirclePlay, Lock, ShieldAlert, Award, CreditCard, AlertTriangle } from "lucide-react";
+import { Check, CirclePlay, Lock, ShieldAlert, Award, CreditCard, AlertTriangle, ChevronRight } from "lucide-react";
 
 interface ChapterItem {
   order: number;
@@ -1013,6 +1013,24 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                             )}
                           </div>
                         )}
+                        {/* Next Chapter navigation */}
+                        {(() => {
+                          const currentIdx = chapters.findIndex((c) => c.order === selected.order);
+                          const nextChapter = currentIdx >= 0 && currentIdx < chapters.length - 1 ? chapters[currentIdx + 1] : null;
+                          if (!nextChapter) return null;
+                          return (
+                            <div className="border-t border-slate-100 px-6 py-5 flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOrder(nextChapter.order)}
+                                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
+                              >
+                                Next Chapter
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
+                            </div>
+                          );
+                        })()}
                         </div>
                         )}
                       </div>

@@ -98,5 +98,11 @@ paymentSubmissionSchema.index({ studentId: 1, productId: 1, status: 1 });
 paymentSubmissionSchema.index({ milestoneId: 1, status: 1 }, { sparse: true });
 paymentSubmissionSchema.index({ status: 1, createdAt: -1 });
 paymentSubmissionSchema.index({ createdAt: -1 });
+// Shop checkout pending check
+paymentSubmissionSchema.index({ studentId: 1, kind: 1, status: 1 });
+// Stock reservation expiry cleanup
+paymentSubmissionSchema.index({ kind: 1, status: 1, "shopCheckout.stockReservedUntil": 1 });
+// Revenue analytics
+paymentSubmissionSchema.index({ status: 1, verifiedAt: -1 });
 
 export const PaymentSubmissionModel = mongoose.model("PaymentSubmission", paymentSubmissionSchema);

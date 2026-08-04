@@ -132,7 +132,7 @@ export default function AdminCouponsPage() {
     return batchCourseList(selectedBatch);
   }, [batches, selectedBatch, isAllBatches]);
 
-  const canPickAllCoursesInBatch = Boolean(selectedBatchId && !isAllBatches);
+  const canPickAllCoursesInBatch = Boolean(selectedBatchId);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -184,11 +184,7 @@ export default function AdminCouponsPage() {
       return;
     }
     if (kind === "COURSE" && !courseId.trim()) {
-      setMsg("Select a course or All courses in batch.");
-      return;
-    }
-    if (kind === "COURSE" && courseId === ALL_COURSES_VALUE && isAllBatches) {
-      setMsg("All courses in batch requires a specific batch (not All batches).");
+      setMsg("Select a course or All courses.");
       return;
     }
     const res = await api("/api/admin/coupons", {
@@ -366,7 +362,7 @@ export default function AdminCouponsPage() {
                           : "Select course"}
                     </option>
                     {canPickAllCoursesInBatch && (
-                      <option value={ALL_COURSES_VALUE}>All courses in this batch</option>
+                      <option value={ALL_COURSES_VALUE}>All courses</option>
                     )}
                     {selectedBatchCourseOptions.map((c) => (
                       <option key={c.courseId} value={c.courseId}>
@@ -381,7 +377,7 @@ export default function AdminCouponsPage() {
                   )}
                   {isAllBatches && (
                     <p className="mt-1 text-xs text-slate-500">
-                      With All batches, pick a specific course (applies on any batch that offers it).
+                      With All batches, pick a specific course or All courses (applies across all batches).
                     </p>
                   )}
                 </label>

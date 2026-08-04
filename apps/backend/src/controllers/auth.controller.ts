@@ -479,6 +479,9 @@ export const signupStudent = asyncHandler(async (req: Request, res: Response): P
       if ((mongoErr.message ?? "").toLowerCase().includes("username")) {
         throw new AppError("Username already taken", 400);
       }
+      if ((mongoErr.message ?? "").toLowerCase().includes("mobile")) {
+        throw new AppError("An account with this mobile number already exists. Please sign in or use a different number.", 400);
+      }
       if ((mongoErr.message ?? "").toLowerCase().includes("email")) {
         throw new AppError("An account with this email already exists. Please sign in.", 400);
       }
@@ -816,8 +819,15 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     await ensureDemoEnrollmentsForStudent(id);
     await createAuditLog("USER_GOOGLE_SIGNUP", id, "User", id, { username: createdUsername, method: "google" }).catch(() => {});
   } catch (err: unknown) {
-    const mongoErr = err as { code?: number };
+    const mongoErr = err as { code?: number; message?: string };
     if (mongoErr?.code === 11000) {
+      const msg = (mongoErr.message ?? "").toLowerCase();
+      if (msg.includes("mobile")) {
+        throw new AppError("An account with this mobile number already exists. Please sign in or use a different number.", 400);
+      }
+      if (msg.includes("username")) {
+        throw new AppError("Username already taken. Please choose a different username.", 400);
+      }
       throw new AppError("An account with this email already exists. Please sign in.", 400);
     }
     throw err;

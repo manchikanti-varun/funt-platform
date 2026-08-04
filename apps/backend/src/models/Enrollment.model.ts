@@ -37,5 +37,7 @@ const enrollmentSchema = new Schema(
 enrollmentSchema.index({ studentId: 1, batchId: 1 }, { unique: true });
 enrollmentSchema.index({ batchId: 1, status: 1 });
 enrollmentSchema.index({ status: 1 });
+enrollmentSchema.index({ studentId: 1, status: 1 });
+enrollmentSchema.index({ franchiseId: 1, enrolledAt: -1 });
 
 export const EnrollmentModel = mongoose.model("Enrollment", enrollmentSchema);

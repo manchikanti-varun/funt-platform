@@ -27,6 +27,7 @@ import {
   setGlobalOnlineBatchHandler,
   setGlobalCentreBatchHandler,
   setNotEnrolledBatchHandler,
+  syncAllCoursesAllBatches,
 } from "../controllers/batch.controller.js";
 
 const router = Router();
@@ -49,6 +50,7 @@ router.get("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN, RO
 router.put("/:id", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.TRAINER), requireBatchOwnership, validateBody(updateBatchSchema), updateBatch);
 router.post("/:id/duplicate", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), duplicateBatch);
 router.post("/:id/sync-course", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), syncCourseContent);
+router.post("/sync-all", requireRoles(ROLE.SUPER_ADMIN), syncAllCoursesAllBatches);
 router.patch("/:id/archive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), archiveBatch);
 router.patch("/:id/unarchive", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), unarchiveBatch);
 router.delete("/:id", requireRoles(ROLE.SUPER_ADMIN), deleteBatch);

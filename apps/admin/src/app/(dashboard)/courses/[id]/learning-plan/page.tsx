@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -23,6 +23,7 @@ interface MilestoneForm {
   unlockAfterDays: string;
   paymentDueInDays: string;
   certificateEligible: boolean;
+  certificateDurationText: string;
   active: boolean;
   chapterOrders: string; // comma-separated string for input
 }
@@ -39,6 +40,7 @@ interface Milestone {
   unlockAfterDays?: number;
   paymentDueInDays?: number;
   certificateEligible: boolean;
+  certificateDurationText?: string;
   active: boolean;
   chapterOrders: number[];
 }
@@ -72,6 +74,7 @@ function blankForm(order: number): MilestoneForm {
     unlockAfterDays: "",
     paymentDueInDays: "",
     certificateEligible: false,
+    certificateDurationText: "",
     active: true,
     chapterOrders: "",
   };
@@ -90,6 +93,7 @@ function milestoneToForm(m: Milestone): MilestoneForm {
     unlockAfterDays: m.unlockAfterDays != null ? String(m.unlockAfterDays) : "",
     paymentDueInDays: m.paymentDueInDays != null ? String(m.paymentDueInDays) : "",
     certificateEligible: m.certificateEligible,
+    certificateDurationText: m.certificateDurationText ?? "",
     active: m.active,
     chapterOrders: (m.chapterOrders ?? []).join(", "),
   };
@@ -108,6 +112,7 @@ function formToPayload(f: MilestoneForm) {
     unlockAfterDays: f.unlockAfterDays ? Number(f.unlockAfterDays) : undefined,
     paymentDueInDays: f.paymentDueInDays ? Number(f.paymentDueInDays) : undefined,
     certificateEligible: f.certificateEligible,
+    certificateDurationText: f.certificateEligible ? (f.certificateDurationText.trim() || undefined) : undefined,
     active: f.active,
     chapterOrders: f.chapterOrders
       .split(",")
@@ -410,25 +415,39 @@ function MilestoneFormPanel({
       </div>
 
       {/* Flags */}
-      <div className="flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.certificateEligible}
-            onChange={(e) => set("certificateEligible", e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span>Issue milestone certificate on completion</span>
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(e) => set("active", e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span>Active</span>
-        </label>
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.certificateEligible}
+              onChange={(e) => set("certificateEligible", e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Issue milestone certificate on completion</span>
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(e) => set("active", e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span>Active</span>
+          </label>
+        </div>
+        {form.certificateEligible && (
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">Certificate Duration Text</label>
+            <input
+              value={form.certificateDurationText}
+              onChange={(e) => set("certificateDurationText", e.target.value)}
+              className="input w-full max-w-sm"
+              placeholder="e.g. 12+ Hours"
+            />
+            <p className="mt-1 text-xs text-slate-500">Shown on the certificate PDF. The milestone title will be used as the course name on the certificate.</p>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
@@ -478,6 +497,11 @@ export default function LearningPlanPage() {
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
+  // Drag-and-drop state for milestone reordering
+  const dragMilestoneRef = useRef<number | null>(null);
+  const dragOverMilestoneRef = useRef<number | null>(null);
+  const [dragMilestoneIndex, setDragMilestoneIndex] = useState<number | null>(null);
+
   const modules = course?.modules ?? [];
 
   // ── Load course ────────────────────────────────────────────────────────────
@@ -519,6 +543,7 @@ export default function LearningPlanPage() {
           unlockAfterDays: m.unlockAfterDays,
           paymentDueInDays: m.paymentDueInDays,
           certificateEligible: m.certificateEligible,
+          certificateDurationText: m.certificateDurationText,
           active: m.active,
           chapterOrders: m.chapterOrders,
         })),
@@ -529,6 +554,48 @@ export default function LearningPlanPage() {
       setPlanError(r.message ?? "Failed to save.");
     } else {
       await load();
+    }
+  }
+
+  // ── Reorder milestones (drag-and-drop or button) ───────────────────────────
+  async function reorderMilestones(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex || milestones.length < 2) return;
+    const reordered = [...milestones];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    // Reassign order values
+    const updated = reordered.map((m, i) => ({ ...m, order: i }));
+    setMilestones(updated);
+    // Persist
+    setPlanSaving(true);
+    setPlanError("");
+    const r = await api(`/api/courses/${id}/learning-plan`, {
+      method: "PUT",
+      body: JSON.stringify({
+        enabled,
+        autoLockPreviousMilestones: autoLock,
+        milestones: updated.map((m) => ({
+          milestoneId: m.milestoneId,
+          title: m.title,
+          description: m.description,
+          order: m.order,
+          feeInPaise: m.feeInPaise,
+          unlockType: m.unlockType,
+          completionRule: m.completionRule,
+          unlockAfterDate: m.unlockAfterDate,
+          unlockAfterDays: m.unlockAfterDays,
+          paymentDueInDays: m.paymentDueInDays,
+          certificateEligible: m.certificateEligible,
+          certificateDurationText: m.certificateDurationText,
+          active: m.active,
+          chapterOrders: m.chapterOrders,
+        })),
+      }),
+    });
+    setPlanSaving(false);
+    if (!r.success) {
+      setPlanError(r.message ?? "Failed to reorder.");
+      await load(); // revert on failure
     }
   }
 
@@ -557,6 +624,14 @@ export default function LearningPlanPage() {
   async function saveMilestone() {
     if (!form.title.trim()) {
       setFormError("Title is required.");
+      return;
+    }
+    const parsedChapters = form.chapterOrders
+      .split(",")
+      .map((s) => parseInt(s.trim(), 10))
+      .filter((n) => !isNaN(n) && n >= 0);
+    if (parsedChapters.length === 0) {
+      setFormError("Assign at least 1 chapter to this milestone.");
       return;
     }
     setFormSaving(true);
@@ -760,7 +835,22 @@ export default function LearningPlanPage() {
 
                 <ul className="space-y-3">
                   {milestones.map((m, idx) => (
-                    <li key={m.milestoneId}>
+                    <li
+                      key={m.milestoneId}
+                      draggable={editingId !== m.milestoneId}
+                      onDragStart={() => { dragMilestoneRef.current = idx; setDragMilestoneIndex(idx); }}
+                      onDragEnter={() => { dragOverMilestoneRef.current = idx; }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDragEnd={() => {
+                        if (dragMilestoneRef.current !== null && dragOverMilestoneRef.current !== null && dragMilestoneRef.current !== dragOverMilestoneRef.current) {
+                          reorderMilestones(dragMilestoneRef.current, dragOverMilestoneRef.current);
+                        }
+                        dragMilestoneRef.current = null;
+                        dragOverMilestoneRef.current = null;
+                        setDragMilestoneIndex(null);
+                      }}
+                      className={`transition-all ${dragMilestoneIndex === idx ? "opacity-50 scale-[0.98]" : ""}`}
+                    >
                       {editingId === m.milestoneId ? (
                         <MilestoneFormPanel
                           form={form}
@@ -777,9 +867,12 @@ export default function LearningPlanPage() {
                         <MilestoneCard
                           milestone={m}
                           index={idx}
+                          total={milestones.length}
                           modules={modules}
                           onEdit={() => startEdit(m)}
                           onDelete={() => deleteMilestone(m)}
+                          onMoveUp={() => reorderMilestones(idx, idx - 1)}
+                          onMoveDown={() => reorderMilestones(idx, idx + 1)}
                         />
                       )}
                     </li>
@@ -843,15 +936,21 @@ export default function LearningPlanPage() {
 function MilestoneCard({
   milestone,
   index,
+  total,
   modules,
   onEdit,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   milestone: Milestone;
   index: number;
+  total: number;
   modules: { order: number; title?: string }[];
   onEdit: () => void;
   onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const feeRupees = milestone.feeInPaise / 100;
   const assignedModules = modules.filter((m) => milestone.chapterOrders.includes(m.order));
@@ -860,6 +959,15 @@ function MilestoneCard({
     <div className={`rounded-xl border ${milestone.active ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50 opacity-60"} overflow-hidden`}>
       {/* Row */}
       <div className="flex items-start gap-4 px-4 py-4">
+        {/* Drag handle */}
+        <div className="flex shrink-0 flex-col items-center gap-1 pt-1">
+          <span className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600" title="Drag to reorder">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
+            </svg>
+          </span>
+        </div>
+
         {/* Order badge */}
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700">
           {index + 1}
@@ -917,6 +1025,28 @@ function MilestoneCard({
 
         {/* Actions */}
         <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onMoveUp}
+            disabled={index === 0}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Move up"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onMoveDown}
+            disabled={index === total - 1}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Move down"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={onEdit}

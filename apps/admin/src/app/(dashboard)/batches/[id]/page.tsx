@@ -110,6 +110,8 @@ export default function EditBatchPage() {
   const [upiQrPickName, setUpiQrPickName] = useState("");
   const [completionCoinsByCourseId, setCompletionCoinsByCourseId] = useState<Record<string, string>>({});
   const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
+  const [emiTextByCourseId, setEmiTextByCourseId] = useState<Record<string, string>>({});
+  const [originalPriceInrByCourseId, setOriginalPriceInrByCourseId] = useState<Record<string, string>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
   const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [platformUpiSummary, setPlatformUpiSummary] = useState<PlatformUpiSummaryState>("idle");
@@ -208,6 +210,17 @@ export default function EditBatchPage() {
         }
         setCompletionCoinsByCourseId(coinMap);
         setCompletionBadgesByCourseId(badgeMap);
+        const emiMap: Record<string, string> = {};
+        const origPriceMap: Record<string, string> = {};
+        for (const s of snaps) {
+          const cid = s.courseId ?? "";
+          if (!cid) continue;
+          emiMap[cid] = (s as { emiStartsAtText?: string }).emiStartsAtText ?? "";
+          const origPaise = Math.max(0, Math.floor(Number((s as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0)));
+          origPriceMap[cid] = origPaise > 0 ? (origPaise / 100).toFixed(2).replace(/\.?0+$/, "") : "";
+        }
+        setEmiTextByCourseId(emiMap);
+        setOriginalPriceInrByCourseId(origPriceMap);
       }
     });
   }, [id]);
@@ -360,6 +373,20 @@ export default function EditBatchPage() {
       ...(Object.keys(courseEnrollmentPrices).length > 0 ? { courseEnrollmentPrices } : {}),
       ...(Object.keys(coursePaymentMethods).length > 0 ? { coursePaymentMethods } : {}),
     };
+    // Add EMI text and original price overrides
+    const courseEmiTexts: Record<string, string> = {};
+    const courseOriginalPrices: Record<string, number> = {};
+    for (const sid of selectedCourseIds) {
+      const emiKey = emiTextByCourseId[sid] !== undefined ? sid : courses.find((c) => c.id === sid)?.courseId ?? sid;
+      const emiVal = (resolveFromMap(emiTextByCourseId, sid) ?? "").trim();
+      if (emiVal) courseEmiTexts[emiKey] = emiVal;
+      const origKey = originalPriceInrByCourseId[sid] !== undefined ? sid : courses.find((c) => c.id === sid)?.courseId ?? sid;
+      const origVal = (resolveFromMap(originalPriceInrByCourseId, sid) ?? "").trim();
+      const origRupees = origVal ? Number(origVal) : 0;
+      if (Number.isFinite(origRupees) && origRupees > 0) courseOriginalPrices[origKey] = origRupees;
+    }
+    if (Object.keys(courseEmiTexts).length > 0) body.courseEmiTexts = courseEmiTexts;
+    if (Object.keys(courseOriginalPrices).length > 0) body.courseOriginalPrices = courseOriginalPrices;
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
     const res = await api(`/api/batches/${id}`, {
@@ -706,6 +733,32 @@ export default function EditBatchPage() {
                           <span className="text-xs text-slate-500">
                             {demo ? "Demo · ₹0 · auto-enroll" : "INR fee"}
                           </span>
+                          {!demo && (
+                            <>
+                              <input
+                                type="text"
+                                placeholder="Strikethrough ₹"
+                                value={resolveFromMap(originalPriceInrByCourseId, sid) ?? ""}
+                                onChange={(e) =>
+                                  setOriginalPriceInrByCourseId((m) => ({ ...m, [sid]: e.target.value }))
+                                }
+                                className="w-32 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                                title="Original price (shown as strikethrough)"
+                              />
+                              <span className="text-xs text-slate-500">MRP ₹</span>
+                              <input
+                                type="text"
+                                placeholder="EMI starts at ₹..."
+                                value={resolveFromMap(emiTextByCourseId, sid) ?? ""}
+                                onChange={(e) =>
+                                  setEmiTextByCourseId((m) => ({ ...m, [sid]: e.target.value }))
+                                }
+                                className="w-40 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                                title="EMI text (leave blank to hide)"
+                              />
+                              <span className="text-xs text-slate-500">EMI text</span>
+                            </>
+                          )}
                           {showPay ? (
                             <div className="flex min-w-0 flex-1 flex-col gap-2">
                               <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-600">

@@ -37,6 +37,7 @@ chapterProgressSchema.set("toJSON", {
 });
 
 chapterProgressSchema.index({ studentId: 1, batchId: 1, courseId: 1, moduleOrder: 1 }, { unique: true });
+chapterProgressSchema.index({ batchId: 1, studentId: 1 });
 
 export const ChapterProgressModel = mongoose.model("ChapterProgress", chapterProgressSchema);
 export const ModuleProgressModel = ChapterProgressModel;
