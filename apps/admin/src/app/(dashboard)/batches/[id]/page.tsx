@@ -547,13 +547,13 @@ export default function EditBatchPage() {
                   const res = await api(`/api/batches/${id}`, { method: "PUT", body: JSON.stringify({ autoEnrollAllStudents: next }) });
                   if (res.success) setBatch((prev) => prev ? { ...prev, autoEnrollAllStudents: next } : prev);
                 }}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition ${
+                className={`rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 ${
                   batch.autoEnrollAllStudents
-                    ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                {batch.autoEnrollAllStudents ? "✓ Auto-enroll ON" : "Auto-enroll OFF"}
+                {batch.autoEnrollAllStudents ? "Auto-enroll ON" : "Auto-enroll OFF"}
               </button>
             )}
             {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (

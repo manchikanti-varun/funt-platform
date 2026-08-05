@@ -793,15 +793,28 @@ export default function LearningPlanPage() {
                   <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600">
                     Milestones ({milestones.length})
                   </h2>
-                  {editingId !== "new" && (
-                    <button
-                      type="button"
-                      onClick={startNew}
-                      className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
-                    >
-                      + Add Milestone
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {milestones.length > 0 && (
+                      <Link
+                        href={`/license-keys?courseId=${encodeURIComponent(course?.courseId || id)}&keyType=FULL_PLAN_ACCESS`}
+                        className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 text-sm font-semibold text-teal-700 hover:bg-teal-100 transition inline-flex items-center gap-1.5"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        Full Plan Key
+                      </Link>
+                    )}
+                    {editingId !== "new" && (
+                      <button
+                        type="button"
+                        onClick={startNew}
+                        className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 transition"
+                      >
+                        + Add Milestone
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* New milestone form */}
@@ -870,6 +883,7 @@ export default function LearningPlanPage() {
                           index={idx}
                           total={milestones.length}
                           modules={modules}
+                          courseId={course?.courseId || id}
                           onEdit={() => startEdit(m)}
                           onDelete={() => deleteMilestone(m)}
                           onMoveUp={() => reorderMilestones(idx, idx - 1)}
@@ -943,6 +957,7 @@ function MilestoneCard({
   onDelete,
   onMoveUp,
   onMoveDown,
+  courseId,
 }: {
   milestone: Milestone;
   index: number;
@@ -952,6 +967,7 @@ function MilestoneCard({
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  courseId: string;
 }) {
   const feeRupees = milestone.feeInPaise / 100;
   const assignedModules = modules.filter((m) => milestone.chapterOrders.includes(m.order));
@@ -1068,6 +1084,16 @@ function MilestoneCard({
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
+          <Link
+            href={`/license-keys?batchId=&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(milestone.milestoneId)}`}
+            className="flex h-8 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 text-teal-700 hover:bg-teal-100 transition text-xs font-medium"
+            title="Generate license key for this milestone"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            Key
+          </Link>
         </div>
       </div>
     </div>

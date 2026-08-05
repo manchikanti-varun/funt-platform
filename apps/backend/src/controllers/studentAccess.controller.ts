@@ -5,6 +5,8 @@ import { AppError } from "../utils/AppError.js";
 import {
   redeemLicenseKey,
   generateCourseLicenseKeys,
+  generateMilestoneLicenseKeys,
+  generateFullPlanLicenseKeys,
   listLicenseKeyAudit,
 } from "../services/licenseKey.service.js";
 import {
@@ -472,14 +474,45 @@ export const getAdminPaymentsFinance = asyncHandler(async (req: Request, res: Re
 
 export const postGenerateLicense = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const adminId = uid(req);
-  const { courseId, batchId, count } = req.body as { courseId?: string; batchId?: string; count?: number };
+  const { courseId, batchId, count, licenseType, targetMilestoneIds } = req.body as {
+    courseId?: string;
+    batchId?: string;
+    count?: number;
+    licenseType?: string;
+    targetMilestoneIds?: string[];
+  };
   if (!courseId?.trim()) throw new AppError("courseId is required", 400);
-  const data = await generateCourseLicenseKeys({
-    courseId: courseId.trim(),
-    batchId: batchId?.trim(),
-    createdBy: adminId,
-    count,
-  });
+
+  let data: { keys: string[]; courseId: string; batchId: string; milestoneId?: string };
+
+  if (licenseType === "MILESTONE_ACCESS") {
+    if (!batchId?.trim()) throw new AppError("batchId is required for milestone keys", 400);
+    const milestoneId = targetMilestoneIds?.[0]?.trim();
+    if (!milestoneId) throw new AppError("milestoneId is required for milestone keys", 400);
+    data = await generateMilestoneLicenseKeys({
+      courseId: courseId.trim(),
+      batchId: batchId.trim(),
+      milestoneId,
+      createdBy: adminId,
+      count,
+    });
+  } else if (licenseType === "FULL_PLAN_ACCESS") {
+    if (!batchId?.trim()) throw new AppError("batchId is required for full plan keys", 400);
+    data = await generateFullPlanLicenseKeys({
+      courseId: courseId.trim(),
+      batchId: batchId.trim(),
+      createdBy: adminId,
+      count,
+    });
+  } else {
+    data = await generateCourseLicenseKeys({
+      courseId: courseId.trim(),
+      batchId: batchId?.trim(),
+      createdBy: adminId,
+      count,
+    });
+  }
+
   if (!data.keys?.length) {
     throw new AppError("License key generation produced no keys", 500);
   }

@@ -69,8 +69,22 @@ interface BatchRow {
   id: string;
   name: string;
   batchId?: string;
-  courseSnapshots?: Array<{ courseId?: string; title?: string }>;
-  courseSnapshot?: { courseId?: string; title?: string };
+  courseSnapshots?: Array<{
+    courseId?: string;
+    title?: string;
+    learningPlan?: {
+      enabled?: boolean;
+      milestones?: Array<{ milestoneId: string; title: string; order: number; active?: boolean }>;
+    };
+  }>;
+  courseSnapshot?: {
+    courseId?: string;
+    title?: string;
+    learningPlan?: {
+      enabled?: boolean;
+      milestones?: Array<{ milestoneId: string; title: string; order: number; active?: boolean }>;
+    };
+  };
 }
 
 function snapshotsFromBatch(b: BatchRow): Array<{ courseId?: string; title?: string }> {
@@ -121,6 +135,9 @@ export function CourseLicenseKeyGenerator({
   const [copiedAllFlash, setCopiedAllFlash] = useState(false);
   const [generateNotice, setGenerateNotice] = useState<string | null>(null);
   const [keysModalOpen, setKeysModalOpen] = useState(false);
+  const [keyType, setKeyType] = useState<"COURSE_ACCESS" | "MILESTONE_ACCESS" | "FULL_PLAN_ACCESS">("COURSE_ACCESS");
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState("");
+  const [milestones, setMilestones] = useState<Array<{ milestoneId: string; title: string; order: number }>>([]);
 
   const effectiveCourseId = (lockedCourseId?.trim() || selectedCourseId).trim();
 
@@ -183,6 +200,28 @@ export function CourseLicenseKeyGenerator({
     else if (list.length > 0 && !list.some((x) => x.id === batchId)) setBatchId("");
   }, [effectiveCourseId, batches, batchId, lockedBatchId]);
 
+  // Load milestones when batch + course are selected and key type needs them
+  useEffect(() => {
+    setMilestones([]);
+    setSelectedMilestoneId("");
+    const resolvedBatchId = batchId || (eligibleBatches.length === 1 ? eligibleBatches[0]?.id : "");
+    if (!effectiveCourseId || !resolvedBatchId) return;
+    // Fetch batch detail to extract learning plan milestones from the course snapshot
+    const batch = batches.find((b) => b.id === resolvedBatchId);
+    if (!batch) return;
+    const snaps = snapshotsFromBatch(batch);
+    const snap = snaps.find((s) => s.courseId === effectiveCourseId) as {
+      courseId?: string;
+      learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; title: string; order: number; active?: boolean }> };
+    } | undefined;
+    if (snap?.learningPlan?.enabled && Array.isArray(snap.learningPlan.milestones)) {
+      const active = snap.learningPlan.milestones
+        .filter((m) => m.active !== false)
+        .sort((a, b) => a.order - b.order);
+      setMilestones(active);
+    }
+  }, [effectiveCourseId, batchId, batches, eligibleBatches]);
+
   async function generate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -209,11 +248,29 @@ export function CourseLicenseKeyGenerator({
     if (!resolvedBatchId && eligibleBatches.length === 1) {
       resolvedBatchId = eligibleBatches[0].id;
     }
-    const body: { courseId: string; batchId?: string; count: number } = {
+
+    if (keyType === "MILESTONE_ACCESS" && !selectedMilestoneId) {
+      setError("Select a milestone for milestone-level keys.");
+      setSubmitting(false);
+      return;
+    }
+    if ((keyType === "MILESTONE_ACCESS" || keyType === "FULL_PLAN_ACCESS") && !resolvedBatchId) {
+      setError("Batch is required for learning plan keys.");
+      setSubmitting(false);
+      return;
+    }
+
+    const body: { courseId: string; batchId?: string; count: number; licenseType?: string; targetMilestoneIds?: string[] } = {
       courseId: effectiveCourseId,
       count: q,
     };
     if (resolvedBatchId) body.batchId = resolvedBatchId;
+    if (keyType !== "COURSE_ACCESS") {
+      body.licenseType = keyType;
+    }
+    if (keyType === "MILESTONE_ACCESS" && selectedMilestoneId) {
+      body.targetMilestoneIds = [selectedMilestoneId];
+    }
 
     const res = await api<{ keys?: string[]; message?: string }>("/api/admin/license-keys", {
       method: "POST",
@@ -450,6 +507,51 @@ export function CourseLicenseKeyGenerator({
             onChange={(e) => setQuantity(parseInt(e.target.value, 10) || 1)}
           />
         </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          Key type
+          <select
+            className="input mt-1.5 max-w-xl py-2 text-sm"
+            value={keyType}
+            onChange={(e) => {
+              setKeyType(e.target.value as typeof keyType);
+              setSelectedMilestoneId("");
+            }}
+          >
+            <option value="COURSE_ACCESS">Course Access (enrolls student in course)</option>
+            <option value="MILESTONE_ACCESS">Milestone Access (unlocks specific milestone)</option>
+            <option value="FULL_PLAN_ACCESS">Full Plan Access (unlocks all milestones)</option>
+          </select>
+        </label>
+
+        {keyType === "MILESTONE_ACCESS" && (
+          <label className="block text-sm font-medium text-slate-700">
+            Milestone
+            {milestones.length > 0 ? (
+              <select
+                className="input mt-1.5 max-w-xl py-2 text-sm"
+                value={selectedMilestoneId}
+                onChange={(e) => setSelectedMilestoneId(e.target.value)}
+                required
+              >
+                <option value="">— Select milestone —</option>
+                {milestones.map((m) => (
+                  <option key={m.milestoneId} value={m.milestoneId}>
+                    {m.order + 1}. {m.title}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="mt-1.5 text-sm text-amber-700">No learning plan milestones found for this course. Ensure the batch has a learning plan enabled.</p>
+            )}
+          </label>
+        )}
+
+        {keyType === "FULL_PLAN_ACCESS" && milestones.length === 0 && effectiveCourseId && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            No learning plan found for this course. Full plan keys require a learning plan with milestones.
+          </p>
+        )}
 
         {eligibleBatches.length > 1 && !lockedBatchId && (
           <label className="block text-sm font-medium text-slate-700">

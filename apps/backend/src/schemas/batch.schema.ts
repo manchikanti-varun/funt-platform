@@ -11,7 +11,7 @@ const createBatchBaseSchema = z.object({
   zoomLink: urlField,
   status: z.string().optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE"]).optional().default("PUBLIC"),
-  autoEnrollAllStudents: z.boolean().optional().default(false),
+  autoEnrollAllStudents: z.boolean().optional(),
   certificatePriceCoins: z.number().int().min(0).optional().default(0),
   manualUpiQrUrl: z.string().max(500_000).optional(),
   headerImageUrl: urlField,
