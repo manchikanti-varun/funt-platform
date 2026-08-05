@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { api, clearToken } from "@/lib/api";
+import { api } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { CourseCard } from "@/components/CourseCard";
-import { CreditCard, ExternalLink, Eye, Search } from "lucide-react";
+import { ArrowRight, CreditCard, Eye, Search } from "lucide-react";
 
 interface MyCourse {
   courseId: string;
@@ -29,8 +29,8 @@ interface ExploreCourse {
   chapterCount?: number;
   moduleCount: number;
   batchId: string;
+  batchType?: string;
   enrollmentPriceInPaise?: number;
-  paymentOptionsLabel?: string;
   courseHeaderImageUrl?: string;
   isDemo?: boolean;
 }
@@ -72,28 +72,19 @@ export default function CoursesPage() {
   const [exploreCoursesList, setExploreCoursesList] = useState<ExploreCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [exploreError, setExploreError] = useState<string | null>(null);
 
   useEffect(() => {
-    setExploreError(null);
     Promise.all([
       api<MyCourse[]>("/api/student/courses").then((r) =>
         r.success && Array.isArray(r.data) ? r.data : []
       ).catch(() => [] as MyCourse[]),
-      api<ExploreCourse[]>("/api/student/courses/explore").then((r) => {
-        if (!r.success) {
-          setExploreError(r.message ?? "Failed to load courses");
-          return [];
-        }
-        return Array.isArray(r.data) ? r.data : [];
-      }).catch(() => [] as ExploreCourse[]),
+      api<ExploreCourse[]>("/api/student/courses/explore").then((r) =>
+        r.success && Array.isArray(r.data) ? r.data : []
+      ).catch(() => [] as ExploreCourse[]),
     ])
       .then(([myList, exploreList]) => {
         setMyCoursesList(myList);
         setExploreCoursesList(exploreList);
-      })
-      .catch((err) => {
-        setExploreError(err?.message ?? "Failed to load courses");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -115,24 +106,15 @@ export default function CoursesPage() {
   const centreCourses = useMemo(() => myCourses.filter((c) => c.batchType === "centre"), [myCourses]);
   const otherCourses = useMemo(() => myCourses.filter((c) => !c.batchType || c.batchType === "other"), [myCourses]);
 
-  const enrolledKeySet = useMemo(() => {
-    // Key by courseId only — the student may be enrolled in a different batch
-    // than what the explore listing shows. We don't want to show the same course twice.
-    return new Set(
-      myCoursesList.map((c) => String(c.courseId).trim())
-    );
-  }, [myCoursesList]);
+  const enrolledKeySet = useMemo(() => new Set(myCoursesList.map((c) => String(c.courseId).trim())), [myCoursesList]);
 
-  const exploreCourses = useMemo(
-    () =>
-      filterBySearch(
-        // Hide courses the student is already enrolled in — they're shown in My Courses
-        exploreCoursesList.filter((c) => !enrolledKeySet.has(String(c.courseId).trim())),
-        searchQuery,
-        (c) => c.courseTitle,
-        (c) => c.description ?? ""
-      ),
-    [exploreCoursesList, searchQuery, enrolledKeySet]
+  const exploreOnline = useMemo(
+    () => exploreCoursesList.filter((c) => c.batchType === "GLOBAL_ONLINE" && !enrolledKeySet.has(String(c.courseId).trim())),
+    [exploreCoursesList, enrolledKeySet]
+  );
+  const exploreCentre = useMemo(
+    () => exploreCoursesList.filter((c) => c.batchType === "GLOBAL_CENTRE" && !enrolledKeySet.has(String(c.courseId).trim())),
+    [exploreCoursesList, enrolledKeySet]
   );
 
   if (loading) {
@@ -256,106 +238,111 @@ export default function CoursesPage() {
         </DataPanel>
       )}
 
-      {/* Explore Courses */}
+      {/* Browse — Learn at Home */}
       <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
         <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Browse</p>
-          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Explore Courses</h2>
-          <p className="mt-1 text-xs text-slate-500">All courses from the platform, including those you are not enrolled in.</p>
+          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Home</h2>
+          <p className="mt-1 text-xs text-slate-500">Complete course + brand new kit. One-time purchase — the kit is yours to keep forever.</p>
         </div>
-        {exploreError ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-10 text-center">
-            <p className="text-sm font-medium text-amber-800">Could not load explore courses</p>
-            <p className="text-xs text-amber-700">{exploreError}</p>
-            {/insufficient role|forbidden/i.test(exploreError) ? (
-              <div className="max-w-md space-y-2 text-xs text-amber-950">
-                <p>
-                  FUNT Learn only works with a <strong>student</strong> account. If you used an Admin / Trainer login (@funt), open the{" "}
-                  <strong>Admin</strong> site instead, or log out here and sign in as a student.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearToken();
-                    window.location.href = "/login";
-                  }}
-                  className="rounded-lg bg-amber-200 px-3 py-1.5 text-sm font-semibold text-amber-950 hover:bg-amber-300"
-                >
-                  Log out and try again
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">Check that the backend is running and you are logged in.</p>
-            )}
-          </div>
-        ) : exploreCourses.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 shadow-inner ring-1 ring-slate-100/80">
-            <p className="text-sm text-slate-500">
-              {searchQuery.trim()
-                ? "No courses match your search."
-                : "No courses in the platform yet."}
-            </p>
+        {exploreOnline.length === 0 ? (
+          <div className="flex items-center justify-center p-8">
+            <p className="text-sm text-slate-500">No courses available right now.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-            {exploreCourses.map((c) => {
-              const enrolled = enrolledKeySet.has(String(c.courseId).trim());
-              const feeLabel =
-                c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
-                  ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-                  : "—";
-              return (
+          <>
+            <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+              {exploreOnline.slice(0, 9).map((c) => (
                 <CourseCard
                   key={`${c.courseId}::${c.batchId}`}
                   href={`/courses/${c.courseId}?batchId=${c.batchId}`}
                   title={c.courseTitle}
                   chapterCount={c.chapterCount ?? c.moduleCount}
                   imageUrl={c.courseHeaderImageUrl}
-                  statusLabel={enrolled ? "Enrolled" : "Explore"}
+                  statusLabel={c.isDemo ? "Free demo" : "Explore"}
                   isDemo={!!c.isDemo}
                   footerExtra={
-                    <p className="text-xs text-slate-600">
-                      {c.isDemo ? "Free demo · no payment" : `Fee: ${feeLabel}`}
-                    </p>
+                    !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                      <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
+                    ) : undefined
                   }
                   actions={
-                    enrolled ? (
-                      <Link
-                        href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white"
-                        title="Open course"
-                        aria-label="Open course"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                        Open
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                        <Eye className="h-3.5 w-3.5" aria-hidden /> Details
                       </Link>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        <Link
-                          href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
-                          title="Course details"
-                          aria-label="View course details"
-                        >
-                          <Eye className="h-3.5 w-3.5" aria-hidden />
-                          Details
+                      {!c.isDemo && (
+                        <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                          <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
                         </Link>
-                        <Link
-                          href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white"
-                          title="Pay"
-                          aria-label="Pay for course"
-                        >
-                          <CreditCard className="h-3.5 w-3.5" aria-hidden />
-                          Pay
-                        </Link>
-                      </div>
-                    )
+                      )}
+                    </div>
                   }
                 />
-              );
-            })}
+              ))}
+            </div>
+            {exploreOnline.length > 9 && (
+              <div className="border-t border-slate-100 px-6 py-3">
+                <Link href="/courses/online" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                  View all {exploreOnline.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              </div>
+            )}
+          </>
+        )}
+      </DataPanel>
+
+      {/* Browse — Learn at Centre */}
+      <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+        <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Browse</p>
+          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Centre</h2>
+          <p className="mt-1 text-xs text-slate-500">Course access with shared lab kits at our centre. Kits are not included — if you want one after the course, contact your trainer for pricing.</p>
+        </div>
+        {exploreCentre.length === 0 ? (
+          <div className="flex items-center justify-center p-8">
+            <p className="text-sm text-slate-500">No courses available right now.</p>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+              {exploreCentre.slice(0, 9).map((c) => (
+                <CourseCard
+                  key={`${c.courseId}::${c.batchId}`}
+                  href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                  title={c.courseTitle}
+                  chapterCount={c.chapterCount ?? c.moduleCount}
+                  imageUrl={c.courseHeaderImageUrl}
+                  statusLabel={c.isDemo ? "Free demo" : "Explore"}
+                  isDemo={!!c.isDemo}
+                  footerExtra={
+                    !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                      <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
+                    ) : undefined
+                  }
+                  actions={
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                        <Eye className="h-3.5 w-3.5" aria-hidden /> Details
+                      </Link>
+                      {!c.isDemo && (
+                        <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                          <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                        </Link>
+                      )}
+                    </div>
+                  }
+                />
+              ))}
+            </div>
+            {exploreCentre.length > 9 && (
+              <div className="border-t border-slate-100 px-6 py-3">
+                <Link href="/courses/centre" className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+                  View all {exploreCentre.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
+                </Link>
+              </div>
+            )}
+          </>
         )}
       </DataPanel>
     </AppPageShell>

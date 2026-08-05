@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { IconBook } from "@/components/icons/NavIcons";
 
 // Inlined from @funt-platform/rich-text-editor to avoid pulling the full editor bundle
 function resolveImageEmbedUrl(input: string, size: 220 | 400 | 800 = 800): string {
@@ -38,34 +37,6 @@ interface CourseCardProps {
   actions?: ReactNode;
 }
 
-function RingProgress({ percent }: { percent: number }) {
-  const p = Math.min(100, Math.max(0, percent));
-  const circumference = 2 * Math.PI * 22;
-  const offset = circumference - (p / 100) * circumference;
-  return (
-    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 56 56" aria-hidden>
-        <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="4" />
-        <circle
-          cx="28"
-          cy="28"
-          r="22"
-          fill="none"
-          stroke="#6366f1"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          className="transition-[stroke-dashoffset] duration-500"
-        />
-      </svg>
-      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-black/30 ring-1 ring-white/25">
-        <IconBook className="h-5 w-5 text-white" />
-      </div>
-    </div>
-  );
-}
-
 export function CourseCard({
   href,
   title,
@@ -93,57 +64,75 @@ export function CourseCard({
         locked ? "opacity-80" : "hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg"
       }`}
     >
-      <div className="relative h-32 w-full shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
+      {/* Image */}
+      <div className="relative h-44 w-full shrink-0 overflow-hidden bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
         {imgSrc ? (
-          <img src={imgSrc} alt="" className="h-full w-full object-cover" />
+          <img
+            src={imgSrc}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <IconBook className="h-12 w-12 text-slate-400/80" aria-hidden />
+            <svg className="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 p-3">
-          <div className="min-w-0 flex-1">
-            <h3 className="line-clamp-2 text-sm font-bold text-white drop-shadow-sm">{title}</h3>
-            {batchName ? <p className="mt-0.5 line-clamp-1 text-xs text-white/85">{batchName}</p> : null}
-          </div>
-          <RingProgress percent={pct} />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h3 className="line-clamp-2 text-base font-bold text-white drop-shadow-md">{title}</h3>
+          {batchName && <p className="mt-0.5 line-clamp-1 text-xs text-white/80">{batchName}</p>}
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2.5 p-3.5">
-        {isDemo ? (
-          <span className="w-fit rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-            Free demo
-          </span>
-        ) : null}
-        {statusLabel ? (
-          <span className="w-fit rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-800">
-            {statusLabel}
-          </span>
-        ) : null}
-        {locked ? <p className="text-xs font-semibold text-red-700">Access disabled</p> : null}
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-2.5 p-4">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {isDemo && (
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
+              Free demo
+            </span>
+          )}
+          {statusLabel && (
+            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700">
+              {statusLabel}
+            </span>
+          )}
+          {locked && <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-[11px] font-bold text-red-700">Locked</span>}
+        </div>
         {footerExtra}
-        {actions ?? (
-          <Link
-            href={locked ? "#" : href}
-            onClick={(e) => locked && e.preventDefault()}
-            className={
-              locked
-                ? "inline-flex w-fit rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-900"
-                : "inline-flex w-fit rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500"
-            }
-          >
-            {locked ? "View status" : "Open"}
-          </Link>
-        )}
+        <div className="mt-auto pt-2">
+          {actions ?? (
+            <Link
+              href={locked ? "#" : href}
+              onClick={(e) => locked && e.preventDefault()}
+              className={
+                locked
+                  ? "inline-flex w-full justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-800"
+                  : "inline-flex w-full justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+              }
+            >
+              {locked ? "View status" : "Open"}
+            </Link>
+          )}
+        </div>
       </div>
 
-      <div className="flex w-full items-center justify-between border-t border-slate-100 bg-slate-50 px-3.5 py-2.5">
-        <span className="text-xs font-medium text-slate-600">
-          {chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}
-        </span>
-        <span className="text-xs font-semibold text-slate-800">{locked ? "—" : `${pct}% complete`}</span>
+      {/* Footer */}
+      <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium text-slate-600">{chapterCount} {chapterCount === 1 ? "chapter" : "chapters"}</span>
+          <span className="font-semibold text-slate-800">{locked ? "—" : `${pct}%`}</span>
+        </div>
+        {!locked && pct > 0 && (
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        )}
       </div>
     </article>
   );

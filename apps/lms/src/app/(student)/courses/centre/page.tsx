@@ -4,9 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { CourseCard } from "@/components/CourseCard";
-import { Search } from "lucide-react";
+import { Search, CreditCard, Eye } from "lucide-react";
 import Link from "next/link";
-import { CreditCard } from "lucide-react";
 
 interface MyCourse {
   courseId: string;
@@ -23,31 +22,52 @@ interface MyCourse {
   isDemo?: boolean;
 }
 
+interface ExploreCourse {
+  courseId: string;
+  courseTitle: string;
+  description?: string;
+  chapterCount?: number;
+  moduleCount: number;
+  batchId: string;
+  batchType?: string;
+  enrollmentPriceInPaise?: number;
+  courseHeaderImageUrl?: string;
+  isDemo?: boolean;
+}
+
 export default function LearnAtCentrePage() {
-  const [courses, setCourses] = useState<MyCourse[]>([]);
+  const [myCourses, setMyCourses] = useState<MyCourse[]>([]);
+  const [exploreCourses, setExploreCourses] = useState<ExploreCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    api<MyCourse[]>("/api/student/courses")
-      .then((r) => {
-        if (r.success && Array.isArray(r.data)) {
-          setCourses(r.data.filter((c) => c.batchType === "centre"));
-        }
-      })
-      .catch(() => {})
+    Promise.all([
+      api<MyCourse[]>("/api/student/courses").then((r) =>
+        r.success && Array.isArray(r.data) ? r.data.filter((c) => c.batchType === "centre") : []
+      ).catch(() => [] as MyCourse[]),
+      api<ExploreCourse[]>("/api/student/courses/explore").then((r) =>
+        r.success && Array.isArray(r.data) ? r.data.filter((c) => c.batchType === "GLOBAL_CENTRE") : []
+      ).catch(() => [] as ExploreCourse[]),
+    ])
+      .then(([my, explore]) => { setMyCourses(my); setExploreCourses(explore); })
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = useMemo(() => {
+  const enrolledIds = useMemo(() => new Set(myCourses.map((c) => c.courseId)), [myCourses]);
+
+  const filteredMy = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return courses;
-    return courses.filter(
-      (c) =>
-        c.courseTitle.toLowerCase().includes(q) ||
-        (c.description ?? "").toLowerCase().includes(q)
-    );
-  }, [courses, searchQuery]);
+    if (!q) return myCourses;
+    return myCourses.filter((c) => c.courseTitle.toLowerCase().includes(q));
+  }, [myCourses, searchQuery]);
+
+  const filteredExplore = useMemo(() => {
+    const unenrolled = exploreCourses.filter((c) => !enrolledIds.has(c.courseId));
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return unenrolled;
+    return unenrolled.filter((c) => c.courseTitle.toLowerCase().includes(q));
+  }, [exploreCourses, searchQuery, enrolledIds]);
 
   if (loading) {
     return (
@@ -63,7 +83,7 @@ export default function LearnAtCentrePage() {
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Learning</p>
           <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">Learn at Centre</h1>
-          <p className="mt-1 text-sm text-slate-500">Course only · no kit</p>
+          <p className="mt-1 text-sm text-slate-500">Course access with shared lab kits at our centre. Kits are not included — if you want one after the course, contact your trainer for pricing.</p>
         </div>
         <div className="relative w-full sm:max-w-sm">
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -79,14 +99,15 @@ export default function LearnAtCentrePage() {
         </div>
       </div>
 
-      {filtered.length > 0 ? (
-        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
+      {/* Enrolled */}
+      {filteredMy.length > 0 && (
+        <DataPanel className="flex flex-col bg-white/95">
           <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
             <p className="text-xs font-medium uppercase tracking-wider text-funt-gold-deep">Enrolled</p>
-            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Centre Courses</h2>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">My Courses</h2>
           </div>
           <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-            {filtered.map((c) => (
+            {filteredMy.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
                 href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`}
@@ -101,23 +122,55 @@ export default function LearnAtCentrePage() {
             ))}
           </div>
         </DataPanel>
-      ) : (
-        <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
-          <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-white p-10 shadow-inner ring-1 ring-slate-100/80">
-            <div className="text-center">
-              <p className="text-sm text-slate-500">
-                {searchQuery.trim()
-                  ? "No courses match your search."
-                  : "You don't have any centre courses yet."}
-              </p>
-              <Link
-                href="/courses"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white"
-              >
-                <CreditCard className="h-3.5 w-3.5" aria-hidden />
-                Browse Courses
-              </Link>
-            </div>
+      )}
+
+      {/* Available courses */}
+      {filteredExplore.length > 0 && (
+        <DataPanel className="flex flex-col bg-white/95">
+          <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Available</p>
+            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">All Courses</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+            {filteredExplore.map((c) => (
+              <CourseCard
+                key={`${c.courseId}::${c.batchId}`}
+                href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                title={c.courseTitle}
+                chapterCount={c.chapterCount ?? c.moduleCount}
+                imageUrl={c.courseHeaderImageUrl}
+                statusLabel={c.isDemo ? "Free demo" : "Explore"}
+                isDemo={!!c.isDemo}
+                footerExtra={
+                  !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                    <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
+                  ) : undefined
+                }
+                actions={
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                      <Eye className="h-3.5 w-3.5" aria-hidden /> Details
+                    </Link>
+                    {!c.isDemo && (
+                      <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                        <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                      </Link>
+                    )}
+                  </div>
+                }
+              />
+            ))}
+          </div>
+        </DataPanel>
+      )}
+
+      {/* Empty state */}
+      {filteredMy.length === 0 && filteredExplore.length === 0 && (
+        <DataPanel className="flex flex-col bg-white/95">
+          <div className="flex flex-1 items-center justify-center p-10">
+            <p className="text-sm text-slate-500">
+              {searchQuery.trim() ? "No courses match your search." : "No centre courses available yet."}
+            </p>
           </div>
         </DataPanel>
       )}

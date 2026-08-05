@@ -13,7 +13,6 @@ import {
   IconAssignment,
   IconAttendance,
   IconSettings,
-  IconSearch,
   IconCourses,
   IconSkills,
   IconProgress,
@@ -54,8 +53,6 @@ const NAV_SECTIONS: Array<{
     items: [
       { href: "/dashboard", label: "Overview", Icon: IconOverview },
       { href: "/courses", label: "Courses", Icon: IconCourses },
-      { href: "/courses/online", label: "Learn at Home", Icon: IconCourses },
-      { href: "/courses/centre", label: "Learn at Centre", Icon: IconCourses },
       { href: "/assignments", label: "Assignments", Icon: IconAssignment },
       { href: "/attendance", label: "Attendance", Icon: IconAttendance },
       { href: "/enroll-license", label: "License key", Icon: IconKey },
@@ -97,7 +94,6 @@ function LMSTopbar({
 }) {
   const [open, setOpen] = useState(false);
   const [showQr, setShowQr] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const displayLevel = user.studentLevel ?? ((user.studentXp ?? 0) > 0 ? Math.floor((user.studentXp ?? 0) / 100) : 0);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -124,20 +120,6 @@ function LMSTopbar({
         <div className="min-w-0 flex-1 lg:flex-initial">
           <p className="truncate text-base font-semibold tracking-tight text-slate-900 sm:text-lg">Hi, {user.name}</p>
           <p className="hidden truncate text-xs font-medium text-slate-500 sm:block">{user.username || "FUNT Learn"}</p>
-        </div>
-      </div>
-      <div className="hidden w-full max-w-sm flex-1 px-2 md:block">
-        <div className="relative">
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-            <IconSearch className="h-[1.125rem] w-[1.125rem]" />
-          </span>
-          <input
-            type="search"
-            placeholder="Search courses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 shadow-sm ring-1 ring-slate-100/80 transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/25"
-          />
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">

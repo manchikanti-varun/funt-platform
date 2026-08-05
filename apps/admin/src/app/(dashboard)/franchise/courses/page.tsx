@@ -41,7 +41,7 @@ export default function FranchiseCoursesPage() {
           {courses.map((c) => (
             <div key={c.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
               {c.headerImageUrl && (
-                <div className="h-36 w-full overflow-hidden bg-slate-100">
+                <div className="h-44 w-full overflow-hidden bg-slate-100">
                   <img src={c.headerImageUrl} alt={c.title} className="h-full w-full object-cover" />
                 </div>
               )}

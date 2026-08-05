@@ -199,8 +199,8 @@ function SignupForm() {
       setSubmitError("Parent phone number is required");
       return;
     }
-    if (!/^\d{6,15}$/.test(mobileNumber.trim())) {
-      setSubmitError("Enter a valid mobile number");
+    if (!/^\d{10}$/.test(mobileNumber.trim())) {
+      setSubmitError("Phone number must be exactly 10 digits");
       return;
     }
     if (!username.trim()) {
@@ -435,9 +435,10 @@ function SignupForm() {
                 <input
                   type="tel"
                   value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, ""))}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+                  maxLength={10}
                   className="input w-full text-black placeholder:text-black/45"
-                  placeholder="Enter mobile number"
+                  placeholder="Enter 10 digit number"
                 />
               </div>
             </div>
