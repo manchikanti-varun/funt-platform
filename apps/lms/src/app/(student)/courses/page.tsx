@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { CourseCard } from "@/components/CourseCard";
-import { ArrowRight, CreditCard, Eye, Search, Home, Building2 } from "lucide-react";
+import { CreditCard, Eye, Search, Home, Building2 } from "lucide-react";
 
 interface MyCourse {
   courseId: string;
@@ -298,7 +298,7 @@ export default function CoursesPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-                {exploreOnline.slice(0, 9).map((c) => (
+                {exploreOnline.map((c) => (
                   <CourseCard
                     key={`${c.courseId}::${c.batchId}`}
                     href={`/courses/${c.courseId}?batchId=${c.batchId}`}
@@ -327,13 +327,6 @@ export default function CoursesPage() {
                   />
                 ))}
               </div>
-              {exploreOnline.length > 9 && (
-                <div className="border-t border-slate-100 px-6 py-3">
-                  <Link href="/courses/online" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-                    View all {exploreOnline.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
-                  </Link>
-                </div>
-              )}
             </>
           )
         )}
@@ -347,7 +340,7 @@ export default function CoursesPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-                {exploreCentre.slice(0, 9).map((c) => (
+                {exploreCentre.map((c) => (
                   <CourseCard
                     key={`${c.courseId}::${c.batchId}`}
                     href={`/courses/${c.courseId}?batchId=${c.batchId}`}
@@ -376,13 +369,6 @@ export default function CoursesPage() {
                   />
                 ))}
               </div>
-              {exploreCentre.length > 9 && (
-                <div className="border-t border-slate-100 px-6 py-3">
-                  <Link href="/courses/centre" className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                    View all {exploreCentre.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
-                  </Link>
-                </div>
-              )}
             </>
           )
         )}
