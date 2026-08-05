@@ -22,7 +22,7 @@ interface Props {
 export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onDelete, onRejectApproval }: Props) {
   return (
     <div className="panel-data overflow-x-auto">
-      <table className="w-full min-w-[900px] text-sm">
+      <table aria-label="Letters" className="w-full min-w-[900px] text-sm">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50/80">
             <th className="th-compact">Letter ID</th>

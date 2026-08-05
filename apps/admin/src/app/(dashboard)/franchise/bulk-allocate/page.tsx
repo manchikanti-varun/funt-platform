@@ -90,7 +90,7 @@ export default function BulkAllocatePage() {
       <FormPanel className="mt-6">
         <div className="p-6 space-y-4">
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table aria-label="Bulk allocation" className="min-w-full">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase text-slate-600">
                   <th className="pb-2 pr-3">Franchise</th>

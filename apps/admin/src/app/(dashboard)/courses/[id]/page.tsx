@@ -1137,6 +1137,7 @@ export default function EditCoursePage() {
                     value={chapterSearch}
                     onChange={(e) => setChapterSearch(e.target.value)}
                     placeholder="Search chapters by title…"
+                    aria-label="Search chapters"
                     className="input mb-3 max-w-md text-sm"
                   />
                   <div className="min-h-0 max-h-64 overflow-x-hidden overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">

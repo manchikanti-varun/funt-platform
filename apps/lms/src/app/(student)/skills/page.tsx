@@ -113,7 +113,7 @@ return (
           <h2 className="mt-5 text-lg font-semibold text-slate-800">No skill data yet</h2>
           <Link
             href="/assignments"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 transition hover:bg-funt-gold-hover"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/15 transition hover:bg-funt-gold-hover"
           >
             Go to assignments
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -150,7 +150,7 @@ return (
           <h2 className="mt-5 text-lg font-semibold text-slate-800">No skills yet</h2>
           <Link
             href="/assignments"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-lg shadow-amber-900/15 transition hover:bg-funt-gold-hover"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/15 transition hover:bg-funt-gold-hover"
           >
             Go to assignments
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

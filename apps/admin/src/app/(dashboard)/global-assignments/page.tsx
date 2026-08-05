@@ -172,6 +172,7 @@ export default function GlobalAssignmentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search assignments by title or instructions…"
+              aria-label="Search assignments"
               className="w-full max-w-md rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
@@ -200,7 +201,7 @@ export default function GlobalAssignmentsPage() {
         ) : (
           <>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table aria-label="Global assignments" className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   <SortableTh label="Title" columnKey="title" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} />

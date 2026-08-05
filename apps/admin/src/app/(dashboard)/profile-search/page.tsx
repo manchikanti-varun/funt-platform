@@ -380,7 +380,7 @@ export default function ProfileSearchPage() {
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Batch access (enrolled = paid)</h3>
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="min-w-full text-sm">
+                    <table aria-label="Batch access" className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50">
                           <th className="px-4 py-3 text-left font-semibold text-slate-700">Batch</th>
@@ -426,7 +426,7 @@ export default function ProfileSearchPage() {
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">Attendance by batch</h3>
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="min-w-full text-sm">
+                    <table aria-label="Attendance by batch" className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50">
                           <th className="px-4 py-3 text-left font-semibold text-slate-700">Batch</th>
@@ -465,7 +465,7 @@ export default function ProfileSearchPage() {
                 <section>
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-600 mb-3">FUNT coin grants</h3>
                   <div className="overflow-x-auto rounded-xl border border-slate-200">
-                    <table className="min-w-full text-sm">
+                    <table aria-label="Coin grants" className="min-w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50">
                           <th className="px-4 py-3 text-left font-semibold text-slate-700">Granted</th>

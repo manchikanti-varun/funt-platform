@@ -177,7 +177,7 @@ export default function LicenseKeyAuditPage() {
       ) : data ? (
         <>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ring-1 ring-slate-100/80">
-            <table className="min-w-full text-sm">
+            <table aria-label="License key audit log" className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
                   <SortableTh label="Key (masked)" columnKey="key" currentSortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="px-4 py-3" />

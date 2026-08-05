@@ -92,7 +92,7 @@ export default function StudentInvoicesPage() {
                 type="button"
                 disabled={downloadingId === inv.id}
                 onClick={() => downloadPdf(inv.id, inv.invoiceNumber)}
-                className="rounded-xl bg-funt-gold px-4 py-2 text-sm font-bold text-black disabled:opacity-60"
+                className="rounded-xl bg-funt-gold px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
               >
                 {downloadingId === inv.id ? "Downloading…" : "Download PDF"}
               </button>

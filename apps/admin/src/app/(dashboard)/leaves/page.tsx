@@ -148,7 +148,7 @@ export default function LeaveManagementPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table aria-label="Leave requests" className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
                   {["Employee", "Role", "Type", "From", "To", "Days", "Status", "Applied"].map((h) => (

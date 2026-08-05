@@ -332,7 +332,7 @@ export default function SupportDashboard() {
               {activeChats.length > 3 && (
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
-                  <input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} placeholder="Filter chats..." className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-7 pr-3 text-[11px] text-slate-700 placeholder-slate-400 focus:border-indigo-300 focus:outline-none" />
+                  <input value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} placeholder="Filter chats..." aria-label="Filter chats" className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-7 pr-3 text-[11px] text-slate-700 placeholder-slate-400 focus:border-indigo-300 focus:outline-none" />
                 </div>
               )}
             </div>
@@ -429,7 +429,7 @@ export default function SupportDashboard() {
                       </div>
                     )}
                     <div className="flex gap-2">
-                      <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addNote(); } }} placeholder="Add a note..." className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs placeholder-slate-400 focus:border-amber-400 focus:outline-none" />
+                      <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addNote(); } }} placeholder="Add a note..." aria-label="Internal note" className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs placeholder-slate-400 focus:border-amber-400 focus:outline-none" />
                       <button onClick={addNote} disabled={!noteInput.trim()} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Add</button>
                     </div>
                   </div>
@@ -483,8 +483,8 @@ export default function SupportDashboard() {
                     <button onClick={() => setShowCanned((v) => !v)} title="Quick replies (Ctrl+/)" className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition ${showCanned ? "border-indigo-200 bg-indigo-50 text-indigo-600" : "border-slate-200 text-slate-400 hover:text-slate-600"}`}>
                       <Zap className="h-4 w-4" />
                     </button>
-                    <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Type your reply..." className="input flex-1 !py-2 text-sm" />
-                    <button onClick={() => sendMessage()} disabled={!input.trim()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-40">
+                    <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMessage()} placeholder="Type your reply..." aria-label="Chat message" className="input flex-1 !py-2 text-sm" />
+                    <button onClick={() => sendMessage()} disabled={!input.trim()} aria-label="Send message" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-40">
                       <Send className="h-4 w-4" />
                     </button>
                   </div>

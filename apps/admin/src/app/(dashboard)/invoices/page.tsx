@@ -267,7 +267,7 @@ export default function InvoicesPage() {
           ) : (
             <div className="-mx-5 -mb-5 overflow-hidden rounded-b-2xl border-t border-slate-200 sm:-mx-6 sm:-mb-6">
               <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
+                <table aria-label="Invoices" className="min-w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-left">
                       <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">

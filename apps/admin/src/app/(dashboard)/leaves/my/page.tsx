@@ -265,7 +265,7 @@ export default function MyLeavesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table aria-label="My leave history" className="w-full text-sm">
               <thead className="border-b border-slate-200">
                 <tr>
                   {["Type", "From", "To", "Days", "Status", "Remarks", "Applied", "Action"].map((h) => (

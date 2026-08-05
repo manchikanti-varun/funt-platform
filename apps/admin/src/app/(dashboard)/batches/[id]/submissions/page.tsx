@@ -305,7 +305,7 @@ export default function BatchSubmissionsPage() {
               </div>
             )}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
+              <table aria-label="Batch submissions" className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
                     {hasPending ? <th className="w-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600"><span className="sr-only">Select</span></th> : null}

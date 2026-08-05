@@ -159,7 +159,7 @@ export default function TicketDetailPage() {
               </div>
               {!isResolved && (
                 <div className="flex items-center gap-2">
-                  <input value={resolution} onChange={(e) => setResolution(e.target.value)} placeholder="Resolution note..." className="h-8 w-48 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs placeholder-slate-400 focus:border-emerald-300 focus:outline-none" />
+                  <input value={resolution} onChange={(e) => setResolution(e.target.value)} placeholder="Resolution note..." aria-label="Resolution note" className="h-8 w-48 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs placeholder-slate-400 focus:border-emerald-300 focus:outline-none" />
                   <button onClick={resolveTicket} disabled={!resolution.trim() || actionBusy} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40">Resolve</button>
                 </div>
               )}

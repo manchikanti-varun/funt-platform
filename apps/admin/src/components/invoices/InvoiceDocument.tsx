@@ -121,7 +121,7 @@ export function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentData }) {
       </div>
 
       <div className="overflow-x-auto p-4 print:overflow-visible">
-        <table className="w-full min-w-[720px] border-collapse print:min-w-0">
+        <table aria-label="Invoice line items" className="w-full min-w-[720px] border-collapse print:min-w-0">
           <thead className="print:table-header-group">
             <tr>
               <th className={th}>Description</th>

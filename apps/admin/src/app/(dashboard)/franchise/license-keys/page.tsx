@@ -243,7 +243,7 @@ export default function FranchiseLicenseKeysPage() {
           <div className="py-10 text-center text-sm text-slate-500">No requests yet.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table aria-label="License key requests" className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-600">Course</th>

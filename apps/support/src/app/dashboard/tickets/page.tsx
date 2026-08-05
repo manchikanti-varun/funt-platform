@@ -94,6 +94,7 @@ export default function TicketsPage() {
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               placeholder="Search ticket # or subject..."
+              aria-label="Search tickets"
               className="h-8 w-52 rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-xs text-slate-700 placeholder-slate-400 focus:border-indigo-300 focus:outline-none"
             />
           </div>

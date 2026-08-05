@@ -94,7 +94,7 @@ export default function FranchiseEarningsPage() {
               <div className="py-12 text-center text-sm text-slate-500">No transactions yet.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
+                <table aria-label="Franchise earnings" className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-slate-600">Date</th>

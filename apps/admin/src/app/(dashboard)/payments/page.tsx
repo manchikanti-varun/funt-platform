@@ -178,7 +178,7 @@ export default function AdminPaymentsPage() {
         <EmptyState title="No pending payments" description="New submissions will appear here when students pay or submit UPI details." />
       ) : (
         <DataPanel>
-          <table className="min-w-full text-sm">
+          <table aria-label="Payment submissions" className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left">
                 <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Type</th>

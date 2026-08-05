@@ -177,7 +177,7 @@ export default function ManageKnowledgePage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
+            <table aria-label="Knowledge base articles" className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Title</th>

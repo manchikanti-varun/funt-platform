@@ -167,6 +167,7 @@ export default function LettersPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name or ID..."
+            aria-label="Search letters"
             className="input w-64 pl-9 text-sm"
           />
         </div>

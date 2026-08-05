@@ -490,7 +490,7 @@ export default function PaymentQrPage() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table aria-label="UPI QR codes" className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
                   <th className="px-3 py-2 font-semibold text-slate-700">Requester</th>
@@ -547,7 +547,7 @@ export default function PaymentQrPage() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table aria-label="UPI accounts" className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
                   <th className="px-3 py-2 font-semibold text-slate-700">Admin</th>

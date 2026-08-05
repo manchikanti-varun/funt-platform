@@ -140,6 +140,7 @@ export default function KnowledgeCenterPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search guides, FAQs, troubleshooting…"
+                aria-label="Search knowledge center"
                 className="w-full rounded-xl border-0 bg-white/95 py-3 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 shadow-lg backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-white/50"
               />
             </div>

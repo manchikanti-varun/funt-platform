@@ -196,6 +196,7 @@ export default function CoursesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search courses by title or description…"
+              aria-label="Search courses"
               className="input max-w-md"
             />
           </div>

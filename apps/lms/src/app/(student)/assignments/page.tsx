@@ -213,7 +213,7 @@ function AssignmentsPageInner() {
   const messageAlert = message ? (
     <div
       className={`flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-semibold ${
-        message.type === "success" ? "border-black/15 bg-funt-honey text-black" : "border-black bg-funt-gold/25 text-black"
+        message.type === "success" ? "border-black/15 bg-funt-honey text-black" : "border-red-200 bg-red-50 text-red-900"
       }`}
     >
       {message.type === "success" ? (
@@ -286,7 +286,7 @@ function AssignmentsPageInner() {
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <Link
                   href={courseLearnHref}
-                  className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow-sm transition hover:bg-funt-gold-hover"
+                  className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-funt-gold-hover"
                 >
                   Continue with course
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
@@ -321,10 +321,10 @@ function AssignmentsPageInner() {
               <button
                 type="submit"
                 disabled={submitLoading || !submissionContent.trim()}
-                className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-6 py-3 text-sm font-semibold text-black shadow-md transition hover:bg-funt-gold-hover disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-funt-gold px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-funt-gold-hover disabled:opacity-50"
               >
                 {submitLoading ? (
-                  <><span className="h-4 w-4 animate-spin rounded-full border-2 border-black border-t-transparent" /> Submitting…</>
+                  <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" /> Submitting…</>
                 ) : (
                   "Submit"
                 )}
@@ -430,7 +430,7 @@ function AssignmentsPageInner() {
                             <button
                               type="submit"
                               disabled={submitLoading || !submissionContent.trim()}
-                              className="rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-black shadow transition hover:bg-funt-gold-hover disabled:opacity-50"
+                              className="rounded-xl bg-funt-gold px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-funt-gold-hover disabled:opacity-50"
                             >
                               {submitLoading ? "Submitting…" : "Submit"}
                             </button>

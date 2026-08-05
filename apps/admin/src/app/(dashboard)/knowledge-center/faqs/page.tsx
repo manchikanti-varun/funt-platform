@@ -246,6 +246,7 @@ export default function FAQsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search FAQs by keyword, topic, or tag…"
+              aria-label="Search FAQs"
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
             {searchQuery && (

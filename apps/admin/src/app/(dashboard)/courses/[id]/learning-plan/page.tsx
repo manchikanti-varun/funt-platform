@@ -312,6 +312,7 @@ function MilestoneFormPanel({
             <input
               type="text"
               placeholder="Search chapters..."
+              aria-label="Search chapters"
               value={chapterSearch}
               onChange={(e) => setChapterSearch(e.target.value)}
               className="input mb-2 w-full max-w-sm"

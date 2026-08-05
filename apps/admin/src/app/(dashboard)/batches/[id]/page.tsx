@@ -636,6 +636,7 @@ export default function EditBatchPage() {
                 value={courseSearch}
                 onChange={(e) => setCourseSearch(e.target.value)}
                 placeholder="Search courses…"
+                aria-label="Search courses"
                 className="input text-sm mb-2 max-w-md"
               />
               <div className="max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 p-2">

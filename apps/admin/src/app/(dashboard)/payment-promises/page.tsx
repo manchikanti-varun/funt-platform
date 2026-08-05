@@ -311,7 +311,7 @@ export default function PaymentPromisesPage() {
       ) : (
         <DataPanel>
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table aria-label="Payment promises" className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-left">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Student</th>

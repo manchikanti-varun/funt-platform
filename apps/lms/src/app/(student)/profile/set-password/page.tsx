@@ -157,7 +157,7 @@ function SetPasswordInner() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-black shadow-sm hover:bg-funt-gold-hover disabled:opacity-60"
+                  className="rounded-xl bg-funt-gold px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-funt-gold-hover disabled:opacity-60"
                 >
                   {loading ? "Saving…" : "Set password"}
                 </button>

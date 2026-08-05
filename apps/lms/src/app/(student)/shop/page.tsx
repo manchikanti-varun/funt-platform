@@ -326,8 +326,8 @@ function ShopInner() {
         </div>
         <p className="mt-1 text-sm text-black/60">Apply coupon, redeem FUNT coins (4 coins = ₹1), then pay remaining via UPI QR and submit proof.</p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <input className="input" placeholder="Coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
-          <input className="input" placeholder="Coins to redeem" type="number" min={0} value={coinsToRedeem} onChange={(e) => setCoinsToRedeem(e.target.value)} />
+          <input className="input" placeholder="Coupon code" aria-label="Coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
+          <input className="input" placeholder="Coins to redeem" aria-label="Coins to redeem" type="number" min={0} value={coinsToRedeem} onChange={(e) => setCoinsToRedeem(e.target.value)} />
           <button className="btn-primary" type="button" disabled={quoteLoading || cartItemsPayload().length === 0} onClick={() => void loadQuote()}>
             {quoteLoading ? "Calculating..." : "Calculate total"}
           </button>
@@ -355,22 +355,22 @@ function ShopInner() {
               <>
                 {quote.upiQrUrl ? <img src={quote.upiQrUrl} alt="UPI QR" className="max-h-56 w-auto rounded-lg border border-black/10" /> : null}
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <input className="input" placeholder="Payer name" value={payerName} onChange={(e) => setPayerName(e.target.value)} />
-                  <input className="input" placeholder="UTR / transaction ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} />
-                  <input className="input sm:col-span-2" type="datetime-local" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+                  <input className="input" placeholder="Payer name" aria-label="Payer name" value={payerName} onChange={(e) => setPayerName(e.target.value)} />
+                  <input className="input" placeholder="UTR / transaction ID" aria-label="UTR or transaction ID" value={transactionId} onChange={(e) => setTransactionId(e.target.value)} />
+                  <input className="input sm:col-span-2" type="datetime-local" aria-label="Date and time paid" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
                 </div>
               </>
             ) : (
               <p className="text-sm text-emerald-700">No rupee payment needed. This order will be confirmed using coins only.</p>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              <input className="input" placeholder="Full name" value={address.fullName} onChange={(e) => setAddress((p) => ({ ...p, fullName: e.target.value }))} />
-              <input className="input" placeholder="Phone" value={address.phone} onChange={(e) => setAddress((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "") }))} maxLength={14} />
-              <input className="input sm:col-span-2" placeholder="Address line 1" value={address.line1} onChange={(e) => setAddress((p) => ({ ...p, line1: e.target.value }))} />
-              <input className="input sm:col-span-2" placeholder="Address line 2 (optional)" value={address.line2} onChange={(e) => setAddress((p) => ({ ...p, line2: e.target.value }))} />
-              <input className="input" placeholder="City" value={address.city} onChange={(e) => setAddress((p) => ({ ...p, city: e.target.value }))} />
-              <input className="input" placeholder="State" value={address.state} onChange={(e) => setAddress((p) => ({ ...p, state: e.target.value }))} />
-              <input className="input sm:col-span-2" placeholder="Postal code" value={address.postalCode} onChange={(e) => setAddress((p) => ({ ...p, postalCode: e.target.value }))} />
+              <input className="input" placeholder="Full name" aria-label="Full name" value={address.fullName} onChange={(e) => setAddress((p) => ({ ...p, fullName: e.target.value }))} />
+              <input className="input" placeholder="Phone" aria-label="Phone number" value={address.phone} onChange={(e) => setAddress((p) => ({ ...p, phone: e.target.value.replace(/[^\d+]/g, "").replace(/(?!^)\+/g, "") }))} maxLength={14} />
+              <input className="input sm:col-span-2" placeholder="Address line 1" aria-label="Address line 1" value={address.line1} onChange={(e) => setAddress((p) => ({ ...p, line1: e.target.value }))} />
+              <input className="input sm:col-span-2" placeholder="Address line 2 (optional)" aria-label="Address line 2" value={address.line2} onChange={(e) => setAddress((p) => ({ ...p, line2: e.target.value }))} />
+              <input className="input" placeholder="City" aria-label="City" value={address.city} onChange={(e) => setAddress((p) => ({ ...p, city: e.target.value }))} />
+              <input className="input" placeholder="State" aria-label="State" value={address.state} onChange={(e) => setAddress((p) => ({ ...p, state: e.target.value }))} />
+              <input className="input sm:col-span-2" placeholder="Postal code" aria-label="Postal code" value={address.postalCode} onChange={(e) => setAddress((p) => ({ ...p, postalCode: e.target.value }))} />
             </div>
             <button className="btn-primary w-full" type="button" disabled={checkoutLoading} onClick={() => void submitCheckout()}>
               {checkoutLoading ? "Submitting..." : "Submit checkout"}

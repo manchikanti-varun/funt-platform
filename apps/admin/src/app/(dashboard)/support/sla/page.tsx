@@ -38,12 +38,12 @@ export default function SlaPage() {
   );
   if (!data) return <p className="text-slate-600">Failed to load SLA data.</p>;
 
-  const TicketTable = ({ tickets, emptyMsg }: { tickets: SlaDashboard["breachedTickets"]; emptyMsg: string }) => (
+  const TicketTable = ({ tickets, emptyMsg, ariaLabel }: { tickets: SlaDashboard["breachedTickets"]; emptyMsg: string; ariaLabel: string }) => (
     tickets.length === 0 ? (
       <div className="flex min-h-[80px] items-center justify-center text-sm text-slate-400">{emptyMsg}</div>
     ) : (
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table aria-label={ariaLabel} className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50">
             <tr>
               {["Ticket #","Subject","Priority","Status","Created","SLA Due"].map((h) => (
@@ -104,7 +104,7 @@ export default function SlaPage() {
         <div className="border-b border-red-100 bg-red-50 px-6 py-4">
           <h2 className="text-sm font-semibold text-red-800">SLA Breached ({data.slaBreachCount})</h2>
         </div>
-        <TicketTable tickets={data.breachedTickets} emptyMsg="No SLA breaches — great!" />
+        <TicketTable tickets={data.breachedTickets} emptyMsg="No SLA breaches — great!" ariaLabel="SLA breached tickets" />
       </div>
 
       {/* Due soon */}
@@ -112,7 +112,7 @@ export default function SlaPage() {
         <div className="border-b border-amber-100 bg-amber-50 px-6 py-4">
           <h2 className="text-sm font-semibold text-amber-800">⏳ Due in Next 3 Hours ({data.dueSoonCount})</h2>
         </div>
-        <TicketTable tickets={data.dueSoonTickets} emptyMsg="No tickets due soon." />
+        <TicketTable tickets={data.dueSoonTickets} emptyMsg="No tickets due soon." ariaLabel="Tickets due soon" />
       </div>
     </AppPageShell>
   );

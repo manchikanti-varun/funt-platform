@@ -259,6 +259,7 @@ export default function GlobalChaptersPage() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search chapters by title or description…"
+                    aria-label="Search chapters"
                     className="input w-full pl-10 pr-3 text-sm"
                   />
                 </div>
@@ -342,7 +343,7 @@ export default function GlobalChaptersPage() {
                 </button>
               </div>
             )}
-            <table className="min-w-full divide-y divide-slate-200">
+            <table aria-label="Global chapters" className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
                   {isSuperAdmin && (

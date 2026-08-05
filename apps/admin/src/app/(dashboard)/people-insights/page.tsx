@@ -244,6 +244,7 @@ export default function PeopleInsightsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search name, username, email, mobile, FUNT ID"
+            aria-label="Search users"
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm md:col-span-2"
           />
           <input
@@ -308,7 +309,7 @@ export default function PeopleInsightsPage() {
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <table aria-label="User search results" className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-3 py-2 text-left">

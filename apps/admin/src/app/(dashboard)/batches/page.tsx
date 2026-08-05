@@ -262,6 +262,7 @@ export default function BatchesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search batches by name or batch ID…"
+              aria-label="Search batches"
               className="input w-full max-w-md"
             />
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">

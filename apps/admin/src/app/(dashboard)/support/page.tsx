@@ -403,6 +403,7 @@ export default function SupportDeskPage() {
               setPage(1);
             }}
             placeholder="Search subject or ticket #…"
+            aria-label="Search tickets"
             className="h-9 w-60 rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-800 shadow-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-100 placeholder:text-slate-400"
           />
         </div>
@@ -521,7 +522,7 @@ export default function SupportDeskPage() {
           <EmptyState hasFilters={hasFilters} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table aria-label="Support tickets" className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50/80">
                 <tr>
                   {[

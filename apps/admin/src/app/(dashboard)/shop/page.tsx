@@ -415,7 +415,7 @@ export default function AdminShopPage() {
           <h2 className="font-semibold text-slate-900">Catalog ({products.length})</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table aria-label="Shop products" className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-600">
                 <th className="px-4 py-3 font-semibold">Name</th>
@@ -505,7 +505,7 @@ export default function AdminShopPage() {
           <h2 className="font-semibold text-slate-900">Orders ({orders.length})</h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
+          <table aria-label="Shop orders" className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-600">
                 <th className="px-4 py-3 font-semibold">Student</th>

@@ -333,6 +333,7 @@ export default function BatchStudentAccessPage() {
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search by username or name..."
+              aria-label="Search students"
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:max-w-sm"
             />
           </div>

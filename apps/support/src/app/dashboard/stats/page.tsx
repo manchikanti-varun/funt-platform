@@ -131,10 +131,19 @@ export default function StatsPage() {
 }
 
 function MetricCard({ icon: Icon, label, value, color }: { icon: typeof Clock; label: string; value: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    indigo: "bg-indigo-50 text-indigo-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    teal: "bg-teal-50 text-teal-600",
+    amber: "bg-amber-50 text-amber-600",
+    blue: "bg-blue-50 text-blue-600",
+    purple: "bg-purple-50 text-purple-600",
+  };
+  const iconColors = colorMap[color] ?? "bg-slate-50 text-slate-600";
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center gap-2">
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg bg-${color}-50 text-${color}-600`}>
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${iconColors}`}>
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>

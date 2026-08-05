@@ -633,7 +633,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                     <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
                   </div>
                   <span className="rounded-full bg-indigo-600/30 px-3 py-1 text-sm font-bold text-slate-900">{chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</span>
-                  <p className="mt-4 text-slate-65">Open the chapter list and start learning.</p>
+                  <p className="mt-4 text-slate-600">Open the chapter list and start learning.</p>
                   <button type="button" onClick={() => router.push(learnRoute)} className="mt-6 rounded-xl bg-indigo-600 px-10 py-3.5 text-base font-bold text-white shadow-lg shadow-md transition hover:bg-indigo-500 hover:shadow-lg">
                     {hasProgress ? "Continue" : "Start"}
                   </button>
@@ -662,10 +662,10 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                     </h2>
                     <div className="mb-4 rounded-xl border-2 border-slate-200 bg-slate-50/40 p-3">
                       <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
-                        <div className="h-full rounded-full bg-indigo-600-deep transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+                        <div className="h-full rounded-full bg-indigo-600 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
                       </div>
                       <p className="mt-2 text-sm font-semibold text-slate-900">{completedCount} of {totalChapters} completed</p>
-                      <p className="text-xs text-slate-50">{totalChapters - completedCount} pending</p>
+                      <p className="text-xs text-slate-500">{totalChapters - completedCount} pending</p>
                       {markCompleteSuccess && <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-slate-900">Progress saved</p>}
                     </div>
                     {totalChapters > 0 && progressPercent === 100 && (
@@ -682,7 +682,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                             <button type="button" onClick={handleGenerateCertificate} disabled={generatingCert} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-60">
                               {generatingCert ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />Generating…</> : <>Generate certificate</>}
                             </button>
-                            {certError && <p className="text-xs font-semibold text-slate-900">{certError}</p>}
+                            {certError && <p className="text-xs font-semibold text-red-600">{certError}</p>}
                           </div>
                         )}
                       </div>
