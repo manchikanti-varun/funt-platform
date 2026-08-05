@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { CourseCard } from "@/components/CourseCard";
-import { ArrowRight, CreditCard, Eye, Search } from "lucide-react";
+import { ArrowRight, CreditCard, Eye, Search, Home, Building2 } from "lucide-react";
 
 interface MyCourse {
   courseId: string;
@@ -72,6 +72,7 @@ export default function CoursesPage() {
   const [exploreCoursesList, setExploreCoursesList] = useState<ExploreCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [browseTab, setBrowseTab] = useState<"online" | "centre">("online");
 
   useEffect(() => {
     Promise.all([
@@ -238,111 +239,152 @@ export default function CoursesPage() {
         </DataPanel>
       )}
 
-      {/* Browse — Learn at Home */}
+      {/* Browse — Unified tabbed interface */}
       <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
         <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Browse</p>
-          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Home</h2>
-          <p className="mt-1 text-xs text-slate-500">Complete course + brand new kit. One-time purchase — the kit is yours to keep forever.</p>
-        </div>
-        {exploreOnline.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
-            <p className="text-sm text-slate-500">No courses available right now.</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-              {exploreOnline.slice(0, 9).map((c) => (
-                <CourseCard
-                  key={`${c.courseId}::${c.batchId}`}
-                  href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                  title={c.courseTitle}
-                  chapterCount={c.chapterCount ?? c.moduleCount}
-                  imageUrl={c.courseHeaderImageUrl}
-                  statusLabel={c.isDemo ? "Free demo" : "Learn at Home"}
-                  isDemo={!!c.isDemo}
-                  footerExtra={
-                    !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
-                      <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
-                    ) : undefined
-                  }
-                  actions={
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-                        <Eye className="h-3.5 w-3.5" aria-hidden /> Details
-                      </Link>
-                      {!c.isDemo && (
-                        <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
-                          <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
-                        </Link>
-                      )}
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-            {exploreOnline.length > 9 && (
-              <div className="border-t border-slate-100 px-6 py-3">
-                <Link href="/courses/online" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
-                  View all {exploreOnline.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
-              </div>
-            )}
-          </>
-        )}
-      </DataPanel>
+          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Explore Courses</h2>
 
-      {/* Browse — Learn at Centre */}
-      <DataPanel className="flex flex-col bg-white/95 transition duration-200 hover:shadow-xl hover:shadow-slate-300/20">
-        <div className="shrink-0 border-b border-slate-200 bg-gradient-to-b from-slate-50/80 to-white px-6 py-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Browse</p>
-          <h2 className="mt-0.5 text-lg font-bold tracking-tight text-slate-800">Learn at Centre</h2>
-          <p className="mt-1 text-xs text-slate-500">Course access with shared lab kits at our centre. Kits are not included — if you want one after the course, contact your trainer for pricing.</p>
-        </div>
-        {exploreCentre.length === 0 ? (
-          <div className="flex items-center justify-center p-8">
-            <p className="text-sm text-slate-500">No courses available right now.</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-              {exploreCentre.slice(0, 9).map((c) => (
-                <CourseCard
-                  key={`${c.courseId}::${c.batchId}`}
-                  href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                  title={c.courseTitle}
-                  chapterCount={c.chapterCount ?? c.moduleCount}
-                  imageUrl={c.courseHeaderImageUrl}
-                  statusLabel={c.isDemo ? "Free demo" : "Learn at Centre"}
-                  isDemo={!!c.isDemo}
-                  footerExtra={
-                    !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
-                      <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
-                    ) : undefined
-                  }
-                  actions={
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-                        <Eye className="h-3.5 w-3.5" aria-hidden /> Details
-                      </Link>
-                      {!c.isDemo && (
-                        <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
-                          <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
-                        </Link>
-                      )}
-                    </div>
-                  }
-                />
-              ))}
-            </div>
-            {exploreCentre.length > 9 && (
-              <div className="border-t border-slate-100 px-6 py-3">
-                <Link href="/courses/centre" className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                  View all {exploreCentre.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
-                </Link>
+          {/* Tab Buttons */}
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setBrowseTab("online")}
+              className={`flex flex-1 items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200 ${
+                browseTab === "online"
+                  ? "border-indigo-300 bg-indigo-50 shadow-sm ring-1 ring-indigo-200"
+                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              <Home className={`mt-0.5 h-5 w-5 shrink-0 ${browseTab === "online" ? "text-indigo-600" : "text-slate-400"}`} aria-hidden />
+              <div>
+                <span className={`text-sm font-bold ${browseTab === "online" ? "text-indigo-700" : "text-slate-700"}`}>
+                  Learn at Home
+                </span>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Complete course + brand new kit. One-time purchase — the kit is yours to keep forever.
+                </p>
               </div>
-            )}
-          </>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setBrowseTab("centre")}
+              className={`flex flex-1 items-start gap-3 rounded-xl border p-4 text-left transition-all duration-200 ${
+                browseTab === "centre"
+                  ? "border-emerald-300 bg-emerald-50 shadow-sm ring-1 ring-emerald-200"
+                  : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              <Building2 className={`mt-0.5 h-5 w-5 shrink-0 ${browseTab === "centre" ? "text-emerald-600" : "text-slate-400"}`} aria-hidden />
+              <div>
+                <span className={`text-sm font-bold ${browseTab === "centre" ? "text-emerald-700" : "text-slate-700"}`}>
+                  Learn at Centre
+                </span>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Course access with shared lab kits at our centre. Kits are not included — if you want one after the course, contact your trainer for pricing.
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content — Online */}
+        {browseTab === "online" && (
+          exploreOnline.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <p className="text-sm text-slate-500">No online courses available right now.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+                {exploreOnline.slice(0, 9).map((c) => (
+                  <CourseCard
+                    key={`${c.courseId}::${c.batchId}`}
+                    href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                    title={c.courseTitle}
+                    chapterCount={c.chapterCount ?? c.moduleCount}
+                    imageUrl={c.courseHeaderImageUrl}
+                    statusLabel={c.isDemo ? "Free demo" : "Learn at Home"}
+                    isDemo={!!c.isDemo}
+                    footerExtra={
+                      !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                        <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
+                      ) : undefined
+                    }
+                    actions={
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                          <Eye className="h-3.5 w-3.5" aria-hidden /> Details
+                        </Link>
+                        {!c.isDemo && (
+                          <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                            <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                          </Link>
+                        )}
+                      </div>
+                    }
+                  />
+                ))}
+              </div>
+              {exploreOnline.length > 9 && (
+                <div className="border-t border-slate-100 px-6 py-3">
+                  <Link href="/courses/online" className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700">
+                    View all {exploreOnline.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                </div>
+              )}
+            </>
+          )
+        )}
+
+        {/* Tab Content — Centre */}
+        {browseTab === "centre" && (
+          exploreCentre.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <p className="text-sm text-slate-500">No centre courses available right now.</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
+                {exploreCentre.slice(0, 9).map((c) => (
+                  <CourseCard
+                    key={`${c.courseId}::${c.batchId}`}
+                    href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                    title={c.courseTitle}
+                    chapterCount={c.chapterCount ?? c.moduleCount}
+                    imageUrl={c.courseHeaderImageUrl}
+                    statusLabel={c.isDemo ? "Free demo" : "Learn at Centre"}
+                    isDemo={!!c.isDemo}
+                    footerExtra={
+                      !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
+                        <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
+                      ) : undefined
+                    }
+                    actions={
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                          <Eye className="h-3.5 w-3.5" aria-hidden /> Details
+                        </Link>
+                        {!c.isDemo && (
+                          <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                            <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                          </Link>
+                        )}
+                      </div>
+                    }
+                  />
+                ))}
+              </div>
+              {exploreCentre.length > 9 && (
+                <div className="border-t border-slate-100 px-6 py-3">
+                  <Link href="/courses/centre" className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+                    View all {exploreCentre.length} courses <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                </div>
+              )}
+            </>
+          )
         )}
       </DataPanel>
     </AppPageShell>
