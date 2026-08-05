@@ -30,6 +30,31 @@ export async function getNotEnrolledBatch() {
   return BatchModel.findOne({ isNotEnrolledBatch: true, status: BATCH_STATUS.ACTIVE }).lean().exec();
 }
 
+/**
+ * Remove a student from the "Not Enrolled Students" batch.
+ * Call this whenever a student gets enrolled in any real batch.
+ * Safe to call multiple times — no-op if student is not in the Not Enrolled batch.
+ *
+ * @param studentIds - single student ID or array of student IDs
+ * @param skipBatchId - optional batch ID to skip (don't remove if target IS the Not Enrolled batch)
+ */
+export async function removeFromNotEnrolledBatch(
+  studentIds: string | string[],
+  skipBatchId?: string
+): Promise<void> {
+  const notEnrolledBatch = await getNotEnrolledBatch();
+  if (!notEnrolledBatch) return;
+  const notEnrolledMongoId = String(notEnrolledBatch._id);
+  if (skipBatchId && notEnrolledMongoId === skipBatchId) return;
+  const ids = Array.isArray(studentIds) ? studentIds : [studentIds];
+  if (ids.length === 0) return;
+  if (ids.length === 1) {
+    await EnrollmentModel.deleteOne({ studentId: ids[0], batchId: notEnrolledMongoId }).exec();
+  } else {
+    await EnrollmentModel.deleteMany({ studentId: { $in: ids }, batchId: notEnrolledMongoId }).exec();
+  }
+}
+
 /** Validate a batch ID (human-readable format like BT-000001) and return the batch document */
 export async function validateBatchId(batchId: string) {
   const trimmed = batchId.trim().toUpperCase();
@@ -126,11 +151,7 @@ export async function assignBatchOnFirstEnrollment(
   const newHumanBatchId = targetBatch.batchId ?? newBatchMongoId;
 
   // Remove from current "Not Enrolled Students" batch if applicable
-  const notEnrolledBatch = await getNotEnrolledBatch();
-  if (notEnrolledBatch) {
-    const notEnrolledMongoId = String(notEnrolledBatch._id);
-    await EnrollmentModel.deleteOne({ studentId, batchId: notEnrolledMongoId }).exec();
-  }
+  await removeFromNotEnrolledBatch(studentId);
 
   // Enroll in new batch
   const existing = await EnrollmentModel.findOne({ studentId, batchId: newBatchMongoId }).exec();

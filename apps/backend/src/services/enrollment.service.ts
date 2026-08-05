@@ -154,6 +154,14 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
     });
   }
 
+  // Remove from "Not Enrolled Students" batch since student is now enrolled in a real batch
+  try {
+    const { removeFromNotEnrolledBatch } = await import("./batchAssignment.service.js");
+    await removeFromNotEnrolledBatch(studentId, batchMongoId);
+  } catch {
+    // Non-critical — don't block enrollment
+  }
+
   return {
     id: String(doc._id),
     studentId: doc.studentId,
@@ -413,6 +421,14 @@ export async function bulkEnroll(
           })
         )
       );
+    }
+
+    // Remove enrolled students from "Not Enrolled Students" batch
+    try {
+      const { removeFromNotEnrolledBatch } = await import("./batchAssignment.service.js");
+      await removeFromNotEnrolledBatch(insertedStudentIds, batchMongoId);
+    } catch {
+      // Non-critical — don't block bulk enrollment
     }
   }
 
