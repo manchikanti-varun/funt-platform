@@ -111,6 +111,7 @@ export default function ParentTicketDetailPage() {
             <div className="border-t border-slate-200 pt-4 space-y-3">
               <textarea value={replyMsg} onChange={(e) => setReplyMsg(e.target.value)} rows={3}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none resize-y"
+                aria-label="Write a reply"
                 placeholder="Write a reply…" />
               {error && <p className="text-sm font-medium text-red-600">{error}</p>}
               <button onClick={() => void sendReply()} disabled={!replyMsg.trim() || sending}
