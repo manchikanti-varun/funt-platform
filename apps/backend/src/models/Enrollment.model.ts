@@ -30,6 +30,8 @@ const enrollmentSchema = new Schema(
     // ── Franchise tracking ──────────────────────────────────────────────
     /** Franchise center that enrolled this student (null = enrolled by parent org) */
     franchiseId: { type: String, required: false, index: true },
+    /** Flag set when milestone initialization failed and needs retry */
+    _milestoneInitPending: { type: Boolean, required: false },
   },
   { timestamps: false }
 );

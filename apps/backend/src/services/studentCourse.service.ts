@@ -540,8 +540,9 @@ export async function getResumePoint(studentId: string): Promise<{
   progressPercent: number;
 } | null> {
   // Get the student's most recently progressed chapter
+  // Note: ChapterProgress has timestamps:false, so sort by completedAt (most recent completion first)
   const latestProgress = await ChapterProgressModel.find({ studentId })
-    .sort({ updatedAt: -1 })
+    .sort({ completedAt: -1, _id: -1 })
     .limit(5)
     .lean()
     .exec();

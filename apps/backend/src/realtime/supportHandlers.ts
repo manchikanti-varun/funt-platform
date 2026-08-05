@@ -12,6 +12,7 @@
  */
 
 import type { Server, Socket } from "socket.io";
+import sanitizeHtml from "sanitize-html";
 import { TicketModel } from "../models/Ticket.model.js";
 import { TicketMessageModel } from "../models/TicketMessage.model.js";
 import { TICKET_STATUS, TICKET_CATEGORY, TICKET_PRIORITY } from "@funt-platform/constants";
@@ -283,10 +284,8 @@ export function registerSupportHandlers(io: Server, socket: Socket): void {
       const isAssigned = String(ticket.assignedTo) === String(userId);
       if (!isOwner && !isAssigned && !isStaff) return;
 
-      // Sanitize message text: strip HTML/script tags to prevent XSS via realtime channel
-      const sanitizedText = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-        .replace(/<[^>]*>/g, "")
-        .trim();
+      // Sanitize message text: strip all HTML to prevent stored XSS via realtime channel
+      const sanitizedText = sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} }).trim();
       if (!sanitizedText) return;
 
       const msg = await TicketMessageModel.create({

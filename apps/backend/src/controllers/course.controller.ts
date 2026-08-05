@@ -4,6 +4,7 @@ import * as service from "../services/course.service.js";
 import { successRes } from "../utils/response.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
+import { cacheGet, cacheSet, CACHE_KEYS, CACHE_TTL } from "../utils/cache.js";
 
 function getUserId(req: Request): string {
   if (!req.user?.userId) throw new AppError("Unauthorized", 401);
@@ -184,7 +185,13 @@ export const bulkDeleteCourses = asyncHandler(async (req: Request, res: Response
 
 /** Public — returns courses with status LAUNCHING_SOON for marketing/explore pages. */
 export const getUpcomingCourses = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const cached = await cacheGet(CACHE_KEYS.upcomingCourses());
+  if (cached) {
+    successRes(res, cached);
+    return;
+  }
   const data = await service.listUpcomingCourses();
+  await cacheSet(CACHE_KEYS.upcomingCourses(), data, CACHE_TTL.EXPLORE);
   successRes(res, data);
 });
 

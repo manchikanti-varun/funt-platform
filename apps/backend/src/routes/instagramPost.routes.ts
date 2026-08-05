@@ -53,7 +53,7 @@ router.post(
     if (!trimmed.includes("instagram.com/")) {
       throw new AppError("Must be a valid Instagram URL", 400);
     }
-    const userId = (req as { userId?: string }).userId ?? "unknown";
+    const userId = (req as { user?: { userId?: string } }).user?.userId ?? "unknown";
     const post = await InstagramPostModel.create({
       postUrl: trimmed,
       label: (label ?? "").trim(),
