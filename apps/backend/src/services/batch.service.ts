@@ -808,7 +808,7 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
   if (input.trainerId !== undefined && input.trainerId !== hadTrainer) {
     await createAuditLog("TRAINER_ASSIGNED", performedBy, ENTITY_BATCH, String(doc._id));
   }
-  if (batchHasDemoCourses(doc as unknown as BatchDoc)) {
+  if (batchHasDemoCourses(doc as unknown as BatchDoc) && !(doc as { isNotEnrolledBatch?: boolean }).isNotEnrolledBatch) {
     await syncAllStudentsToDemoBatch(String(doc._id), performedBy);
   }
   const staff = await staffDisplayByMongoIds([String(doc.trainerId)]);

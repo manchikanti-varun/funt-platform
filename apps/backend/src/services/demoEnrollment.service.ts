@@ -89,11 +89,12 @@ async function excludedStudentIdsForBatch(batchMongoId: string): Promise<Set<str
   return new Set(rows.map((r) => String(r.studentId)));
 }
 
-/** Active batches marked for auto-enrollment (includes demo batches and global batches). */
+/** Active batches marked for auto-enrollment (excludes the "Not Enrolled Students" batch which is managed by signup flow). */
 export async function listBatchesWithDemoCourses() {
   return BatchModel.find({
     status: BATCH_STATUS.ACTIVE,
     autoEnrollAllStudents: true,
+    isNotEnrolledBatch: { $ne: true },
   })
     .lean()
     .exec();
@@ -151,6 +152,8 @@ export async function syncAllStudentsToDemoBatch(
   const batch = await BatchModel.findById(batchMongoId).lean().exec();
   if (!batch) return { enrolled: 0, skipped: 0 };
   if (!batchHasDemoCourses(batch)) return { enrolled: 0, skipped: 0 };
+  // Never mass-sync into the Not Enrolled batch — it's managed by signup flow only
+  if ((batch as { isNotEnrolledBatch?: boolean }).isNotEnrolledBatch) return { enrolled: 0, skipped: 0 };
 
   const students = await UserModel.find({
     roles: ROLE.STUDENT,
