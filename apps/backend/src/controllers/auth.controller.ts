@@ -817,6 +817,11 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
     id = result.id;
     createdUsername = result.username;
     await ensureDemoEnrollmentsForStudent(id);
+    // Batch Assignment Engine: assign student to batch on signup
+    const { assignBatchOnSignup } = await import("../services/batchAssignment.service.js");
+    await assignBatchOnSignup(id).catch((err) =>
+      console.error("[google-signup] batch assignment:", err instanceof Error ? err.message : err)
+    );
     await createAuditLog("USER_GOOGLE_SIGNUP", id, "User", id, { username: createdUsername, method: "google" }).catch(() => {});
   } catch (err: unknown) {
     const mongoErr = err as { code?: number; message?: string };
