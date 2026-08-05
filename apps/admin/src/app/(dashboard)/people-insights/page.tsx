@@ -198,6 +198,38 @@ export default function PeopleInsightsPage() {
     setMessage({ type: "success", text: `Downloaded ${selectedIds.length} selected ${role.toLowerCase()} records.` });
   }
 
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+
+  async function bulkDelete() {
+    if (selectedIds.length === 0) {
+      setMessage({ type: "error", text: "Select at least one user to delete." });
+      return;
+    }
+    setBulkDeleteConfirm(true);
+  }
+
+  async function confirmBulkDelete() {
+    setBulkDeleteConfirm(false);
+    setMessage(null);
+    let deleted = 0;
+    let failed = 0;
+    for (const uid of selectedIds) {
+      const res = await api(`/api/admin/users/${uid}`, { method: "DELETE" });
+      if (res.success) {
+        deleted++;
+      } else {
+        failed++;
+      }
+    }
+    setRows((prev) => prev.filter((r) => !selectedIds.includes(r.id)));
+    setSelectedIds([]);
+    if (failed === 0) {
+      setMessage({ type: "success", text: `Deleted ${deleted} user${deleted > 1 ? "s" : ""} successfully.` });
+    } else {
+      setMessage({ type: "error", text: `Deleted ${deleted}, failed ${failed}. Some users could not be removed.` });
+    }
+  }
+
   return (
     <AppPageShell className="w-full">
       <RequireRoles roles={[ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.SUB_ADMIN]} fallbackHref="/dashboard" />
@@ -302,6 +334,16 @@ export default function PeopleInsightsPage() {
             <IconActionButton title="Bulk download selected as CSV" ariaLabel="Bulk download selected as CSV" onClick={() => void bulkDownload()}>
               <ListChecks className="h-5 w-5" />
             </IconActionButton>
+            {isSuperAdmin && role !== "SUPER_ADMIN" && (
+              <IconActionButton
+                title={selectedIds.length > 0 ? `Delete ${selectedIds.length} selected` : "Select users to delete"}
+                ariaLabel={selectedIds.length > 0 ? `Delete ${selectedIds.length} selected users` : "Select users to delete"}
+                onClick={() => void bulkDelete()}
+                className="border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+              >
+                <Trash2 className="h-5 w-5" />
+              </IconActionButton>
+            )}
             <IconActionButton title="Refresh records" ariaLabel="Refresh records" onClick={() => void load()}>
               <RefreshCw className="h-5 w-5" />
             </IconActionButton>
@@ -506,6 +548,45 @@ export default function PeopleInsightsPage() {
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
               >
                 Delete permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation dialog */}
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Delete {selectedIds.length} user{selectedIds.length > 1 ? "s" : ""}</h3>
+                <p className="text-xs text-slate-500">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700">
+              Permanently delete <strong className="text-slate-900">{selectedIds.length}</strong> selected {role.toLowerCase()} account{selectedIds.length > 1 ? "s" : ""}?
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              All enrollments, progress, and associated data for these users will be removed. This cannot be reversed.
+            </p>
+            <div className="mt-5 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setBulkDeleteConfirm(false)}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmBulkDelete()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+              >
+                Delete {selectedIds.length} user{selectedIds.length > 1 ? "s" : ""}
               </button>
             </div>
           </div>

@@ -139,7 +139,7 @@ export default function LearnAtHomePage() {
                 title={c.courseTitle}
                 chapterCount={c.chapterCount ?? c.moduleCount}
                 imageUrl={c.courseHeaderImageUrl}
-                statusLabel={c.isDemo ? "Free demo" : "Explore"}
+                statusLabel={c.isDemo ? "Free demo" : "Learn at Home"}
                 isDemo={!!c.isDemo}
                 footerExtra={
                   !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
