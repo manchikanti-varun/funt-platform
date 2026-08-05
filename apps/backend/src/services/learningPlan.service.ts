@@ -778,6 +778,12 @@ export async function unlockMilestone(input: UnlockMilestoneInput): Promise<void
     { studentId, batchId, courseId, source, milestoneTitle: milestone.title }
   );
 
+  // Invalidate student's cached course list so access change is reflected immediately
+  try {
+    const { cacheDel, CACHE_KEYS } = await import("../utils/cache.js");
+    await cacheDel(CACHE_KEYS.studentCourses(studentId));
+  } catch { /* non-critical */ }
+
   await createNotification({
     userId: studentId,
     title: `🔓 "${milestone.title}" Unlocked!`,

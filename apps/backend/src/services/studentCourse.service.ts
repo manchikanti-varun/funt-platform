@@ -8,7 +8,6 @@ import { EnrollmentRequestModel } from "../models/EnrollmentRequest.model.js";
 import { LicenseKeyModel } from "../models/LicenseKey.model.js";
 import { PaymentSubmissionModel } from "../models/PaymentSubmission.model.js";
 import { findBatchByParam, getBatchCourseSnapshots } from "./batch.service.js";
-import { normalizeAllowedPaymentMethods, formatPaymentMethodsLabel } from "../utils/coursePaymentMethods.js";
 import { getLatestCoursePaymentState } from "./paymentSubmission.service.js";
 import { BATCH_STATUS, ENROLLMENT_STATUS } from "@funt-platform/constants";
 import { AppError } from "../utils/AppError.js";
@@ -182,6 +181,19 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
     needsPaymentCheck ? hasLicenseKeyEnrollment(studentId, batchMongoId, snapshotCourseId) : Promise.resolve(false),
   ]);
 
+  // Check if student has any unlocked milestone (learning plan courses)
+  let hasMilestoneAccess = false;
+  if (needsPaymentCheck && isLearningPlanActive(snapshot)) {
+    const { MilestoneProgressModel } = await import("../models/MilestoneProgress.model.js");
+    const unlockedMilestone = await MilestoneProgressModel.findOne({
+      studentId,
+      batchId: batchMongoId,
+      courseId: snapshotCourseId,
+      unlocked: true,
+    }).select("_id").lean().exec();
+    hasMilestoneAccess = !!unlockedMilestone;
+  }
+
   const blocked = !!(enrollment as { accessBlocked?: boolean } | null)?.accessBlocked;
   const courseBlocked = isCourseBlockedInEnrollment(
     enrollment as ({ courseAccessBlocked?: Map<string, boolean> | Record<string, boolean> } & Record<string, unknown>) | null,
@@ -189,7 +201,7 @@ export async function getBatchCourseForStudent(studentId: string, batchId: strin
   );
   let hasVerifiedCoursePayment = false;
   if (!!enrollment && !blocked && needsPaymentCheck) {
-    hasVerifiedCoursePayment = payState?.status === "VERIFIED" || hasLicenseKey;
+    hasVerifiedCoursePayment = payState?.status === "VERIFIED" || hasLicenseKey || hasMilestoneAccess;
   }
   const hasAccess = !!enrollment && !blocked && !courseBlocked && (!needsPaymentCheck || hasVerifiedCoursePayment);
 
@@ -399,7 +411,7 @@ export async function getMyCoursesForStudent(studentId: string) {
   const batchById = new Map(batches.map((b) => [String(b._id), b]));
 
   // ── Batch-load payment states and license keys to avoid N+1 (3A-01 fix) ──
-  const [verifiedPayments, licenseKeys, allProgress] = await Promise.all([
+  const [verifiedPayments, licenseKeys, allProgress, milestoneProgressDocs] = await Promise.all([
     PaymentSubmissionModel.find({
       studentId,
       batchId: { $in: batchIds },
@@ -414,6 +426,12 @@ export async function getMyCoursesForStudent(studentId: string) {
       studentId,
       batchId: { $in: batchIds },
     }).lean().exec(),
+    // Also load milestone progress — if any milestone is unlocked, student has access
+    (await import("../models/MilestoneProgress.model.js")).MilestoneProgressModel.find({
+      studentId,
+      batchId: { $in: batchIds },
+      unlocked: true,
+    }).select("batchId courseId").lean().exec(),
   ]);
 
   // Build lookup maps for O(1) access checks
@@ -425,6 +443,13 @@ export async function getMyCoursesForStudent(studentId: string) {
     const bId = String((k as { batchId?: string }).batchId ?? "");
     const cId = String((k as { courseId?: string }).courseId ?? "");
     if (bId && cId) licenseKeyBatchCourseSet.add(`${bId}::${cId}`);
+  }
+  // Build milestone access set: student has at least one unlocked milestone for this course
+  const milestoneAccessSet = new Set<string>();
+  for (const mp of milestoneProgressDocs) {
+    const bId = String((mp as { batchId?: string }).batchId ?? "");
+    const cId = String((mp as { courseId?: string }).courseId ?? "");
+    if (bId && cId) milestoneAccessSet.add(`${bId}::${cId}`);
   }
   // Group progress by batchId+courseId for percent computation
   const progressByBatchCourse = new Map<string, Array<{ moduleOrder: number; completedAt?: Date | null; contentCompletedAt?: Date | null; videoCompletedAt?: Date | null; youtubeCompletedAt?: Date | null; assignmentCompletedAt?: Date | null; quizCompletedAt?: Date | null }>>();
@@ -471,15 +496,18 @@ export async function getMyCoursesForStudent(studentId: string) {
       // Use pre-loaded data instead of per-iteration DB calls
       const hasVerifiedPayment = verifiedPaymentSet.has(`${e.batchId}::${courseId}`);
       const hasLicenseKey = licenseKeyBatchCourseSet.has(`${e.batchId}::${courseId}`);
+      const hasMilestoneAccess = milestoneAccessSet.has(`${e.batchId}::${courseId}`);
       const isDemo = !!(s as { isDemo?: boolean }).isDemo;
-      // Only demo courses get free access. Non-demo courses require verified payment or license key,
-      // even if enrollmentPriceInPaise is 0 (price not yet configured by admin).
-      const hasCourseAccess = !blocked && !courseBlocked && (isDemo || hasVerifiedPayment || hasLicenseKey);
-      // For global online/centre batches, still show the course in the listing even without payment
-      // so the "Learn at Home" / "Learn at Centre" sections appear. Mark as locked.
+      // Demo courses get free access. Non-demo courses require verified payment, license key,
+      // or at least one unlocked milestone (for learning plan courses).
+      const hasCourseAccess = !blocked && !courseBlocked && (isDemo || hasVerifiedPayment || hasLicenseKey || hasMilestoneAccess);
+      // For global online/centre batches, show courses in the enrolled listing only if student has some form of access
+      // (payment verified, license key, milestone unlocked, or demo). Otherwise they appear in explore section.
       const isGlobalBatch = !!(batch as { isGlobalOnlineBatch?: boolean }).isGlobalOnlineBatch ||
         !!(batch as { isGlobalCentreBatch?: boolean }).isGlobalCentreBatch;
       if (!hasCourseAccess && !isGlobalBatch) continue;
+      // For global batches without access, skip — these will show in explore instead
+      if (!hasCourseAccess && isGlobalBatch) continue;
 
       const isAdminBlocked = blocked || courseBlocked;
 
@@ -734,22 +762,22 @@ export async function listCoursesForExplore() {
       moduleCount: number;
       enrollmentPriceInPaise: number;
       originalPriceInPaise: number;
-      emiStartsAtText?: string;
-      paymentOptionsLabel: string;
       courseHeaderImageUrl?: string;
       isDemo?: boolean;
       durationText?: string;
       ageGroup?: string;
       certification?: string;
-      paymentNote?: string;
+      levelTag?: string;
       learningOutcomes: string[];
       cardDescription?: string;
       cardIncludes: string[];
       overview?: string;
-      pricingTiers: unknown[];
       courseImages: string[];
       courseFaqs: unknown[];
       batchType: string;
+      deliveryMode: string;
+      milestoneFeesInPaise: number[];
+      totalMilestoneFeePaise: number;
     }
   >();
   for (const batch of batches) {
@@ -763,10 +791,6 @@ export async function listCoursesForExplore() {
       const rowKey = `${batchId}::${courseId}`;
       if (byBatchCourseKey.has(rowKey)) continue;
       const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((s as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
-      const allowed =
-        enrollmentPriceInPaise >= 100
-          ? normalizeAllowedPaymentMethods((s as { allowedPaymentMethods?: unknown }).allowedPaymentMethods)
-          : [];
       byBatchCourseKey.set(rowKey, {
         batchId,
         batchName: String((batch as { name?: string }).name ?? "").trim() || undefined,
@@ -776,22 +800,30 @@ export async function listCoursesForExplore() {
         moduleCount: Array.isArray(s?.modules) ? s.modules.length : 0,
         enrollmentPriceInPaise,
         originalPriceInPaise: Math.max(0, Math.floor(Number((s as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
-        emiStartsAtText: String((s as { emiStartsAtText?: string }).emiStartsAtText ?? "").trim() || undefined,
-        paymentOptionsLabel: enrollmentPriceInPaise >= 100 ? formatPaymentMethodsLabel(allowed) : "—",
         courseHeaderImageUrl: String((s as { headerImageUrl?: string }).headerImageUrl ?? "").trim() || undefined,
         isDemo: !!(s as { isDemo?: boolean }).isDemo,
         durationText: String((s as { durationText?: string }).durationText ?? "").trim() || undefined,
         ageGroup: String((s as { ageGroup?: string }).ageGroup ?? "").trim() || undefined,
         certification: String((s as { certification?: string }).certification ?? "").trim() || undefined,
-        paymentNote: String((s as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
+        levelTag: String((s as { levelTag?: string }).levelTag ?? "").trim() || undefined,
         learningOutcomes: Array.isArray((s as { learningOutcomes?: string[] }).learningOutcomes) ? (s as { learningOutcomes: string[] }).learningOutcomes : [],
         cardDescription: String((s as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
         cardIncludes: Array.isArray((s as { cardIncludes?: string[] }).cardIncludes) ? (s as { cardIncludes: string[] }).cardIncludes : [],
         overview: String((s as { overview?: string }).overview ?? "").trim() || undefined,
-        pricingTiers: Array.isArray((s as { pricingTiers?: unknown[] }).pricingTiers) ? (s as { pricingTiers: unknown[] }).pricingTiers : [],
         courseImages: Array.isArray((s as { courseImages?: string[] }).courseImages) ? (s as { courseImages: string[] }).courseImages : [],
         courseFaqs: Array.isArray((s as { courseFaqs?: unknown[] }).courseFaqs) ? (s as { courseFaqs: unknown[] }).courseFaqs : [],
         batchType,
+        deliveryMode: String((s as { deliveryMode?: string }).deliveryMode ?? "FULL_ACCESS"),
+        milestoneFeesInPaise: (() => {
+          const lp = (s as { learningPlan?: { enabled?: boolean; milestones?: { feeInPaise?: number; active?: boolean }[] } }).learningPlan;
+          if (!lp?.enabled || !Array.isArray(lp.milestones)) return [];
+          return lp.milestones.filter((m) => m.active !== false).map((m) => Math.max(0, Math.floor(Number(m.feeInPaise ?? 0))));
+        })(),
+        totalMilestoneFeePaise: (() => {
+          const lp = (s as { learningPlan?: { enabled?: boolean; milestones?: { feeInPaise?: number; active?: boolean }[] } }).learningPlan;
+          if (!lp?.enabled || !Array.isArray(lp.milestones)) return 0;
+          return lp.milestones.filter((m) => m.active !== false).reduce((sum, m) => sum + Math.max(0, Math.floor(Number(m.feeInPaise ?? 0))), 0);
+        })(),
       });
     }
   }
@@ -810,22 +842,22 @@ export async function listCoursesForExplore() {
       batchName: v.batchName,
       enrollmentPriceInPaise: v.enrollmentPriceInPaise,
       originalPriceInPaise: v.originalPriceInPaise,
-      emiStartsAtText: v.emiStartsAtText,
-      paymentOptionsLabel: v.paymentOptionsLabel,
       courseHeaderImageUrl: resolveCourseHeaderImageUrl(courseId, v.courseHeaderImageUrl, catalog),
       isDemo: v.isDemo,
       durationText: v.durationText,
       ageGroup: v.ageGroup,
       certification: v.certification,
-      paymentNote: v.paymentNote,
+      levelTag: v.levelTag,
       learningOutcomes: v.learningOutcomes,
       cardDescription: v.cardDescription,
       cardIncludes: v.cardIncludes,
       overview: v.overview,
-      pricingTiers: v.pricingTiers,
       courseImages: v.courseImages,
       courseFaqs: v.courseFaqs,
       batchType: v.batchType,
+      deliveryMode: v.deliveryMode,
+      milestoneFeesInPaise: v.milestoneFeesInPaise,
+      totalMilestoneFeePaise: v.totalMilestoneFeePaise,
     };
   });
 }

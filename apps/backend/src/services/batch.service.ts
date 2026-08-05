@@ -332,15 +332,13 @@ function copyCourseToSnapshot(course: {
   learningPlan?: unknown;
   ageGroup?: string;
   certification?: string;
-  paymentNote?: string;
+  levelTag?: string;
   learningOutcomes?: string[];
   overview?: string;
   cardDescription?: string;
   cardIncludes?: string[];
-  originalPriceInPaise?: number;
   courseImages?: string[];
   courseFaqs?: unknown[];
-  pricingTiers?: unknown[];
 }) {
   const deliveryMode = (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS;
   const learningPlan = (course as { learningPlan?: unknown }).learningPlan;
@@ -353,15 +351,13 @@ function copyCourseToSnapshot(course: {
     durationText: course.durationText ?? "",
     ageGroup: String((course as { ageGroup?: string }).ageGroup ?? "").trim() || undefined,
     certification: String((course as { certification?: string }).certification ?? "").trim() || undefined,
-    paymentNote: String((course as { paymentNote?: string }).paymentNote ?? "").trim() || undefined,
+    levelTag: String((course as { levelTag?: string }).levelTag ?? "").trim() || undefined,
     learningOutcomes: Array.isArray((course as { learningOutcomes?: string[] }).learningOutcomes) ? (course as { learningOutcomes: string[] }).learningOutcomes : [],
     overview: String((course as { overview?: string }).overview ?? "").trim() || undefined,
     cardDescription: String((course as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
     cardIncludes: Array.isArray((course as { cardIncludes?: string[] }).cardIncludes) ? (course as { cardIncludes: string[] }).cardIncludes : [],
-    originalPriceInPaise: Math.max(0, Math.floor(Number((course as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
     courseImages: Array.isArray((course as { courseImages?: string[] }).courseImages) ? (course as { courseImages: string[] }).courseImages : [],
     courseFaqs: Array.isArray((course as { courseFaqs?: unknown[] }).courseFaqs) ? (course as { courseFaqs: unknown[] }).courseFaqs : [],
-    pricingTiers: Array.isArray((course as { pricingTiers?: unknown[] }).pricingTiers) ? (course as { pricingTiers: unknown[] }).pricingTiers : [],
     isDemo: !!(course as { isDemo?: boolean }).isDemo,
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
@@ -890,13 +886,11 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
     cardDescription: String((course as { cardDescription?: string }).cardDescription ?? "").trim() || undefined,
     cardIncludes: Array.isArray((course as { cardIncludes?: string[] }).cardIncludes)
       ? (course as { cardIncludes: string[] }).cardIncludes : [],
-    originalPriceInPaise: Math.max(0, Math.floor(Number((course as { originalPriceInPaise?: number }).originalPriceInPaise ?? 0))),
     courseImages: Array.isArray((course as { courseImages?: string[] }).courseImages)
       ? (course as { courseImages: string[] }).courseImages : [],
     courseFaqs: Array.isArray((course as { courseFaqs?: unknown[] }).courseFaqs)
       ? (course as { courseFaqs: unknown[] }).courseFaqs : [],
-    pricingTiers: Array.isArray((course as { pricingTiers?: unknown[] }).pricingTiers)
-      ? (course as { pricingTiers: unknown[] }).pricingTiers : [],
+    levelTag: String((course as { levelTag?: string }).levelTag ?? "").trim() || undefined,
     modules: JSON.parse(JSON.stringify(course.modules)),
     version: course.version,
     deliveryMode: (course as { deliveryMode?: string }).deliveryMode ?? COURSE_DELIVERY_MODE.FULL_ACCESS,

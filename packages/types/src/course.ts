@@ -8,6 +8,7 @@ export interface Course {
     modules: string[];
   version: number;
   status: COURSE_STATUS;
+  levelTag?: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;

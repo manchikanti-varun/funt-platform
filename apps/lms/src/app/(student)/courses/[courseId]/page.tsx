@@ -691,11 +691,19 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                     {learningPlan && learningPlan.milestones && learningPlan.milestones.length > 0 && (
                       <div className="mb-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-3">
                         <p className="mb-2 text-xs font-bold uppercase tracking-wider text-teal-700">Learning Plan</p>
-                        {learningPlan.totalProgramFeeRupees ? (
-                          <p className="mb-2 text-[11px] text-teal-600">
-                            Total program: ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
-                          </p>
-                        ) : null}
+                        <div className="mb-3 flex flex-wrap items-baseline gap-3">
+                          {learningPlan.milestones[0]?.feeRupees > 0 && (
+                            <p className="text-sm font-bold text-teal-800">
+                              ₹{learningPlan.milestones[0].feeRupees.toLocaleString("en-IN")}
+                              <span className="ml-1 text-xs font-normal text-teal-600">/ month</span>
+                            </p>
+                          )}
+                          {learningPlan.totalProgramFeeRupees ? (
+                            <p className="text-[11px] text-teal-600">
+                              Total fee: ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
+                            </p>
+                          ) : null}
+                        </div>
                         {/* Buy Full Program button — show when not all milestones are unlocked */}
                         {learningPlan.totalProgramFeeRupees && learningPlan.totalProgramFeeRupees > 0 &&
                          learningPlan.milestones.some((ms) => !ms.unlocked) && data?.batchId && (

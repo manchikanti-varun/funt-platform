@@ -49,6 +49,7 @@ export default function NewCoursePage() {
   const [headerImageDataUrl, setHeaderImageDataUrl] = useState("");
   const [isDemo, setIsDemo] = useState(false);
   const [ageGroup, setAgeGroup] = useState("");
+  const [levelTag, setLevelTag] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -117,6 +118,7 @@ export default function NewCoursePage() {
         globalChapterIds: selectedIds,
         headerImageUrl: headerImageDataUrl.trim(),
         ageGroup: ageGroup.trim(),
+        levelTag: levelTag.trim(),
         ...(isDemo ? { isDemo: true } : {}),
       }),
     });
@@ -205,15 +207,30 @@ export default function NewCoursePage() {
               />
               <p className="mt-1 text-xs text-slate-500">Shown as a badge on the course card.</p>
             </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-slate-700">Level Tag</label>
+              <select
+                value={levelTag}
+                onChange={(e) => setLevelTag(e.target.value)}
+                className="input max-w-xs"
+              >
+                <option value="">— None —</option>
+                <option value="JUNIOR">Junior Level</option>
+                <option value="SENIOR">Senior Level</option>
+                <option value="SUPER_SENIOR">Super Senior Level</option>
+              </select>
+              <p className="mt-1 text-xs text-slate-500">Shown as a badge indicating course difficulty.</p>
+            </div>
             <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3">
               <p className="text-xs font-semibold text-amber-800">After saving, open the course edit page to add:</p>
               <ul className="mt-1.5 space-y-0.5 text-xs text-amber-700 list-disc list-inside">
                 <li>Card description & Includes (bullet points shown on course card)</li>
-                <li>Original price ₹ (strikethrough price)</li>
                 <li>Course gallery images (3–4 photos for detail page)</li>
                 <li>FAQs (shown at bottom of course detail page)</li>
-                <li>Learning Outcomes, Overview, Pricing Tiers, Certification</li>
+                <li>Learning Outcomes, Overview, Certification</li>
+                <li>Learning Plan milestones (if milestone-based course)</li>
               </ul>
+              <p className="mt-2 text-xs text-amber-600">Pricing is set at the batch level when you add this course to a batch.</p>
             </div>
           </div>
 

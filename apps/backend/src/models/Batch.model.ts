@@ -71,14 +71,13 @@ const courseSnapshotSchema = new Schema(
     /** Marketing/catalog fields */
     ageGroup: { type: String, required: false, default: "" },
     certification: { type: String, required: false, default: "" },
-    paymentNote: { type: String, required: false, default: "" },
     learningOutcomes: { type: [String], required: false, default: [] },
     overview: { type: String, required: false, default: "" },
     /** Short description for course card (plain text) */
     cardDescription: { type: String, required: false, default: "" },
     /** "Includes" bullet points shown on the course card */
     cardIncludes: { type: [String], required: false, default: [] },
-    /** Original price in paise (shown with strikethrough) */
+    /** Original price in paise (shown with strikethrough) — set at batch level */
     originalPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
     /** Gallery images for course page (3-4 images, URLs) */
     courseImages: { type: [String], required: false, default: [] },
@@ -92,16 +91,8 @@ const courseSnapshotSchema = new Schema(
       required: false,
       default: [],
     },
-    pricingTiers: {
-      type: [{
-        label: { type: String, required: true },
-        price: { type: String, required: true },
-        note: { type: String, required: false, default: "" },
-        _id: false,
-      }],
-      required: false,
-      default: [],
-    },
+    /** Level tag: JUNIOR, SENIOR, SUPER_SENIOR */
+    levelTag: { type: String, required: false, default: "" },
     modules: { type: [courseModuleSnapshotSchema], required: true, default: [] },
     version: { type: Number, required: true },
     /** INR enrollment list price for this course in this batch (paise). Shown at checkout; Razorpay order uses this amount. */

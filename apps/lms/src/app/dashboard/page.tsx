@@ -28,7 +28,6 @@ interface ExploreCourse {
   moduleCount: number;
   batchId: string;
   enrollmentPriceInPaise?: number;
-  paymentOptionsLabel?: string;
 }
 
 interface UserMe {

@@ -16,12 +16,10 @@ interface MilestoneForm {
   title: string;
   description: string;
   order: number;
-  feeInPaise: number;
   unlockType: string;
   completionRule: string;
   unlockAfterDate: string;
   unlockAfterDays: string;
-  paymentDueInDays: string;
   certificateEligible: boolean;
   certificateDurationText: string;
   active: boolean;
@@ -33,12 +31,10 @@ interface Milestone {
   title: string;
   description?: string;
   order: number;
-  feeInPaise: number;
   unlockType: string;
   completionRule: string;
   unlockAfterDate?: string;
   unlockAfterDays?: number;
-  paymentDueInDays?: number;
   certificateEligible: boolean;
   certificateDurationText?: string;
   active: boolean;
@@ -67,12 +63,10 @@ function blankForm(order: number): MilestoneForm {
     title: "",
     description: "",
     order,
-    feeInPaise: 0,
     unlockType: MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION,
     completionRule: MILESTONE_COMPLETION_RULE.COMPLETE_ALL_CHAPTERS,
     unlockAfterDate: "",
     unlockAfterDays: "",
-    paymentDueInDays: "",
     certificateEligible: false,
     certificateDurationText: "",
     active: true,
@@ -86,12 +80,10 @@ function milestoneToForm(m: Milestone): MilestoneForm {
     title: m.title,
     description: m.description ?? "",
     order: m.order,
-    feeInPaise: m.feeInPaise,
     unlockType: m.unlockType,
     completionRule: m.completionRule,
     unlockAfterDate: m.unlockAfterDate ? new Date(m.unlockAfterDate).toISOString().split("T")[0] : "",
     unlockAfterDays: m.unlockAfterDays != null ? String(m.unlockAfterDays) : "",
-    paymentDueInDays: m.paymentDueInDays != null ? String(m.paymentDueInDays) : "",
     certificateEligible: m.certificateEligible,
     certificateDurationText: m.certificateDurationText ?? "",
     active: m.active,
@@ -105,12 +97,10 @@ function formToPayload(f: MilestoneForm) {
     title: f.title.trim(),
     description: f.description.trim(),
     order: Number(f.order),
-    feeInPaise: Math.max(0, Math.floor(Number(f.feeInPaise ?? 0))),
     unlockType: f.unlockType,
     completionRule: f.completionRule,
     unlockAfterDate: f.unlockAfterDate || undefined,
     unlockAfterDays: f.unlockAfterDays ? Number(f.unlockAfterDays) : undefined,
-    paymentDueInDays: f.paymentDueInDays ? Number(f.paymentDueInDays) : undefined,
     certificateEligible: f.certificateEligible,
     certificateDurationText: f.certificateEligible ? (f.certificateDurationText.trim() || undefined) : undefined,
     active: f.active,
@@ -172,7 +162,6 @@ function MilestoneFormPanel({
 
   const showDateField = form.unlockType === MILESTONE_UNLOCK_TYPE.DATE_BASED;
   const showRelativeDays = form.unlockType === MILESTONE_UNLOCK_TYPE.RELATIVE_DATE;
-  const showFee = form.unlockType === MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION;
 
   return (
     <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-5 space-y-4">
@@ -226,38 +215,10 @@ function MilestoneFormPanel({
           </select>
         </div>
 
-        {/* Fee — only shown for payment unlock */}
-        {showFee && (
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Fee (₹)</label>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              value={form.feeInPaise / 100}
-              onChange={(e) => set("feeInPaise", Math.round(parseFloat(e.target.value || "0") * 100))}
-              className="input w-full"
-              placeholder="0"
-            />
-            <p className="mt-1 text-xs text-slate-500">Enter in rupees. Leave 0 for free payment milestone.</p>
-          </div>
-        )}
-
-        {/* Payment due in days */}
-        {showFee && (
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Payment Due (days)</label>
-            <input
-              type="number"
-              min={1}
-              value={form.paymentDueInDays}
-              onChange={(e) => set("paymentDueInDays", e.target.value)}
-              className="input w-full"
-              placeholder="e.g. 10"
-            />
-            <p className="mt-1 text-xs text-slate-500">Days after eligibility before payment is overdue.</p>
-          </div>
-        )}
+        {/* Note: Fee and payment due days are configured at batch level */}
+        <div className="sm:col-span-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2">
+          <p className="text-xs text-amber-800">Pricing and payment due days are set per-milestone when adding this course to a batch.</p>
+        </div>
 
         {/* Date unlock */}
         {showDateField && (
@@ -537,12 +498,10 @@ export default function LearningPlanPage() {
           title: m.title,
           description: m.description,
           order: m.order,
-          feeInPaise: m.feeInPaise,
           unlockType: m.unlockType,
           completionRule: m.completionRule,
           unlockAfterDate: m.unlockAfterDate,
           unlockAfterDays: m.unlockAfterDays,
-          paymentDueInDays: m.paymentDueInDays,
           certificateEligible: m.certificateEligible,
           certificateDurationText: m.certificateDurationText,
           active: m.active,
@@ -580,12 +539,10 @@ export default function LearningPlanPage() {
           title: m.title,
           description: m.description,
           order: m.order,
-          feeInPaise: m.feeInPaise,
           unlockType: m.unlockType,
           completionRule: m.completionRule,
           unlockAfterDate: m.unlockAfterDate,
           unlockAfterDays: m.unlockAfterDays,
-          paymentDueInDays: m.paymentDueInDays,
           certificateEligible: m.certificateEligible,
           certificateDurationText: m.certificateDurationText,
           active: m.active,
@@ -969,7 +926,6 @@ function MilestoneCard({
   onMoveDown: () => void;
   courseId: string;
 }) {
-  const feeRupees = milestone.feeInPaise / 100;
   const assignedModules = modules.filter((m) => milestone.chapterOrders.includes(m.order));
 
   return (
@@ -1003,11 +959,6 @@ function MilestoneCard({
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
               {UNLOCK_TYPE_LABELS[milestone.unlockType] ?? milestone.unlockType}
             </span>
-            {feeRupees > 0 && (
-              <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-green-700">
-                ₹{feeRupees.toLocaleString("en-IN")}
-              </span>
-            )}
           </div>
           {milestone.description && (
             <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">{milestone.description}</p>
@@ -1016,12 +967,6 @@ function MilestoneCard({
             <span>{milestone.chapterOrders.length} chapter{milestone.chapterOrders.length !== 1 ? "s" : ""}</span>
             <span>·</span>
             <span>{COMPLETION_RULE_LABELS[milestone.completionRule] ?? milestone.completionRule}</span>
-            {milestone.paymentDueInDays && (
-              <>
-                <span>·</span>
-                <span>Due in {milestone.paymentDueInDays}d</span>
-              </>
-            )}
             {milestone.unlockAfterDays && (
               <>
                 <span>·</span>

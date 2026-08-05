@@ -13,13 +13,15 @@ function getUserId(req: Request): string {
 
 export const createCourse = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const createdBy = getUserId(req);
-  const { title, description, durationText, headerImageUrl, isDemo, globalChapterIds, globalModuleIds } = req.body ?? {};
+  const { title, description, durationText, headerImageUrl, isDemo, ageGroup, levelTag, globalChapterIds, globalModuleIds } = req.body ?? {};
   const data = await service.createCourse({
     title,
     description,
     durationText,
     headerImageUrl: typeof headerImageUrl === "string" ? headerImageUrl : undefined,
     isDemo: isDemo === true || isDemo === "true",
+    ageGroup: typeof ageGroup === "string" ? ageGroup.trim() : undefined,
+    levelTag: typeof levelTag === "string" ? levelTag.trim() : undefined,
     globalChapterIds: globalChapterIds ?? globalModuleIds,
     createdBy,
   });
@@ -44,7 +46,7 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
   const id = req.params.id;
   const performedBy = getUserId(req);
   if (!id) throw new AppError("Course ID is required", 400);
-  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, paymentNote, learningOutcomes, overview, pricingTiers, cardDescription, cardIncludes, originalPriceInPaise, courseImages, courseFaqs, enableWatermark } = req.body ?? {};
+  const { title, description, durationText, headerImageUrl, isDemo, moderatorIds, ageGroup, certification, levelTag, learningOutcomes, overview, cardDescription, cardIncludes, courseImages, courseFaqs, enableWatermark } = req.body ?? {};
   const body = req.body ?? {};
   const headerPatch =
     "headerImageUrl" in body
@@ -65,13 +67,11 @@ export const updateCourse = asyncHandler(async (req: Request, res: Response): Pr
       moderatorIds: Array.isArray(moderatorIds) ? moderatorIds : undefined,
       ageGroup: typeof ageGroup === "string" ? ageGroup : undefined,
       certification: typeof certification === "string" ? certification : undefined,
-      paymentNote: typeof paymentNote === "string" ? paymentNote : undefined,
+      levelTag: typeof levelTag === "string" ? levelTag : undefined,
       learningOutcomes: Array.isArray(learningOutcomes) ? learningOutcomes.filter((l: unknown) => typeof l === "string" && l.trim()) : undefined,
       overview: typeof overview === "string" ? overview : undefined,
-      pricingTiers: Array.isArray(pricingTiers) ? pricingTiers : undefined,
       cardDescription: typeof cardDescription === "string" ? cardDescription : undefined,
       cardIncludes: Array.isArray(cardIncludes) ? cardIncludes.filter((l: unknown) => typeof l === "string" && l.trim()) : undefined,
-      originalPriceInPaise: typeof originalPriceInPaise === "number" ? originalPriceInPaise : (originalPriceInPaise !== undefined ? Number(originalPriceInPaise) : undefined),
       courseImages: Array.isArray(courseImages) ? courseImages.filter((u: unknown) => typeof u === "string" && u.trim()) : undefined,
       courseFaqs: Array.isArray(courseFaqs) ? courseFaqs : undefined,
       ...("enableWatermark" in body ? { enableWatermark: enableWatermark === true ? true : enableWatermark === false ? false : null } : {}),

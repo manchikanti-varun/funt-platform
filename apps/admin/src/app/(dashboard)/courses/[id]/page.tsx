@@ -47,13 +47,11 @@ interface Course {
   isDemo?: boolean;
   ageGroup?: string;
   certification?: string;
-  paymentNote?: string;
   learningOutcomes?: string[];
   overview?: string;
-  pricingTiers?: { label: string; price: string; note?: string }[];
+  levelTag?: string;
   cardDescription?: string;
   cardIncludes?: string[];
-  originalPriceInPaise?: number;
   courseImages?: string[];
   courseFaqs?: { question: string; answer: string }[];
   modules: CourseModule[];
@@ -92,15 +90,13 @@ export default function EditCoursePage() {
   const [isDemo, setIsDemo] = useState(false);
   const [ageGroup, setAgeGroup] = useState("");
   const [certification, setCertification] = useState("");
-  const [paymentNote, setPaymentNote] = useState("");
   const [learningOutcomes, setLearningOutcomes] = useState("");
   const [overview, setOverview] = useState("");
-  const [pricingTiers, setPricingTiers] = useState<{ label: string; price: string; note: string }[]>([]);
   const [cardDescription, setCardDescription] = useState("");
   const [cardIncludes, setCardIncludes] = useState("");
-  const [originalPriceInr, setOriginalPriceInr] = useState("");
   const [courseImages, setCourseImages] = useState<string[]>([]);
   const [courseFaqs, setCourseFaqs] = useState<{ question: string; answer: string }[]>([]);
+  const [levelTag, setLevelTag] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -135,16 +131,13 @@ export default function EditCoursePage() {
         setIsDemo(!!r.data.isDemo);
         setAgeGroup((r.data.ageGroup ?? "").trim());
         setCertification((r.data.certification ?? "").trim());
-        setPaymentNote((r.data.paymentNote ?? "").trim());
         setLearningOutcomes((r.data.learningOutcomes ?? []).join("\n"));
         setOverview(decodeEncodedRichText(r.data.overview ?? ""));
-        setPricingTiers((r.data.pricingTiers ?? []).map((t) => ({ label: t.label, price: t.price, note: t.note ?? "" })));
         setCardDescription((r.data.cardDescription ?? "").trim());
         setCardIncludes((r.data.cardIncludes ?? []).join("\n"));
-        const opaise = Math.max(0, Math.floor(Number(r.data.originalPriceInPaise ?? 0)));
-        setOriginalPriceInr(opaise > 0 ? (opaise / 100).toFixed(0) : "");
         setCourseImages(Array.isArray(r.data.courseImages) ? r.data.courseImages : []);
         setCourseFaqs(Array.isArray(r.data.courseFaqs) ? r.data.courseFaqs : []);
+        setLevelTag((r.data.levelTag ?? "").trim());
         const wm = r.data.enableWatermark;
         setEnableWatermark(wm === true ? true : wm === false ? false : "inherit");
       }
@@ -218,15 +211,13 @@ export default function EditCoursePage() {
       headerImageUrl: imageValue,
       ageGroup: ageGroup.trim(),
       certification: certification.trim(),
-      paymentNote: paymentNote.trim(),
       learningOutcomes: learningOutcomes.split("\n").map((l) => l.trim()).filter(Boolean),
       overview: overview.trim(),
-      pricingTiers: pricingTiers.filter((t) => t.label.trim() && t.price.trim()),
       cardDescription: cardDescription.trim(),
       cardIncludes: cardIncludes.split("\n").map((l) => l.trim()).filter(Boolean),
-      originalPriceInPaise: originalPriceInr.trim() ? Math.round(Number(originalPriceInr.trim()) * 100) : 0,
       courseImages: courseImages.filter(Boolean),
       courseFaqs: courseFaqs.filter((f) => f.question.trim() && f.answer.trim()),
+      levelTag: levelTag.trim(),
       enableWatermark: enableWatermark === "inherit" ? null : enableWatermark,
     };
     const res = await api(`/api/courses/${id}`, {
@@ -528,7 +519,7 @@ export default function EditCoursePage() {
           </div>
           <div className="border-t border-slate-200 pt-6">
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-600">Marketing & Catalog Details</h3>
-            <p className="mb-4 text-sm text-slate-600">These fields appear on the explore/catalog pages and the marketing website.</p>
+            <p className="mb-4 text-sm text-slate-600">These fields appear on the explore/catalog pages and the marketing website. Pricing is set at the batch level.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-semibold text-slate-700">Age Group</label>
@@ -538,9 +529,15 @@ export default function EditCoursePage() {
                 <label className="mb-1 block text-sm font-semibold text-slate-700">Certification</label>
                 <input value={certification} onChange={(e) => setCertification(e.target.value)} className="input" placeholder="e.g. Certification upon completion" />
               </div>
-              <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Payment Note</label>
-                <input value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} className="input" placeholder="e.g. EMI available" />
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Level Tag</label>
+                <select value={levelTag} onChange={(e) => setLevelTag(e.target.value)} className="input">
+                  <option value="">— None —</option>
+                  <option value="JUNIOR">Junior Level</option>
+                  <option value="SENIOR">Senior Level</option>
+                  <option value="SUPER_SENIOR">Super Senior Level</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-400">Displayed as a badge on course cards to indicate difficulty.</p>
               </div>
             </div>
             <div className="mt-4">
@@ -551,40 +548,13 @@ export default function EditCoursePage() {
               <label className="mb-1 block text-sm font-semibold text-slate-700">Course Overview (detailed description)</label>
               <RichTextEditor value={overview} onChange={setOverview} minHeight={160} />
             </div>
-            <div className="mt-4">
-              <label className="mb-2 block text-sm font-semibold text-slate-700">Pricing Tiers</label>
-              {pricingTiers.map((tier, idx) => (
-                <div key={idx} className="mb-2 flex items-start gap-2">
-                  <input value={tier.label} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], label: e.target.value }; setPricingTiers(t); }} className="input flex-1" placeholder="Tier name (e.g. Get kit + 32 hours)" />
-                  <input value={tier.price} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], price: e.target.value }; setPricingTiers(t); }} className="input w-32" placeholder="INR 7,000" />
-                  <input value={tier.note} onChange={(e) => { const t = [...pricingTiers]; t[idx] = { ...t[idx], note: e.target.value }; setPricingTiers(t); }} className="input flex-1" placeholder="Note (optional)" />
-                  <button type="button" onClick={() => setPricingTiers(pricingTiers.filter((_, i) => i !== idx))} className="mt-2 text-sm text-red-600 hover:text-red-800">Remove</button>
-                </div>
-              ))}
-              <button type="button" onClick={() => setPricingTiers([...pricingTiers, { label: "", price: "", note: "" }])} className="text-sm font-medium text-indigo-700 hover:text-indigo-900">+ Add pricing tier</button>
-            </div>
 
             {/* ── Card display fields ── */}
             <div className="mt-6 border-t border-slate-200 pt-5 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Card Display (shown on course cards)</h4>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">
-                    Original price (₹) <span className="font-normal text-slate-400">— shown with strikethrough</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={originalPriceInr}
-                    onChange={(e) => setOriginalPriceInr(e.target.value)}
-                    className="input"
-                    placeholder="e.g. 7000"
-                  />
-                  <p className="mt-1 text-xs text-slate-400">Set a value here to show ~~₹7,000~~ ₹5,999 on cards.</p>
-                </div>
-                <div>
+                <div className="sm:col-span-2">
                   <label className="mb-1 block text-sm font-semibold text-slate-700">
                     Card description <span className="font-normal text-slate-400">— 2–3 lines on the card</span>
                   </label>

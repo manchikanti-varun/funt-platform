@@ -104,6 +104,8 @@ export interface CreateCourseInput {
   durationText?: string;
   headerImageUrl?: string;
   isDemo?: boolean;
+  ageGroup?: string;
+  levelTag?: string;
   globalChapterIds: string[];
   createdBy: string;
 }
@@ -117,13 +119,11 @@ export interface UpdateCourseInput {
   moderatorIds?: string[];
   ageGroup?: string;
   certification?: string;
-  paymentNote?: string;
+  levelTag?: string;
   learningOutcomes?: string[];
   overview?: string;
-  pricingTiers?: { label: string; price: string; note?: string }[];
   cardDescription?: string;
   cardIncludes?: string[];
-  originalPriceInPaise?: number;
   courseImages?: string[];
   courseFaqs?: { question: string; answer: string }[];
   /** null = inherit global setting, true = watermark on, false = watermark off */
@@ -176,13 +176,11 @@ function toCourseResponse(doc: {
     ...((doc as { isDemo?: boolean }).isDemo ? { isDemo: true } : {}),
     ageGroup: String(d.ageGroup ?? "").trim() || undefined,
     certification: String(d.certification ?? "").trim() || undefined,
-    paymentNote: String(d.paymentNote ?? "").trim() || undefined,
+    levelTag: String(d.levelTag ?? "").trim() || undefined,
     learningOutcomes: Array.isArray(d.learningOutcomes) ? d.learningOutcomes : [],
     overview: String(d.overview ?? "").trim() || undefined,
-    pricingTiers: Array.isArray(d.pricingTiers) ? d.pricingTiers : [],
     cardDescription: String(d.cardDescription ?? "").trim() || undefined,
     cardIncludes: Array.isArray(d.cardIncludes) ? d.cardIncludes : [],
-    originalPriceInPaise: Math.max(0, Math.floor(Number(d.originalPriceInPaise ?? 0))),
     courseImages: Array.isArray(d.courseImages) ? d.courseImages : [],
     courseFaqs: Array.isArray(d.courseFaqs) ? d.courseFaqs : [],
     modules: doc.modules,
@@ -246,15 +244,13 @@ async function syncCourseMetadataToBatchSnapshots(
   fields: {
     ageGroup?: string;
     certification?: string;
-    paymentNote?: string;
+    levelTag?: string;
     learningOutcomes?: string[];
     overview?: string;
     cardDescription?: string;
     cardIncludes?: string[];
-    originalPriceInPaise?: number;
     courseImages?: string[];
     courseFaqs?: unknown[];
-    pricingTiers?: unknown[];
     durationText?: string;
     title?: string;
     description?: string;
@@ -280,15 +276,13 @@ async function syncCourseMetadataToBatchSnapshots(
       if (fields.durationText !== undefined) { s.durationText = fields.durationText; dirty = true; }
       if (fields.ageGroup !== undefined) { s.ageGroup = fields.ageGroup || undefined; dirty = true; }
       if (fields.certification !== undefined) { s.certification = fields.certification || undefined; dirty = true; }
-      if (fields.paymentNote !== undefined) { s.paymentNote = fields.paymentNote || undefined; dirty = true; }
+      if (fields.levelTag !== undefined) { s.levelTag = fields.levelTag || undefined; dirty = true; }
       if (fields.learningOutcomes !== undefined) { s.learningOutcomes = fields.learningOutcomes; dirty = true; }
       if (fields.overview !== undefined) { s.overview = fields.overview || undefined; dirty = true; }
       if (fields.cardDescription !== undefined) { s.cardDescription = fields.cardDescription || undefined; dirty = true; }
       if (fields.cardIncludes !== undefined) { s.cardIncludes = fields.cardIncludes; dirty = true; }
-      if (fields.originalPriceInPaise !== undefined) { s.originalPriceInPaise = fields.originalPriceInPaise; dirty = true; }
       if (fields.courseImages !== undefined) { s.courseImages = fields.courseImages; dirty = true; }
       if (fields.courseFaqs !== undefined) { s.courseFaqs = fields.courseFaqs; dirty = true; }
-      if (fields.pricingTiers !== undefined) { s.pricingTiers = fields.pricingTiers; dirty = true; }
     }
     if (!dirty) continue;
     if (snapshots.length === 1) {
@@ -451,6 +445,8 @@ export async function createCourse(input: CreateCourseInput) {
     durationText: normalizedDurationText,
     headerImageUrl,
     ...(input.isDemo ? { isDemo: true } : {}),
+    ...(input.ageGroup ? { ageGroup: input.ageGroup.trim() } : {}),
+    ...(input.levelTag ? { levelTag: input.levelTag.trim() } : {}),
     modules: snapshots,
     version: 1,
     status: COURSE_STATUS.ACTIVE,
@@ -516,13 +512,11 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   }
   if (input.ageGroup !== undefined) (doc as unknown as Record<string, unknown>).ageGroup = input.ageGroup.trim();
   if (input.certification !== undefined) (doc as unknown as Record<string, unknown>).certification = input.certification.trim();
-  if (input.paymentNote !== undefined) (doc as unknown as Record<string, unknown>).paymentNote = input.paymentNote.trim();
+  if (input.levelTag !== undefined) (doc as unknown as Record<string, unknown>).levelTag = input.levelTag.trim();
   if (input.learningOutcomes !== undefined) (doc as unknown as Record<string, unknown>).learningOutcomes = input.learningOutcomes;
   if (input.overview !== undefined) (doc as unknown as Record<string, unknown>).overview = input.overview.trim();
-  if (input.pricingTiers !== undefined) (doc as unknown as Record<string, unknown>).pricingTiers = input.pricingTiers;
   if (input.cardDescription !== undefined) (doc as unknown as Record<string, unknown>).cardDescription = input.cardDescription.trim();
   if (input.cardIncludes !== undefined) (doc as unknown as Record<string, unknown>).cardIncludes = input.cardIncludes;
-  if (input.originalPriceInPaise !== undefined) (doc as unknown as Record<string, unknown>).originalPriceInPaise = Math.max(0, Math.floor(Number(input.originalPriceInPaise)));
   if (input.courseImages !== undefined) (doc as unknown as Record<string, unknown>).courseImages = input.courseImages;
   if (input.courseFaqs !== undefined) (doc as unknown as Record<string, unknown>).courseFaqs = input.courseFaqs;
   if ("enableWatermark" in input) {
@@ -548,15 +542,13 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
       durationText: input.durationText !== undefined ? String((doc as unknown as Record<string, unknown>).durationText ?? "") : undefined,
       ageGroup: input.ageGroup !== undefined ? String((doc as unknown as Record<string, unknown>).ageGroup ?? "") : undefined,
       certification: input.certification !== undefined ? String((doc as unknown as Record<string, unknown>).certification ?? "") : undefined,
-      paymentNote: input.paymentNote !== undefined ? String((doc as unknown as Record<string, unknown>).paymentNote ?? "") : undefined,
+      levelTag: input.levelTag !== undefined ? String((doc as unknown as Record<string, unknown>).levelTag ?? "") : undefined,
       learningOutcomes: input.learningOutcomes !== undefined ? (doc as unknown as Record<string, unknown>).learningOutcomes as string[] : undefined,
       overview: input.overview !== undefined ? String((doc as unknown as Record<string, unknown>).overview ?? "") : undefined,
       cardDescription: input.cardDescription !== undefined ? String((doc as unknown as Record<string, unknown>).cardDescription ?? "") : undefined,
       cardIncludes: input.cardIncludes !== undefined ? (doc as unknown as Record<string, unknown>).cardIncludes as string[] : undefined,
-      originalPriceInPaise: input.originalPriceInPaise !== undefined ? Math.max(0, Math.floor(Number((doc as unknown as Record<string, unknown>).originalPriceInPaise ?? 0))) : undefined,
       courseImages: input.courseImages !== undefined ? (doc as unknown as Record<string, unknown>).courseImages as string[] : undefined,
       courseFaqs: input.courseFaqs !== undefined ? (doc as unknown as Record<string, unknown>).courseFaqs as unknown[] : undefined,
-      pricingTiers: input.pricingTiers !== undefined ? (doc as unknown as Record<string, unknown>).pricingTiers as unknown[] : undefined,
     });
   } catch (err) {
     console.error("[course] Failed to sync metadata to batch snapshots:", err instanceof Error ? err.message : err);

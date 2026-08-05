@@ -579,14 +579,14 @@ export default function NewBatchPage() {
                               <div className="border-t border-slate-100 pt-3 space-y-3">
                                 {isLP ? (
                                   <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
-                                    <p className="text-xs font-semibold text-indigo-800">Learning Plan Course</p>
-                                    <p className="mt-1 text-xs text-indigo-700">Students pay per milestone. Enrollment is free. Fee is configured in the Learning Plan settings.</p>
+                                    <p className="text-xs font-semibold text-indigo-800">Learning Plan Course (Milestone-based)</p>
+                                    <p className="mt-1 text-xs text-indigo-700">Students pay per milestone. Set the full access price above for students who want to pay upfront. Milestone-level fees and payment due days are configured in the batch milestone pricing (coming from course learning plan).</p>
                                   </div>
                                 ) : (
                                   <>
                                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
                                   <label className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                    Course fee (₹ INR)
+                                    Full course fee (₹ INR)
                                     <input
                                       type="number"
                                       min={0}
@@ -600,7 +600,9 @@ export default function NewBatchPage() {
                                     <span className="normal-case tracking-normal font-normal text-slate-400">
                                       {demo
                                         ? "Demo courses are free (₹0) and auto-enroll all students when added to this batch."
-                                        : "Leave blank when access is complimentary."}
+                                        : isLP
+                                          ? "Full access price (one-time). Milestone prices are set in the Learning Plan."
+                                          : "Leave blank when access is complimentary."}
                                     </span>
                                   </label>
                                   <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">

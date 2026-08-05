@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 import {
   COURSE_STATUS,
   COURSE_DELIVERY_MODE,
+  COURSE_LEVEL,
   MILESTONE_UNLOCK_TYPE,
   MILESTONE_COMPLETION_RULE,
 } from "@funt-platform/constants";
@@ -14,7 +15,8 @@ const milestoneSchema = new Schema(
     title:                { type: String, required: true, maxlength: 200 },
     description:          { type: String, required: false, default: "" },
     order:                { type: Number, required: true },   // display only — not a FK
-    feeInPaise:           { type: Number, required: true, default: 0, min: 0 },
+    /** Fee stored as template default — actual fee for students is in the batch snapshot */
+    feeInPaise:           { type: Number, required: false, default: 0, min: 0 },
     unlockType:           {
       type: String,
       required: true,
@@ -29,7 +31,8 @@ const milestoneSchema = new Schema(
     },
     unlockAfterDate:      { type: Date,   required: false },
     unlockAfterDays:      { type: Number, required: false, min: 0 },  // relative to enrolledAt
-    paymentDueInDays:     { type: Number, required: false, min: 0 },  // days after eligibility to pay
+    /** Payment due days stored as template default — actual value is in the batch snapshot */
+    paymentDueInDays:     { type: Number, required: false, min: 0 },
     certificateEligible:  { type: Boolean, required: true, default: false },
     active:               { type: Boolean, required: true, default: true },
     /** Chapter orders (moduleOrder values) that belong to this milestone */
@@ -98,7 +101,6 @@ const courseSchema = new Schema(
     /** Marketing/catalog fields — shown on explore pages and marketing website */
     ageGroup: { type: String, required: false, default: "" },
     certification: { type: String, required: false, default: "Certification upon completion" },
-    paymentNote: { type: String, required: false, default: "" },
     /** What students learn — array of short bullet points */
     learningOutcomes: { type: [String], required: false, default: [] },
     /** Course overview / detailed description (rich text) */
@@ -107,10 +109,6 @@ const courseSchema = new Schema(
     cardDescription: { type: String, required: false, default: "" },
     /** "Includes" bullet points shown on the course card */
     cardIncludes: { type: [String], required: false, default: [] },
-    /** Original price in paise (shown with strikethrough on cards) */
-    originalPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
-    /** Current/discounted price in paise */
-    enrollmentPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
     /** Gallery images for course page (3-4 images) */
     courseImages: { type: [String], required: false, default: [] },
     /** Manual FAQs for course page [{question, answer}] */
@@ -123,16 +121,12 @@ const courseSchema = new Schema(
       required: false,
       default: [],
     },
-    /** Pricing tiers: [{label, price, note}] shown on explore page */
-    pricingTiers: {
-      type: [{
-        label: { type: String, required: true },
-        price: { type: String, required: true },
-        note: { type: String, required: false, default: "" },
-        _id: false,
-      }],
+    /** Level tag: JUNIOR, SENIOR, SUPER_SENIOR — manually set or dropdown */
+    levelTag: {
+      type: String,
       required: false,
-      default: [],
+      enum: [...Object.values(COURSE_LEVEL), ""],
+      default: "",
     },
     modules: {
       type: [courseModuleSnapshotSchema],

@@ -539,23 +539,6 @@ export default function EditBatchPage() {
                 </button>
               </>
             )}
-            {!trainerOnly && (
-              <button
-                type="button"
-                onClick={async () => {
-                  const next = !batch.autoEnrollAllStudents;
-                  const res = await api(`/api/batches/${id}`, { method: "PUT", body: JSON.stringify({ autoEnrollAllStudents: next }) });
-                  if (res.success) setBatch((prev) => prev ? { ...prev, autoEnrollAllStudents: next } : prev);
-                }}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 ${
-                  batch.autoEnrollAllStudents
-                    ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {batch.autoEnrollAllStudents ? "Auto-enroll ON" : "Auto-enroll OFF"}
-              </button>
-            )}
             {!trainerOnly && batch.status !== BATCH_STATUS.ARCHIVED && (
               <button
                 type="button"

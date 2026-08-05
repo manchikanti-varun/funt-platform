@@ -33,13 +33,11 @@ interface Course {
   deliveryMode?: string;
   ageGroup?: string;
   certification?: string;
-  paymentNote?: string;
+  levelTag?: string;
   learningOutcomes?: string[];
   overview?: string;
-  pricingTiers?: { label: string; price: string; note?: string }[];
   cardDescription?: string;
   cardIncludes?: string[];
-  originalPriceInPaise?: number;
   courseImages?: string[];
   courseFaqs?: { question: string; answer: string }[];
   isDemo?: boolean;
@@ -207,7 +205,7 @@ export default function ViewCoursePage() {
       </EntityDetailSection>
 
       {/* ── Marketing & Catalog Details ── */}
-      {(course.ageGroup || course.certification || course.paymentNote || course.isDemo) && (
+      {(course.ageGroup || course.certification || course.levelTag || course.isDemo) && (
         <EntityDetailSection title="Course Details">
           <dl className="grid gap-3 sm:grid-cols-2 text-sm">
             {course.ageGroup && (
@@ -222,10 +220,12 @@ export default function ViewCoursePage() {
                 <dd className="mt-0.5 font-medium text-slate-800">{course.certification}</dd>
               </div>
             )}
-            {course.paymentNote && (
+            {course.levelTag && (
               <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Note</dt>
-                <dd className="mt-0.5 font-medium text-slate-800">{course.paymentNote}</dd>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Level</dt>
+                <dd className="mt-0.5 font-medium text-slate-800">
+                  {course.levelTag === 'JUNIOR' ? 'Junior Level' : course.levelTag === 'SENIOR' ? 'Senior Level' : course.levelTag === 'SUPER_SENIOR' ? 'Super Senior Level' : course.levelTag}
+                </dd>
               </div>
             )}
             {course.isDemo && (
@@ -234,12 +234,6 @@ export default function ViewCoursePage() {
                 <dd className="mt-0.5">
                   <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Demo Course (Free)</span>
                 </dd>
-              </div>
-            )}
-            {(course.originalPriceInPaise ?? 0) > 0 && (
-              <div>
-                <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Original Price (strikethrough)</dt>
-                <dd className="mt-0.5 font-medium text-red-500 line-through">₹{((course.originalPriceInPaise ?? 0) / 100).toLocaleString('en-IN')}</dd>
               </div>
             )}
           </dl>
@@ -284,20 +278,6 @@ export default function ViewCoursePage() {
             className={`text-slate-700 ${RICH_TEXT_VIEW_CLASS}`}
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(course.overview) }}
           />
-        </EntityDetailSection>
-      )}
-
-      {course.pricingTiers && course.pricingTiers.length > 0 && (
-        <EntityDetailSection title="Pricing Tiers">
-          <div className="space-y-2">
-            {course.pricingTiers.map((tier, i) => (
-              <div key={i} className="flex items-baseline gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5">
-                <span className="text-sm font-medium text-slate-700">{tier.label}</span>
-                <span className="text-base font-bold text-indigo-700">{tier.price}</span>
-                {tier.note && <span className="text-xs text-slate-500">{tier.note}</span>}
-              </div>
-            ))}
-          </div>
         </EntityDetailSection>
       )}
 

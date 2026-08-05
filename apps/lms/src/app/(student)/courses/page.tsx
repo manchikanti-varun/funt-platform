@@ -33,6 +33,10 @@ interface ExploreCourse {
   enrollmentPriceInPaise?: number;
   courseHeaderImageUrl?: string;
   isDemo?: boolean;
+  deliveryMode?: string;
+  levelTag?: string;
+  milestoneFeesInPaise?: number[];
+  totalMilestoneFeePaise?: number;
 }
 
 function filterBySearch<T>(
@@ -340,34 +344,76 @@ export default function CoursesPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:grid-cols-3">
-                {exploreCentre.map((c) => (
-                  <CourseCard
-                    key={`${c.courseId}::${c.batchId}`}
-                    href={`/courses/${c.courseId}?batchId=${c.batchId}`}
-                    title={c.courseTitle}
-                    chapterCount={c.chapterCount ?? c.moduleCount}
-                    imageUrl={c.courseHeaderImageUrl}
-                    statusLabel={c.isDemo ? "Free demo" : "Learn at Centre"}
-                    isDemo={!!c.isDemo}
-                    footerExtra={
-                      !c.isDemo && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0 ? (
-                        <p className="text-xs text-slate-600">Fee: ₹{(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}</p>
-                      ) : undefined
-                    }
-                    actions={
-                      <div className="flex flex-wrap gap-2">
-                        <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
-                          <Eye className="h-3.5 w-3.5" aria-hidden /> Details
-                        </Link>
-                        {!c.isDemo && (
-                          <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
-                            <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                {exploreCentre.map((c) => {
+                  const isLevelCourse = c.deliveryMode === "LEARNING_PLAN";
+                  const milestonePerMonth = isLevelCourse && Array.isArray(c.milestoneFeesInPaise) && c.milestoneFeesInPaise.length > 0
+                    ? `₹${(c.milestoneFeesInPaise[0] / 100).toLocaleString("en-IN")}`
+                    : null;
+                  const totalMilestoneFee = isLevelCourse && c.totalMilestoneFeePaise && c.totalMilestoneFeePaise > 0
+                    ? `₹${(c.totalMilestoneFeePaise / 100).toLocaleString("en-IN")}`
+                    : null;
+                  const individualFee = !isLevelCourse && c.enrollmentPriceInPaise && c.enrollmentPriceInPaise > 0
+                    ? `₹${(c.enrollmentPriceInPaise / 100).toLocaleString("en-IN")}`
+                    : null;
+
+                  return (
+                    <CourseCard
+                      key={`${c.courseId}::${c.batchId}`}
+                      href={`/courses/${c.courseId}?batchId=${c.batchId}`}
+                      title={c.courseTitle}
+                      chapterCount={c.chapterCount ?? c.moduleCount}
+                      imageUrl={c.courseHeaderImageUrl}
+                      statusLabel={c.isDemo ? "Free demo" : isLevelCourse ? "Level · Per Month" : "Individual · Full Access"}
+                      isDemo={!!c.isDemo}
+                      footerExtra={
+                        !c.isDemo ? (
+                          <div className="space-y-1">
+                            {c.levelTag && (
+                              <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                c.levelTag === 'JUNIOR' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                                c.levelTag === 'SENIOR' ? 'bg-blue-100 text-blue-700 border border-blue-200' :
+                                c.levelTag === 'SUPER_SENIOR' ? 'bg-purple-100 text-purple-700 border border-purple-200' :
+                                'bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}>
+                                {c.levelTag === 'JUNIOR' ? 'Junior' : c.levelTag === 'SENIOR' ? 'Senior' : c.levelTag === 'SUPER_SENIOR' ? 'Super Senior' : c.levelTag}
+                              </span>
+                            )}
+                            {isLevelCourse ? (
+                              <>
+                                {milestonePerMonth && (
+                                  <p className="text-xs font-semibold text-slate-700">
+                                    {milestonePerMonth}<span className="font-normal text-slate-500"> / month (milestone-based)</span>
+                                  </p>
+                                )}
+                                {totalMilestoneFee && (
+                                  <p className="text-[11px] text-slate-500">Total fee: {totalMilestoneFee}</p>
+                                )}
+                              </>
+                            ) : (
+                              individualFee && (
+                                <p className="text-xs font-semibold text-slate-700">
+                                  Fee: {individualFee} <span className="font-normal text-slate-500">(one-time · full course)</span>
+                                </p>
+                              )
+                            )}
+                          </div>
+                        ) : undefined
+                      }
+                      actions={
+                        <div className="flex flex-wrap gap-2">
+                          <Link href={`/courses/${c.courseId}?batchId=${c.batchId}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                            <Eye className="h-3.5 w-3.5" aria-hidden /> Details
                           </Link>
-                        )}
-                      </div>
-                    }
-                  />
-                ))}
+                          {!c.isDemo && (
+                            <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                              <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
+                            </Link>
+                          )}
+                        </div>
+                      }
+                    />
+                  );
+                })}
               </div>
             </>
           )
