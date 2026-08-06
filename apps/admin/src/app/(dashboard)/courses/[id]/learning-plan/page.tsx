@@ -400,8 +400,11 @@ function MilestoneFormPanel({
         </div>
         {form.certificateEligible && (
           <div>
-            <label className="mb-1 block text-xs font-semibold text-slate-700">Certificate Duration Text</label>
+            <label className="mb-1 block text-xs font-semibold text-slate-700">
+              Certificate Duration Text <span className="text-red-500">*</span>
+            </label>
             <input
+              required
               value={form.certificateDurationText}
               onChange={(e) => set("certificateDurationText", e.target.value)}
               className="input w-full max-w-sm"
@@ -582,6 +585,10 @@ export default function LearningPlanPage() {
   async function saveMilestone() {
     if (!form.title.trim()) {
       setFormError("Title is required.");
+      return;
+    }
+    if (form.certificateEligible && !form.certificateDurationText.trim()) {
+      setFormError("Certificate Duration Text is required when milestone certificate is enabled.");
       return;
     }
     const parsedChapters = form.chapterOrders

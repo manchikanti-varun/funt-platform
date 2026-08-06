@@ -188,8 +188,8 @@ export default function ViewCoursePage() {
       </EntityActionsPanel>
 
       {cardImageSrc ? (
-        <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
-          <div className="relative h-32 w-full">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-200 via-slate-100 to-indigo-100">
+          <div className="relative aspect-video w-full">
             <img src={cardImageSrc} alt={`${course.title} card`} className="h-full w-full object-cover" />
           </div>
         </div>

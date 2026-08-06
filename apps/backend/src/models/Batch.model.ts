@@ -44,6 +44,8 @@ const batchMilestoneSchema = new Schema(
     unlockAfterDays:      { type: Number, required: false, min: 0 },
     paymentDueInDays:     { type: Number, required: false, min: 0 },
     certificateEligible:  { type: Boolean, required: true, default: false },
+    /** Duration text shown on milestone certificate */
+    certificateDurationText: { type: String, required: false },
     active:               { type: Boolean, required: true, default: true },
     chapterOrders:        { type: [Number], required: true, default: [] },
     milestoneQuizId:      { type: String, required: false },

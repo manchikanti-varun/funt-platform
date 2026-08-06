@@ -3,7 +3,6 @@ import mongoose, { Schema } from "mongoose";
 import {
   COURSE_STATUS,
   COURSE_DELIVERY_MODE,
-  COURSE_LEVEL,
   MILESTONE_UNLOCK_TYPE,
   MILESTONE_COMPLETION_RULE,
 } from "@funt-platform/constants";
@@ -34,6 +33,8 @@ const milestoneSchema = new Schema(
     /** Payment due days stored as template default — actual value is in the batch snapshot */
     paymentDueInDays:     { type: Number, required: false, min: 0 },
     certificateEligible:  { type: Boolean, required: true, default: false },
+    /** Duration text shown on milestone certificate (e.g. "12+ Hours") */
+    certificateDurationText: { type: String, required: false },
     active:               { type: Boolean, required: true, default: true },
     /** Chapter orders (moduleOrder values) that belong to this milestone */
     chapterOrders:        { type: [Number], required: true, default: [] },
@@ -125,7 +126,6 @@ const courseSchema = new Schema(
     levelTag: {
       type: String,
       required: false,
-      enum: [...Object.values(COURSE_LEVEL), ""],
       default: "",
     },
     modules: {
