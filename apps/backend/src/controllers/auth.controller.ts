@@ -778,11 +778,11 @@ export const googleSignupComplete = asyncHandler(async (req: Request, res: Respo
   }
   if (!address?.trim()) throw new AppError("Address is required", 400);
   if (!schoolName?.trim()) throw new AppError("School / college name is required", 400);
-  // Password is optional for Google sign-up: users may sign in via Google only
-  // and set a password later through the secure set-password flow.
-  if (password != null && password !== "") {
-    validateSignupPassword(password);
+  // Password is required even for Google sign-up
+  if (!password?.trim()) {
+    throw new AppError("Password is required", 400);
   }
+  validateSignupPassword(password);
 
   const validGrades = ["6", "7", "8", "9", "10", "11", "12", "other"];
   const gradeVal = grade?.trim();

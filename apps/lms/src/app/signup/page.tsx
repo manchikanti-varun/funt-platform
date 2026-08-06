@@ -240,23 +240,18 @@ function SignupForm() {
     setStep(2);
   }
 
-  async function handleSubmit(e: React.FormEvent, options?: { skipPassword?: boolean }) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError("");
-    // Google flow allows skipping password entirely (sign in with Google only).
-    // Non-Google flow always requires a password.
-    // If it's a Google flow and the password field is empty, auto-skip validation.
-    const skipPassword = isGoogleFlow && (!!options?.skipPassword || !password.trim());
-    if (!skipPassword) {
-      const err = validatePassword(password);
-      if (err) {
-        setSubmitError(err);
-        return;
-      }
-      if (password !== confirmPassword) {
-        setSubmitError("Passwords do not match");
-        return;
-      }
+    // Password is always required
+    const err = validatePassword(password);
+    if (err) {
+      setSubmitError(err);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setSubmitError("Passwords do not match");
+      return;
     }
     setSubmitting(true);
     const controller = new AbortController();
@@ -280,7 +275,7 @@ function SignupForm() {
           schoolName: schoolName.trim(),
           city: city.trim() || undefined,
           batchId: batchId.trim() || undefined,
-          ...(skipPassword ? {} : { password }),
+          password,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -537,21 +532,16 @@ function SignupForm() {
         ) : (
           <form onSubmit={(e) => handleSubmit(e)} className="mx-auto mt-6 max-w-lg space-y-4 rounded-2xl border border-black/10 bg-white/70 p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-black/55">Security</p>
-            {isGoogleFlow && (
-              <div className="rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-xs text-black/65">
-                Since you signed up with Google, setting a password is optional. You can always set one later from your profile.
-              </div>
-            )}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-black">
-                Password {isGoogleFlow ? "(optional)" : "*"}
+                Password *
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required={!isGoogleFlow}
+                  required
                   className="input w-full pr-10 text-black placeholder:text-black/45"
                   placeholder="Create a strong password"
                 />
@@ -613,13 +603,13 @@ function SignupForm() {
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-black">
-                Confirm Password {isGoogleFlow ? "(optional)" : "*"}
+                Confirm Password *
               </label>
               <input
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required={!isGoogleFlow}
+                required
                 className="input w-full text-black placeholder:text-black/45"
                 placeholder="Re-enter your password"
               />
@@ -637,16 +627,6 @@ function SignupForm() {
                 {submitting ? "Creating account…" : "Create account"}
               </button>
             </div>
-            {isGoogleFlow && (
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={(e) => handleSubmit(e as unknown as React.FormEvent, { skipPassword: true })}
-                className="mt-1 w-full text-sm font-medium text-black/60 underline-offset-4 hover:text-black hover:underline disabled:opacity-60"
-              >
-                Skip — continue with Google only
-              </button>
-            )}
           </form>
         )}
 

@@ -2,12 +2,6 @@ import { z } from "zod";
 import { titleField, urlField } from "./common.schema.js";
 import { COURSE_DELIVERY_MODE } from "@funt-platform/constants";
 
-const pricingTierSchema = z.object({
-  label: z.string().min(1).max(100),
-  price: z.string().min(1).max(50),
-  note: z.string().max(200).optional().default(""),
-});
-
 const chapterSnapshotSchema = z.object({
   originalGlobalModuleId: z.string().min(1),
   title: z.string().min(1).max(300),
@@ -33,19 +27,17 @@ export const createCourseSchema = z.object({
   isDemo: z.boolean().optional().default(false),
   durationText: z.string().max(200).optional().default(""),
   ageGroup: z.string().max(100).optional().default(""),
+  levelTag: z.string().max(50).optional().default(""),
   certification: z.string().max(300).optional().default("Certification upon completion"),
-  paymentNote: z.string().max(500).optional().default(""),
   learningOutcomes: z.array(z.string().max(300)).max(20).optional().default([]),
   overview: z.string().max(100_000).optional().default(""),
   cardDescription: z.string().max(1000).optional().default(""),
   cardIncludes: z.array(z.string().max(300)).max(20).optional().default([]),
-  originalPriceInPaise: z.number().int().min(0).optional().default(0),
   courseImages: z.array(z.string().max(2048)).max(10).optional().default([]),
   courseFaqs: z.array(z.object({
     question: z.string().min(1).max(500),
     answer: z.string().min(1).max(2000),
   })).max(20).optional().default([]),
-  pricingTiers: z.array(pricingTierSchema).max(10).optional().default([]),
   globalChapterIds: z.array(z.string().min(1)).optional(),
   modules: z.array(chapterSnapshotSchema).optional().default([]),
   chapters: z.array(chapterSnapshotSchema).optional().default([]),
