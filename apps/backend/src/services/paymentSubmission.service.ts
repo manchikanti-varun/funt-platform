@@ -169,25 +169,15 @@ export async function getEnrollmentCheckoutPricing(
             studentId, batchId: batchMongoId, courseId, unlocked: true,
           }).select("milestoneId").lean().exec();
           const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
-          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
-          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
           const remaining = Math.max(0, totalMilestonePaise - paidPaise);
-          if (remaining > 0) listPaise = remaining;
+          listPaise = remaining > 0 ? remaining : totalMilestonePaise;
         } else {
           const milestone = allMilestones.find((m) => m.milestoneId === milestoneIdTrimmed);
-          if (milestone && milestone.feeInPaise && milestone.feeInPaise > 0) {
-            listPaise = milestone.feeInPaise;
-          }
-        }
-        // Re-evaluate payment methods based on actual milestone price
-        // (enrollmentPriceInPaise may be 0 for LP courses but milestones have their own fees)
-        if (listPaise >= 100) {
-          const rawAllowed = (snap as { allowedPaymentMethods?: unknown }).allowedPaymentMethods;
-          const methods = normalizeAllowedPaymentMethods(rawAllowed);
-          if (methods.length > 0) {
-            meta.allowedPaymentMethods = methods;
-            meta.allowUpiManual = methods.includes("UPI_MANUAL");
-            meta.allowRazorpayMethod = methods.includes("RAZORPAY");
+          const milestoneFee = (milestone as { feeInPaise?: number } | undefined)?.feeInPaise ?? 0;
+          if (milestoneFee > 0) {
+            listPaise = milestoneFee;
           }
         }
       }
@@ -234,11 +224,23 @@ export async function getCourseEnrollmentCheckoutMeta(batchId: string, courseId:
   if (!snap) throw new AppError("Course not available in this batch", 404);
   const title = (snap as { title?: string }).title ?? "Course";
   const enrollmentPriceInPaise = Math.max(0, Math.floor(Number((snap as { enrollmentPriceInPaise?: number }).enrollmentPriceInPaise ?? 0)));
+
+  // For LP courses, consider milestone fees as the effective price for payment method gating
+  let effectivePriceForGating = enrollmentPriceInPaise;
+  if (effectivePriceForGating < 100) {
+    const { isLearningPlanActive, getMilestonesFromSnapshot } = await import("./learningPlan.service.js");
+    if (isLearningPlanActive(snap)) {
+      const milestones = getMilestonesFromSnapshot(snap);
+      const totalMilestonePaise = milestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+      if (totalMilestonePaise >= 100) effectivePriceForGating = totalMilestonePaise;
+    }
+  }
+
   const rawAllowed = (snap as { allowedPaymentMethods?: unknown }).allowedPaymentMethods;
   const allowedPaymentMethods: CoursePaymentMethodCode[] =
-    enrollmentPriceInPaise >= 100 ? normalizeAllowedPaymentMethods(rawAllowed) : [];
-  const allowUpiManual = enrollmentPriceInPaise >= 100 && allowedPaymentMethods.includes("UPI_MANUAL");
-  const allowRazorpayMethod = enrollmentPriceInPaise >= 100 && allowedPaymentMethods.includes("RAZORPAY");
+    effectivePriceForGating >= 100 ? normalizeAllowedPaymentMethods(rawAllowed) : [];
+  const allowUpiManual = effectivePriceForGating >= 100 && allowedPaymentMethods.includes("UPI_MANUAL");
+  const allowRazorpayMethod = effectivePriceForGating >= 100 && allowedPaymentMethods.includes("RAZORPAY");
   const batchQr = String((batch as { manualUpiQrUrl?: string }).manualUpiQrUrl ?? "").trim();
   const envQr = process.env.PAYMENT_UPI_QR_URL?.trim() ?? "";
   const upiQrUrl = batchQr || envQr;
@@ -276,15 +278,16 @@ export async function createStudentRazorpayOrder(studentId: string, batchIdParam
             studentId, batchId: batchMongoId, courseId, unlocked: true,
           }).select("milestoneId").lean().exec();
           const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
-          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
-          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
           const remaining = Math.max(0, totalMilestonePaise - paidPaise);
-          if (remaining > 0) listPaise = remaining;
+          listPaise = remaining > 0 ? remaining : totalMilestonePaise;
         } else {
           // Single milestone payment: use that milestone's fee
           const milestone = allMilestones.find((m) => m.milestoneId === milestoneIdTrimmed);
-          if (milestone && milestone.feeInPaise && milestone.feeInPaise > 0) {
-            listPaise = milestone.feeInPaise;
+          const milestoneFee = (milestone as { feeInPaise?: number } | undefined)?.feeInPaise ?? 0;
+          if (milestoneFee > 0) {
+            listPaise = milestoneFee;
           }
           // Validate milestone is not already unlocked
           const alreadyUnlocked = await MilestoneProgressModel.findOne({
