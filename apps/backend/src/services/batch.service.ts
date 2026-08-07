@@ -695,7 +695,15 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
         const human = idAliasMap.get(cid) ?? cid;
         s.allowedPaymentMethods = allowedPaymentMethodsForCourse(paise, { mongo, human }, pm);
       } else if (input.courseEnrollmentPrices !== undefined && paise < 100) {
-        s.allowedPaymentMethods = [];
+        // Don't wipe payment methods for LP courses that use milestone-based pricing
+        const lpSnap = s as { deliveryMode?: string; learningPlan?: { enabled?: boolean; milestones?: Array<{ feeInPaise?: number }> } };
+        const hasLpFees = lpSnap.deliveryMode === COURSE_DELIVERY_MODE.LEARNING_PLAN &&
+          lpSnap.learningPlan?.enabled &&
+          Array.isArray(lpSnap.learningPlan.milestones) &&
+          lpSnap.learningPlan.milestones.some((m) => (m.feeInPaise ?? 0) >= 100);
+        if (!hasLpFees) {
+          s.allowedPaymentMethods = [];
+        }
       }
       if (input.courseCompletionRewardCoins !== undefined) {
         const r = lookupInMap(rewardMap as Record<string, unknown>, cid) as number | undefined;
@@ -812,7 +820,21 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
         if (pm !== undefined) {
           allowedPaymentMethods = allowedPaymentMethodsForCourse(paise, { mongo, human }, pm);
         } else if (paise < 100) {
-          allowedPaymentMethods = [];
+          // Don't wipe payment methods for LP courses that use milestone-based pricing
+          const lpSnap = snap as { deliveryMode?: string; learningPlan?: { enabled?: boolean; milestones?: Array<{ feeInPaise?: number }> } };
+          const hasLpFees = lpSnap.deliveryMode === COURSE_DELIVERY_MODE.LEARNING_PLAN &&
+            lpSnap.learningPlan?.enabled &&
+            Array.isArray(lpSnap.learningPlan.milestones) &&
+            lpSnap.learningPlan.milestones.some((m) => (m.feeInPaise ?? 0) >= 100);
+          if (hasLpFees) {
+            // Preserve previous methods or default to both
+            const kept = Array.isArray(prevMethods) && prevMethods.length > 0
+              ? (prevMethods as string[]).filter((x) => x === "UPI_MANUAL" || x === "RAZORPAY") as CoursePaymentMethodCode[]
+              : [];
+            allowedPaymentMethods = kept.length > 0 ? [...new Set(kept)] as CoursePaymentMethodCode[] : ["UPI_MANUAL", "RAZORPAY"];
+          } else {
+            allowedPaymentMethods = [];
+          }
         } else if (Array.isArray(prevMethods) && prevMethods.length > 0) {
           const kept = (prevMethods as string[]).filter((x) => x === "UPI_MANUAL" || x === "RAZORPAY") as CoursePaymentMethodCode[];
           allowedPaymentMethods =
@@ -830,13 +852,29 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
           badgeInput !== undefined
             ? normalizeCompletionBadgeTypes(badgeInput)
             : normalizeCompletionBadgeTypes(oldBadgesByCourseId.get(String(snap.courseId)) ?? []);
-        return applyDemoCourseSnapshotPricing({
+        const finalSnap = applyDemoCourseSnapshotPricing({
           ...snap,
           enrollmentPriceInPaise: paise,
           allowedPaymentMethods,
           completionRewardCoins,
           completionBadgeTypes,
         });
+        // Apply milestone pricing overrides (same as batch create)
+        if (input.courseMilestonePricing) {
+          const mPricing = (input.courseMilestonePricing[mongo] ?? input.courseMilestonePricing[human] ?? {}) as Record<string, { feeInPaise: number; paymentDueInDays?: number }>;
+          if (Object.keys(mPricing).length > 0 && finalSnap.learningPlan?.milestones) {
+            finalSnap.learningPlan.milestones = finalSnap.learningPlan.milestones.map((m: { milestoneId: string; feeInPaise?: number; paymentDueInDays?: number }) => {
+              const override = mPricing[m.milestoneId];
+              if (!override) return m;
+              return {
+                ...m,
+                feeInPaise: override.feeInPaise ?? m.feeInPaise ?? 0,
+                paymentDueInDays: override.paymentDueInDays ?? m.paymentDueInDays,
+              };
+            });
+          }
+        }
+        return finalSnap;
       });
     (doc as { courseSnapshots?: unknown[] }).courseSnapshots = courseSnapshots;
   } else {
