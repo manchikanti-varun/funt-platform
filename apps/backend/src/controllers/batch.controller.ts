@@ -313,17 +313,27 @@ export const syncAllCoursesAllBatches = asyncHandler(async (req: Request, res: R
 
   let synced = 0;
   let failed = 0;
+
+  // Process batches in parallel chunks of 5 for performance
+  const CHUNK_SIZE = 5;
+  const allJobs: Array<{ batchId: string; courseId: string }> = [];
   for (const batch of batches) {
     const snapshots = service.getBatchCourseSnapshots(batch as Parameters<typeof service.getBatchCourseSnapshots>[0]);
     for (const snap of snapshots) {
       const courseId = (snap as { courseId?: string }).courseId;
       if (!courseId) continue;
-      try {
-        await service.syncCourseContentToBatch(String(batch._id), courseId, performedBy);
-        synced++;
-      } catch {
-        failed++;
-      }
+      allJobs.push({ batchId: String(batch._id), courseId });
+    }
+  }
+
+  for (let i = 0; i < allJobs.length; i += CHUNK_SIZE) {
+    const chunk = allJobs.slice(i, i + CHUNK_SIZE);
+    const results = await Promise.allSettled(
+      chunk.map((job) => service.syncCourseContentToBatch(job.batchId, job.courseId, performedBy))
+    );
+    for (const r of results) {
+      if (r.status === "fulfilled") synced++;
+      else failed++;
     }
   }
 

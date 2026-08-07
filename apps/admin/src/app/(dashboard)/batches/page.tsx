@@ -223,7 +223,10 @@ export default function BatchesPage() {
                   disabled={syncing}
                   onClick={async () => {
                     setSyncing(true);
-                    const res = await api<{ synced: number; failed: number }>("/api/batches/sync-all", { method: "POST" });
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout for sync-all
+                    const res = await api<{ synced: number; failed: number }>("/api/batches/sync-all", { method: "POST", signal: controller.signal });
+                    clearTimeout(timeout);
                     setSyncing(false);
                     if (res.success && res.data) {
                       await dialog.alert({ title: "Sync complete", message: `Synced ${res.data.synced} course snapshot(s). ${res.data.failed > 0 ? `${res.data.failed} failed.` : ""}` });
