@@ -315,6 +315,33 @@ export default function EditBatchPage() {
           }
           return next;
         });
+        // Remap milestone pricing keys (courseId::milestoneId)
+        setMilestoneFeeInrByKey((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            for (const key of Object.keys(next)) {
+              if (key.startsWith(`${oldId}::`)) {
+                const newKey = `${newId}::${key.slice(oldId.length + 2)}`;
+                next[newKey] = next[key];
+                delete next[key];
+              }
+            }
+          }
+          return next;
+        });
+        setMilestoneDueDaysByKey((m) => {
+          const next = { ...m };
+          for (const [oldId, newId] of Object.entries(idMap)) {
+            for (const key of Object.keys(next)) {
+              if (key.startsWith(`${oldId}::`)) {
+                const newKey = `${newId}::${key.slice(oldId.length + 2)}`;
+                next[newKey] = next[key];
+                delete next[key];
+              }
+            }
+          }
+          return next;
+        });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -896,7 +923,9 @@ export default function EditBatchPage() {
                         </div>
                         {/* Milestone pricing for LP courses */}
                         {(() => {
-                          const snap = batch?.courseSnapshots?.find((s) => s.courseId === sid) ?? (batch?.courseSnapshot?.courseId === sid ? batch.courseSnapshot : null);
+                          // Find snapshot by sid (could be MongoDB _id or human courseId)
+                          const snap = batch?.courseSnapshots?.find((s) => s.courseId === sid || s.courseId === (courses.find((c) => c.id === sid)?.courseId)) 
+                            ?? (batch?.courseSnapshot?.courseId === sid || batch?.courseSnapshot?.courseId === (courses.find((c) => c.id === sid)?.courseId) ? batch.courseSnapshot : null);
                           const isLP = snap?.deliveryMode === "LEARNING_PLAN" && snap?.learningPlan?.enabled;
                           const milestones = isLP && Array.isArray(snap?.learningPlan?.milestones) ? snap.learningPlan.milestones : [];
                           if (milestones.length === 0) return null;
