@@ -880,12 +880,16 @@ export async function syncCourseContentToBatch(batchId: string, courseId: string
   const batchDoc = await BatchModel.findById(batchMongoId).exec();
   if (!batchDoc) throw new AppError("Batch not found", 404);
 
-  // Find the source course
+  // Find the source course — search by both courseId field and _id to handle any format
   const courseQuery: Record<string, unknown>[] = [{ courseId }];
   if (/^[a-f\d]{24}$/i.test(courseId)) {
     courseQuery.push({ _id: courseId });
   }
-  const course = await CourseModel.findOne({ $or: courseQuery }).lean().exec();
+  let course = await CourseModel.findOne({ $or: courseQuery }).lean().exec();
+  // Fallback: if snapshot stored a MongoDB _id but course uses a different human-readable courseId
+  if (!course && /^[a-f\d]{24}$/i.test(courseId)) {
+    course = await CourseModel.findById(courseId).lean().exec();
+  }
   if (!course) throw new AppError("Course not found", 404);
 
   // Find the snapshot to update — handle both courseSnapshots array and legacy courseSnapshot singular

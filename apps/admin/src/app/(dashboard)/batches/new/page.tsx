@@ -282,6 +282,20 @@ export default function NewBatchPage() {
         delete coins[id];
         const badges = { ...prev.completionBadgesByCourseId };
         delete badges[id];
+        const origPrice = { ...(prev.originalPriceInrByCourseId ?? {}) };
+        delete origPrice[id];
+        const emiText = { ...(prev.emiTextByCourseId ?? {}) };
+        delete emiText[id];
+        // Clean up milestone pricing for this course
+        const mFee = { ...(prev.milestoneFeeInrByKey ?? {}) };
+        const mDue = { ...(prev.milestoneDueDaysByKey ?? {}) };
+        const prefix = `${id}::`;
+        for (const key of Object.keys(mFee)) {
+          if (key.startsWith(prefix)) delete mFee[key];
+        }
+        for (const key of Object.keys(mDue)) {
+          if (key.startsWith(prefix)) delete mDue[key];
+        }
         return {
           ...prev,
           selectedCourseIds: prev.selectedCourseIds.filter((x) => x !== id),
@@ -289,6 +303,10 @@ export default function NewBatchPage() {
           paymentByCourseId: payment,
           completionCoinsByCourseId: coins,
           completionBadgesByCourseId: badges,
+          originalPriceInrByCourseId: origPrice,
+          emiTextByCourseId: emiText,
+          milestoneFeeInrByKey: mFee,
+          milestoneDueDaysByKey: mDue,
         };
       }
       const demo = courseIsDemo(id);

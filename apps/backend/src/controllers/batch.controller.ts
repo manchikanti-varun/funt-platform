@@ -313,6 +313,7 @@ export const syncAllCoursesAllBatches = asyncHandler(async (req: Request, res: R
 
   let synced = 0;
   let failed = 0;
+  let skipped = 0;
 
   // Process batches in parallel chunks of 5 for performance
   const CHUNK_SIZE = 5;
@@ -333,11 +334,16 @@ export const syncAllCoursesAllBatches = asyncHandler(async (req: Request, res: R
     );
     for (const r of results) {
       if (r.status === "fulfilled") synced++;
-      else failed++;
+      else {
+        const msg = r.reason instanceof Error ? r.reason.message : "";
+        // Course not found = orphaned reference, skip silently
+        if (msg.includes("Course not found") || msg.includes("not found")) skipped++;
+        else failed++;
+      }
     }
   }
 
-  successRes(res, { totalBatches: batches.length, synced, failed }, `Synced ${synced} course snapshot(s) across ${batches.length} batch(es)`);
+  successRes(res, { totalBatches: batches.length, synced, failed, skipped }, `Synced ${synced} course snapshot(s). ${skipped > 0 ? `${skipped} skipped (course deleted/missing).` : ""} ${failed > 0 ? `${failed} failed.` : ""}`);
 });
 
 export const archiveBatch = asyncHandler(async (req: Request, res: Response): Promise<void> => {
