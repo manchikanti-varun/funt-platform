@@ -432,7 +432,34 @@ export async function confirmRazorpayCoursePayment(input: {
     throw new AppError("Razorpay is not enabled for this course in your batch.", 400);
   }
 
-  const listPaise = meta.enrollmentPriceInPaise;
+  // ── Resolve milestone-aware price (same as order creation) ──────────────
+  let listPaise = meta.enrollmentPriceInPaise;
+  if (milestoneIdTrimmed) {
+    const { getMilestonesFromSnapshot, isLearningPlanActive } = await import("./learningPlan.service.js");
+    const batch = await findBatchByParam(batchParam);
+    if (batch) {
+      const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+      if (snap && isLearningPlanActive(snap)) {
+        const allMilestones = getMilestonesFromSnapshot(snap);
+        if (milestoneIdTrimmed === "FULL_PROGRAM") {
+          const unlockedMilestones = await MilestoneProgressModel.find({
+            studentId: input.studentId, batchId: batchMongoId, courseId, unlocked: true,
+          }).select("milestoneId").lean().exec();
+          const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, (m as { feeInPaise?: number }).feeInPaise ?? 0), 0);
+          const remaining = Math.max(0, totalMilestonePaise - paidPaise);
+          listPaise = remaining > 0 ? remaining : totalMilestonePaise;
+        } else {
+          const milestone = allMilestones.find((m) => m.milestoneId === milestoneIdTrimmed);
+          const milestoneFee = (milestone as { feeInPaise?: number } | undefined)?.feeInPaise ?? 0;
+          if (milestoneFee > 0) listPaise = milestoneFee;
+        }
+      }
+    }
+  }
+
   const priced = await assertEnrollmentCoupon(input.couponCode, batchMongoId, courseId, input.studentId, listPaise);
   const finalPaise = priced.finalPricePaise;
   const orderContext = await RazorpayOrderContextModel.findOne({ razorpayOrderId: orderId }).lean().exec();
