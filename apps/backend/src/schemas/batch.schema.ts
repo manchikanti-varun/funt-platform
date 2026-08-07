@@ -22,6 +22,8 @@ const createBatchBaseSchema = z.object({
   courseCompletionRewardCoins: z.record(z.string(), z.number()).optional(),
   courseCompletionBadgeTypes: z.record(z.string(), z.array(z.string())).optional(),
   courseOriginalPrices: z.record(z.string(), z.number()).optional(),
+  courseEmiTexts: z.record(z.string(), z.string()).optional(),
+  courseMilestonePricing: z.record(z.string(), z.record(z.string(), z.object({ feeInPaise: z.number(), paymentDueInDays: z.number().optional() }))).optional(),
   courseCardDescriptions: z.record(z.string(), z.string()).optional(),
   courseCardIncludes: z.record(z.string(), z.array(z.string())).optional(),
   courseImages: z.record(z.string(), z.array(z.string())).optional(),
