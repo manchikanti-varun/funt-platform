@@ -386,6 +386,7 @@ function PaymentForm() {
     const qs = new URLSearchParams();
     qs.set("batchId", effectiveBatchId);
     if (appliedCoupon.trim()) qs.set("couponCode", appliedCoupon.trim());
+    if (milestoneId.trim()) qs.set("milestoneId", milestoneId.trim());
     api<CheckoutInfo>(`/api/student/courses/${encodeURIComponent(courseId)}/checkout?${qs.toString()}`)
       .then((r) => {
         if (r.success && r.data) {
@@ -393,7 +394,7 @@ function PaymentForm() {
         } else setCheckoutErr(r.message ?? "Could not load checkout");
       })
       .catch(() => setCheckoutErr("Could not load checkout"));
-  }, [type, effectiveBatchId, courseId, appliedCoupon]);
+  }, [type, effectiveBatchId, courseId, appliedCoupon, milestoneId]);
 
   useEffect(() => {
     loadCheckout();
@@ -812,6 +813,13 @@ function PaymentForm() {
               ? decodeURIComponent(productName)
               : "Order proof."}
         </p>
+        {type === "course" && milestoneId.trim() && (
+          <p className="mt-1 rounded-md bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-800">
+            {milestoneId.trim() === "FULL_PROGRAM"
+              ? "🎯 Full Program Access — all milestones"
+              : `🎯 Milestone payment`}
+          </p>
+        )}
 
         {type === "course" && (
           <p className="mt-3 text-sm text-black/70">

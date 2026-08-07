@@ -153,8 +153,9 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
   const courseId = req.params.courseId?.trim();
   const batchId = typeof req.query.batchId === "string" ? req.query.batchId.trim() : "";
   const couponCode = typeof req.query.couponCode === "string" ? req.query.couponCode : undefined;
+  const milestoneId = typeof req.query.milestoneId === "string" ? req.query.milestoneId.trim() : undefined;
   if (!courseId || !batchId) throw new AppError("courseId and batchId are required", 400);
-  const pricing = await getEnrollmentCheckoutPricing(studentId, batchId, courseId, couponCode);
+  const pricing = await getEnrollmentCheckoutPricing(studentId, batchId, courseId, couponCode, milestoneId);
   let upiQrUrl = pricing.upiQrUrl ?? "";
   let upiQrRefreshAfterSeconds: number | undefined;
   if (pricing.allowUpiManual && pricing.finalPaise > 0) {
@@ -205,9 +206,9 @@ export const getCourseCheckout = asyncHandler(async (req: Request, res: Response
 
 export const postStudentRazorpayOrder = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const studentId = uid(req);
-  const { batchId, courseId, couponCode } = req.body as { batchId?: string; courseId?: string; couponCode?: string };
+  const { batchId, courseId, couponCode, milestoneId } = req.body as { batchId?: string; courseId?: string; couponCode?: string; milestoneId?: string };
   if (!batchId?.trim() || !courseId?.trim()) throw new AppError("batchId and courseId are required", 400);
-  const data = await createStudentRazorpayOrder(studentId, batchId.trim(), courseId.trim(), couponCode);
+  const data = await createStudentRazorpayOrder(studentId, batchId.trim(), courseId.trim(), couponCode, milestoneId?.trim());
   successRes(res, data);
 });
 

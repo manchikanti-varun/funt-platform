@@ -76,6 +76,8 @@ interface LearningPlanStatus {
   nextEligibleMilestoneId?: string;
   totalProgramFeePaise?: number;
   totalProgramFeeRupees?: number;
+  remainingProgramFeePaise?: number;
+  remainingProgramFeeRupees?: number;
   milestones: MilestoneStatus[];
 }
 
@@ -621,15 +623,32 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                       : null;
 
                     if (firstMilestone && firstMilestone.feeInPaise && firstMilestone.feeInPaise > 0) {
+                      const totalLpPaise = lpData!.milestones!.reduce((sum, m) => sum + (m.feeInPaise ?? 0), 0);
                       return (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Choose a payment option</p>
+                          {/* Option 1: Pay milestone */}
                           <Link
-                            href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(firstMilestone.milestoneId)}`}
-                            className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500"
+                            href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(firstMilestone.milestoneId)}`}
+                            className="flex w-full flex-col items-center rounded-xl border-2 border-indigo-200 bg-indigo-50/60 px-5 py-3.5 text-center shadow-sm transition hover:border-indigo-400 hover:bg-indigo-50"
                           >
-                            Pay ₹{(firstMilestone.feeInPaise / 100).toLocaleString("en-IN")} for {firstMilestone.title}
+                            <span className="text-sm font-bold text-indigo-700">
+                              Pay ₹{(firstMilestone.feeInPaise / 100).toLocaleString("en-IN")} for {firstMilestone.title}
+                            </span>
+                            <span className="mt-1 text-[11px] text-slate-500">Pay milestone-by-milestone as you progress</span>
                           </Link>
-                          <p className="text-center text-xs text-slate-500">Milestone-based course — pay as you progress</p>
+                          {/* Option 2: Pay full access */}
+                          {totalLpPaise > firstMilestone.feeInPaise && (
+                            <Link
+                              href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=FULL_PROGRAM`}
+                              className="flex w-full flex-col items-center rounded-xl border-2 border-teal-200 bg-teal-50/60 px-5 py-3.5 text-center shadow-sm transition hover:border-teal-400 hover:bg-teal-50"
+                            >
+                              <span className="text-sm font-bold text-teal-700">
+                                Pay ₹{(totalLpPaise / 100).toLocaleString("en-IN")} for Full Access
+                              </span>
+                              <span className="mt-1 text-[11px] text-slate-500">One-time payment — unlock all milestones</span>
+                            </Link>
+                          )}
                         </div>
                       );
                     }
@@ -744,13 +763,17 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                          learningPlan.milestones.some((ms) => !ms.unlocked) && data?.batchId && (
                           <div className="mb-3 rounded-lg border border-indigo-200 bg-indigo-50 p-2.5">
                             <Link
-                              href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=FULL_PROGRAM`}
+                              href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=FULL_PROGRAM`}
                               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
                             >
                               <CreditCard className="h-4 w-4" />
-                              Buy Full Program — ₹{learningPlan.totalProgramFeeRupees.toLocaleString("en-IN")}
+                              Buy Full Program — ₹{(learningPlan.remainingProgramFeeRupees ?? learningPlan.totalProgramFeeRupees).toLocaleString("en-IN")}
                             </Link>
-                            <p className="mt-1.5 text-center text-[10px] text-indigo-600">Unlock all milestones at once</p>
+                            {learningPlan.remainingProgramFeeRupees && learningPlan.remainingProgramFeeRupees < learningPlan.totalProgramFeeRupees ? (
+                              <p className="mt-1.5 text-center text-[10px] text-indigo-600">Remaining amount (₹{(learningPlan.totalProgramFeeRupees - learningPlan.remainingProgramFeeRupees).toLocaleString("en-IN")} already paid)</p>
+                            ) : (
+                              <p className="mt-1.5 text-center text-[10px] text-indigo-600">Unlock all milestones at once</p>
+                            )}
                           </div>
                         )}
                         <ul className="space-y-1.5">
@@ -773,7 +796,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                               {!ms.unlocked && !ms.locked && ms.eligibleForNext && ms.feeRupees > 0 && data?.batchId && (
                                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                   <Link
-                                    href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
+                                    href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
                                     className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-indigo-500"
                                   >
                                     <CreditCard className="h-3 w-3" />
@@ -867,7 +890,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                                   .map((ms) => (
                                     <div key={ms.milestoneId} className="flex flex-col gap-2">
                                       <Link
-                                        href={`/payment?type=milestone&batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
+                                        href={`/payment?type=course&batchId=${encodeURIComponent(data!.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}`}
                                         className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-indigo-500"
                                       >
                                         Pay ₹{ms.feeRupees.toLocaleString("en-IN")} to unlock {ms.title}

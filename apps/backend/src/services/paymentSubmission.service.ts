@@ -146,12 +146,54 @@ export async function getEnrollmentCheckoutPricing(
   studentId: string,
   batchIdParam: string,
   courseId: string,
-  couponCode?: string
+  couponCode?: string,
+  milestoneId?: string
 ) {
   await assertStudentCanPurchaseCourseEnrollment(studentId, batchIdParam, courseId);
   const batchMongoId = await resolveBatchMongoId(batchIdParam);
   const meta = await getCourseEnrollmentCheckoutMeta(batchIdParam, courseId);
-  const listPaise = meta.enrollmentPriceInPaise;
+  let listPaise = meta.enrollmentPriceInPaise;
+
+  // ── Learning Plan milestone-aware pricing for checkout display ───────────
+  const milestoneIdTrimmed = milestoneId?.trim() || undefined;
+  if (milestoneIdTrimmed) {
+    const { getMilestonesFromSnapshot, isLearningPlanActive } = await import("./learningPlan.service.js");
+    const batch = await findBatchByParam(batchIdParam);
+    if (batch) {
+      const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+      if (snap && isLearningPlanActive(snap)) {
+        const allMilestones = getMilestonesFromSnapshot(snap);
+        if (milestoneIdTrimmed === "FULL_PROGRAM") {
+          const unlockedMilestones = await MilestoneProgressModel.find({
+            studentId, batchId: batchMongoId, courseId, unlocked: true,
+          }).select("milestoneId").lean().exec();
+          const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const remaining = Math.max(0, totalMilestonePaise - paidPaise);
+          if (remaining > 0) listPaise = remaining;
+        } else {
+          const milestone = allMilestones.find((m) => m.milestoneId === milestoneIdTrimmed);
+          if (milestone && milestone.feeInPaise && milestone.feeInPaise > 0) {
+            listPaise = milestone.feeInPaise;
+          }
+        }
+        // Re-evaluate payment methods based on actual milestone price
+        // (enrollmentPriceInPaise may be 0 for LP courses but milestones have their own fees)
+        if (listPaise >= 100) {
+          const rawAllowed = (snap as { allowedPaymentMethods?: unknown }).allowedPaymentMethods;
+          const methods = normalizeAllowedPaymentMethods(rawAllowed);
+          if (methods.length > 0) {
+            meta.allowedPaymentMethods = methods;
+            meta.allowUpiManual = methods.includes("UPI_MANUAL");
+            meta.allowRazorpayMethod = methods.includes("RAZORPAY");
+          }
+        }
+      }
+    }
+  }
+
   let finalPaise = listPaise;
   let discountPaise = 0;
   let couponApplied = false;
@@ -210,18 +252,75 @@ export async function getCourseEnrollmentCheckoutMeta(batchId: string, courseId:
   };
 }
 
-export async function createStudentRazorpayOrder(studentId: string, batchIdParam: string, courseId: string, couponCode?: string) {
+export async function createStudentRazorpayOrder(studentId: string, batchIdParam: string, courseId: string, couponCode?: string, milestoneId?: string) {
   if (!isRazorpayConfigured()) throw new AppError("Online checkout is not configured", 503);
   await assertStudentCanPurchaseCourseEnrollment(studentId, batchIdParam, courseId);
   const batchMongoId = await resolveBatchMongoId(batchIdParam);
   const meta = await getCourseEnrollmentCheckoutMeta(batchIdParam, courseId);
-  if (!meta.allowRazorpayMethod) {
+  let listPaise = meta.enrollmentPriceInPaise;
+  let effectiveAllowRazorpay = meta.allowRazorpayMethod;
+
+  // ── Learning Plan milestone-aware pricing ───────────────────────────────
+  const milestoneIdTrimmed = milestoneId?.trim() || undefined;
+  if (milestoneIdTrimmed) {
+    const { getMilestonesFromSnapshot, isLearningPlanActive } = await import("./learningPlan.service.js");
+    const batch = await findBatchByParam(batchIdParam);
+    if (batch) {
+      const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+      const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+      if (snap && isLearningPlanActive(snap)) {
+        const allMilestones = getMilestonesFromSnapshot(snap);
+        if (milestoneIdTrimmed === "FULL_PROGRAM") {
+          // Full program upgrade: total milestone fees minus already-paid milestones
+          const unlockedMilestones = await MilestoneProgressModel.find({
+            studentId, batchId: batchMongoId, courseId, unlocked: true,
+          }).select("milestoneId").lean().exec();
+          const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const remaining = Math.max(0, totalMilestonePaise - paidPaise);
+          if (remaining > 0) listPaise = remaining;
+        } else {
+          // Single milestone payment: use that milestone's fee
+          const milestone = allMilestones.find((m) => m.milestoneId === milestoneIdTrimmed);
+          if (milestone && milestone.feeInPaise && milestone.feeInPaise > 0) {
+            listPaise = milestone.feeInPaise;
+          }
+          // Validate milestone is not already unlocked
+          const alreadyUnlocked = await MilestoneProgressModel.findOne({
+            studentId, batchId: batchMongoId, courseId, milestoneId: milestoneIdTrimmed, unlocked: true,
+          }).select("_id").lean().exec();
+          if (alreadyUnlocked) {
+            throw new AppError("This milestone is already unlocked. No payment needed.", 400);
+          }
+          // Validate sequence — must be the next eligible milestone
+          const enrollment = await EnrollmentModel.findOne({
+            studentId, batchId: batchMongoId,
+          }).select("nextEligibleMilestoneId").lean().exec();
+          const nextEligible = (enrollment as { nextEligibleMilestoneId?: string } | null)?.nextEligibleMilestoneId;
+          if (nextEligible && nextEligible !== milestoneIdTrimmed) {
+            throw new AppError("You can only pay for the next eligible milestone in sequence.", 400);
+          }
+        }
+        // Re-evaluate payment methods for LP courses where enrollmentPriceInPaise may be 0
+        if (listPaise >= 100 && !effectiveAllowRazorpay) {
+          const rawAllowed = (snap as { allowedPaymentMethods?: unknown }).allowedPaymentMethods;
+          const methods = normalizeAllowedPaymentMethods(rawAllowed);
+          if (methods.includes("RAZORPAY")) {
+            effectiveAllowRazorpay = true;
+          }
+        }
+      }
+    }
+  }
+
+  if (!effectiveAllowRazorpay) {
     throw new AppError("Razorpay checkout is not enabled for this course in your batch.", 400);
   }
-  if (meta.enrollmentPriceInPaise < 100) {
+  if (listPaise < 100) {
     throw new AppError("No Razorpay price is set for this course. Ask your administrator to set an enrollment price on the batch.", 400);
   }
-  const listPaise = meta.enrollmentPriceInPaise;
+
   const priced = await assertEnrollmentCoupon(couponCode, batchMongoId, courseId.trim(), studentId, listPaise);
   const finalPaise = priced.finalPricePaise;
   if (finalPaise < 100) {
@@ -236,6 +335,7 @@ export async function createStudentRazorpayOrder(studentId: string, batchIdParam
     batchId: batchMongoId,
     courseId: courseId.trim(),
     coupon: couponCode?.trim() ? couponCode.trim().toUpperCase() : "",
+    ...(milestoneIdTrimmed ? { milestoneId: milestoneIdTrimmed } : {}),
   });
   await RazorpayOrderContextModel.findOneAndUpdate(
     { razorpayOrderId: orderId },
@@ -247,6 +347,7 @@ export async function createStudentRazorpayOrder(studentId: string, batchIdParam
         expectedAmountPaise: finalPaise,
         expectedCouponCode: couponCode?.trim() ? couponCode.trim().toUpperCase() : undefined,
         expectedCouponId: priced.couponId ?? undefined,
+        milestoneId: milestoneIdTrimmed ?? undefined,
         consumedAt: undefined,
       },
     },
@@ -549,7 +650,28 @@ export async function submitStudentPayment(input: {
     if (!meta.allowUpiManual) {
       throw new AppError("Manual UPI payment is not enabled for this course in your batch.", 400);
     }
-    const listPaise = meta.enrollmentPriceInPaise;
+    let listPaise = meta.enrollmentPriceInPaise;
+    // For FULL_PROGRAM: calculate remaining by subtracting already-unlocked milestone fees
+    if (milestoneIdTrimmed === "FULL_PROGRAM") {
+      const { getMilestonesFromSnapshot, isLearningPlanActive } = await import("./learningPlan.service.js");
+      const batch = await findBatchByParam(batchParam);
+      if (batch) {
+        const { getBatchCourseSnapshots } = await import("./batch.service.js");
+        const snaps = getBatchCourseSnapshots(batch as Parameters<typeof getBatchCourseSnapshots>[0]);
+        const snap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId) ?? snaps[0];
+        if (snap && isLearningPlanActive(snap)) {
+          const allMilestones = getMilestonesFromSnapshot(snap);
+          const unlockedMilestones = await MilestoneProgressModel.find({
+            studentId: input.studentId, batchId: batchMongoId, courseId, unlocked: true,
+          }).select("milestoneId").lean().exec();
+          const unlockedIds = new Set(unlockedMilestones.map((m) => (m as { milestoneId: string }).milestoneId));
+          const totalMilestonePaise = allMilestones.reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const paidPaise = allMilestones.filter((m) => unlockedIds.has(m.milestoneId)).reduce((s, m) => s + Math.max(0, m.feeInPaise ?? 0), 0);
+          const remaining = Math.max(0, totalMilestonePaise - paidPaise);
+          if (remaining > 0) listPaise = remaining;
+        }
+      }
+    }
     const priced = await assertEnrollmentCoupon(input.couponCode, batchMongoId, courseId, input.studentId, listPaise);
     const expectedFinal = priced.finalPricePaise;
     if (listPaise > 0) {

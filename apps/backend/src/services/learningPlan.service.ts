@@ -1187,12 +1187,20 @@ export async function getStudentMilestoneStatus(
   // Calculate total program fee for display
   const totalProgramFeePaise = ordered.reduce((sum, m) => sum + (m.feeInPaise ?? 0), 0);
 
+  // Calculate remaining fee (total minus already-unlocked milestones)
+  const paidMilestoneFeePaise = ordered
+    .filter((m) => !!(progressMap.get(m.milestoneId) as Record<string, unknown> | undefined)?.unlocked)
+    .reduce((sum, m) => sum + (m.feeInPaise ?? 0), 0);
+  const remainingProgramFeePaise = Math.max(0, totalProgramFeePaise - paidMilestoneFeePaise);
+
   return {
     autoLockPreviousMilestones: !!(courseSnapshot as { learningPlan?: { autoLockPreviousMilestones?: boolean } })?.learningPlan?.autoLockPreviousMilestones,
     currentMilestoneId: (enrollment as { currentMilestoneId?: string } | null)?.currentMilestoneId,
     nextEligibleMilestoneId: (enrollment as { nextEligibleMilestoneId?: string } | null)?.nextEligibleMilestoneId,
     totalProgramFeePaise,
     totalProgramFeeRupees: totalProgramFeePaise / 100,
+    remainingProgramFeePaise,
+    remainingProgramFeeRupees: remainingProgramFeePaise / 100,
     milestones: ordered.map((m) => {
       const p = progressMap.get(m.milestoneId) as Record<string, unknown> | undefined;
       return {
