@@ -34,7 +34,7 @@ interface Batch {
   autoEnrollAllStudents?: boolean;
   certificatePriceCoins?: number;
   manualUpiQrUrl?: string;
-  courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[] };
+  courseSnapshot?: { title?: string; courseId?: string; enrollmentPriceInPaise?: number; allowedPaymentMethods?: string[]; completionRewardCoins?: number; completionBadgeTypes?: string[]; deliveryMode?: string; learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; title: string; order: number; feeInPaise?: number; paymentDueInDays?: number }> } };
   courseSnapshots?: Array<{
     title?: string;
     courseId?: string;
@@ -42,6 +42,8 @@ interface Batch {
     allowedPaymentMethods?: string[];
     completionRewardCoins?: number;
     completionBadgeTypes?: string[];
+    deliveryMode?: string;
+    learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; title: string; order: number; feeInPaise?: number; paymentDueInDays?: number }> };
   }>;
 }
 
@@ -113,6 +115,8 @@ export default function EditBatchPage() {
   const [completionBadgesByCourseId, setCompletionBadgesByCourseId] = useState<Record<string, string[]>>({});
   const [emiTextByCourseId, setEmiTextByCourseId] = useState<Record<string, string>>({});
   const [originalPriceInrByCourseId, setOriginalPriceInrByCourseId] = useState<Record<string, string>>({});
+  const [milestoneFeeInrByKey, setMilestoneFeeInrByKey] = useState<Record<string, string>>({});
+  const [milestoneDueDaysByKey, setMilestoneDueDaysByKey] = useState<Record<string, string>>({});
   const [badgeOptions, setBadgeOptions] = useState<BadgeOption[]>([]);
   const [showFallbackQrUploader, setShowFallbackQrUploader] = useState(false);
   const [platformUpiSummary, setPlatformUpiSummary] = useState<PlatformUpiSummaryState>("idle");
@@ -222,6 +226,25 @@ export default function EditBatchPage() {
         }
         setEmiTextByCourseId(emiMap);
         setOriginalPriceInrByCourseId(origPriceMap);
+        // Load milestone pricing from snapshots
+        const mFeeMap: Record<string, string> = {};
+        const mDueMap: Record<string, string> = {};
+        for (const s of snaps) {
+          const cid = s.courseId ?? "";
+          if (!cid) continue;
+          const lp = (s as { learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; feeInPaise?: number; paymentDueInDays?: number }> } }).learningPlan;
+          if (!lp?.enabled || !Array.isArray(lp.milestones)) continue;
+          for (const m of lp.milestones) {
+            const key = `${cid}::${m.milestoneId}`;
+            const feePaise = Math.max(0, Math.floor(Number(m.feeInPaise ?? 0)));
+            mFeeMap[key] = feePaise > 0 ? String(feePaise / 100) : "";
+            if (m.paymentDueInDays && m.paymentDueInDays > 0) {
+              mDueMap[key] = String(m.paymentDueInDays);
+            }
+          }
+        }
+        setMilestoneFeeInrByKey(mFeeMap);
+        setMilestoneDueDaysByKey(mDueMap);
       }
     });
   }, [id]);
@@ -388,6 +411,26 @@ export default function EditBatchPage() {
     }
     if (Object.keys(courseEmiTexts).length > 0) body.courseEmiTexts = courseEmiTexts;
     if (Object.keys(courseOriginalPrices).length > 0) body.courseOriginalPrices = courseOriginalPrices;
+    // Build milestone pricing
+    const courseMilestonePricing: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>> = {};
+    for (const [key, val] of Object.entries(milestoneFeeInrByKey)) {
+      const [cid, mid] = key.split("::");
+      if (!cid || !mid) continue;
+      const rupees = val?.trim() ? Number(val.trim()) : 0;
+      if (!Number.isFinite(rupees) || rupees < 0) continue;
+      if (!courseMilestonePricing[cid]) courseMilestonePricing[cid] = {};
+      courseMilestonePricing[cid][mid] = { feeInPaise: Math.round(rupees * 100) };
+    }
+    for (const [key, val] of Object.entries(milestoneDueDaysByKey)) {
+      const [cid, mid] = key.split("::");
+      if (!cid || !mid) continue;
+      const days = val?.trim() ? Math.floor(Number(val.trim())) : 0;
+      if (!Number.isFinite(days) || days <= 0) continue;
+      if (!courseMilestonePricing[cid]) courseMilestonePricing[cid] = {};
+      if (!courseMilestonePricing[cid][mid]) courseMilestonePricing[cid][mid] = { feeInPaise: 0 };
+      courseMilestonePricing[cid][mid].paymentDueInDays = days;
+    }
+    if (Object.keys(courseMilestonePricing).length > 0) body.courseMilestonePricing = courseMilestonePricing;
     if (upiQrRemoved) body.manualUpiQrUrl = null;
     else if (upiQrNewDataUrl) body.manualUpiQrUrl = upiQrNewDataUrl;
     const res = await api(`/api/batches/${id}`, {
@@ -851,6 +894,52 @@ export default function EditBatchPage() {
                             <span className="text-xs text-slate-500">Auto-award on completion of this course.</span>
                           </div>
                         </div>
+                        {/* Milestone pricing for LP courses */}
+                        {(() => {
+                          const snap = batch?.courseSnapshots?.find((s) => s.courseId === sid) ?? (batch?.courseSnapshot?.courseId === sid ? batch.courseSnapshot : null);
+                          const isLP = snap?.deliveryMode === "LEARNING_PLAN" && snap?.learningPlan?.enabled;
+                          const milestones = isLP && Array.isArray(snap?.learningPlan?.milestones) ? snap.learningPlan.milestones : [];
+                          if (milestones.length === 0) return null;
+                          return (
+                            <div className="w-full border-t border-slate-100 pt-2 mt-1">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">Per-milestone pricing</p>
+                              <div className="space-y-1.5">
+                                {[...milestones].sort((a, b) => a.order - b.order).map((m) => {
+                                  const feeKey = `${sid}::${m.milestoneId}`;
+                                  return (
+                                    <div key={m.milestoneId} className="flex flex-wrap items-center gap-2 rounded border border-slate-100 bg-slate-50 px-2.5 py-1.5">
+                                      <span className="min-w-0 flex-1 text-xs font-medium text-slate-700 truncate">{m.title}</span>
+                                      <label className="flex items-center gap-1 text-[11px] text-slate-500">
+                                        Fee ₹
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          step="1"
+                                          placeholder="0"
+                                          value={milestoneFeeInrByKey[feeKey] ?? ""}
+                                          onChange={(e) => setMilestoneFeeInrByKey((prev) => ({ ...prev, [feeKey]: e.target.value }))}
+                                          className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                                        />
+                                      </label>
+                                      <label className="flex items-center gap-1 text-[11px] text-slate-500">
+                                        Due
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          placeholder="days"
+                                          value={milestoneDueDaysByKey[feeKey] ?? ""}
+                                          onChange={(e) => setMilestoneDueDaysByKey((prev) => ({ ...prev, [feeKey]: e.target.value }))}
+                                          className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+                                        />
+                                        <span>days</span>
+                                      </label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </li>
                     );
                   })}

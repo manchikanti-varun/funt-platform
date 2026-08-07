@@ -610,12 +610,47 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                   </button>
                 ) : null}
                 {data?.batchId && courseId && !data?.hasPendingCoursePayment && data.visibility !== "PRIVATE" ? (
-                  <Link
-                    href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}`}
-                    className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500"
-                  >
-                    Pay for access
-                  </Link>
+                  (() => {
+                    const snapTitle = (data.courseSnapshot as { title?: string })?.title ?? courseTitle;
+                    const snapPrice = (data.courseSnapshot as { enrollmentPriceInPaise?: number })?.enrollmentPriceInPaise ?? 0;
+                    // For Learning Plan courses, show milestone-specific payment
+                    const isLP = data.courseSnapshot && (data.courseSnapshot as { deliveryMode?: string }).deliveryMode === "LEARNING_PLAN";
+                    const lpData = isLP ? (data.courseSnapshot as { learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; title: string; order: number; feeInPaise?: number }> } }).learningPlan : null;
+                    const firstMilestone = lpData?.enabled && Array.isArray(lpData.milestones) && lpData.milestones.length > 0
+                      ? [...lpData.milestones].sort((a, b) => a.order - b.order)[0]
+                      : null;
+
+                    if (firstMilestone && firstMilestone.feeInPaise && firstMilestone.feeInPaise > 0) {
+                      return (
+                        <div className="space-y-2">
+                          <Link
+                            href={`/payment?type=milestone&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(firstMilestone.milestoneId)}`}
+                            className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500"
+                          >
+                            Pay ₹{(firstMilestone.feeInPaise / 100).toLocaleString("en-IN")} for {firstMilestone.title}
+                          </Link>
+                          <p className="text-center text-xs text-slate-500">Milestone-based course — pay as you progress</p>
+                        </div>
+                      );
+                    }
+
+                    // Full access course — show course name and price clearly
+                    return (
+                      <div className="space-y-2">
+                        <Link
+                          href={`/payment?type=course&batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}`}
+                          className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-indigo-500"
+                        >
+                          {snapPrice > 0
+                            ? `Pay ₹${(snapPrice / 100).toLocaleString("en-IN")} for ${snapTitle}`
+                            : `Enroll in ${snapTitle}`}
+                        </Link>
+                        {snapPrice > 0 && (
+                          <p className="text-center text-xs text-slate-500">One-time payment — full course access</p>
+                        )}
+                      </div>
+                    );
+                  })()
                 ) : null}
                 <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/25 px-4 py-4">
                   <p className="text-sm font-semibold text-slate-900">Have a license key?</p>
@@ -742,7 +777,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                                     className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-indigo-500"
                                   >
                                     <CreditCard className="h-3 w-3" />
-                                    {ms.order === 0 ? `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to start` : `Pay ₹${ms.feeRupees.toLocaleString("en-IN")} to unlock`}
+                                    Pay ₹{ms.feeRupees.toLocaleString("en-IN")} for {ms.title}
                                   </Link>
                                   <Link
                                     href={`/request-pay-later?batchId=${encodeURIComponent(data.batchId)}&courseId=${encodeURIComponent(courseId)}&milestoneId=${encodeURIComponent(ms.milestoneId)}&title=${encodeURIComponent(ms.title)}&amount=${ms.feeInPaise}`}

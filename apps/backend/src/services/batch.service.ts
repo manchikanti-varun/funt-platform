@@ -187,6 +187,8 @@ export interface CreateBatchInput {
   /** Per course (keys: course Mongo id or human `courseId`): badge key(s) auto-awarded on completion certificate. */
   courseCompletionBadgeTypes?: Record<string, string | string[]>;
   visibility?: "PUBLIC" | "PRIVATE";
+  /** Per course per milestone pricing: { courseId: { milestoneId: { feeInPaise, paymentDueInDays? } } } */
+  courseMilestonePricing?: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>>;
 }
 
 export interface UpdateBatchInput {
@@ -218,6 +220,8 @@ export interface UpdateBatchInput {
   courseImages?: Record<string, string[]>;
   /** Per course: FAQs [{question, answer}] */
   courseFaqs?: Record<string, Array<{ question: string; answer: string }>>;
+  /** Per course per milestone pricing: { courseId: { milestoneId: { feeInPaise, paymentDueInDays? } } } */
+  courseMilestonePricing?: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>>;
 }
 
 type BatchDoc = {
@@ -410,6 +414,7 @@ export async function createBatch(input: CreateBatchInput) {
   const priceMap = input.courseEnrollmentPrices ?? {};
   const rewardMap = input.courseCompletionRewardCoins ?? {};
   const badgeMap = input.courseCompletionBadgeTypes ?? {};
+  const milestonePricingMap = input.courseMilestonePricing ?? {};
   const allowedBadges = await getAutoAwardableBadgeTypeSet();
   ensureAllowedCompletionBadges(input.courseCompletionBadgeTypes, allowedBadges);
   const courseSnapshots = courses
@@ -428,13 +433,29 @@ export async function createBatch(input: CreateBatchInput) {
       );
       const completionRewardCoins = normalizeCompletionRewardCoins(rewardMap[mongo] ?? rewardMap[human] ?? 0);
       const completionBadgeTypes = normalizeCompletionBadgeTypes(badgeMap[mongo] ?? badgeMap[human] ?? []);
-      return applyDemoCourseSnapshotPricing({
+
+      // Apply per-milestone pricing from batch input
+      const mPricing = milestonePricingMap[mongo] ?? milestonePricingMap[human] ?? {};
+      const finalSnap = applyDemoCourseSnapshotPricing({
         ...snap,
         enrollmentPriceInPaise,
         allowedPaymentMethods,
         completionRewardCoins,
         completionBadgeTypes,
       });
+      // Override milestone fees and payment due days from batch-level input
+      if (Object.keys(mPricing).length > 0 && finalSnap.learningPlan?.milestones) {
+        finalSnap.learningPlan.milestones = finalSnap.learningPlan.milestones.map((m: { milestoneId: string; feeInPaise?: number; paymentDueInDays?: number }) => {
+          const override = mPricing[m.milestoneId];
+          if (!override) return m;
+          return {
+            ...m,
+            feeInPaise: override.feeInPaise ?? m.feeInPaise ?? 0,
+            paymentDueInDays: override.paymentDueInDays ?? m.paymentDueInDays,
+          };
+        });
+      }
+      return finalSnap;
     });
 
   const batchId = await generateBatchId();
@@ -594,7 +615,8 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       input.courseCardDescriptions !== undefined ||
       input.courseCardIncludes !== undefined ||
       input.courseImages !== undefined ||
-      input.courseFaqs !== undefined) &&
+      input.courseFaqs !== undefined ||
+      input.courseMilestonePricing !== undefined) &&
     input.courseIds === undefined
   ) {
     const snaps = JSON.parse(JSON.stringify(getBatchCourseSnapshots(doc as unknown as BatchDoc))) as Array<{
@@ -690,6 +712,24 @@ export async function updateBatch(id: string, input: UpdateBatchInput, performed
       if (imgRaw !== undefined) s.courseImages = Array.isArray(imgRaw) ? imgRaw as string[] : [];
       const faqRaw = lookupInMap(faqMap as Record<string, unknown>, cid);
       if (faqRaw !== undefined) s.courseFaqs = Array.isArray(faqRaw) ? faqRaw as Array<{ question: string; answer: string }> : [];
+      // Apply milestone pricing overrides
+      if (input.courseMilestonePricing) {
+        const mPricing = (lookupInMap(input.courseMilestonePricing as Record<string, unknown>, cid) ?? {}) as Record<string, { feeInPaise: number; paymentDueInDays?: number }>;
+        if (Object.keys(mPricing).length > 0) {
+          const lp = (s as { learningPlan?: { enabled?: boolean; milestones?: Array<{ milestoneId: string; feeInPaise?: number; paymentDueInDays?: number }> } }).learningPlan;
+          if (lp?.milestones && Array.isArray(lp.milestones)) {
+            lp.milestones = lp.milestones.map((m) => {
+              const override = mPricing[m.milestoneId];
+              if (!override) return m;
+              return {
+                ...m,
+                feeInPaise: override.feeInPaise ?? m.feeInPaise ?? 0,
+                paymentDueInDays: override.paymentDueInDays ?? m.paymentDueInDays,
+              };
+            });
+          }
+        }
+      }
     }
     (doc as { courseSnapshots?: unknown[] }).courseSnapshots = snaps;
   }

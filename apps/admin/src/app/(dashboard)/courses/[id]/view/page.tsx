@@ -48,7 +48,6 @@ interface Course {
       milestoneId: string;
       title: string;
       order: number;
-      feeInPaise: number;
       unlockType: string;
       completionRule: string;
       chapterOrders: number[];
@@ -333,12 +332,10 @@ export default function ViewCoursePage() {
         <EntityDetailSection title={`Learning Plan — Milestones (${course.learningPlan.milestones.filter((m) => m.active).length})`}>
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-xs text-slate-600">
-              <span className="rounded-full bg-indigo-100 px-2 py-0.5 font-semibold text-indigo-800">
-                Total: ₹{(course.learningPlan.milestones.filter((m) => m.active).reduce((s, m) => s + m.feeInPaise, 0) / 100).toLocaleString("en-IN")}
-              </span>
               {course.learningPlan.autoLockPreviousMilestones && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-800">Auto-lock previous</span>
               )}
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 font-medium text-slate-600">Pricing is set at batch level</span>
             </div>
             <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/50">
               {[...course.learningPlan.milestones].filter((m) => m.active).sort((a, b) => a.order - b.order).map((m, i) => (
@@ -351,9 +348,6 @@ export default function ViewCoursePage() {
                         {m.chapterOrders.length} chapter{m.chapterOrders.length !== 1 ? "s" : ""} · {m.unlockType.replace(/_/g, " ").toLowerCase()} · {m.completionRule.replace(/_/g, " ").toLowerCase()}
                       </p>
                     </div>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-                      {m.feeInPaise > 0 ? `₹${(m.feeInPaise / 100).toLocaleString("en-IN")}` : "Free"}
-                    </span>
                     <button
                       type="button"
                       onClick={() => {

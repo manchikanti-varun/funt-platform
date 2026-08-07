@@ -123,6 +123,7 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     coursePaymentMethods,
     courseCompletionRewardCoins,
     courseCompletionBadgeTypes,
+    courseMilestonePricing,
     manualUpiQrUrl: manualUpiQrUrlRaw,
     headerImageUrl: headerImageUrlRaw,
     visibility,
@@ -145,6 +146,7 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     headerImageUrl: parseBatchHeaderImageForCreate(headerImageUrlRaw),
     courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
     courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
+    courseMilestonePricing: typeof courseMilestonePricing === "object" && courseMilestonePricing ? courseMilestonePricing : undefined,
     visibility: parseBatchVisibility(visibility),
   });
   successRes(res, data, "Batch created", 201);
@@ -214,6 +216,7 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
     courseCardIncludes,
     courseImages: courseImagesRaw,
     courseFaqs: courseFaqsRaw,
+    courseMilestonePricing,
     visibility,
   } = body;
   const ids = Array.isArray(courseIds) && courseIds.length > 0 ? courseIds : (courseId ? [courseId] : undefined);
@@ -238,6 +241,7 @@ export const updateBatch = asyncHandler(async (req: Request, res: Response): Pro
       courseCardIncludes: courseCardIncludes && typeof courseCardIncludes === "object" ? courseCardIncludes as Record<string, string[]> : undefined,
       courseImages: courseImagesRaw && typeof courseImagesRaw === "object" ? courseImagesRaw as Record<string, string[]> : undefined,
       courseFaqs: courseFaqsRaw && typeof courseFaqsRaw === "object" ? courseFaqsRaw as Record<string, Array<{ question: string; answer: string }>> : undefined,
+      courseMilestonePricing: courseMilestonePricing && typeof courseMilestonePricing === "object" ? courseMilestonePricing as Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>> : undefined,
       visibility: parseBatchVisibility(visibility),
     },
     performedBy

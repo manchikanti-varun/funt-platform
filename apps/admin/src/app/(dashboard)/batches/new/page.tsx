@@ -15,6 +15,14 @@ interface CourseOption {
   isDemo?: boolean;
   deliveryMode?: string;
   headerImageUrl?: string;
+  learningPlan?: {
+    enabled: boolean;
+    milestones: Array<{
+      milestoneId: string;
+      title: string;
+      order: number;
+    }>;
+  };
 }
 
 interface BadgeOption {
@@ -48,6 +56,10 @@ interface BatchDraft {
   paymentByCourseId: Record<string, { upiManual: boolean; razorpay: boolean }>;
   completionCoinsByCourseId: Record<string, string>;
   completionBadgesByCourseId: Record<string, string[]>;
+  /** Per-milestone fee in INR (rupees) keyed by courseId::milestoneId */
+  milestoneFeeInrByKey: Record<string, string>;
+  /** Per-milestone payment due days keyed by courseId::milestoneId */
+  milestoneDueDaysByKey: Record<string, string>;
 }
 
 const INITIAL_DRAFT: BatchDraft = {
@@ -62,6 +74,8 @@ const INITIAL_DRAFT: BatchDraft = {
   paymentByCourseId: {},
   completionCoinsByCourseId: {},
   completionBadgesByCourseId: {},
+  milestoneFeeInrByKey: {},
+  milestoneDueDaysByKey: {},
 };
 import {
   mapPaymentUpiApiToSummary,
@@ -117,10 +131,24 @@ export default function NewBatchPage() {
     paymentByCourseId,
     completionCoinsByCourseId,
     completionBadgesByCourseId,
+    milestoneFeeInrByKey,
+    milestoneDueDaysByKey,
   } = form;
 
   function update<K extends keyof BatchDraft>(field: K, value: BatchDraft[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+  function updateMilestoneFee(courseId: string, milestoneId: string, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      milestoneFeeInrByKey: { ...prev.milestoneFeeInrByKey, [`${courseId}::${milestoneId}`]: value },
+    }));
+  }
+  function updateMilestoneDueDays(courseId: string, milestoneId: string, value: string) {
+    setForm((prev) => ({
+      ...prev,
+      milestoneDueDaysByKey: { ...prev.milestoneDueDaysByKey, [`${courseId}::${milestoneId}`]: value },
+    }));
   }
   function updateEnrollmentInr(id: string, value: string) {
     setForm((prev) => ({
@@ -314,6 +342,26 @@ export default function NewBatchPage() {
         const badges = (completionBadgesByCourseId[sid] ?? []).map((b) => b.trim()).filter(Boolean);
         if (badges.length > 0) courseCompletionBadgeTypes[sid] = badges;
       }
+      // Build milestone pricing map: { courseId: { milestoneId: { feeInPaise, paymentDueInDays } } }
+      const courseMilestonePricing: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>> = {};
+      for (const [key, val] of Object.entries(milestoneFeeInrByKey)) {
+        const [cid, mid] = key.split("::");
+        if (!cid || !mid) continue;
+        const rupees = val?.trim() ? Number(val.trim()) : 0;
+        if (!Number.isFinite(rupees) || rupees < 0) continue;
+        if (!courseMilestonePricing[cid]) courseMilestonePricing[cid] = {};
+        courseMilestonePricing[cid][mid] = { feeInPaise: Math.round(rupees * 100) };
+      }
+      for (const [key, val] of Object.entries(milestoneDueDaysByKey)) {
+        const [cid, mid] = key.split("::");
+        if (!cid || !mid) continue;
+        const days = val?.trim() ? Math.floor(Number(val.trim())) : 0;
+        if (!Number.isFinite(days) || days <= 0) continue;
+        if (!courseMilestonePricing[cid]) courseMilestonePricing[cid] = {};
+        if (!courseMilestonePricing[cid][mid]) courseMilestonePricing[cid][mid] = { feeInPaise: 0 };
+        courseMilestonePricing[cid][mid].paymentDueInDays = days;
+      }
+
       const res = await api("/api/batches", {
         method: "POST",
         body: JSON.stringify({
@@ -329,6 +377,7 @@ export default function NewBatchPage() {
           ...(manualUpiQrDataUrl.trim() ? { manualUpiQrUrl: manualUpiQrDataUrl.trim() } : {}),
           ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
           ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
+          ...(Object.keys(courseMilestonePricing).length > 0 ? { courseMilestonePricing } : {}),
         }),
       });
       if (!res.success) {
@@ -578,9 +627,56 @@ export default function NewBatchPage() {
                             {checked ? (
                               <div className="border-t border-slate-100 pt-3 space-y-3">
                                 {isLP ? (
-                                  <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
-                                    <p className="text-xs font-semibold text-indigo-800">Learning Plan Course (Milestone-based)</p>
-                                    <p className="mt-1 text-xs text-indigo-700">Students pay per milestone. Set the full access price above for students who want to pay upfront. Milestone-level fees and payment due days are configured in the batch milestone pricing (coming from course learning plan).</p>
+                                  <div className="space-y-3">
+                                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
+                                      <p className="text-xs font-semibold text-indigo-800">Learning Plan Course (Milestone-based)</p>
+                                      <p className="mt-1 text-xs text-indigo-700">Set the full access price above (one-time buy-all). Set per-milestone fees below.</p>
+                                    </div>
+                                    {/* Milestone pricing */}
+                                    {(() => {
+                                      const course = courses.find((x) => x.id === c.id);
+                                      const milestones = course?.learningPlan?.milestones ?? [];
+                                      if (milestones.length === 0) return (
+                                        <p className="text-xs text-slate-500">No milestones configured. Add milestones in the course learning plan first.</p>
+                                      );
+                                      return (
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+                                          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Per-milestone pricing</p>
+                                          {[...milestones].sort((a, b) => a.order - b.order).map((m) => {
+                                            const feeKey = `${c.id}::${m.milestoneId}`;
+                                            return (
+                                              <div key={m.milestoneId} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2">
+                                                <span className="min-w-0 flex-1 text-xs font-medium text-slate-700 truncate">{m.title}</span>
+                                                <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                                  Fee ₹
+                                                  <input
+                                                    type="number"
+                                                    min={0}
+                                                    step="1"
+                                                    placeholder="0"
+                                                    value={milestoneFeeInrByKey[feeKey] ?? ""}
+                                                    onChange={(e) => updateMilestoneFee(c.id, m.milestoneId, e.target.value)}
+                                                    className="w-20 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                                                  />
+                                                </label>
+                                                <label className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                                                  Due
+                                                  <input
+                                                    type="number"
+                                                    min={1}
+                                                    placeholder="days"
+                                                    value={milestoneDueDaysByKey[feeKey] ?? ""}
+                                                    onChange={(e) => updateMilestoneDueDays(c.id, m.milestoneId, e.target.value)}
+                                                    className="w-14 rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                                                  />
+                                                  <span>days</span>
+                                                </label>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 ) : (
                                   <>
