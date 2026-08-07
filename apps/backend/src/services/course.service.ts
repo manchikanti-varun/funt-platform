@@ -510,18 +510,18 @@ export async function updateCourse(id: string, input: UpdateCourseInput, perform
   if (input.isDemo !== undefined) {
     (doc as { isDemo?: boolean }).isDemo = !!input.isDemo;
   }
-  if (input.ageGroup !== undefined) (doc as unknown as Record<string, unknown>).ageGroup = input.ageGroup.trim();
-  if (input.certification !== undefined) (doc as unknown as Record<string, unknown>).certification = input.certification.trim();
-  if (input.levelTag !== undefined) (doc as unknown as Record<string, unknown>).levelTag = input.levelTag.trim();
-  if (input.learningOutcomes !== undefined) (doc as unknown as Record<string, unknown>).learningOutcomes = input.learningOutcomes;
-  if (input.overview !== undefined) (doc as unknown as Record<string, unknown>).overview = input.overview.trim();
-  if (input.cardDescription !== undefined) (doc as unknown as Record<string, unknown>).cardDescription = input.cardDescription.trim();
-  if (input.cardIncludes !== undefined) (doc as unknown as Record<string, unknown>).cardIncludes = input.cardIncludes;
-  if (input.courseImages !== undefined) (doc as unknown as Record<string, unknown>).courseImages = input.courseImages;
-  if (input.courseFaqs !== undefined) (doc as unknown as Record<string, unknown>).courseFaqs = input.courseFaqs;
+  if (input.ageGroup !== undefined) doc.set("ageGroup", input.ageGroup.trim());
+  if (input.certification !== undefined) doc.set("certification", input.certification.trim());
+  if (input.levelTag !== undefined) doc.set("levelTag", input.levelTag.trim());
+  if (input.learningOutcomes !== undefined) doc.set("learningOutcomes", input.learningOutcomes);
+  if (input.overview !== undefined) doc.set("overview", input.overview.trim());
+  if (input.cardDescription !== undefined) doc.set("cardDescription", input.cardDescription.trim());
+  if (input.cardIncludes !== undefined) doc.set("cardIncludes", input.cardIncludes);
+  if (input.courseImages !== undefined) doc.set("courseImages", input.courseImages);
+  if (input.courseFaqs !== undefined) doc.set("courseFaqs", input.courseFaqs);
   if ("enableWatermark" in input) {
     const wm = input.enableWatermark;
-    (doc as unknown as Record<string, unknown>).enableWatermark = wm === true ? true : wm === false ? false : null;
+    doc.set("enableWatermark", wm === true ? true : wm === false ? false : null);
   }
   if (input.moderatorIds !== undefined) {
     doc.moderatorIds = Array.isArray(input.moderatorIds)
