@@ -758,34 +758,35 @@ export default function NewBatchPage() {
                                           : "Leave blank when access is complimentary."}
                                     </span>
                                   </label>
-                                  {!demo && (
-                                    <>
-                                      <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                        MRP ₹
-                                        <input
-                                          type="number"
-                                          min={0}
-                                          step="1"
-                                          placeholder="Strikethrough"
-                                          value={originalPriceInrByCourseId[c.id] ?? ""}
-                                          onChange={(e) => setForm((prev) => ({ ...prev, originalPriceInrByCourseId: { ...prev.originalPriceInrByCourseId, [c.id]: e.target.value } }))}
-                                          className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
-                                        />
-                                      </label>
-                                      <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                                        EMI text
-                                        <input
-                                          type="text"
-                                          placeholder="EMI starts at ₹..."
-                                          value={emiTextByCourseId[c.id] ?? ""}
-                                          onChange={(e) => setForm((prev) => ({ ...prev, emiTextByCourseId: { ...prev.emiTextByCourseId, [c.id]: e.target.value } }))}
-                                          className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
-                                        />
-                                      </label>
-                                    </>
-                                  )}
                                 </div>
                                   </>
+                                )}
+                                {/* MRP, EMI, Completion coins, badges, payment controls — shown for all course types */}
+                                {!demo && (
+                                  <div className="flex flex-wrap items-center gap-3">
+                                    <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                      MRP ₹
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        step="1"
+                                        placeholder="Strikethrough"
+                                        value={originalPriceInrByCourseId[c.id] ?? ""}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, originalPriceInrByCourseId: { ...(prev.originalPriceInrByCourseId ?? {}), [c.id]: e.target.value } }))}
+                                        className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                      />
+                                    </label>
+                                    <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                      EMI text
+                                      <input
+                                        type="text"
+                                        placeholder="EMI starts at ₹..."
+                                        value={emiTextByCourseId[c.id] ?? ""}
+                                        onChange={(e) => setForm((prev) => ({ ...prev, emiTextByCourseId: { ...(prev.emiTextByCourseId ?? {}), [c.id]: e.target.value } }))}
+                                        className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                      />
+                                    </label>
+                                  </div>
                                 )}
                                 {/* Completion coins, badges, payment controls — shown for all course types */}
                                 <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
