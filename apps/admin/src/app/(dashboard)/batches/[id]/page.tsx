@@ -702,36 +702,41 @@ export default function EditBatchPage() {
                     >
                       <input
                         type="checkbox"
-                        checked={selectedCourseIds.includes(c.id)}
+                        checked={selectedCourseIds.includes(c.id) || selectedCourseIds.includes(c.courseId ?? "")}
                         onChange={() => {
                           setSelectedCourseIds((prev) => {
-                            if (!prev.includes(c.id) && !String(c.headerImageUrl ?? "").trim()) {
+                            const isSelected = prev.includes(c.id) || prev.includes(c.courseId ?? "");
+                            if (!isSelected && !String(c.headerImageUrl ?? "").trim()) {
                               setError("This course has no card image. Add one on the course before adding it to a batch.");
                               return prev;
                             }
                             setError("");
-                            if (prev.includes(c.id)) {
+                            if (isSelected) {
                               setEnrollmentInrByCourseId((m) => {
                                 const next = { ...m };
                                 delete next[c.id];
+                                if (c.courseId) delete next[c.courseId];
                                 return next;
                               });
                               setPaymentByCourseId((m) => {
                                 const next = { ...m };
                                 delete next[c.id];
+                                if (c.courseId) delete next[c.courseId];
                                 return next;
                               });
                               setCompletionCoinsByCourseId((m) => {
                                 const next = { ...m };
                                 delete next[c.id];
+                                if (c.courseId) delete next[c.courseId];
                                 return next;
                               });
                               setCompletionBadgesByCourseId((m) => {
                                 const next = { ...m };
                                 delete next[c.id];
+                                if (c.courseId) delete next[c.courseId];
                                 return next;
                               });
-                              return prev.filter((x) => x !== c.id);
+                              return prev.filter((x) => x !== c.id && x !== (c.courseId ?? ""));
                             }
                             setEnrollmentInrByCourseId((m) => ({
                               ...m,

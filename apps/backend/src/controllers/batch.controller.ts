@@ -124,6 +124,8 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     courseCompletionRewardCoins,
     courseCompletionBadgeTypes,
     courseMilestonePricing,
+    courseOriginalPrices,
+    courseEmiTexts,
     manualUpiQrUrl: manualUpiQrUrlRaw,
     headerImageUrl: headerImageUrlRaw,
     visibility,
@@ -147,6 +149,8 @@ export const createBatch = asyncHandler(async (req: Request, res: Response): Pro
     courseCompletionRewardCoins: parseCourseCompletionRewardCoins(courseCompletionRewardCoins),
     courseCompletionBadgeTypes: parseCourseCompletionBadgeTypes(courseCompletionBadgeTypes),
     courseMilestonePricing: typeof courseMilestonePricing === "object" && courseMilestonePricing ? courseMilestonePricing : undefined,
+    courseOriginalPrices: courseOriginalPrices && typeof courseOriginalPrices === "object" ? courseOriginalPrices as Record<string, number> : undefined,
+    courseEmiTexts: courseEmiTexts && typeof courseEmiTexts === "object" ? courseEmiTexts as Record<string, string> : undefined,
     visibility: parseBatchVisibility(visibility),
   });
   successRes(res, data, "Batch created", 201);

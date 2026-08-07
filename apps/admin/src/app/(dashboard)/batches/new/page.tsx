@@ -60,6 +60,10 @@ interface BatchDraft {
   milestoneFeeInrByKey: Record<string, string>;
   /** Per-milestone payment due days keyed by courseId::milestoneId */
   milestoneDueDaysByKey: Record<string, string>;
+  /** Original/MRP price per course (shown as strikethrough) */
+  originalPriceInrByCourseId: Record<string, string>;
+  /** EMI display text per course */
+  emiTextByCourseId: Record<string, string>;
 }
 
 const INITIAL_DRAFT: BatchDraft = {
@@ -76,6 +80,8 @@ const INITIAL_DRAFT: BatchDraft = {
   completionBadgesByCourseId: {},
   milestoneFeeInrByKey: {},
   milestoneDueDaysByKey: {},
+  originalPriceInrByCourseId: {},
+  emiTextByCourseId: {},
 };
 import {
   mapPaymentUpiApiToSummary,
@@ -133,6 +139,8 @@ export default function NewBatchPage() {
     completionBadgesByCourseId,
     milestoneFeeInrByKey = {},
     milestoneDueDaysByKey = {},
+    originalPriceInrByCourseId = {},
+    emiTextByCourseId = {},
   } = form;
 
   function update<K extends keyof BatchDraft>(field: K, value: BatchDraft[K]) {
@@ -342,6 +350,18 @@ export default function NewBatchPage() {
         const badges = (completionBadgesByCourseId[sid] ?? []).map((b) => b.trim()).filter(Boolean);
         if (badges.length > 0) courseCompletionBadgeTypes[sid] = badges;
       }
+      // Build original prices and EMI text maps
+      const courseOriginalPrices: Record<string, number> = {};
+      const courseEmiTexts: Record<string, string> = {};
+      for (const sid of selectedCourseIds) {
+        if (courseIsDemo(sid)) continue;
+        const origVal = (originalPriceInrByCourseId[sid] ?? "").trim();
+        const origRupees = origVal ? Number(origVal) : 0;
+        if (Number.isFinite(origRupees) && origRupees > 0) courseOriginalPrices[sid] = origRupees;
+        const emiVal = (emiTextByCourseId[sid] ?? "").trim();
+        if (emiVal) courseEmiTexts[sid] = emiVal;
+      }
+
       // Build milestone pricing map: { courseId: { milestoneId: { feeInPaise, paymentDueInDays } } }
       const courseMilestonePricing: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>> = {};
       for (const [key, val] of Object.entries(milestoneFeeInrByKey)) {
@@ -378,6 +398,8 @@ export default function NewBatchPage() {
           ...(selectedCourseIds.length > 0 ? { courseCompletionRewardCoins } : {}),
           ...(Object.keys(courseCompletionBadgeTypes).length > 0 ? { courseCompletionBadgeTypes } : {}),
           ...(Object.keys(courseMilestonePricing).length > 0 ? { courseMilestonePricing } : {}),
+          ...(Object.keys(courseOriginalPrices).length > 0 ? { courseOriginalPrices } : {}),
+          ...(Object.keys(courseEmiTexts).length > 0 ? { courseEmiTexts } : {}),
         }),
       });
       if (!res.success) {
@@ -718,6 +740,32 @@ export default function NewBatchPage() {
                                           : "Leave blank when access is complimentary."}
                                     </span>
                                   </label>
+                                  {!demo && (
+                                    <>
+                                      <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                        MRP ₹
+                                        <input
+                                          type="number"
+                                          min={0}
+                                          step="1"
+                                          placeholder="Strikethrough"
+                                          value={originalPriceInrByCourseId[c.id] ?? ""}
+                                          onChange={(e) => setForm((prev) => ({ ...prev, originalPriceInrByCourseId: { ...prev.originalPriceInrByCourseId, [c.id]: e.target.value } }))}
+                                          className="w-28 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                        />
+                                      </label>
+                                      <label className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                                        EMI text
+                                        <input
+                                          type="text"
+                                          placeholder="EMI starts at ₹..."
+                                          value={emiTextByCourseId[c.id] ?? ""}
+                                          onChange={(e) => setForm((prev) => ({ ...prev, emiTextByCourseId: { ...prev.emiTextByCourseId, [c.id]: e.target.value } }))}
+                                          className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-900"
+                                        />
+                                      </label>
+                                    </>
+                                  )}
                                 </div>
                                   </>
                                 )}

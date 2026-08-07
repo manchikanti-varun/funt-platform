@@ -81,6 +81,8 @@ const courseSnapshotSchema = new Schema(
     cardIncludes: { type: [String], required: false, default: [] },
     /** Original price in paise (shown with strikethrough) — set at batch level */
     originalPriceInPaise: { type: Number, required: false, default: 0, min: 0 },
+    /** EMI display text (e.g. "EMI starts at ₹1,000") */
+    emiStartsAtText: { type: String, required: false, default: "" },
     /** Gallery images for course page (3-4 images, URLs) */
     courseImages: { type: [String], required: false, default: [] },
     /** Manual FAQs for course page */

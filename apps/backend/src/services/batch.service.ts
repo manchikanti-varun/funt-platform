@@ -189,6 +189,10 @@ export interface CreateBatchInput {
   visibility?: "PUBLIC" | "PRIVATE";
   /** Per course per milestone pricing: { courseId: { milestoneId: { feeInPaise, paymentDueInDays? } } } */
   courseMilestonePricing?: Record<string, Record<string, { feeInPaise: number; paymentDueInDays?: number }>>;
+  /** Per course: original price in rupees for strikethrough display */
+  courseOriginalPrices?: Record<string, number>;
+  /** Per course: EMI "starts at" display text */
+  courseEmiTexts?: Record<string, string>;
 }
 
 export interface UpdateBatchInput {
@@ -455,6 +459,13 @@ export async function createBatch(input: CreateBatchInput) {
           };
         });
       }
+      // Apply original price and EMI text
+      const origPriceMap = input.courseOriginalPrices ?? {};
+      const emiMap = input.courseEmiTexts ?? {};
+      const origRupees = origPriceMap[mongo] ?? origPriceMap[human] ?? 0;
+      if (origRupees > 0) (finalSnap as { originalPriceInPaise?: number }).originalPriceInPaise = Math.round(origRupees * 100);
+      const emiText = (emiMap[mongo] ?? emiMap[human] ?? "").trim();
+      if (emiText) (finalSnap as { emiStartsAtText?: string }).emiStartsAtText = emiText;
       return finalSnap;
     });
 
