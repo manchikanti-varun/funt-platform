@@ -131,8 +131,8 @@ export default function NewBatchPage() {
     paymentByCourseId,
     completionCoinsByCourseId,
     completionBadgesByCourseId,
-    milestoneFeeInrByKey,
-    milestoneDueDaysByKey,
+    milestoneFeeInrByKey = {},
+    milestoneDueDaysByKey = {},
   } = form;
 
   function update<K extends keyof BatchDraft>(field: K, value: BatchDraft[K]) {
