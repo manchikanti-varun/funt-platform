@@ -7,3 +7,4 @@ export { ExtendModal } from "./ExtendModal";
 export { ExperienceModal } from "./ExperienceModal";
 export { DeleteModal } from "./DeleteModal";
 export { LetterPreviewPanel } from "./LetterPreviewPanel";
+export { LetterEditModal } from "./LetterEditModal";

@@ -204,7 +204,8 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
 
     // Greeting
     doc.font("Helvetica").fontSize(FONT_BODY)
-      .text(`Dear ${data.recipientName}`, PAGE_MARGIN);
+      .text(`Dear `, PAGE_MARGIN, doc.y, { continued: true });
+    doc.font("Helvetica-Bold").text(data.recipientName);
     doc.moveDown(1.2);
 
     // Paragraph 1: Offer
@@ -314,7 +315,8 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     doc.moveDown(1.5);
 
     // Name
-    doc.font("Helvetica").text(`Name: ${data.recipientName}`, PAGE_MARGIN);
+    doc.font("Helvetica").text("Name: ", PAGE_MARGIN, doc.y, { continued: true });
+    doc.font("Helvetica-Bold").text(data.recipientName);
     doc.moveDown(1.2);
 
     // Signature lines

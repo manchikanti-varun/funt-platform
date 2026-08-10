@@ -362,7 +362,10 @@ export async function revokeLetter(letterId: string, revokedBy: string, reason: 
 // ─── Update (only DRAFT or REJECTED_BY_SA) ───────────────────────────────────
 
 export async function updateLetter(letterMongoId: string, input: UpdateLetterInput, updatedBy: string) {
-  const letter = await LetterModel.findById(letterMongoId).exec();
+  let letter = await LetterModel.findById(letterMongoId).exec();
+  if (!letter && !/^[a-f\d]{24}$/i.test(letterMongoId)) {
+    letter = await LetterModel.findOne({ letterId: letterMongoId.trim().toUpperCase() }).exec();
+  }
   if (!letter) throw new AppError("Letter not found", 404);
 
   // Allow editing in DRAFT, REJECTED, or already-issued states (Super Admin can modify issued letters)
@@ -647,8 +650,12 @@ function formatLetterResponse(letter: unknown) {
     endDate: doc.endDate ?? null,
     duration: doc.duration ?? null,
     stipend: doc.stipend ?? null,
+    ctc: doc.ctc ?? null,
+    location: doc.location ?? null,
     reportingTo: doc.reportingTo ?? null,
     responsibilities: doc.responsibilities ?? null,
+    timings: doc.timings ?? null,
+    termsAndConditions: doc.termsAndConditions ?? null,
     dutiesDescription: doc.dutiesDescription ?? null,
     performanceSummary: doc.performanceSummary ?? null,
     signatoryName: doc.signatoryName ?? null,

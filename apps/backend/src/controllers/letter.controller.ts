@@ -43,6 +43,8 @@ export const createLetter = asyncHandler(async (req: Request, res: Response): Pr
     location: body.location,
     reportingTo: body.reportingTo,
     responsibilities: body.responsibilities,
+    timings: body.timings,
+    termsAndConditions: body.termsAndConditions,
     performanceSummary: body.performanceSummary,
     dutiesDescription: body.dutiesDescription,
     signatoryName: body.signatoryName,

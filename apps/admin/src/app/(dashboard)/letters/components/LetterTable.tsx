@@ -2,7 +2,7 @@
 
 import {
   Download, Send, ShieldCheck, XCircle, UserCheck, UserX,
-  Ban, CalendarPlus, Award, FileText, Eye, Trash2,
+  Ban, CalendarPlus, Award, FileText, Eye, Trash2, Pencil,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import type { LetterRow } from "../types";
@@ -15,11 +15,12 @@ interface Props {
   onExtend: (id: string) => void;
   onExperience: (id: string) => void;
   onPreview: (id: string) => void;
+  onEdit: (letter: LetterRow) => void;
   onDelete: (letter: LetterRow) => void;
   onRejectApproval: (id: string) => void;
 }
 
-export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onDelete, onRejectApproval }: Props) {
+export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExtend, onExperience, onPreview, onEdit, onDelete, onRejectApproval }: Props) {
   return (
     <div className="panel-data overflow-x-auto">
       <table aria-label="Letters" className="w-full min-w-[900px] text-sm">
@@ -64,6 +65,13 @@ export function LetterTable({ letters, onAction, onDownloadPdf, onRevoke, onExte
                   <ActionBtn onClick={() => onPreview(l._id || l.letterId)} title="Preview" cls="border-slate-200 text-slate-500 hover:bg-slate-100">
                     <Eye className="h-3.5 w-3.5" />
                   </ActionBtn>
+
+                  {/* Edit — available for all non-terminal statuses */}
+                  {l.status !== "REVOKED" && l.status !== "WITHDRAWN" && l.status !== "EXPIRED" && (
+                    <ActionBtn onClick={() => onEdit(l)} title="Edit Letter" cls="border-amber-200 text-amber-600 hover:bg-amber-50">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </ActionBtn>
+                  )}
 
                   {/* Download PDF */}
                   {l.letterId && (

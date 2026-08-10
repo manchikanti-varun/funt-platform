@@ -17,6 +17,7 @@ import { ExtendModal } from "./components/ExtendModal";
 import { ExperienceModal } from "./components/ExperienceModal";
 import { DeleteModal } from "./components/DeleteModal";
 import { LetterPreviewPanel } from "./components/LetterPreviewPanel";
+import { LetterEditModal } from "./components/LetterEditModal";
 import type { LetterRow } from "./types";
 
 const STATUS_OPTIONS = [
@@ -53,6 +54,7 @@ export default function LettersPage() {
   const [expId, setExpId] = useState("");
   const [previewId, setPreviewId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<LetterRow | null>(null);
+  const [editTarget, setEditTarget] = useState<LetterRow | null>(null);
 
   const load = useCallback(async () => {
     const qs = new URLSearchParams();
@@ -243,6 +245,7 @@ export default function LettersPage() {
           onExtend={setExtendId}
           onExperience={setExpId}
           onPreview={setPreviewId}
+          onEdit={setEditTarget}
           onDelete={setDeleteTarget}
           onRejectApproval={handleRejectApproval}
         />
@@ -286,6 +289,13 @@ export default function LettersPage() {
           letterId={previewId}
           onClose={() => setPreviewId("")}
           onDownloadPdf={handleDownloadPdf}
+        />
+      )}
+      {editTarget && (
+        <LetterEditModal
+          letterId={editTarget._id || editTarget.letterId}
+          onSaved={load}
+          onClose={() => setEditTarget(null)}
         />
       )}
     </AppPageShell>
