@@ -122,7 +122,7 @@ async function generateQrBuffer(url: string): Promise<Buffer> {
 }
 
 function getVerifyUrl(letterId: string): string {
-  const base = (process.env.VERIFY_PUBLIC_URL || "https://learn.funt.in").replace(/\/+$/, "");
+  const base = (process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "");
   return `${base}/verify-letter?id=${encodeURIComponent(letterId)}`;
 }
 
