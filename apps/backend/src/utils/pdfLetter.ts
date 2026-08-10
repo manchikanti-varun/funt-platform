@@ -97,6 +97,7 @@ export interface OfferLetterData {
   signatoryName?: string;
   signatoryRole?: string;
   signatoryImageUrl?: string;
+  verificationCode?: string;
 }
 
 export interface ExperienceLetterData {
@@ -115,15 +116,18 @@ export interface ExperienceLetterData {
   signatoryRole?: string;
   signatoryImageUrl?: string;
   stampImageUrl?: string;
+  verificationCode?: string;
 }
 
 async function generateQrBuffer(url: string): Promise<Buffer> {
   return QRCode.toBuffer(url, { width: 70, margin: 1, errorCorrectionLevel: "M" });
 }
 
-function getVerifyUrl(letterId: string): string {
+function getVerifyUrl(letterId: string, verificationCode?: string): string {
   const base = (process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "");
-  return `${base}/verify-letter?id=${encodeURIComponent(letterId)}`;
+  let url = `${base}/verify-letter?id=${encodeURIComponent(letterId)}`;
+  if (verificationCode) url += `&code=${encodeURIComponent(verificationCode)}`;
+  return url;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -152,8 +156,7 @@ function drawLetterhead(doc: any): void {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawFooterQr(doc: any, letterId: string, qrBuffer: Buffer): void {
-  const verifyUrl = getVerifyUrl(letterId);
+function drawFooterQr(doc: any, letterId: string, qrBuffer: Buffer, verifyUrl: string): void {
   
   // Ensure we have space for the footer — if content is too close to bottom, it's already fine
   // because the footer is drawn at a fixed position from the page bottom.
@@ -180,7 +183,8 @@ function drawFooterQr(doc: any, letterId: string, qrBuffer: Buffer): void {
 }
 
 export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buffer> {
-  const qrBuffer = await generateQrBuffer(getVerifyUrl(data.letterId));
+  const verifyUrl = getVerifyUrl(data.letterId, data.verificationCode);
+  const qrBuffer = await generateQrBuffer(verifyUrl);
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
@@ -324,7 +328,7 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     doc.font("Helvetica-Bold").text("Funt Robotics Academy");
 
     // Footer QR on page 1
-    drawFooterQr(doc, data.letterId, qrBuffer);
+    drawFooterQr(doc, data.letterId, qrBuffer, verifyUrl);
 
     // ─── PAGE 2: Acceptance & Annexure ──────────────────────────────
 
@@ -400,14 +404,15 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     }
 
     // Footer QR on last page
-    drawFooterQr(doc, data.letterId, qrBuffer);
+    drawFooterQr(doc, data.letterId, qrBuffer, verifyUrl);
 
     doc.end();
   });
 }
 
 export async function generateExperienceLetterPdf(data: ExperienceLetterData): Promise<Buffer> {
-  const qrBuffer = await generateQrBuffer(getVerifyUrl(data.letterId));
+  const verifyUrl = getVerifyUrl(data.letterId, data.verificationCode);
+  const qrBuffer = await generateQrBuffer(verifyUrl);
 
   // Pre-fetch signature and stamp images (if URLs provided)
   let sigImageBuffer: Buffer | null = null;
@@ -512,7 +517,7 @@ export async function generateExperienceLetterPdf(data: ExperienceLetterData): P
     doc.font("Helvetica").text(data.signatoryRole || "Manager, FUNT ROBOTICS ACADEMY");
 
     // Footer QR
-    drawFooterQr(doc, data.letterId, qrBuffer);
+    drawFooterQr(doc, data.letterId, qrBuffer, verifyUrl);
 
     doc.end();
   });

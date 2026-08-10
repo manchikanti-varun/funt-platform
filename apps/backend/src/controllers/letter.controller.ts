@@ -197,7 +197,8 @@ export const deleteLetterHandler = asyncHandler(async (req: Request, res: Respon
 export const verifyLetterPublic = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const letterId = req.params.letterId;
   if (!letterId) throw new AppError("letterId is required", 400);
-  const data = await service.verifyLetterPublic(letterId);
+  const code = (req.query.code as string) || undefined;
+  const data = await service.verifyLetterPublic(letterId, code);
   if (!data) {
     res.status(404).json({ success: false, message: "Letter not found or invalid" });
     return;

@@ -7,6 +7,13 @@ import { createSettingsSnapshot, getLetterSettings } from "./letterSettings.serv
 import { AppError } from "../utils/AppError.js";
 import crypto from "crypto";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Generate a short 6-char alphanumeric verification code (uppercase) */
+function generateVerificationCode(): string {
+  return crypto.randomBytes(4).toString("base64url").slice(0, 6).toUpperCase();
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CreateLetterInput {
@@ -164,6 +171,7 @@ export async function createLetter(input: CreateLetterInput) {
       ...letterData,
       letterId,
       issuedAt,
+      verificationCode: generateVerificationCode(),
       status: input.type === LETTER_TYPE.EXPERIENCE_LETTER ? LETTER_STATUS.ACTIVE : LETTER_STATUS.PENDING_ACCEPTANCE,
       approvalStatus: APPROVAL_STATUS.APPROVED,
       approvedBy: input.issuedBy,
@@ -254,6 +262,7 @@ export async function approveLetter(letterMongoId: string, approvedBy: string) {
   letter.issuedAt = now;
   letter.documentHash = documentHash;
   letter.electronicSignature = electronicSignature;
+  (letter as unknown as { verificationCode: string }).verificationCode = generateVerificationCode();
 
   if (letter.type === LETTER_TYPE.OFFER_LETTER) {
     letter.status = LETTER_STATUS.PENDING_ACCEPTANCE;
@@ -550,6 +559,7 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       signatoryName: (letter as { signatoryName?: string }).signatoryName,
       signatoryRole: (letter as { signatoryRole?: string }).signatoryRole,
       signatoryImageUrl: (letter as { signatoryImageUrl?: string }).signatoryImageUrl,
+      verificationCode: (letter as { verificationCode?: string }).verificationCode ?? undefined,
     });
   }
 
@@ -579,6 +589,7 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       signatoryRole: (letter as { signatoryRole?: string }).signatoryRole,
       signatoryImageUrl: sigImageUrl,
       stampImageUrl: stampUrl,
+      verificationCode: (letter as { verificationCode?: string }).verificationCode ?? undefined,
     });
   }
 
@@ -587,13 +598,19 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
 
 // ─── Public Verification ──────────────────────────────────────────────────────
 
-export async function verifyLetterPublic(letterId: string) {
+export async function verifyLetterPublic(letterId: string, code?: string) {
   const letter = await LetterModel.findOne({ letterId: letterId.trim().toUpperCase() })
-    .select("letterId type recipientName designation department employmentType joiningDate endDate status issuedAt revokedAt documentHash electronicSignature internResponse")
+    .select("letterId type recipientName designation department employmentType joiningDate endDate status issuedAt revokedAt documentHash electronicSignature internResponse verificationCode")
     .lean()
     .exec();
 
   if (!letter) return null;
+
+  // Require verification code if one exists on the letter
+  const storedCode = (letter as { verificationCode?: string }).verificationCode;
+  if (storedCode && (!code || code.trim().toUpperCase() !== storedCode.toUpperCase())) {
+    return { requiresCode: true, letterId: letter.letterId };
+  }
 
   await createAuditLog("LETTER_VERIFY_ACCESSED", "public", "Letter", letterId).catch(() => {});
 
