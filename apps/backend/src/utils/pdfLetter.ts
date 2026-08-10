@@ -239,7 +239,7 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     // Paragraph 3: Reporting & Responsibilities
     if (data.reportingTo) {
       doc.font("Helvetica").text(
-        `As ${articleFor(empLabel)} ${empLabel.toLowerCase()}, you will be reporting to Mr./Ms. `,
+        `As ${articleFor(empLabel)} ${empLabel.toLowerCase()}, you will be reporting to `,
         PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
       );
       doc.font("Helvetica-Bold").text(data.reportingTo.toUpperCase(), { continued: true });
