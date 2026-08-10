@@ -114,8 +114,13 @@ export async function createEnrollment(input: CreateEnrollmentInput) {
     String((snapshots[0] as { courseId?: string } | undefined)?.courseId ?? "").trim() ||
     undefined;
 
-  // ── Learning Plan: initialize milestone progress for each course in snapshot ──
-  for (const snap of snapshots) {
+  // ── Learning Plan: initialize milestone progress ──
+  // If a specific courseId is provided, only initialize that course's milestones.
+  // Otherwise (admin batch enrollment), initialize milestones for all courses in the batch.
+  const snapsToInit = input.courseId
+    ? snapshots.filter((s) => (s as { courseId?: string }).courseId === input.courseId)
+    : snapshots;
+  for (const snap of snapsToInit) {
     const snapCourseId = String((snap as { courseId?: string }).courseId ?? "").trim();
     if (!snapCourseId) continue;
     if (isLearningPlanActive(snap)) {

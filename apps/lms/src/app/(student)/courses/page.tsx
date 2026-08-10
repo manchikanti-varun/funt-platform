@@ -162,7 +162,7 @@ export default function CoursesPage() {
             {onlineCourses.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
-                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`}
+                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fcourses` : `/courses/${c.courseId}?batchId=${c.batchId}`}
                 title={c.courseTitle}
                 chapterCount={c.chapterCount ?? c.moduleCount}
                 progressPercent={c.needsPayment ? 0 : (c.progressPercent ?? 0)}
@@ -187,7 +187,7 @@ export default function CoursesPage() {
             {centreCourses.map((c) => (
               <CourseCard
                 key={`${c.courseId}::${c.batchId}`}
-                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`}
+                href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fcourses` : `/courses/${c.courseId}?batchId=${c.batchId}`}
                 title={c.courseTitle}
                 chapterCount={c.chapterCount ?? c.moduleCount}
                 progressPercent={c.needsPayment ? 0 : (c.progressPercent ?? 0)}
@@ -322,7 +322,7 @@ export default function CoursesPage() {
                           <Eye className="h-3.5 w-3.5" aria-hidden /> Details
                         </Link>
                         {!c.isDemo && (
-                          <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                          <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fcourses`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
                             <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
                           </Link>
                         )}
@@ -405,7 +405,7 @@ export default function CoursesPage() {
                             <Eye className="h-3.5 w-3.5" aria-hidden /> Details
                           </Link>
                           {!c.isDemo && (
-                            <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
+                            <Link href={`/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fcourses`} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">
                               <CreditCard className="h-3.5 w-3.5" aria-hidden /> Pay
                             </Link>
                           )}

@@ -188,7 +188,7 @@ export default function StudentDashboardPage() {
             <PageSection title="Learn at Home" subtitle="Course + Kit" className="border-indigo-200 bg-white">
               <div className="space-y-2">
                 {onlineCourses.slice(0, 3).map((c) => (
-                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
+                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fdashboard` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-black">{c.courseTitle}</p>
                       <p className="text-xs font-semibold text-indigo-700">{c.needsPayment ? "Pay" : `${c.progressPercent}%`}</p>
@@ -208,7 +208,7 @@ export default function StudentDashboardPage() {
             <PageSection title="Learn at Centre" subtitle="Course only · no kit" className="border-indigo-200 bg-white">
               <div className="space-y-2">
                 {centreCourses.slice(0, 3).map((c) => (
-                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
+                  <Link key={`${c.batchId}-${c.courseId}`} href={c.needsPayment ? `/payment?type=course&batchId=${encodeURIComponent(c.batchId)}&courseId=${encodeURIComponent(c.courseId)}&from=%2Fdashboard` : `/courses/${c.courseId}?batchId=${c.batchId}`} className="block rounded-xl border border-indigo-200 bg-white px-3 py-2.5 transition hover:border-indigo-400">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-black">{c.courseTitle}</p>
                       <p className="text-xs font-semibold text-indigo-700">{c.needsPayment ? "Pay" : `${c.progressPercent}%`}</p>

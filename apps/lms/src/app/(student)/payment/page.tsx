@@ -345,6 +345,7 @@ function PaymentForm() {
   const productId = searchParams.get("productId") ?? "";
   const productName = searchParams.get("productName") ?? "";
   const milestoneId = searchParams.get("milestoneId") ?? "";
+  const fromParam = searchParams.get("from") ?? "";
 
   const [enteredBatchId, setEnteredBatchId] = useState("");
   const [batchIdConfirmed, setBatchIdConfirmed] = useState(!!batchId);
@@ -795,7 +796,7 @@ function PaymentForm() {
       )}
 
       <Link
-        href={type === "shop" ? "/shop" : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
+        href={type === "shop" ? "/shop" : fromParam ? decodeURIComponent(fromParam) : `/courses/${encodeURIComponent(courseId)}?batchId=${encodeURIComponent(effectiveBatchId)}`}
         className="text-sm font-medium text-funt-gold-deep hover:underline"
       >
         Back

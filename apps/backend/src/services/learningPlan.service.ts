@@ -668,6 +668,12 @@ async function onMilestoneCompleted(
       source: MILESTONE_UNLOCK_SOURCE.FREE,
       actorId: "system",
     });
+  } else if (nextMilestone && (nextMilestone.feeInPaise ?? 0) > 0) {
+    // Next milestone requires payment — mark it as eligible so the payment button appears
+    await MilestoneProgressModel.updateOne(
+      { studentId, batchId, courseId, milestoneId: nextMilestone.milestoneId },
+      { $set: { eligibleForNext: true, eligibleAt: new Date() } }
+    ).exec();
   }
 
   // Schedule RELATIVE_DATE next milestone

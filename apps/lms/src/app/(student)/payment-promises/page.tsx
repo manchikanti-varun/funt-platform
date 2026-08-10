@@ -168,7 +168,7 @@ function PromiseCard({ promise }: { promise: MyPromise }) {
       {showPayButton && (
         <div className="mt-4">
           <Link
-            href={`/payment?type=course&milestoneId=${promise.milestoneId}`}
+            href={`/payment?type=course&milestoneId=${promise.milestoneId}&from=%2Fpayment-promises`}
             className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-900/20 transition hover:bg-indigo-500"
           >
             Pay Now — ₹{promise.amountRupees}

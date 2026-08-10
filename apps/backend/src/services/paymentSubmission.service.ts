@@ -965,19 +965,18 @@ export async function verifyPaymentAndEnroll(
         // ── Learning Plan: initialize milestone progress for newly enrolled students ──
         // This is critical for students who pay via Razorpay — their enrollment is created
         // directly here (not via enrollment.service.ts:createEnrollment) so we must init milestones.
+        // IMPORTANT: Only initialize milestones for the specific course being paid for,
+        // not all courses in the batch. Other courses require their own payment.
         if (enrollmentCreated) {
           try {
             const { isLearningPlanActive: isLpActive, getMilestonesFromSnapshot: getMilestones, initializeMilestoneProgress } = await import("./learningPlan.service.js");
             const batch = await findBatchByParam(batchId);
             if (batch) {
               const snaps = getBatchCourseSnapshots(batch as BatchDoc);
-              for (const snap of snaps) {
-                const snapCourseId = String((snap as { courseId?: string }).courseId ?? "").trim();
-                if (!snapCourseId) continue;
-                if (isLpActive(snap)) {
-                  const milestones = getMilestones(snap);
-                  await initializeMilestoneProgress(doc.studentId, batchId, snapCourseId, milestones, new Date());
-                }
+              const paidSnap = snaps.find((s) => (s as { courseId?: string }).courseId === courseId);
+              if (paidSnap && isLpActive(paidSnap)) {
+                const milestones = getMilestones(paidSnap);
+                await initializeMilestoneProgress(doc.studentId, batchId, courseId, milestones, new Date());
               }
             }
           } catch (lpErr) {
