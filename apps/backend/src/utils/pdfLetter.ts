@@ -257,13 +257,6 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
       );
       doc.font("Helvetica-Bold").text(`INR ${data.stipend}`, { continued: true });
       doc.font("Helvetica").text(` Per Month.`);
-      doc.text(
-        `please confirm your acceptance in writing via electronic mail to us on or before `,
-        PAGE_MARGIN, doc.y, { continued: true, width: contentWidth, lineGap: LINE_GAP }
-      );
-      const acceptDate = new Date(data.joiningDate);
-      acceptDate.setDate(acceptDate.getDate() - 14);
-      doc.font("Helvetica-Bold").text(`${formatDate(acceptDate)}.`);
       doc.moveDown(1);
     } else if (data.ctc) {
       doc.font("Helvetica").text(

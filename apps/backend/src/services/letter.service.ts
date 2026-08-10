@@ -39,6 +39,10 @@ export interface CreateLetterInput {
   issuedBy: string;
   /** If true, skip approval (super admin creating directly) */
   autoApprove?: boolean;
+  /** Custom issued date (overrides today) */
+  issuedDate?: Date;
+  /** Days from issued date for acceptance deadline */
+  acceptanceDeadlineDays?: number;
 }
 
 export interface UpdateLetterInput {
@@ -131,14 +135,15 @@ export async function createLetter(input: CreateLetterInput) {
     linkedLetterId: input.linkedLetterId || undefined,
     internshipGroup,
     issuedBy: input.issuedBy,
-    acceptanceDeadlineDays: 3,
+    acceptanceDeadlineDays: input.acceptanceDeadlineDays ?? 3,
   };
 
   if (isAutoApproved) {
     // Super admin creates directly — auto-approve and generate ID
     const letterId = await generateLetterId();
-    const deadlineDays = 3;
-    const acceptanceDeadline = new Date(now);
+    const deadlineDays = input.acceptanceDeadlineDays ?? 3;
+    const issuedAt = input.issuedDate ?? now;
+    const acceptanceDeadline = new Date(issuedAt);
     acceptanceDeadline.setDate(acceptanceDeadline.getDate() + deadlineDays);
 
     const signablePayload: LetterSignablePayload = {
@@ -150,7 +155,7 @@ export async function createLetter(input: CreateLetterInput) {
       employmentType: input.employmentType,
       joiningDate: input.joiningDate.toISOString(),
       endDate: input.endDate?.toISOString(),
-      issuedAt: now.toISOString(),
+      issuedAt: issuedAt.toISOString(),
     };
     const { documentHash, electronicSignature } = signLetterPayload(signablePayload);
     const { snapshot, version: templateVersion } = await createSettingsSnapshot();
@@ -158,7 +163,7 @@ export async function createLetter(input: CreateLetterInput) {
     const letter = await LetterModel.create({
       ...letterData,
       letterId,
-      issuedAt: now,
+      issuedAt,
       status: input.type === LETTER_TYPE.EXPERIENCE_LETTER ? LETTER_STATUS.ACTIVE : LETTER_STATUS.PENDING_ACCEPTANCE,
       approvalStatus: APPROVAL_STATUS.APPROVED,
       approvedBy: input.issuedBy,

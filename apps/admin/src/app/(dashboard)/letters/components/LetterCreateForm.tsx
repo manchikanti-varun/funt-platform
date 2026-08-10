@@ -39,6 +39,8 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
   const [empType, setEmpType] = useState("INTERN");
   const [dept, setDept] = useState("ENGINEERING");
   const [desg, setDesg] = useState("");
+  const [issuedDate, setIssuedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [acceptDays, setAcceptDays] = useState("3");
   const [joinDate, setJoinDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [dur, setDur] = useState("3");
@@ -98,6 +100,8 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
         employmentType: empType,
         department: dept,
         designation: desg.trim(),
+        issuedDate: issuedDate || undefined,
+        acceptanceDeadlineDays: parseInt(acceptDays) || 3,
         joiningDate: joinDate,
         endDate: endDate || undefined,
         duration: empType === "INTERN" ? `${dur} Months` : undefined,
@@ -118,11 +122,24 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
       setFormMsg({ type: "ok", text: r.data?.letterId ?? "Letter created!" });
       setName("");
       setEmail("");
+      setGender("Mr");
+      setEmpType("INTERN");
+      setDept("ENGINEERING");
       setDesg("");
+      setIssuedDate(new Date().toISOString().split("T")[0]);
+      setAcceptDays("3");
       setJoinDate("");
       setEndDate("");
+      setDur("3");
       setStipend("");
       setCtc("");
+      setLoc("Hyderabad");
+      setReportTo("");
+      setResp("");
+      setTimings("");
+      setTerms("");
+      setSigName("");
+      setSigRole("");
       onCreated();
     } else {
       setFormMsg({ type: "err", text: r.message ?? "Failed to create letter." });
@@ -203,6 +220,37 @@ export function LetterCreateForm({ onCreated, onClose }: Props) {
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
+            </div>
+          </div>
+        </fieldset>
+
+        {/* Duration */}
+        <fieldset className="space-y-3">
+          <legend className="text-[11px] font-bold uppercase tracking-widest text-indigo-600">
+            Letter Date & Acceptance
+          </legend>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="text-xs font-medium text-slate-600">Letter Date (top of PDF)</label>
+              <input
+                type="date"
+                value={issuedDate}
+                onChange={(e) => setIssuedDate(e.target.value)}
+                className="input mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-600">Acceptance Deadline (days)</label>
+              <select value={acceptDays} onChange={(e) => setAcceptDays(e.target.value)} className="input mt-1">
+                <option value="1">1 day</option>
+                <option value="2">2 days</option>
+                <option value="3">3 days</option>
+                <option value="5">5 days</option>
+                <option value="7">7 days</option>
+              </select>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Deadline: {issuedDate ? new Date(new Date(issuedDate).getTime() + parseInt(acceptDays) * 86400000).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+              </p>
             </div>
           </div>
         </fieldset>
