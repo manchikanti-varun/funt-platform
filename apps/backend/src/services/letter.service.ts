@@ -811,10 +811,10 @@ export async function acceptOfferByToken(token: string, digitalSignatureName: st
   // Check minimum required documents
   const docs = ((letter as unknown as { uploadedDocuments?: Array<{ docType: string }> }).uploadedDocuments ?? []);
   const docTypes = new Set(docs.map((d) => d.docType));
-  const required = ["PHOTO", "AADHAAR"];
+  const required = ["PHOTO", "AADHAAR", "PAN_BANK", "EDUCATION", "OFFER_COPY"];
   const missing = required.filter((r) => !docTypes.has(r));
   if (missing.length > 0) {
-    throw new AppError(`Please upload required documents: ${missing.join(", ")}`, 400);
+    throw new AppError(`Please upload all required documents. Missing: ${missing.join(", ")}`, 400);
   }
 
   letter.status = LETTER_STATUS.ACCEPTED;
