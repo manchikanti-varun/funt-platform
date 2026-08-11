@@ -150,7 +150,8 @@ export async function createLetter(input: CreateLetterInput) {
     const letterId = await generateLetterId();
     const deadlineDays = input.acceptanceDeadlineDays ?? 3;
     const issuedAt = input.issuedDate ?? now;
-    const acceptanceDeadline = new Date(issuedAt);
+    // Acceptance deadline: always from today (not the letter date) to avoid immediate expiry for backdated letters
+    const acceptanceDeadline = new Date(now);
     acceptanceDeadline.setDate(acceptanceDeadline.getDate() + deadlineDays);
 
     const signablePayload: LetterSignablePayload = {

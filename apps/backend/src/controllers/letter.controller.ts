@@ -54,7 +54,7 @@ export const createLetter = asyncHandler(async (req: Request, res: Response): Pr
     linkedLetterId: body.linkedLetterId,
     issuedBy,
     autoApprove: isSuperAdmin(req),
-    issuedDate: body.issuedDate ? new Date(body.issuedDate) : undefined,
+    issuedDate: body.issuedDate ? new Date(body.issuedDate + "T00:00:00+05:30") : undefined,
     acceptanceDeadlineDays: body.acceptanceDeadlineDays ? Number(body.acceptanceDeadlineDays) : undefined,
   });
 

@@ -16,6 +16,8 @@ interface MilestoneForm {
   title: string;
   description: string;
   order: number;
+  feeInPaise: string;
+  paymentDueInDays: string;
   unlockType: string;
   completionRule: string;
   unlockAfterDate: string;
@@ -31,6 +33,8 @@ interface Milestone {
   title: string;
   description?: string;
   order: number;
+  feeInPaise: number;
+  paymentDueInDays?: number;
   unlockType: string;
   completionRule: string;
   unlockAfterDate?: string;
@@ -63,6 +67,8 @@ function blankForm(order: number): MilestoneForm {
     title: "",
     description: "",
     order,
+    feeInPaise: "",
+    paymentDueInDays: "",
     unlockType: MILESTONE_UNLOCK_TYPE.PAYMENT_AFTER_COMPLETION,
     completionRule: MILESTONE_COMPLETION_RULE.COMPLETE_ALL_CHAPTERS,
     unlockAfterDate: "",
@@ -80,6 +86,8 @@ function milestoneToForm(m: Milestone): MilestoneForm {
     title: m.title,
     description: m.description ?? "",
     order: m.order,
+    feeInPaise: m.feeInPaise != null ? String(m.feeInPaise) : "",
+    paymentDueInDays: m.paymentDueInDays != null ? String(m.paymentDueInDays) : "",
     unlockType: m.unlockType,
     completionRule: m.completionRule,
     unlockAfterDate: m.unlockAfterDate ? new Date(m.unlockAfterDate).toISOString().split("T")[0] : "",
@@ -97,6 +105,8 @@ function formToPayload(f: MilestoneForm) {
     title: f.title.trim(),
     description: f.description.trim(),
     order: Number(f.order),
+    feeInPaise: f.feeInPaise ? Number(f.feeInPaise) : 0,
+    paymentDueInDays: f.paymentDueInDays ? Number(f.paymentDueInDays) : undefined,
     unlockType: f.unlockType,
     completionRule: f.completionRule,
     unlockAfterDate: f.unlockAfterDate || undefined,
@@ -501,6 +511,8 @@ export default function LearningPlanPage() {
           title: m.title,
           description: m.description,
           order: m.order,
+          feeInPaise: m.feeInPaise ?? 0,
+          paymentDueInDays: m.paymentDueInDays,
           unlockType: m.unlockType,
           completionRule: m.completionRule,
           unlockAfterDate: m.unlockAfterDate,
@@ -526,8 +538,8 @@ export default function LearningPlanPage() {
     const reordered = [...milestones];
     const [moved] = reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, moved);
-    // Reassign order values
-    const updated = reordered.map((m, i) => ({ ...m, order: i }));
+    // Reassign order values (1-based)
+    const updated = reordered.map((m, i) => ({ ...m, order: i + 1 }));
     setMilestones(updated);
     // Persist
     setPlanSaving(true);
@@ -542,6 +554,8 @@ export default function LearningPlanPage() {
           title: m.title,
           description: m.description,
           order: m.order,
+          feeInPaise: m.feeInPaise ?? 0,
+          paymentDueInDays: m.paymentDueInDays,
           unlockType: m.unlockType,
           completionRule: m.completionRule,
           unlockAfterDate: m.unlockAfterDate,
@@ -562,7 +576,7 @@ export default function LearningPlanPage() {
 
   // ── Add new milestone ──────────────────────────────────────────────────────
   function startNew() {
-    const nextOrder = milestones.length > 0 ? Math.max(...milestones.map((m) => m.order)) + 1 : 0;
+    const nextOrder = milestones.length > 0 ? Math.max(...milestones.map((m) => m.order)) + 1 : 1;
     setForm(blankForm(nextOrder));
     setFormError("");
     setEditingId("new");

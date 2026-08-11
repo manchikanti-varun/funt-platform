@@ -39,13 +39,14 @@ function resolveLogoPath(): string | null {
 }
 
 function formatDate(d: Date): string {
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" });
 }
 
 function formatDateLong(d: Date): string {
-  const day = String(d.getDate()).padStart(2, "0");
+  const ist = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const day = String(ist.getDate()).padStart(2, "0");
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  return `${day}th ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return `${day}th ${months[ist.getMonth()]} ${ist.getFullYear()}`;
 }
 
 function employmentTypeLabel(type: string): string {
