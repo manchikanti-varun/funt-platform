@@ -189,6 +189,14 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
   const verifyUrl = getVerifyUrl(data.letterId, data.verificationCode);
   const qrBuffer = await generateQrBuffer(verifyUrl);
 
+  // Generate acceptance QR if token exists
+  let acceptQrBuffer: Buffer | null = null;
+  let acceptUrl: string | null = null;
+  if (data.acceptanceToken) {
+    acceptUrl = `${(process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "")}/accept-offer?token=${encodeURIComponent(data.acceptanceToken)}`;
+    acceptQrBuffer = await generateQrBuffer(acceptUrl);
+  }
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: PAGE_MARGIN, bufferPages: true });
     const chunks: Buffer[] = [];
@@ -341,18 +349,25 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     doc.font("Helvetica").fontSize(FONT_BODY).fillColor("#000000");
 
     // Acceptance portal link (if available)
-    if (data.acceptanceToken) {
-      const acceptUrl = `${(process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "")}/accept-offer?token=${encodeURIComponent(data.acceptanceToken)}`;
+    if (data.acceptanceToken && acceptUrl && acceptQrBuffer) {
       doc.font("Helvetica-Bold").text("Accept Your Offer Online", PAGE_MARGIN, doc.y, { width: contentWidth });
       doc.moveDown(0.5);
       doc.font("Helvetica").text(
         "To accept this offer, upload the required documents, and digitally sign — visit the link below or scan the QR code:",
         PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
       );
-      doc.moveDown(0.8);
-      doc.font("Helvetica-Bold").fillColor("#1a56db").text(acceptUrl, PAGE_MARGIN, doc.y, { width: contentWidth, link: acceptUrl });
-      doc.fillColor("#000000");
       doc.moveDown(1);
+
+      // QR code + link side by side
+      const qrY = doc.y;
+      doc.image(acceptQrBuffer, PAGE_MARGIN, qrY, { width: 80 });
+      const linkX = PAGE_MARGIN + 95;
+      doc.font("Helvetica-Bold").fontSize(9).fillColor("#1a56db")
+        .text(acceptUrl, linkX, qrY + 10, { width: contentWidth - 95, link: acceptUrl });
+      doc.fillColor("#000000").fontSize(FONT_BODY);
+      doc.y = qrY + 90;
+      doc.moveDown(0.5);
+
       if (data.acceptanceDeadline) {
         doc.font("Helvetica").text(
           `Deadline: Please accept on or before ${formatDate(data.acceptanceDeadline)}. After this date, the link will expire and the offer will be automatically withdrawn.`,
