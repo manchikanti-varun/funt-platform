@@ -14,6 +14,11 @@ function generateVerificationCode(): string {
   return crypto.randomBytes(4).toString("base64url").slice(0, 6).toUpperCase();
 }
 
+/** Generate a secure 32-char acceptance token */
+function generateAcceptanceToken(): string {
+  return crypto.randomBytes(24).toString("base64url");
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CreateLetterInput {
@@ -173,6 +178,8 @@ export async function createLetter(input: CreateLetterInput) {
       letterId,
       issuedAt,
       verificationCode: generateVerificationCode(),
+      acceptanceToken: input.type === LETTER_TYPE.OFFER_LETTER ? generateAcceptanceToken() : undefined,
+      acceptanceTokenExpiresAt: input.type === LETTER_TYPE.OFFER_LETTER ? acceptanceDeadline : undefined,
       status: input.type === LETTER_TYPE.EXPERIENCE_LETTER ? LETTER_STATUS.ACTIVE : LETTER_STATUS.PENDING_ACCEPTANCE,
       approvalStatus: APPROVAL_STATUS.APPROVED,
       approvedBy: input.issuedBy,
@@ -561,6 +568,8 @@ export async function generateLetterPdf(letterId: string): Promise<Buffer> {
       signatoryRole: (letter as { signatoryRole?: string }).signatoryRole,
       signatoryImageUrl: (letter as { signatoryImageUrl?: string }).signatoryImageUrl,
       verificationCode: (letter as { verificationCode?: string }).verificationCode ?? undefined,
+      acceptanceToken: (letter as { acceptanceToken?: string }).acceptanceToken ?? undefined,
+      acceptanceDeadline: letter.acceptanceDeadline ? new Date(letter.acceptanceDeadline) : undefined,
     });
   }
 
@@ -692,9 +701,173 @@ function formatLetterResponse(letter: unknown) {
     internshipGroup: doc.internshipGroup ?? null,
     issuedAt: doc.issuedAt ?? null,
     acceptanceDeadline: doc.acceptanceDeadline ?? null,
+    acceptanceToken: doc.acceptanceToken ?? null,
+    uploadedDocuments: doc.uploadedDocuments ?? [],
+    documentReviewStatus: doc.documentReviewStatus ?? null,
+    documentReviewNote: doc.documentReviewNote ?? null,
+    digitalSignatureName: doc.digitalSignatureName ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
+}
+
+// ─── Acceptance Portal (Public — token-based) ─────────────────────────────────
+
+function getAcceptancePortalUrl(token: string): string {
+  const base = (process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "");
+  return `${base}/accept-offer?token=${encodeURIComponent(token)}`;
+}
+
+export { getAcceptancePortalUrl };
+
+const DOCUMENT_TYPES = ["PHOTO", "AADHAAR", "PAN_BANK", "EDUCATION", "OFFER_COPY"] as const;
+
+export async function getOfferByToken(token: string) {
+  const letter = await LetterModel.findOne({ acceptanceToken: token.trim() }).lean().exec();
+  if (!letter) return null;
+
+  const now = new Date();
+  const expired = letter.acceptanceTokenExpiresAt && new Date(letter.acceptanceTokenExpiresAt) < now;
+  const alreadyResponded = letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE;
+
+  return {
+    letterId: letter.letterId,
+    recipientName: letter.recipientName,
+    designation: letter.designation,
+    department: letter.department,
+    employmentType: letter.employmentType,
+    joiningDate: letter.joiningDate,
+    endDate: letter.endDate ?? null,
+    duration: (letter as { duration?: string }).duration ?? null,
+    stipend: letter.stipend ?? null,
+    ctc: letter.ctc ?? null,
+    location: letter.location ?? null,
+    reportingTo: letter.reportingTo ?? null,
+    responsibilities: (letter as { responsibilities?: string }).responsibilities ?? null,
+    timings: (letter as { timings?: string }).timings ?? null,
+    termsAndConditions: (letter as { termsAndConditions?: string }).termsAndConditions ?? null,
+    issuedAt: letter.issuedAt,
+    acceptanceDeadline: letter.acceptanceDeadline ?? null,
+    status: letter.status,
+    expired,
+    alreadyResponded,
+    uploadedDocuments: ((letter as { uploadedDocuments?: Array<{ docType: string; filename: string; uploadedAt?: Date }> }).uploadedDocuments ?? []).map((d) => ({
+      docType: d.docType,
+      filename: d.filename,
+      uploadedAt: d.uploadedAt,
+    })),
+    documentReviewStatus: (letter as { documentReviewStatus?: string }).documentReviewStatus ?? null,
+    documentReviewNote: (letter as { documentReviewNote?: string }).documentReviewNote ?? null,
+  };
+}
+
+export async function uploadDocumentByToken(token: string, docType: string, filename: string, fileKey: string, fileSize: number) {
+  if (!DOCUMENT_TYPES.includes(docType as typeof DOCUMENT_TYPES[number])) {
+    throw new AppError(`Invalid document type. Must be one of: ${DOCUMENT_TYPES.join(", ")}`, 400);
+  }
+
+  const letter = await LetterModel.findOne({ acceptanceToken: token.trim() }).exec();
+  if (!letter) throw new AppError("Invalid or expired link", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) throw new AppError("This offer has already been responded to", 400);
+
+  const now = new Date();
+  if (letter.acceptanceTokenExpiresAt && new Date(letter.acceptanceTokenExpiresAt) < now) {
+    throw new AppError("This acceptance link has expired", 400);
+  }
+
+  const docs = ((letter as unknown as { uploadedDocuments?: Array<Record<string, unknown>> }).uploadedDocuments ?? []);
+  docs.push({ docType, filename, fileKey, fileSize, uploadedAt: now });
+  (letter as unknown as { uploadedDocuments: Array<Record<string, unknown>> }).uploadedDocuments = docs;
+  await letter.save();
+
+  return { docType, filename, uploadedAt: now };
+}
+
+export async function removeDocumentByToken(token: string, fileKey: string) {
+  const letter = await LetterModel.findOne({ acceptanceToken: token.trim() }).exec();
+  if (!letter) throw new AppError("Invalid or expired link", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) throw new AppError("This offer has already been responded to", 400);
+
+  const docs = ((letter as unknown as { uploadedDocuments?: Array<{ fileKey: string }> }).uploadedDocuments ?? []);
+  const filtered = docs.filter((d) => d.fileKey !== fileKey);
+  (letter as unknown as { uploadedDocuments: Array<Record<string, unknown>> }).uploadedDocuments = filtered;
+  await letter.save();
+
+  return { removed: true };
+}
+
+export async function acceptOfferByToken(token: string, digitalSignatureName: string, ip?: string) {
+  if (!digitalSignatureName?.trim()) throw new AppError("Digital signature (full name) is required", 400);
+
+  const letter = await LetterModel.findOne({ acceptanceToken: token.trim() }).exec();
+  if (!letter) throw new AppError("Invalid or expired link", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) throw new AppError("This offer has already been responded to", 400);
+
+  const now = new Date();
+  if (letter.acceptanceTokenExpiresAt && new Date(letter.acceptanceTokenExpiresAt) < now) {
+    throw new AppError("This acceptance link has expired", 400);
+  }
+
+  // Check minimum required documents
+  const docs = ((letter as unknown as { uploadedDocuments?: Array<{ docType: string }> }).uploadedDocuments ?? []);
+  const docTypes = new Set(docs.map((d) => d.docType));
+  const required = ["PHOTO", "AADHAAR"];
+  const missing = required.filter((r) => !docTypes.has(r));
+  if (missing.length > 0) {
+    throw new AppError(`Please upload required documents: ${missing.join(", ")}`, 400);
+  }
+
+  letter.status = LETTER_STATUS.ACCEPTED;
+  (letter as unknown as { internResponse: string }).internResponse = "ACCEPTED";
+  (letter as unknown as { internRespondedAt: Date }).internRespondedAt = now;
+  (letter as unknown as { acceptedAt: Date }).acceptedAt = now;
+  (letter as unknown as { digitalSignatureName: string }).digitalSignatureName = digitalSignatureName.trim();
+  (letter as unknown as { acceptedFromIp: string | undefined }).acceptedFromIp = ip;
+  (letter as unknown as { documentReviewStatus: string }).documentReviewStatus = "PENDING_REVIEW";
+  await letter.save();
+
+  await createAuditLog("LETTER_ACCEPTED_BY_INTERN", "intern_portal", "Letter", letter.letterId ?? String(letter._id), {
+    digitalSignatureName: digitalSignatureName.trim(),
+  });
+
+  return { accepted: true, letterId: letter.letterId };
+}
+
+export async function declineOfferByToken(token: string, reason?: string) {
+  const letter = await LetterModel.findOne({ acceptanceToken: token.trim() }).exec();
+  if (!letter) throw new AppError("Invalid or expired link", 404);
+  if (letter.status !== LETTER_STATUS.PENDING_ACCEPTANCE) throw new AppError("This offer has already been responded to", 400);
+
+  const now = new Date();
+  letter.status = LETTER_STATUS.REJECTED_BY_INTERN;
+  (letter as unknown as { internResponse: string }).internResponse = "REJECTED";
+  (letter as unknown as { internRespondedAt: Date }).internRespondedAt = now;
+  (letter as unknown as { internRejectReason: string | undefined }).internRejectReason = reason?.trim() || undefined;
+  await letter.save();
+
+  await createAuditLog("LETTER_REJECTED_BY_INTERN", "intern_portal", "Letter", letter.letterId ?? String(letter._id), { reason });
+
+  return { declined: true, letterId: letter.letterId };
+}
+
+export async function reviewDocuments(letterMongoId: string, status: "APPROVED" | "REJECTED", note: string, reviewedBy: string) {
+  let letter = await LetterModel.findById(letterMongoId).exec();
+  if (!letter) {
+    letter = await LetterModel.findOne({ letterId: letterMongoId.trim().toUpperCase() }).exec();
+  }
+  if (!letter) throw new AppError("Letter not found", 404);
+
+  (letter as unknown as { documentReviewStatus: string }).documentReviewStatus = status;
+  (letter as unknown as { documentReviewNote: string | undefined }).documentReviewNote = note?.trim() || undefined;
+  (letter as unknown as { documentReviewedBy: string }).documentReviewedBy = reviewedBy;
+  (letter as unknown as { documentReviewedAt: Date }).documentReviewedAt = new Date();
+  await letter.save();
+
+  await createAuditLog("LETTER_DOCUMENTS_REVIEWED", reviewedBy, "Letter", letter.letterId ?? String(letter._id), {
+    status, note,
+  });
+
+  return formatLetterResponse(letter);
 }
 
 // Legacy export for backward compatibility

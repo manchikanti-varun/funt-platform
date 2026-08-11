@@ -28,6 +28,7 @@ import { globalAssignmentRoutes } from "./routes/globalAssignment.routes.js";
 import { enrollmentRoutes } from "./routes/enrollment.routes.js";
 import { progressRoutes } from "./routes/progress.routes.js";
 import { verifyRoutes } from "./routes/verify.routes.js";
+import { acceptOfferRoutes } from "./routes/acceptOffer.routes.js";
 import { skillProfileRoutes } from "./routes/skillProfile.routes.js";
 import { achievementRoutes } from "./routes/achievement.routes.js";
 import { auditRoutes } from "./routes/audit.routes.js";
@@ -174,6 +175,7 @@ app.use("/api/franchise/admin", franchiseAdminRoutes);
 app.use("/api/franchise", franchiseRoutes);
 app.use("/api/referral", referralRoutes);
 app.use("/verify", verifyRoutes);
+app.use("/accept-offer", acceptOfferRoutes);
 
 // 404 catch-all — must be after all routes and before error handler
 app.use((_req, _res, next) => {

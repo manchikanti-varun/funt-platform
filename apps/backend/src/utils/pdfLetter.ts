@@ -99,6 +99,8 @@ export interface OfferLetterData {
   signatoryRole?: string;
   signatoryImageUrl?: string;
   verificationCode?: string;
+  acceptanceToken?: string;
+  acceptanceDeadline?: Date;
 }
 
 export interface ExperienceLetterData {
@@ -337,13 +339,36 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
     drawLetterhead(doc);
 
     doc.font("Helvetica").fontSize(FONT_BODY).fillColor("#000000");
-    doc.text(
-      `Kindly sign and return a copy of this letter along with Annexure-1 to ${HR_EMAIL} to confirm your acceptance of this offer within 3 working days. If we do not receive your acceptance within the specified timeline, the offer will be automatically withdrawn without any further action from Funt Robotics Entity.`,
-      PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
-    );
-    doc.moveDown(1.5);
 
-    doc.text(
+    // Acceptance portal link (if available)
+    if (data.acceptanceToken) {
+      const acceptUrl = `${(process.env.VERIFY_LETTER_PUBLIC_URL || process.env.MARKETING_URL || "https://funt.in").replace(/\/+$/, "")}/accept-offer?token=${encodeURIComponent(data.acceptanceToken)}`;
+      doc.font("Helvetica-Bold").text("Accept Your Offer Online", PAGE_MARGIN, doc.y, { width: contentWidth });
+      doc.moveDown(0.5);
+      doc.font("Helvetica").text(
+        "To accept this offer, upload the required documents, and digitally sign — visit the link below or scan the QR code:",
+        PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.moveDown(0.8);
+      doc.font("Helvetica-Bold").fillColor("#1a56db").text(acceptUrl, PAGE_MARGIN, doc.y, { width: contentWidth, link: acceptUrl });
+      doc.fillColor("#000000");
+      doc.moveDown(1);
+      if (data.acceptanceDeadline) {
+        doc.font("Helvetica").text(
+          `Deadline: Please accept on or before ${formatDate(data.acceptanceDeadline)}. After this date, the link will expire and the offer will be automatically withdrawn.`,
+          PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+        );
+        doc.moveDown(1.5);
+      }
+    } else {
+      doc.text(
+        `Kindly sign and return a copy of this letter along with Annexure-1 to ${HR_EMAIL} to confirm your acceptance of this offer within 3 working days. If we do not receive your acceptance within the specified timeline, the offer will be automatically withdrawn without any further action from Funt Robotics Entity.`,
+        PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
+      );
+      doc.moveDown(1.5);
+    }
+
+    doc.font("Helvetica").text(
       "We look forward to having you join our team and contribute to our growth. Best wishes and welcome to the team!",
       PAGE_MARGIN, doc.y, { width: contentWidth, lineGap: LINE_GAP }
     );
@@ -354,6 +379,8 @@ export async function generateOfferLetterPdf(data: OfferLetterData): Promise<Buf
 
     // Annexure heading
     doc.font("Helvetica-Bold").fontSize(12).text("Annexure -1", { align: "center" });
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(9).text("(Documents to upload on the acceptance portal)", { align: "center" });
     doc.moveDown(1);
 
     // Annexure table

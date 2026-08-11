@@ -69,6 +69,20 @@ router.patch("/:letterId/intern-reject", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADM
 router.patch("/:letterId/withdraw", requireRoles(ROLE.SUPER_ADMIN), withdrawLetter);
 router.patch("/:letterId/revoke", requireRoles(ROLE.SUPER_ADMIN), revokeLetter);
 
+// ── Document Review (Admin) ───────────────────────────────────────────────────
+router.patch("/:letterId/review-documents", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), async (req, res, next) => {
+  try {
+    const { reviewDocuments } = await import("../services/letter.service.js");
+    const { successRes: sRes } = await import("../utils/response.js");
+    const userId = req.user?.userId;
+    if (!userId) { res.status(401).json({ success: false, message: "Unauthorized" }); return; }
+    const { status, note } = req.body ?? {};
+    if (!status || !["APPROVED", "REJECTED"].includes(status)) { res.status(400).json({ success: false, message: "status must be APPROVED or REJECTED" }); return; }
+    const data = await reviewDocuments(req.params.letterId, status, note ?? "", userId);
+    sRes(res, data, "Documents reviewed");
+  } catch (err) { next(err); }
+});
+
 // ── Experience Letter from Offer ──────────────────────────────────────────────
 router.post("/:letterId/experience", requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN), createExperienceFromOfferHandler);
 

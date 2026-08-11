@@ -6,7 +6,16 @@ import { StatusBadge } from "./StatusBadge";
 import {
   X, FileText, Award, Download, User, Briefcase, MapPin,
   Calendar, DollarSign, Clock, ShieldCheck, UserCheck, Edit3,
+  Link2, Upload, CheckCircle2, XCircle, ExternalLink,
 } from "lucide-react";
+
+interface UploadedDoc {
+  docType: string;
+  filename: string;
+  fileKey: string;
+  fileSize?: number;
+  uploadedAt?: string;
+}
 
 interface LetterDetail {
   _id: string;
@@ -39,8 +48,14 @@ interface LetterDetail {
   issuedAt?: string;
   createdAt?: string;
   acceptedAt?: string;
+  acceptanceDeadline?: string;
+  acceptanceToken?: string;
   revokedAt?: string;
   revokedReason?: string;
+  digitalSignatureName?: string;
+  uploadedDocuments?: UploadedDoc[];
+  documentReviewStatus?: string;
+  documentReviewNote?: string;
 }
 
 interface Props {
@@ -49,12 +64,25 @@ interface Props {
   onDownloadPdf: (id: string) => void;
 }
 
+const DOC_TYPE_LABELS: Record<string, string> = {
+  PHOTO: "Passport Photo",
+  AADHAAR: "Aadhaar / Voter ID / DL",
+  PAN_BANK: "PAN + Bank Details",
+  EDUCATION: "Educational Certificates",
+  OFFER_COPY: "Signed Offer Copy",
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:38472";
+
 export function LetterPreviewPanel({ letterId, onClose, onDownloadPdf }: Props) {
   const [letter, setLetter] = useState<LetterDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewMsg, setReviewMsg] = useState("");
 
-  useEffect(() => {
+  function loadLetter() {
     api<LetterDetail>(`/api/letters/${letterId}`)
       .then((r) => {
         if (r.success && r.data) setLetter(r.data);
@@ -62,7 +90,30 @@ export function LetterPreviewPanel({ letterId, onClose, onDownloadPdf }: Props) 
       })
       .catch(() => setError("Network error."))
       .finally(() => setLoading(false));
-  }, [letterId]);
+  }
+
+  useEffect(() => { loadLetter(); }, [letterId]);
+
+  async function handleReview(status: "APPROVED" | "REJECTED") {
+    if (!letter) return;
+    setReviewing(true);
+    setReviewMsg("");
+    const r = await api(`/api/letters/${letter._id || letter.letterId}/review-documents`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, note: reviewNote.trim() }),
+    });
+    setReviewing(false);
+    if (r.success) {
+      setReviewMsg(`Documents ${status.toLowerCase()}.`);
+      loadLetter();
+    } else {
+      setReviewMsg(r.message ?? "Failed to review.");
+    }
+  }
+
+  const acceptancePortalUrl = letter?.acceptanceToken
+    ? `${(process.env.NEXT_PUBLIC_MARKETING_URL || "https://funt.in").replace(/\/+$/, "")}/accept-offer?token=${letter.acceptanceToken}`
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -91,7 +142,7 @@ export function LetterPreviewPanel({ letterId, onClose, onDownloadPdf }: Props) 
                 onClick={() => onDownloadPdf(letter.letterId!)}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-100"
               >
-                <Download className="h-3.5 w-3.5" /> Download PDF
+                <Download className="h-3.5 w-3.5" /> PDF
               </button>
             )}
             <button
@@ -112,9 +163,7 @@ export function LetterPreviewPanel({ letterId, onClose, onDownloadPdf }: Props) 
             </div>
           )}
 
-          {error && (
-            <div className="alert alert--error">{error}</div>
-          )}
+          {error && <div className="alert alert--error">{error}</div>}
 
           {letter && !loading && (
             <div className="space-y-6">
@@ -126,7 +175,117 @@ export function LetterPreviewPanel({ letterId, onClose, onDownloadPdf }: Props) 
                     Approval: {letter.approvalStatus.replace(/_/g, " ")}
                   </span>
                 )}
+                {letter.digitalSignatureName && (
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                    Signed: {letter.digitalSignatureName}
+                  </span>
+                )}
               </div>
+
+              {/* Acceptance Portal Link */}
+              {acceptancePortalUrl && letter.status === "PENDING_ACCEPTANCE" && (
+                <Section icon={<Link2 className="h-4 w-4" />} title="Acceptance Portal">
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-500">Send this link to the intern to accept the offer online:</p>
+                    <div className="flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2">
+                      <input
+                        readOnly
+                        value={acceptancePortalUrl}
+                        className="flex-1 bg-transparent text-xs font-mono text-indigo-700 outline-none"
+                        onClick={(e) => (e.target as HTMLInputElement).select()}
+                      />
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(acceptancePortalUrl); }}
+                        className="shrink-0 rounded-md bg-indigo-100 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-200"
+                      >
+                        Copy
+                      </button>
+                      <a href={acceptancePortalUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-indigo-500 hover:text-indigo-700">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                    {letter.acceptanceDeadline && (
+                      <p className="text-[11px] text-slate-400">Expires: {formatDate(letter.acceptanceDeadline)}</p>
+                    )}
+                  </div>
+                </Section>
+              )}
+
+              {/* Uploaded Documents */}
+              {letter.uploadedDocuments && letter.uploadedDocuments.length > 0 && (
+                <Section icon={<Upload className="h-4 w-4" />} title="Uploaded Documents">
+                  <div className="space-y-2">
+                    {letter.uploadedDocuments.map((doc, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-700">{DOC_TYPE_LABELS[doc.docType] || doc.docType}</p>
+                          <p className="truncate text-[11px] text-slate-500">{doc.filename}</p>
+                        </div>
+                        {doc.fileKey && (
+                          <a
+                            href={`${API_URL}/api/student/files/download?key=${encodeURIComponent(doc.fileKey)}&name=${encodeURIComponent(doc.filename)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-100"
+                          >
+                            View
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Document Review Status */}
+                  {letter.documentReviewStatus && (
+                    <div className={`mt-3 rounded-lg border px-3 py-2 ${
+                      letter.documentReviewStatus === "APPROVED" ? "border-emerald-200 bg-emerald-50" :
+                      letter.documentReviewStatus === "REJECTED" ? "border-red-200 bg-red-50" :
+                      "border-amber-200 bg-amber-50"
+                    }`}>
+                      <p className={`text-xs font-semibold ${
+                        letter.documentReviewStatus === "APPROVED" ? "text-emerald-700" :
+                        letter.documentReviewStatus === "REJECTED" ? "text-red-700" :
+                        "text-amber-700"
+                      }`}>
+                        Documents: {letter.documentReviewStatus.replace(/_/g, " ")}
+                      </p>
+                      {letter.documentReviewNote && (
+                        <p className="mt-1 text-[11px] text-slate-600">{letter.documentReviewNote}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Review Actions */}
+                  {letter.documentReviewStatus === "PENDING_REVIEW" && (
+                    <div className="mt-3 space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-xs font-semibold text-slate-700">Review Documents</p>
+                      <input
+                        value={reviewNote}
+                        onChange={(e) => setReviewNote(e.target.value)}
+                        placeholder="Note (optional)"
+                        className="input w-full text-xs"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleReview("APPROVED")}
+                          disabled={reviewing}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleReview("REJECTED")}
+                          disabled={reviewing}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500 disabled:opacity-50"
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> Reject
+                        </button>
+                      </div>
+                      {reviewMsg && <p className="text-xs text-slate-600">{reviewMsg}</p>}
+                    </div>
+                  )}
+                </Section>
+              )}
 
               {/* Recipient */}
               <Section icon={<User className="h-4 w-4" />} title="Recipient">

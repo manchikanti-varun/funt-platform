@@ -122,9 +122,26 @@ const letterSchema = new Schema(
     // Acceptance workflow
     acceptanceDeadlineDays: { type: Number, required: false, default: 3 },
     acceptanceDeadline: { type: Date, required: false },
+    acceptanceToken: { type: String, required: false, unique: true, sparse: true },
+    acceptanceTokenExpiresAt: { type: Date, required: false },
     acceptedAt: { type: Date, required: false },
     withdrawnAt: { type: Date, required: false },
     withdrawnBy: { type: String, required: false },
+    // Digital acceptance
+    digitalSignatureName: { type: String, required: false },
+    acceptedFromIp: { type: String, required: false },
+    // Document uploads from intern
+    uploadedDocuments: [{
+      docType: { type: String, required: true }, // PHOTO, AADHAAR, PAN_BANK, EDUCATION, OFFER_COPY
+      filename: { type: String, required: true },
+      fileKey: { type: String, required: true },
+      fileSize: { type: Number, required: false },
+      uploadedAt: { type: Date, default: Date.now },
+    }],
+    documentReviewStatus: { type: String, required: false, enum: ["PENDING_REVIEW", "APPROVED", "REJECTED", null] },
+    documentReviewNote: { type: String, required: false },
+    documentReviewedBy: { type: String, required: false },
+    documentReviewedAt: { type: Date, required: false },
     // Digital signature
     documentHash: { type: String, required: false },
     electronicSignature: { type: String, required: false },
@@ -143,5 +160,6 @@ letterSchema.index({ approvalStatus: 1 });
 letterSchema.index({ recipientEmail: 1 });
 letterSchema.index({ internshipGroup: 1 });
 letterSchema.index({ issuedAt: -1 });
+letterSchema.index({ acceptanceToken: 1 });
 
 export const LetterModel = mongoose.model("Letter", letterSchema);
