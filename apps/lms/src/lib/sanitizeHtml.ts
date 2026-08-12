@@ -397,7 +397,7 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
 
   // Rewrite <video src="r2://..."> to the backend stream endpoint
   const base = (apiBase ?? "").replace(/\/$/, "");
-  const withR2Resolved = withDriveImages.replace(
+  const withR2Videos = withDriveImages.replace(
     /<video\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*)>/gi,
     (_match, before: string, quote: string, r2Key: string, after: string) => {
       const streamUrl = `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
@@ -405,8 +405,27 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
     }
   );
 
+  // Rewrite <img src="r2://..."> to the backend stream endpoint
+  const withR2Images = withR2Videos.replace(
+    /<img\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*?)>/gi,
+    (_match, before: string, quote: string, r2Key: string, after: string) => {
+      const streamUrl = `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+      return `<img${before} src=${quote}${streamUrl}${quote}${after}>`;
+    }
+  );
+
+  // Rewrite relative API paths (e.g. /api/admin/images/...) to absolute API URL
+  const withAbsoluteApiPaths = base
+    ? withR2Images.replace(
+        /\ssrc=(["'])(\/api\/[^"']+)\1/gi,
+        (_match, quote: string, path: string) => {
+          return ` src=${quote}${base}${path}${quote}`;
+        }
+      )
+    : withR2Images;
+
   // Use lightweight allowlist sanitizer instead of DOMPurify
-  return sanitizeAllowlist(withR2Resolved);
+  return sanitizeAllowlist(withAbsoluteApiPaths);
 }
 
 /** One-line preview for cards/lists — course descriptions are often HTML from the editor. */
