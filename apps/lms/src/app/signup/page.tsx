@@ -7,7 +7,7 @@ import { API_URL, markClientLoggedIn } from "@/lib/api";
 import { FormPanel } from "@/components/ui/FormPanel";
 
 
-const CLASS_OPTIONS = ["6", "7", "8", "9", "10", "11", "12", "other"];
+const CLASS_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "other"];
 const COUNTRY_CODES = ["+91", "+1", "+44", "+61", "+971", "+65"];
 const USERNAME_MIN_LENGTH = 4;
 const USERNAME_MAX_LENGTH = 32;

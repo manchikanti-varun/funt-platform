@@ -439,13 +439,53 @@ export async function getMyCoursesForStudent(studentId: string) {
 
   // Build lookup maps for O(1) access checks
   const verifiedPaymentSet = new Set(
-    verifiedPayments.map((p) => `${p.batchId}::${(p as { courseId?: string }).courseId ?? ""}`)
+    verifiedPayments
+      .filter((p) => {
+        const cId = (p as { courseId?: string }).courseId;
+        // Only count payments that have a specific courseId — legacy batch-wide payments
+        // without courseId should NOT grant per-course access in multi-course batches.
+        return typeof cId === "string" && cId.trim().length > 0;
+      })
+      .map((p) => `${p.batchId}::${(p as { courseId?: string }).courseId!.trim()}`)
   );
   const licenseKeyBatchCourseSet = new Set<string>();
   for (const k of licenseKeys) {
     const bId = String((k as { batchId?: string }).batchId ?? "");
     const cId = String((k as { courseId?: string }).courseId ?? "");
     if (bId && cId) licenseKeyBatchCourseSet.add(`${bId}::${cId}`);
+  }
+
+  // Resolve courseId variants for license keys so both human-readable and ObjectId formats match.
+  // This mirrors the bidirectional resolution in hasLicenseKeyEnrollment().
+  const uniqueLicenseCourseIds = [...new Set(licenseKeys.map((k) => String((k as { courseId?: string }).courseId ?? "")).filter(Boolean))];
+  if (uniqueLicenseCourseIds.length > 0) {
+    const byMongo = uniqueLicenseCourseIds.filter((x) => /^[a-fA-F0-9]{24}$/.test(x));
+    const byHuman = uniqueLicenseCourseIds.filter((x) => !/^[a-fA-F0-9]{24}$/.test(x));
+    const resolvedCourses = await CourseModel.find({
+      $or: [
+        ...(byMongo.length ? [{ _id: { $in: byMongo } }] : []),
+        ...(byHuman.length ? [{ courseId: { $in: byHuman } }] : []),
+      ],
+    }).select("courseId").lean().exec();
+    // Build a map from either format to both formats
+    const idToHuman = new Map<string, string>();
+    const humanToId = new Map<string, string>();
+    for (const c of resolvedCourses) {
+      const mongoId = String(c._id);
+      const humanId = (c as { courseId?: string }).courseId ?? "";
+      if (humanId) {
+        idToHuman.set(mongoId, humanId);
+        humanToId.set(humanId, mongoId);
+      }
+    }
+    // Add variant entries to the set so lookups work with either format
+    for (const k of licenseKeys) {
+      const bId = String((k as { batchId?: string }).batchId ?? "");
+      const cId = String((k as { courseId?: string }).courseId ?? "");
+      if (!bId || !cId) continue;
+      const alt = idToHuman.get(cId) ?? humanToId.get(cId);
+      if (alt) licenseKeyBatchCourseSet.add(`${bId}::${alt}`);
+    }
   }
   // Build milestone access set: student has at least one unlocked milestone for this course
   const milestoneAccessSet = new Set<string>();

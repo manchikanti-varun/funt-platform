@@ -405,12 +405,17 @@ export function sanitizeHtml(html: string | undefined | null, apiBase?: string):
     }
   );
 
-  // Rewrite <img src="r2://..."> to the backend stream endpoint
+  // Rewrite <img src="r2://..."> to the public image serve endpoint (no auth required for images)
+  // Keys starting with "images/" use the public serve route; other keys use the authenticated stream.
   const withR2Images = withR2Videos.replace(
     /<img\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*?)>/gi,
     (_match, before: string, quote: string, r2Key: string, after: string) => {
-      const streamUrl = `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
-      return `<img${before} src=${quote}${streamUrl}${quote}${after}>`;
+      // Strip the "r2://" prefix to get the raw object key
+      const objectKey = r2Key.slice(5);
+      const url = objectKey.startsWith("images/")
+        ? `${base}/api/admin/images/serve/${objectKey}`
+        : `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+      return `<img${before} src=${quote}${url}${quote}${after}>`;
     }
   );
 

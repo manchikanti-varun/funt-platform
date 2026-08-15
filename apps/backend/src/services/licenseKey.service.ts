@@ -427,6 +427,14 @@ export async function redeemLicenseKey(studentId: string, rawKey: string) {
     }
   }
 
+  // Invalidate student's cached course list so the new license access is reflected immediately.
+  // createEnrollment already does this when a new enrollment is created, but when the student
+  // was already enrolled (e.g. has a license for another course in same batch), we must clear manually.
+  if (alreadyEnrolled) {
+    const { cacheDel, CACHE_KEYS } = await import("../utils/cache.js");
+    await cacheDel(CACHE_KEYS.studentCourses(studentId));
+  }
+
   // Audit: license redeemed
   await createAuditLog("LICENSE_KEY_REDEEMED", studentId, "LicenseKey", String(license._id), {
     courseId: license.courseId,
