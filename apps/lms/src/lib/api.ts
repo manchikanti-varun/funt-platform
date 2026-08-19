@@ -201,6 +201,41 @@ function authRedirectError(message: string | undefined): string {
   return "Your session expired. Please sign in again.";
 }
 
+/** Convert technical server error messages into user-friendly text. */
+function friendlyErrorMessage(status: number, serverMessage: string | undefined): string {
+  const msg = (serverMessage ?? "").trim();
+  const lower = msg.toLowerCase();
+
+  // CSRF errors — user just needs to refresh
+  if (lower.includes("csrf")) {
+    return "Your session security token expired. Please refresh the page and try again.";
+  }
+  // Request blocked by origin check
+  if (lower.includes("invalid origin") || lower.includes("request blocked")) {
+    return "This request was blocked for security reasons. Please refresh the page and try again.";
+  }
+  // Rate limiting
+  if (status === 429) {
+    return msg || "Too many requests. Please wait a moment and try again.";
+  }
+  // Forbidden (non-CSRF) — show server message which is already user-friendly
+  if (status === 403 && msg) {
+    return msg;
+  }
+  // Server errors
+  if (status >= 500) {
+    return msg || "Something went wrong on our end. Please try again in a moment.";
+  }
+  // Connection refused
+  if (status === 0) {
+    return "Could not connect to the server. Please check your internet connection.";
+  }
+  // If server sent a message, use it (backend messages are already user-friendly)
+  if (msg) return msg;
+  // Generic fallback
+  return "Something went wrong. Please try again.";
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}
@@ -220,7 +255,7 @@ export async function api<T>(
   try {
     res = await fetch(`${API_URL}${path}`, { ...options, credentials: "include", headers });
   } catch (err) {
-    return { success: false, message: "Network error. Check that the API URL is correct and CORS allows this origin." };
+    return { success: false, message: "Could not connect to the server. Please check your internet connection and try again." };
   }
   const json = await res.json().catch(() => ({}));
 
@@ -240,7 +275,8 @@ export async function api<T>(
         }
       }
     }
-    const msg = serverMessage ?? (res.status === 0 ? "Connection refused or blocked (check CORS and API URL)." : `Request failed (${res.status})`);
+    // Make error messages user-friendly
+    const msg = friendlyErrorMessage(res.status, serverMessage);
     return { success: false, message: msg };
   }
   return { success: true, data: (json as { data?: T }).data ?? (json as T), message: (json as { message?: string }).message };

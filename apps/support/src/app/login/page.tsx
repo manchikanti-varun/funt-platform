@@ -39,7 +39,7 @@ export default function SupportLoginPage() {
       if (!isStaff) { setError("Access denied. Only support staff can use this portal."); setLoading(false); return; }
 
       router.push("/dashboard");
-    } catch { setError("Unable to connect to server"); }
+    } catch { setError("Could not connect to the server. Please try again."); }
     setLoading(false);
   }
 

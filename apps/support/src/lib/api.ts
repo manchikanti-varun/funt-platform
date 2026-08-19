@@ -57,6 +57,31 @@ export function apiUrl(path: string): string {
   return `${API_URL}${normalizedPath}`;
 }
 
+/** Convert technical server error messages into user-friendly text. */
+function friendlyErrorMessage(status: number, serverMessage: string | undefined): string {
+  const msg = (serverMessage ?? "").trim();
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("csrf")) {
+    return "Your session security token expired. Please refresh the page and try again.";
+  }
+  if (lower.includes("invalid origin") || lower.includes("request blocked")) {
+    return "This request was blocked for security reasons. Please refresh the page and try again.";
+  }
+  if (status === 429) {
+    return msg || "Too many requests. Please wait a moment and try again.";
+  }
+  if (status === 403 && msg) return msg;
+  if (status >= 500) {
+    return msg || "Something went wrong on our end. Please try again in a moment.";
+  }
+  if (status === 0) {
+    return "Could not connect to the server. Please check your internet connection.";
+  }
+  if (msg) return msg;
+  return "Something went wrong. Please try again.";
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}
@@ -73,7 +98,7 @@ export async function api<T>(
   try {
     res = await fetch(`${API_URL}${path}`, { ...options, credentials: "include", headers });
   } catch {
-    return { success: false, message: "Network error. Check that the API URL is correct." };
+    return { success: false, message: "Could not connect to the server. Please check your internet connection and try again." };
   }
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
 
@@ -82,7 +107,7 @@ export async function api<T>(
     if (res.status === 401 && typeof window !== "undefined") {
       window.location.href = "/login";
     }
-    return { success: false, message: serverMessage ?? `Request failed (${res.status})` };
+    return { success: false, message: friendlyErrorMessage(res.status, serverMessage) };
   }
 
   let data: T | undefined;
