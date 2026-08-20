@@ -939,14 +939,12 @@ export function startBackupScheduler(): void {
   }
 
   scheduleNextRun(config.cronSchedule);
-  console.log(`[backup] Scheduler started — cron: "${config.cronSchedule}"`);
+  console.log(`[backup] Scheduler active (${config.cronSchedule})`);
 }
 
 function scheduleNextRun(cronExpr: string): void {
   const nextRun = getNextCronRun(cronExpr);
   const delay = nextRun.getTime() - Date.now();
-
-  console.log(`[backup] Next backup scheduled at: ${nextRun.toLocaleString("en-IN")}`);
 
   schedulerTimer = setTimeout(async () => {
     console.log("[backup] Running scheduled backup...");

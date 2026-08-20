@@ -6,11 +6,7 @@ import { validateEnv, getEnv } from "./config/env.js";
 import { initSocketServer } from "./realtime/socketServer.js";
 
 validateEnv();
-const { port, mongoUri, isProduction, nodeEnv } = getEnv();
-
-if (!isProduction) {
-  console.log(`[server] Development mode (NODE_ENV=${nodeEnv})`);
-}
+const { port, mongoUri, isProduction, nodeEnv, backendPublicUrl } = getEnv();
 
 const host = "0.0.0.0";
 
@@ -25,7 +21,8 @@ function listen(): Promise<http.Server> {
     server.listen(
       { port: Number(port), host, reuseAddress: true },
       () => {
-        console.log(`[server] Backend running at http://localhost:${port}`);
+        const publicUrl = isProduction ? backendPublicUrl : `http://localhost:${port}`;
+        console.log(`[server] Running at ${publicUrl} (${nodeEnv})`);
         resolve(server);
       }
     );

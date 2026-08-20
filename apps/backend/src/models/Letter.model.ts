@@ -160,6 +160,5 @@ letterSchema.index({ approvalStatus: 1 });
 letterSchema.index({ recipientEmail: 1 });
 letterSchema.index({ internshipGroup: 1 });
 letterSchema.index({ issuedAt: -1 });
-letterSchema.index({ acceptanceToken: 1 });
 
 export const LetterModel = mongoose.model("Letter", letterSchema);

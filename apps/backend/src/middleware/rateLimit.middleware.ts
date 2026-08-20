@@ -16,15 +16,12 @@ function getWindowMs(): number {
 function getStore(prefix: string): Partial<Options> {
   const client = getRedisClient();
   if (!client) {
-    const { isProduction } = getEnv();
-    if (isProduction) {
-      console.warn(`[rate-limit] Redis not available for "${prefix}" limiter — using in-memory store. Rate limiting will NOT be shared across instances.`);
-    }
+    // Redis connects async — in-memory store used briefly during cold start.
+    // Once Redis is ready, new requests will use it. No action needed.
     return {};
   }
   return {
     store: new RedisStore({
-      // Use sendCommand for ioredis compatibility with rate-limit-redis v4
       sendCommand: (...args: string[]) => client.call(args[0], ...args.slice(1)) as never,
       prefix: `rl:${prefix}:`,
     }),

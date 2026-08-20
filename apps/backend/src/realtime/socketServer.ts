@@ -116,7 +116,6 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
     });
   });
 
-  console.log("[socket.io] Live support chat initialized");
   return io;
 }
 
