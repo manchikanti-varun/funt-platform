@@ -14,12 +14,12 @@ A production LMS and operations platform for robotics education built as a Turbo
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Express 4, Mongoose 8, Redis (ioredis), JWT, Zod, PDFKit, Socket.IO |
+| Backend | Express 4, Mongoose 8, Redis (ioredis), JWT, Zod 4, PDFKit, Socket.IO |
 | Admin | Next.js 16, React 18, TailwindCSS 3, Recharts |
 | LMS | Next.js 16, React 18, TailwindCSS 3, Recharts |
 | Support | Next.js 16, React 18, TailwindCSS 3 |
 | Editor | TipTap / ProseMirror (shared package) |
-| Tooling | Turborepo, TypeScript 5, Node 20+ |
+| Tooling | Turborepo, TypeScript 5, Node 22+ |
 | Database | MongoDB Atlas |
 | Storage | Cloudflare R2 (videos, images) |
 | Payments | Razorpay + manual UPI/QR |
@@ -34,14 +34,15 @@ funt-platform/
 ├── apps/
 │   ├── backend/          Express API + business logic + MongoDB models
 │   ├── admin/            Next.js admin/staff dashboard (port 3000)
-│   ├── lms/             Next.js student/parent portal (port 3001)
+│   ├── lms/              Next.js student/parent portal (port 3001)
 │   └── support/          Next.js support agent portal (port 3002)
 ├── packages/
 │   ├── constants/        Shared enums (roles, statuses, types)
 │   ├── types/            Shared TypeScript type contracts
+│   ├── auth-utils/       Shared JWT parsing and role helpers
+│   ├── design-system/    Shared UI components and tokens
 │   └── rich-text-editor/ TipTap-based editor with media handling
-├── docs/
-│   └── DEPLOYMENT.md     Production deploy runbook
+├── .nvmrc                Node version (22) for Railway/Vercel
 ├── turbo.json
 └── package.json
 ```
@@ -318,7 +319,7 @@ Achievement, AssignmentSubmission, Attendance, AuditLog, BadgeTypeDefinition, Ba
 ## Local Development
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 22+ (see `.nvmrc`)
 - npm 10+
 - MongoDB (Atlas or local)
 
