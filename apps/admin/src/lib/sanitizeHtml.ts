@@ -285,7 +285,7 @@ function plainTextToRichHtml(input: string): string {
   return out.join("");
 }
 
-export function sanitizeHtml(html: string | undefined | null): string {
+export function sanitizeHtml(html: string | undefined | null, apiBase?: string): string {
   const raw = decodeEncodedRichText(html);
   if (!raw) return "";
 
@@ -300,6 +300,36 @@ export function sanitizeHtml(html: string | undefined | null): string {
   );
   const withDriveImages = rewriteEmbeddedMediaInHtml(normalized);
 
+  // Rewrite r2:// video and image URLs to the backend serve endpoints
+  const base = (apiBase ?? process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  let withR2Media = withDriveImages;
+  if (base) {
+    // Videos: r2://videos/... → backend stream endpoint
+    withR2Media = withR2Media.replace(
+      /<video\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*)>/gi,
+      (_match, before: string, quote: string, r2Key: string, after: string) => {
+        const streamUrl = `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+        return `<video${before} src=${quote}${streamUrl}${quote}${after}>`;
+      }
+    );
+    // Images: r2://images/... → public serve endpoint
+    withR2Media = withR2Media.replace(
+      /<img\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*?)>/gi,
+      (_match, before: string, quote: string, r2Key: string, after: string) => {
+        const objectKey = r2Key.slice(5); // strip "r2://"
+        const url = objectKey.startsWith("images/")
+          ? `${base}/api/admin/images/serve/${objectKey}`
+          : `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+        return `<img${before} src=${quote}${url}${quote}${after}>`;
+      }
+    );
+    // Relative /api/ paths → absolute
+    withR2Media = withR2Media.replace(
+      /\ssrc=(["'])(\/api\/[^"']+)\1/gi,
+      (_match, quote: string, path: string) => ` src=${quote}${base}${path}${quote}`
+    );
+  }
+
   // Use lightweight allowlist sanitizer instead of DOMPurify
-  return sanitizeAllowlist(withDriveImages);
+  return sanitizeAllowlist(withR2Media);
 }

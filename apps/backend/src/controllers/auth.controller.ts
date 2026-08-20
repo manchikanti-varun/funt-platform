@@ -594,13 +594,13 @@ export const googleRedirect = asyncHandler(async (req: Request, res: Response): 
 export const googleCallback = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { googleClientId, googleClientSecret, jwtSecret, frontendAdminUrl, frontendLmsUrl } = getEnv();
   if (!googleClientId || !googleClientSecret) {
-    res.redirect(frontendAdminUrl + "/login?error=google_not_configured");
+    res.redirect(frontendAdminUrl + "/login?error=" + encodeURIComponent("Google login is not configured. Please contact support."));
     return;
   }
   const code = req.query.code as string;
   const stateB64 = req.query.state as string;
   if (!code || !stateB64) {
-    res.redirect(frontendAdminUrl + "/login?error=missing_code_or_state");
+    res.redirect(frontendAdminUrl + "/login?error=" + encodeURIComponent("Google sign-in was cancelled or interrupted. Please try again."));
     return;
   }
   let state: GoogleState & { purpose: "google_oauth_state"; nonce: string };
@@ -612,13 +612,15 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
     if (state.purpose !== "google_oauth_state" || !state.nonce?.trim()) throw new Error("Invalid state payload");
   } catch {
     res.clearCookie(OAUTH_NONCE_COOKIE, { path: "/" });
-    res.redirect(frontendAdminUrl + "/login?error=invalid_state");
+    res.redirect(frontendAdminUrl + "/login?error=" + encodeURIComponent("Google sign-in session expired. Please try again."));
     return;
   }
+  // From here on, we know state.app — redirect errors to the correct frontend
+  const errorBase = (state.app === "lms" ? frontendLmsUrl : frontendAdminUrl).replace(/\/$/, "");
   const nonceCookie = (req.cookies?.[OAUTH_NONCE_COOKIE] as string | undefined)?.trim();
   if (!nonceCookie || nonceCookie !== state.nonce) {
     res.clearCookie(OAUTH_NONCE_COOKIE, { path: "/" });
-    res.redirect(frontendAdminUrl + "/login?error=state_nonce_mismatch");
+    res.redirect(errorBase + "/login?error=" + encodeURIComponent("Google sign-in session expired or was opened in a different browser tab. Please try again."));
     return;
   }
   const consumed = await OAuthNonceModel.findOneAndUpdate(
@@ -628,7 +630,7 @@ export const googleCallback = asyncHandler(async (req: Request, res: Response): 
   ).exec();
   if (!consumed) {
     res.clearCookie(OAUTH_NONCE_COOKIE, { path: "/" });
-    res.redirect(frontendAdminUrl + "/login?error=state_expired_or_reused");
+    res.redirect(errorBase + "/login?error=" + encodeURIComponent("Google sign-in link expired or was already used. Please try again."));
     return;
   }
   res.clearCookie(OAUTH_NONCE_COOKIE, { path: "/" });

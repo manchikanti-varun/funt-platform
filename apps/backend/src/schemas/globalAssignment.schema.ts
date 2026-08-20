@@ -5,7 +5,7 @@ export const createGlobalAssignmentSchema = z.object({
   instructions: z.string().max(500_000).optional().default(""),
   submissionType: z.enum(["file", "text", "link"]).optional().default("text"),
   skillTags: z.array(z.string().max(100)).optional().default([]),
-  type: z.enum(["chapter", "general"]).optional().default("chapter"),
+  type: z.enum(["module", "chapter", "general"]).optional().default("module"),
   allowedStudentIds: z.array(z.string()).optional(),
   moderatorIds: z.array(z.string()).optional(),
   dueDate: z.string().optional(),

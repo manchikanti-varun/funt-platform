@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS } from "@/lib/sanitizeHtml";
 import { SUBMISSION_TYPE } from "@funt-platform/constants";
 import { AppPageShell, DataPanel } from "@/components/ui";
@@ -299,7 +299,7 @@ function AssignmentsPageInner() {
             {chapterAssignment.instructions && (
               <div className="rounded-xl border-2 border-black/10 bg-funt-honey/30 px-4 py-3">
                 <p className="text-sm font-bold text-black">Instructions</p>
-                <div className={`mt-1 text-sm text-black/75 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(chapterAssignment.instructions) }} />
+                <div className={`mt-1 text-sm text-black/75 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(chapterAssignment.instructions, API_URL) }} />
               </div>
             )}
             <div>
@@ -382,7 +382,7 @@ function AssignmentsPageInner() {
                       {a.instructions && (
                         <div
                           className={`mt-2 line-clamp-2 text-sm text-slate-600 ${RICH_TEXT_PREVIEW_CLASS}`}
-                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.instructions) }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(a.instructions, API_URL) }}
                         />
                       )}
                       {!alreadySubmitted && (
@@ -408,7 +408,7 @@ function AssignmentsPageInner() {
                           {expandedAssignment.instructions && (
                             <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
                               <p className="text-sm font-medium text-slate-700">Instructions</p>
-                              <div className={`mt-1 text-sm text-slate-600 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(expandedAssignment.instructions) }} />
+                              <div className={`mt-1 text-sm text-slate-600 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(expandedAssignment.instructions, API_URL) }} />
                             </div>
                           )}
                           <div>

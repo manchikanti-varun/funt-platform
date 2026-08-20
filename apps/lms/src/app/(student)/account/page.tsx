@@ -65,8 +65,8 @@ export default function AccountPage() {
       }),
     });
     setSaving(false);
-    if (res.success) setMsg("Saved.");
-    else setMsg(res.message ?? "Could not save");
+    if (res.success) setMsg("Changes saved successfully.");
+    else setMsg(res.message ?? "Could not save. Please try again.");
   }
 
   if (!user) {

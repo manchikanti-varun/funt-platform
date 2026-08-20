@@ -189,8 +189,15 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="flex h-full min-h-0 items-center justify-center">
+      <div className="flex h-full min-h-0 flex-col items-center justify-center gap-3">
         <p className="text-slate-500">Unable to load profile.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Refresh page
+        </button>
       </div>
     );
   }

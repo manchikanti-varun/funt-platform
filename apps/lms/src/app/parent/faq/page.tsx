@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { SUPPORT_EMAIL, SUPPORT_WHATSAPP_DISPLAY, supportWhatsAppHref } from "@/lib/support";
 
@@ -277,7 +277,7 @@ export default function ParentFaqPage() {
                         <div className="border-t border-slate-100 px-4 pb-4 pt-3">
                           <div
                             className="prose prose-sm max-w-none text-slate-600 prose-headings:text-sm prose-headings:font-bold"
-                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(faq.content) }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(faq.content, API_URL) }}
                           />
                           {faq.tags && faq.tags.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-1">

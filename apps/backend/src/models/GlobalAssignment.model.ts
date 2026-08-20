@@ -22,7 +22,7 @@ const globalAssignmentSchema = new Schema(
       enum: [...Object.values(ASSIGNMENT_STATUS), "DRAFT", "PUBLISHED", "DUE", "CLOSED"],
       default: ASSIGNMENT_STATUS.ACTIVE,
     },
-        type: { type: String, required: true, enum: ["general", "module"], default: "module" },
+        type: { type: String, required: true, enum: ["general", "module", "chapter"], default: "module" },
         allowedStudentIds: { type: [String], required: false, default: [] },
     createdBy: { type: String, required: true },
         moderatorIds: { type: [String], required: false, default: [] },
