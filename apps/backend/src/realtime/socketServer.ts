@@ -39,6 +39,23 @@ export function initSocketServer(httpServer: HTTPServer): SocketServer {
     transports: ["websocket", "polling"],
   });
 
+  // ── Redis adapter for multi-replica scaling ───────────────────────
+  // When running multiple replicas, this ensures all instances share
+  // Socket.IO events (messages, rooms) via Redis pub/sub.
+  const redisUrl = process.env.REDIS_URL?.trim();
+  if (redisUrl) {
+    import("@socket.io/redis-adapter").then(({ createAdapter }) => {
+      import("ioredis").then((ioredis) => {
+        const Redis = ioredis.default ?? ioredis;
+        const pubClient = new (Redis as unknown as new (url: string, opts?: object) => import("ioredis").Redis)(redisUrl, { tls: redisUrl.startsWith("rediss://") ? {} : undefined, lazyConnect: true });
+        const subClient = pubClient.duplicate();
+        Promise.all([pubClient.connect(), subClient.connect()])
+          .then(() => { io!.adapter(createAdapter(pubClient as never, subClient as never)); })
+          .catch((err) => { console.warn("[socket.io] Redis adapter failed — single-instance mode:", err instanceof Error ? err.message : err); });
+      });
+    }).catch(() => { /* @socket.io/redis-adapter not installed — single instance mode */ });
+  }
+
   // ── Authentication middleware ─────────────────────────────────────
   io.use(async (socket, next) => {
     try {
