@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { CheckCircle2, XCircle, Flame, Star, Trophy, Zap } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,6 +271,8 @@ export function VideoCheckpointPlayer({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  const completedCount = progress.filter((p) => p.completed).length;
+
   return (
     <div className={`relative ${className}`}>
       {/* Video element */}
@@ -291,17 +294,21 @@ export function VideoCheckpointPlayer({
 
       {/* Timeline Progress Markers */}
       {checkpoints.length > 0 && videoDuration > 0 && (
-        <div className="relative mt-2 h-3 rounded-full bg-slate-100 border border-slate-200 overflow-visible">
+        <div className="relative mt-2.5 h-2 rounded-full bg-slate-100 border border-slate-200">
           {checkpoints.map((cp) => {
             const pct = Math.min(100, (cp.questionTimestamp / videoDuration) * 100);
             const state = getProgressState(cp._id);
-            const color = state === "completed" ? "bg-emerald-500" : state === "attempted" ? "bg-amber-500" : "bg-slate-400";
+            const color = state === "completed"
+              ? "bg-emerald-500 ring-emerald-200"
+              : state === "attempted"
+              ? "bg-amber-500 ring-amber-200"
+              : "bg-slate-400 ring-slate-200";
             return (
               <div
                 key={cp._id}
-                className={`absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ${color} border-2 border-white shadow-sm`}
+                className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full ${color} ring-2 shadow-sm transition-all`}
                 style={{ left: `${pct}%` }}
-                title={`${formatTimeShort(cp.questionTimestamp)} — ${state}`}
+                title={`${formatTimeShort(cp.questionTimestamp)} — ${state === "completed" ? "Completed" : state === "attempted" ? "In Progress" : "Upcoming"}`}
               />
             );
           })}
@@ -310,57 +317,62 @@ export function VideoCheckpointPlayer({
 
       {/* Gamification Stats Bar */}
       {checkpoints.length > 0 && (
-        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
+        <div className="mt-2.5 flex items-center gap-3 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
           {currentStreak > 0 && (
-            <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
-              🔥 {currentStreak} streak
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600">
+              <Flame className="h-3.5 w-3.5" /> {currentStreak} streak
             </span>
           )}
           {totalXpEarned > 0 && (
-            <span className="inline-flex items-center gap-1 font-medium">
-              ⭐ {totalXpEarned} XP earned
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600">
+              <Star className="h-3.5 w-3.5" /> {totalXpEarned} XP
             </span>
           )}
           {bestStreak > 1 && (
-            <span className="inline-flex items-center gap-1">
-              Best: {bestStreak} in a row
+            <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+              <Trophy className="h-3 w-3" /> Best: {bestStreak}
             </span>
           )}
-          <span className="ml-auto">
-            {progress.filter((p) => p.completed).length}/{checkpoints.length} checkpoints
+          <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-500">
+            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+            {completedCount}/{checkpoints.length}
           </span>
         </div>
       )}
 
       {/* Checkpoint Overlay */}
       {checkpointState !== "idle" && activeCheckpoint && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">
           <div className="w-full max-w-md mx-4 rounded-2xl bg-white p-6 shadow-2xl max-h-[90%] overflow-y-auto">
             {/* Showing / answering */}
             {checkpointState === "showing" && (
               <>
-                <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-2">
-                  Checkpoint Question
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                    Checkpoint
+                  </span>
                   {(activeCheckpoint.bonusXp ?? 0) > 0 && (
-                    <span className="ml-2 text-amber-600">+{activeCheckpoint.bonusXp} XP</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">
+                      <Zap className="h-3 w-3" /> +{activeCheckpoint.bonusXp} XP
+                    </span>
                   )}
-                </p>
+                </div>
 
                 {/* Code snippet */}
                 {activeCheckpoint.codeSnippet && (
-                  <pre className="mb-3 rounded-lg bg-slate-900 p-3 text-xs text-green-300 overflow-x-auto whitespace-pre-wrap">
+                  <pre className="mb-3 rounded-lg bg-slate-900 p-3 text-xs text-green-300 overflow-x-auto whitespace-pre-wrap font-mono">
                     <code>{activeCheckpoint.codeSnippet}</code>
                   </pre>
                 )}
 
-                <p className="text-base font-semibold text-slate-900 mb-4">{activeCheckpoint.question}</p>
+                <p className="text-base font-semibold text-slate-900 mb-4 leading-relaxed">{activeCheckpoint.question}</p>
 
                 {/* MCQ / True-False options */}
                 {(activeCheckpoint.type === "mcq" || activeCheckpoint.type === "true_false") && (
                   <div className="space-y-2 mb-4">
                     {activeCheckpoint.options.map((opt) => (
                       <label key={opt.optionId}
-                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition ${selectedOption === opt.optionId ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
+                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${selectedOption === opt.optionId ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
                         <input type="radio" name="checkpoint-answer" value={opt.optionId}
                           checked={selectedOption === opt.optionId} onChange={() => setSelectedOption(opt.optionId)}
                           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
@@ -373,10 +385,10 @@ export function VideoCheckpointPlayer({
                 {/* Multi-select */}
                 {activeCheckpoint.type === "multi_select" && (
                   <div className="space-y-2 mb-4">
-                    <p className="text-xs text-slate-500 mb-1">Select all that apply</p>
+                    <p className="text-xs text-slate-500 font-medium">Select all that apply</p>
                     {activeCheckpoint.options.map((opt) => (
                       <label key={opt.optionId}
-                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition ${selectedOptions.includes(opt.optionId) ? "border-indigo-500 bg-indigo-50" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
+                        className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${selectedOptions.includes(opt.optionId) ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
                         <input type="checkbox" checked={selectedOptions.includes(opt.optionId)}
                           onChange={(e) => {
                             if (e.target.checked) setSelectedOptions([...selectedOptions, opt.optionId]);
@@ -402,7 +414,7 @@ export function VideoCheckpointPlayer({
 
                 <button type="button" onClick={handleSubmitAnswer} disabled={submitting}
                   className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                  {submitting ? "Checking…" : "Submit Answer"}
+                  {submitting ? "Checking..." : "Submit Answer"}
                 </button>
               </>
             )}
@@ -410,19 +422,22 @@ export function VideoCheckpointPlayer({
             {/* Correct */}
             {checkpointState === "correct" && answerResult && (
               <>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
-                    <svg className="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                <div className="flex items-center gap-3 mb-3">
+                  <CheckCircle2 className="h-9 w-9 text-emerald-500 shrink-0" />
+                  <div>
+                    <p className="text-lg font-bold text-emerald-700">Correct!</p>
+                    {answerResult.xpAwarded > 0 && (
+                      <p className="text-sm font-semibold text-amber-600 flex items-center gap-1">
+                        <Zap className="h-3.5 w-3.5" /> +{answerResult.xpAwarded} XP earned
+                      </p>
+                    )}
                   </div>
-                  <p className="text-lg font-bold text-emerald-700">Correct!</p>
                 </div>
-                {answerResult.xpAwarded > 0 && (
-                  <p className="text-sm font-semibold text-amber-600 mb-2">+{answerResult.xpAwarded} XP earned!</p>
-                )}
                 {answerResult.currentStreak > 1 && (
-                  <p className="text-sm text-indigo-600 font-medium mb-2">🔥 {answerResult.currentStreak} in a row!</p>
+                  <div className="mb-3 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 flex items-center gap-2">
+                    <Flame className="h-4 w-4 text-orange-500" />
+                    <span className="text-sm font-semibold text-orange-700">{answerResult.currentStreak} in a row!</span>
+                  </div>
                 )}
                 {answerResult.explanation && <p className="text-sm text-slate-600 mb-4">{answerResult.explanation}</p>}
                 <button type="button" onClick={handleContinue}
@@ -435,16 +450,14 @@ export function VideoCheckpointPlayer({
             {/* Incorrect */}
             {checkpointState === "incorrect" && answerResult && (
               <>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                    <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                <div className="flex items-center gap-3 mb-3">
+                  <XCircle className="h-9 w-9 text-red-500 shrink-0" />
+                  <div>
+                    <p className="text-lg font-bold text-red-700">Not quite</p>
+                    <p className="text-sm text-slate-500">Let&apos;s review this section</p>
                   </div>
-                  <p className="text-lg font-bold text-red-700">Not quite.</p>
                 </div>
-                <p className="text-sm text-slate-600 mb-2">Let&apos;s review this section once more.</p>
-                {answerResult.explanation && <p className="text-sm text-slate-500 mb-4">{answerResult.explanation}</p>}
+                {answerResult.explanation && <p className="text-sm text-slate-600 mb-4">{answerResult.explanation}</p>}
                 <button type="button" onClick={handleReviewAgain}
                   className="w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 transition">
                   Review Again

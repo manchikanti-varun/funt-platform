@@ -24,9 +24,19 @@ export const createCheckpoint = asyncHandler(async (req: Request, res: Response)
   const moduleId = req.params.moduleId;
   if (!moduleId) throw new AppError("moduleId is required", 400);
 
-  const mod = await GlobalModuleModel.findById(moduleId).lean().exec();
-  if (!mod) throw new AppError("Module not found", 404);
-  const videoKey = getModuleVideoKey(mod as Record<string, unknown>);
+  let videoKey = "";
+
+  // If moduleId looks like a MongoDB ObjectId, validate the module exists
+  // Otherwise it's a temp UUID from the "new chapter" page — allow it
+  const isObjectId = /^[a-fA-F0-9]{24}$/.test(moduleId);
+  if (isObjectId) {
+    const mod = await GlobalModuleModel.findById(moduleId).lean().exec();
+    if (!mod) throw new AppError("Module not found", 404);
+    videoKey = getModuleVideoKey(mod as Record<string, unknown>);
+  } else {
+    // Temp module — videoKey provided in body or use placeholder
+    videoKey = req.body.videoKey || "r2://pending";
+  }
 
   const result = await checkpointService.createCheckpoint({
     moduleId,
@@ -118,6 +128,21 @@ export const exportCheckpoints = asyncHandler(async (req: Request, res: Response
 
   const data = await checkpointService.exportCheckpoints(moduleId);
   successRes(res, data);
+});
+
+// ─── Admin: Migrate checkpoints from temp ID to real ID ───────────────────────
+
+export const migrateCheckpoints = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const moduleId = req.params.moduleId;
+  if (!moduleId) throw new AppError("moduleId is required", 400);
+
+  const { tempModuleId } = req.body ?? {};
+  if (!tempModuleId || typeof tempModuleId !== "string") {
+    throw new AppError("tempModuleId is required", 400);
+  }
+
+  const result = await checkpointService.migrateCheckpoints(tempModuleId, moduleId);
+  successRes(res, result);
 });
 
 // ─── Student: Get checkpoints (without answers) ──────────────────────────────

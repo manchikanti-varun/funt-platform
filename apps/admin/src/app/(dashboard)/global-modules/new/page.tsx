@@ -12,6 +12,7 @@ import { BackLink } from "@/components/ui/BackLink";
 import { DraftRestoredBanner } from "@/components/ui/DraftRestoredBanner";
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
+import { VideoCheckpoints } from "@/components/chapters/VideoCheckpoints";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
@@ -58,6 +59,14 @@ export default function NewGlobalChapterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadsInProgress, setUploadsInProgress] = useState(0);
+
+  // R2 video preview URL for checkpoint component
+  const [r2VideoPreviewUrl, setR2VideoPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!videoUrl.startsWith("r2://")) { setR2VideoPreviewUrl(null); return; }
+    api<{ previewUrl: string }>(`/api/admin/videos/preview?key=${encodeURIComponent(videoUrl)}`)
+      .then((r) => { if (r.success && r.data?.previewUrl) setR2VideoPreviewUrl(r.data.previewUrl); });
+  }, [videoUrl]);
 
   function update<K extends keyof ChapterDraft>(field: K, value: ChapterDraft[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -211,6 +220,11 @@ export default function NewGlobalChapterPage() {
     });
     setLoading(false);
     if (res.success && res.data?.id) {
+      // Migrate any checkpoints created with temp ID to the real module ID
+      await api(`/api/checkpoints/module/${res.data.id}/migrate`, {
+        method: "POST",
+        body: JSON.stringify({ tempModuleId: tempModuleId.current }),
+      });
       clearDraft();
       router.push("/global-modules");
       return;
@@ -280,6 +294,12 @@ export default function NewGlobalChapterPage() {
               courseId="global"
               moduleId={tempModuleId.current}
             />
+            {/* Interactive Checkpoints — shown when R2 video is uploaded */}
+            {videoUrl.startsWith("r2://") && (
+              <div className="mt-4">
+                <VideoCheckpoints moduleId={tempModuleId.current} videoPreviewUrl={r2VideoPreviewUrl} />
+              </div>
+            )}
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-semibold text-slate-700">

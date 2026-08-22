@@ -30,6 +30,7 @@ import {
   bulkImportCheckpoints,
   duplicateCheckpoints,
   exportCheckpoints,
+  migrateCheckpoints,
   getStudentCheckpoints,
   getStudentProgress,
   submitAnswer,
@@ -54,6 +55,7 @@ checkpointAdminRoutes.post("/module/:moduleId", validateBody(createCheckpointSch
 checkpointAdminRoutes.post("/module/:moduleId/bulk-import", validateBody(bulkImportCheckpointsSchema), bulkImportCheckpoints);
 checkpointAdminRoutes.post("/module/:moduleId/duplicate", validateBody(duplicateCheckpointsSchema), duplicateCheckpoints);
 checkpointAdminRoutes.get("/module/:moduleId/export", exportCheckpoints);
+checkpointAdminRoutes.post("/module/:moduleId/migrate", migrateCheckpoints);
 checkpointAdminRoutes.put("/:checkpointId", validateBody(updateCheckpointSchema), updateCheckpoint);
 checkpointAdminRoutes.delete("/:checkpointId", deleteCheckpoint);
 

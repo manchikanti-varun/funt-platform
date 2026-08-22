@@ -2,6 +2,26 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import {
+  Play,
+  Plus,
+  Download,
+  Upload,
+  Copy,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Timer,
+  Code2,
+  ListChecks,
+  ToggleLeft as TFIcon,
+  TextCursorInput,
+  Zap,
+} from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,6 +88,14 @@ const TYPE_LABELS: Record<CheckpointType, string> = {
   multi_select: "Multi-Select",
   fill_blank: "Fill in the Blank",
   code_output: "Code Output",
+};
+
+const TYPE_ICONS: Record<CheckpointType, React.ReactNode> = {
+  mcq: <ListChecks className="h-3.5 w-3.5" />,
+  true_false: <TFIcon className="h-3.5 w-3.5" />,
+  multi_select: <ListChecks className="h-3.5 w-3.5" />,
+  fill_blank: <TextCursorInput className="h-3.5 w-3.5" />,
+  code_output: <Code2 className="h-3.5 w-3.5" />,
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -274,40 +302,25 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
   async function handleBulkImport() {
     setError("");
     let parsed;
-    try {
-      parsed = JSON.parse(importJson);
-    } catch {
-      setError("Invalid JSON. Paste an array of checkpoint objects.");
-      return;
-    }
+    try { parsed = JSON.parse(importJson); } catch { setError("Invalid JSON."); return; }
     const items = Array.isArray(parsed) ? parsed : parsed.checkpoints;
-    if (!Array.isArray(items) || items.length === 0) {
-      setError("Expected an array of checkpoints.");
-      return;
-    }
+    if (!Array.isArray(items) || items.length === 0) { setError("Expected an array of checkpoints."); return; }
     setImporting(true);
     const res = await api(`/api/checkpoints/module/${moduleId}/bulk-import`, {
-      method: "POST",
-      body: JSON.stringify({ checkpoints: items }),
+      method: "POST", body: JSON.stringify({ checkpoints: items }),
     });
-    if (res.success) {
-      setShowImport(false);
-      setImportJson("");
-      void fetchCheckpoints();
-    } else {
-      setError(res.message ?? "Import failed.");
-    }
+    if (res.success) { setShowImport(false); setImportJson(""); void fetchCheckpoints(); }
+    else setError(res.message ?? "Import failed.");
     setImporting(false);
   }
 
-  // ─── Duplicate from another module ────────────────────────────────────────
+  // ─── Duplicate ────────────────────────────────────────────────────────────
 
   async function handleDuplicate() {
     const sourceId = prompt("Enter the source module ID to copy checkpoints from:");
     if (!sourceId?.trim()) return;
     const res = await api(`/api/checkpoints/module/${moduleId}/duplicate`, {
-      method: "POST",
-      body: JSON.stringify({ sourceModuleId: sourceId.trim() }),
+      method: "POST", body: JSON.stringify({ sourceModuleId: sourceId.trim() }),
     });
     if (res.success) void fetchCheckpoints();
     else alert(res.message ?? "Duplicate failed.");
@@ -319,7 +332,6 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
     setPreviewMode(true);
     setPreviewCheckpoint(null);
     setPreviewResult(null);
-    // Start video playback - checkpoint detection done via timeupdate
   }
 
   function handlePreviewTimeUpdate() {
@@ -367,19 +379,23 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
     const rt = previewCheckpoint.reviewTimestamp;
     setPreviewCheckpoint(null);
     setPreviewResult(null);
-    if (previewVideoRef.current) {
-      previewVideoRef.current.currentTime = rt;
-      previewVideoRef.current.play();
-    }
+    if (previewVideoRef.current) { previewVideoRef.current.currentTime = rt; previewVideoRef.current.play(); }
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (!videoPreviewUrl) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm font-semibold text-slate-700">Interactive Checkpoints</p>
-        <p className="mt-1 text-xs text-slate-500">Upload an MP4 video to enable interactive checkpoints.</p>
+      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+            <Play className="h-5 w-5 text-slate-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-700">Interactive Checkpoints</p>
+            <p className="text-xs text-slate-500">Upload an MP4 video to enable interactive checkpoints.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -389,39 +405,45 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
   if (previewMode) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-indigo-700">🎬 Preview Mode</p>
+        <div className="flex items-center justify-between rounded-lg bg-indigo-50 border border-indigo-200 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Play className="h-4 w-4 text-indigo-600" />
+            <p className="text-sm font-semibold text-indigo-800">Preview Mode</p>
+            <span className="text-xs text-indigo-600">Experience checkpoints as a student would</span>
+          </div>
           <button type="button" onClick={() => setPreviewMode(false)}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+            className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition">
             Exit Preview
           </button>
         </div>
         <div className="relative">
-          <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black">
+          <div className="aspect-video overflow-hidden rounded-xl border border-slate-200 bg-black shadow-md">
             <video ref={previewVideoRef} src={videoPreviewUrl} controls playsInline preload="metadata"
               className="h-full w-full" onTimeUpdate={handlePreviewTimeUpdate} />
           </div>
           {previewCheckpoint && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-xl">
-              <div className="w-full max-w-md mx-4 rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl">
+              <div className="w-full max-w-md mx-4 rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
                 {!previewResult && (
                   <>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 mb-1">
-                      {TYPE_LABELS[previewCheckpoint.type]} • {formatTime(previewCheckpoint.questionTimestamp)}
-                    </p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100">
+                        {TYPE_ICONS[previewCheckpoint.type]}
+                      </div>
+                      <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">
+                        {TYPE_LABELS[previewCheckpoint.type]}
+                      </span>
+                      <span className="ml-auto text-xs font-mono text-slate-400">{formatTime(previewCheckpoint.questionTimestamp)}</span>
+                    </div>
                     {previewCheckpoint.codeSnippet && (
-                      <pre className="mb-3 rounded-lg bg-slate-900 p-3 text-xs text-green-300 overflow-x-auto">
-                        <code>{previewCheckpoint.codeSnippet}</code>
-                      </pre>
+                      <pre className="mb-3 rounded-lg bg-slate-900 p-3 text-xs text-green-300 overflow-x-auto font-mono"><code>{previewCheckpoint.codeSnippet}</code></pre>
                     )}
                     <p className="text-base font-semibold text-slate-900 mb-4">{previewCheckpoint.question}</p>
                     {(previewCheckpoint.type === "mcq" || previewCheckpoint.type === "true_false") && (
                       <div className="space-y-2 mb-4">
                         {previewCheckpoint.options.map((opt) => (
-                          <label key={opt.optionId} className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition ${previewAnswer === opt.optionId ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white"}`}>
-                            <input type="radio" name="preview-answer" value={opt.optionId}
-                              checked={previewAnswer === opt.optionId} onChange={() => setPreviewAnswer(opt.optionId)}
-                              className="h-4 w-4 text-indigo-600" />
+                          <label key={opt.optionId} className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${previewAnswer === opt.optionId ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
+                            <input type="radio" name="preview-answer" value={opt.optionId} checked={previewAnswer === opt.optionId} onChange={() => setPreviewAnswer(opt.optionId)} className="h-4 w-4 text-indigo-600" />
                             <span className="text-sm">{opt.text}</span>
                           </label>
                         ))}
@@ -430,41 +452,41 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
                     {previewCheckpoint.type === "multi_select" && (
                       <div className="space-y-2 mb-4">
                         {previewCheckpoint.options.map((opt) => (
-                          <label key={opt.optionId} className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition ${previewMultiAnswers.includes(opt.optionId) ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white"}`}>
-                            <input type="checkbox" checked={previewMultiAnswers.includes(opt.optionId)}
-                              onChange={(e) => {
-                                if (e.target.checked) setPreviewMultiAnswers([...previewMultiAnswers, opt.optionId]);
-                                else setPreviewMultiAnswers(previewMultiAnswers.filter((id) => id !== opt.optionId));
-                              }} className="h-4 w-4 text-indigo-600 rounded" />
+                          <label key={opt.optionId} className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${previewMultiAnswers.includes(opt.optionId) ? "border-indigo-500 bg-indigo-50 shadow-sm" : "border-slate-200 hover:border-slate-300 bg-white"}`}>
+                            <input type="checkbox" checked={previewMultiAnswers.includes(opt.optionId)} onChange={(e) => { if (e.target.checked) setPreviewMultiAnswers([...previewMultiAnswers, opt.optionId]); else setPreviewMultiAnswers(previewMultiAnswers.filter((id) => id !== opt.optionId)); }} className="h-4 w-4 text-indigo-600 rounded" />
                             <span className="text-sm">{opt.text}</span>
                           </label>
                         ))}
                       </div>
                     )}
                     {(previewCheckpoint.type === "fill_blank" || previewCheckpoint.type === "code_output") && (
-                      <input type="text" value={previewTextAnswer} onChange={(e) => setPreviewTextAnswer(e.target.value)}
-                        placeholder="Type your answer..." className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm mb-4" />
+                      <input type="text" value={previewTextAnswer} onChange={(e) => setPreviewTextAnswer(e.target.value)} placeholder="Type your answer..."
+                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm mb-4 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none" />
                     )}
                     <button type="button" onClick={handlePreviewSubmit}
-                      className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500">
+                      className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
                       Submit Answer
                     </button>
                   </>
                 )}
                 {previewResult === "correct" && (
                   <>
-                    <p className="text-lg font-bold text-emerald-700 mb-2">✓ Correct!</p>
-                    {previewCheckpoint.explanation && <p className="text-sm text-slate-600 mb-4">{previewCheckpoint.explanation}</p>}
-                    <button type="button" onClick={handlePreviewContinue}
-                      className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-500">Continue</button>
+                    <div className="flex items-center gap-3 mb-3">
+                      <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                      <p className="text-lg font-bold text-emerald-700">Correct!</p>
+                    </div>
+                    {previewCheckpoint.explanation && <p className="text-sm text-slate-600 mb-4 pl-11">{previewCheckpoint.explanation}</p>}
+                    <button type="button" onClick={handlePreviewContinue} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 transition">Continue</button>
                   </>
                 )}
                 {previewResult === "incorrect" && (
                   <>
-                    <p className="text-lg font-bold text-red-700 mb-2">✗ Incorrect</p>
-                    {previewCheckpoint.explanation && <p className="text-sm text-slate-600 mb-4">{previewCheckpoint.explanation}</p>}
-                    <button type="button" onClick={handlePreviewReview}
-                      className="w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-500">Review Again</button>
+                    <div className="flex items-center gap-3 mb-3">
+                      <XCircle className="h-8 w-8 text-red-500" />
+                      <p className="text-lg font-bold text-red-700">Not quite</p>
+                    </div>
+                    {previewCheckpoint.explanation && <p className="text-sm text-slate-600 mb-4 pl-11">{previewCheckpoint.explanation}</p>}
+                    <button type="button" onClick={handlePreviewReview} className="w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 transition">Review Again</button>
                   </>
                 )}
               </div>
@@ -480,29 +502,37 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm font-semibold text-slate-700">Interactive Checkpoints</p>
-        <div className="flex gap-2 flex-wrap">
+      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+            <Timer className="h-4 w-4 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Interactive Checkpoints</p>
+            <p className="text-xs text-slate-500">{checkpoints.length} checkpoint{checkpoints.length !== 1 ? "s" : ""}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
           {checkpoints.length > 0 && (
             <>
-              <button type="button" onClick={startPreview} className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
-                ▶ Preview
+              <button type="button" onClick={startPreview} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                <Play className="h-3.5 w-3.5" /> Preview
               </button>
-              <button type="button" onClick={handleExport} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
-                ↓ Export
+              <button type="button" onClick={handleExport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+                <Download className="h-3.5 w-3.5" /> Export
               </button>
             </>
           )}
-          <button type="button" onClick={() => setShowImport(!showImport)} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
-            ↑ Import
+          <button type="button" onClick={() => setShowImport(!showImport)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+            <Upload className="h-3.5 w-3.5" /> Import
           </button>
-          <button type="button" onClick={handleDuplicate} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
-            ⊕ Duplicate
+          <button type="button" onClick={handleDuplicate} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">
+            <Copy className="h-3.5 w-3.5" /> Duplicate
           </button>
           {!showForm && (
             <button type="button" onClick={() => { resetForm(); setShowForm(true); }}
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
-              + Add Checkpoint
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition">
+              <Plus className="h-3.5 w-3.5" /> Add
             </button>
           )}
         </div>
@@ -510,200 +540,236 @@ export function VideoCheckpoints({ moduleId, videoPreviewUrl }: VideoCheckpoints
 
       {/* Bulk Import Panel */}
       {showImport && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-600">Paste JSON (array of checkpoint objects)</p>
-          <textarea value={importJson} onChange={(e) => setImportJson(e.target.value)} rows={6}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-slate-500" />
+            <p className="text-xs font-semibold text-slate-700">Bulk Import — paste JSON array</p>
+          </div>
+          <textarea value={importJson} onChange={(e) => setImportJson(e.target.value)} rows={5}
             placeholder='[{"questionTimestamp": 510, "reviewTimestamp": 405, "question": "...", "type": "mcq", "options": [...], "correctOptionId": "b"}]'
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none" />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && showImport && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={handleBulkImport} disabled={importing}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60">
-              {importing ? "Importing…" : "Import"}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-60 transition">
+              {importing ? "Importing..." : "Import Checkpoints"}
             </button>
             <button type="button" onClick={() => { setShowImport(false); setError(""); }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+              className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
           </div>
         </div>
       )}
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Video Player — use for timestamp selection</p>
-          <div className="aspect-video overflow-hidden rounded-lg border border-slate-200 bg-black">
-            <video ref={videoRef} src={videoPreviewUrl} controls controlsList="nodownload noremoteplayback"
-              disablePictureInPicture playsInline preload="metadata" className="h-full w-full" />
+        <div className="rounded-xl border border-indigo-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-indigo-100 bg-indigo-50/50 px-4 py-3">
+            <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wider flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5" />
+              {editingId ? "Edit Checkpoint" : "New Checkpoint"} — Use video player to pick timestamps
+            </p>
           </div>
+          <div className="p-4 space-y-4">
+            {/* Video player */}
+            <div className="aspect-video overflow-hidden rounded-lg border border-slate-200 bg-black shadow-inner">
+              <video ref={videoRef} src={videoPreviewUrl} controls controlsList="nodownload noremoteplayback"
+                disablePictureInPicture playsInline preload="metadata" className="h-full w-full" />
+            </div>
 
-          {/* Timestamps */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Question appears at</label>
-              <div className="flex gap-2">
-                <input type="text" value={questionTimestamp} onChange={(e) => setQuestionTimestamp(e.target.value)}
-                  placeholder="MM:SS" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-                <button type="button" onClick={useCurrentTimeForQuestion}
-                  className="shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">Use Current Time</button>
+            {/* Timestamps */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Question appears at</label>
+                <div className="flex gap-2">
+                  <input type="text" value={questionTimestamp} onChange={(e) => setQuestionTimestamp(e.target.value)}
+                    placeholder="MM:SS" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none font-mono" />
+                  <button type="button" onClick={useCurrentTimeForQuestion}
+                    className="inline-flex items-center gap-1.5 shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                    <Clock className="h-3.5 w-3.5" /> Use Current
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Review starts at</label>
+                <div className="flex gap-2">
+                  <input type="text" value={reviewTimestamp} onChange={(e) => setReviewTimestamp(e.target.value)}
+                    placeholder="MM:SS" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none font-mono" />
+                  <button type="button" onClick={useCurrentTimeForReview}
+                    className="inline-flex items-center gap-1.5 shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                    <Clock className="h-3.5 w-3.5" /> Use Current
+                  </button>
+                </div>
               </div>
             </div>
+
+            {/* Question Type */}
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Review starts at</label>
-              <div className="flex gap-2">
-                <input type="text" value={reviewTimestamp} onChange={(e) => setReviewTimestamp(e.target.value)}
-                  placeholder="MM:SS" className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-                <button type="button" onClick={useCurrentTimeForReview}
-                  className="shrink-0 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">Use Current Time</button>
-              </div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">Question Type</label>
+              <select value={questionType} onChange={(e) => setQuestionType(e.target.value as CheckpointType)}
+                className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none bg-white">
+                {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
             </div>
-          </div>
 
-          {/* Question Type */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Question Type</label>
-            <select value={questionType} onChange={(e) => setQuestionType(e.target.value as CheckpointType)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none">
-              {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-
-          {/* Question */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Question</label>
-            <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)}
-              placeholder="What is JWT mainly used for?" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-          </div>
-
-          {/* Code snippet (for code_output) */}
-          {questionType === "code_output" && (
+            {/* Question text */}
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Code Snippet</label>
-              <textarea value={codeSnippet} onChange={(e) => setCodeSnippet(e.target.value)} rows={4}
-                placeholder="console.log(typeof null);" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none" />
-              <input type="text" value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)}
-                placeholder="Language (e.g. javascript)" className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+              <label className="block text-xs font-medium text-slate-600 mb-1">Question</label>
+              <input type="text" value={question} onChange={(e) => setQuestion(e.target.value)}
+                placeholder="What is JWT mainly used for?" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
             </div>
-          )}
 
-          {/* Options (MCQ / Multi-select) */}
-          {(questionType === "mcq" || questionType === "multi_select") && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Options ({questionType === "multi_select" ? "check all correct" : "mark the correct one"})
-              </label>
+            {/* Code snippet */}
+            {questionType === "code_output" && (
               <div className="space-y-2">
-                {options.map((opt, i) => (
-                  <div key={opt.optionId} className="flex items-center gap-2">
-                    {questionType === "mcq" ? (
-                      <input type="radio" name="correctOption" value={opt.optionId}
-                        checked={correctOptionId === opt.optionId} onChange={() => setCorrectOptionId(opt.optionId)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
-                    ) : (
-                      <input type="checkbox" checked={correctOptionIds.includes(opt.optionId)}
-                        onChange={(e) => {
-                          if (e.target.checked) setCorrectOptionIds([...correctOptionIds, opt.optionId]);
-                          else setCorrectOptionIds(correctOptionIds.filter((id) => id !== opt.optionId));
-                        }} className="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500" />
-                    )}
-                    <span className="text-xs font-semibold text-slate-500 w-5">{opt.optionId.toUpperCase()}.</span>
-                    <input type="text" value={opt.text} onChange={(e) => {
-                      const updated = [...options]; updated[i] = { ...updated[i], text: e.target.value }; setOptions(updated);
-                    }} placeholder={`Option ${opt.optionId.toUpperCase()}`}
-                      className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-                  </div>
-                ))}
+                <label className="block text-xs font-medium text-slate-600">Code Snippet</label>
+                <textarea value={codeSnippet} onChange={(e) => setCodeSnippet(e.target.value)} rows={4}
+                  placeholder="console.log(typeof null);" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-mono bg-slate-50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none" />
+                <input type="text" value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)}
+                  placeholder="Language (e.g. javascript)" className="w-full max-w-xs rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+              </div>
+            )}
+
+            {/* MCQ / Multi-select options */}
+            {(questionType === "mcq" || questionType === "multi_select") && (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-2">
+                  Options — {questionType === "multi_select" ? "check all correct" : "select the correct one"}
+                </label>
+                <div className="space-y-2">
+                  {options.map((opt, i) => (
+                    <div key={opt.optionId} className="flex items-center gap-2">
+                      {questionType === "mcq" ? (
+                        <input type="radio" name="correctOption" value={opt.optionId}
+                          checked={correctOptionId === opt.optionId} onChange={() => setCorrectOptionId(opt.optionId)}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500" />
+                      ) : (
+                        <input type="checkbox" checked={correctOptionIds.includes(opt.optionId)}
+                          onChange={(e) => { if (e.target.checked) setCorrectOptionIds([...correctOptionIds, opt.optionId]); else setCorrectOptionIds(correctOptionIds.filter((id) => id !== opt.optionId)); }}
+                          className="h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500" />
+                      )}
+                      <span className="text-xs font-bold text-slate-400 w-5 text-center">{opt.optionId.toUpperCase()}</span>
+                      <input type="text" value={opt.text} onChange={(e) => { const u = [...options]; u[i] = { ...u[i], text: e.target.value }; setOptions(u); }}
+                        placeholder={`Option ${opt.optionId.toUpperCase()}`}
+                        className="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* True/False */}
+            {questionType === "true_false" && (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-2">Correct Answer</label>
+                <div className="flex gap-4">
+                  {[{ id: "true", label: "True" }, { id: "false", label: "False" }].map((o) => (
+                    <label key={o.id} className={`flex items-center gap-2 rounded-lg border-2 px-4 py-2.5 cursor-pointer transition ${correctOptionId === o.id ? "border-indigo-500 bg-indigo-50" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                      <input type="radio" name="tfAnswer" value={o.id} checked={correctOptionId === o.id} onChange={() => setCorrectOptionId(o.id)} className="h-4 w-4 text-indigo-600" />
+                      <span className="text-sm font-medium">{o.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fill-blank / Code output answer */}
+            {(questionType === "fill_blank" || questionType === "code_output") && (
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">Correct Answer</label>
+                <input type="text" value={correctText} onChange={(e) => setCorrectText(e.target.value)}
+                  placeholder="e.g. object" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+                <label className="block text-xs font-medium text-slate-600">Alternative Answers (comma-separated)</label>
+                <input type="text" value={acceptableAnswers} onChange={(e) => setAcceptableAnswers(e.target.value)}
+                  placeholder="e.g. Object, OBJECT" className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+              </div>
+            )}
+
+            {/* Explanation + Bonus XP */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-600 mb-1">Explanation (optional)</label>
+                <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)}
+                  placeholder="Shown after answering..." rows={2}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none" />
+              </div>
+              <div>
+                <label className="flex items-center gap-1 text-xs font-medium text-slate-600 mb-1">
+                  <Zap className="h-3 w-3 text-amber-500" /> Bonus XP
+                </label>
+                <input type="number" value={bonusXp} onChange={(e) => setBonusXp(e.target.value)} min={0} max={100}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
+                <p className="mt-1 text-[10px] text-slate-400">Awarded on first-attempt correct</p>
               </div>
             </div>
-          )}
 
-          {/* True/False options */}
-          {questionType === "true_false" && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Correct Answer</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="tfAnswer" value="true" checked={correctOptionId === "true"}
-                    onChange={() => setCorrectOptionId("true")} className="h-4 w-4 text-indigo-600" />
-                  <span className="text-sm font-medium">True</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="tfAnswer" value="false" checked={correctOptionId === "false"}
-                    onChange={() => setCorrectOptionId("false")} className="h-4 w-4 text-indigo-600" />
-                  <span className="text-sm font-medium">False</span>
-                </label>
-              </div>
+            {/* Error */}
+            {error && !showImport && <p className="text-xs font-medium text-red-600">{error}</p>}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <button type="button" onClick={handleSave} disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 transition">
+                {saving ? "Saving..." : editingId ? "Update Checkpoint" : "Save Checkpoint"}
+              </button>
+              <button type="button" onClick={() => { resetForm(); setShowForm(false); }}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                Cancel
+              </button>
             </div>
-          )}
-
-          {/* Fill-blank / Code output answer */}
-          {(questionType === "fill_blank" || questionType === "code_output") && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Correct Answer</label>
-              <input type="text" value={correctText} onChange={(e) => setCorrectText(e.target.value)}
-                placeholder="e.g. object" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-              <label className="block text-xs font-medium text-slate-600 mt-2 mb-1">Alternative Answers (comma-separated)</label>
-              <input type="text" value={acceptableAnswers} onChange={(e) => setAcceptableAnswers(e.target.value)}
-                placeholder="e.g. Object, OBJECT" className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-            </div>
-          )}
-
-          {/* Explanation + Bonus XP */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Explanation (optional)</label>
-              <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)}
-                placeholder="Shown after answering..." rows={2}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none resize-none" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Bonus XP (first-attempt correct)</label>
-              <input type="number" value={bonusXp} onChange={(e) => setBonusXp(e.target.value)} min={0} max={100}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 outline-none" />
-            </div>
-          </div>
-
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
-
-          <div className="flex gap-2">
-            <button type="button" onClick={handleSave} disabled={saving}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 transition">
-              {saving ? "Saving…" : editingId ? "Update Checkpoint" : "Save Checkpoint"}
-            </button>
-            <button type="button" onClick={() => { resetForm(); setShowForm(false); }}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">Cancel</button>
           </div>
         </div>
       )}
 
       {/* Checkpoint List */}
       {loading ? (
-        <div className="flex items-center justify-center py-6"><div className="spinner spinner--inline" /></div>
+        <div className="flex items-center justify-center py-8"><div className="spinner spinner--inline" /></div>
       ) : checkpoints.length === 0 && !showForm ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 py-8 text-center">
-          <p className="text-sm text-slate-500">No checkpoints yet. Add one to make the video interactive.</p>
+        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 py-10 text-center">
+          <Timer className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+          <p className="text-sm text-slate-500">No checkpoints yet.</p>
+          <p className="text-xs text-slate-400 mt-1">Add one to make the video interactive for students.</p>
         </div>
       ) : checkpoints.length > 0 ? (
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50/80 border-b border-slate-200">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500">Time</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500">Type</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-500">Question</th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-slate-500">Actions</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Question</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {checkpoints.map((cp) => (
-                <tr key={cp._id} className={cp.isActive ? "" : "opacity-50"}>
-                  <td className="px-3 py-2 font-mono text-xs">{formatTime(cp.questionTimestamp)}</td>
-                  <td className="px-3 py-2 text-xs"><span className="rounded bg-slate-100 px-1.5 py-0.5">{TYPE_LABELS[cp.type]}</span></td>
-                  <td className="px-3 py-2 text-slate-700 truncate max-w-[200px]">{cp.question}</td>
-                  <td className="px-3 py-2 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button type="button" onClick={() => openEdit(cp)} className="rounded px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition">Edit</button>
-                      <button type="button" onClick={() => handleToggleActive(cp)} className="rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 transition">{cp.isActive ? "Disable" : "Enable"}</button>
-                      <button type="button" onClick={() => handleDelete(cp._id)} className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 transition">Delete</button>
+                <tr key={cp._id} className={`transition-colors hover:bg-slate-50/50 ${cp.isActive ? "" : "opacity-40"}`}>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 font-mono text-xs font-medium text-slate-700 bg-slate-100 rounded-md px-2 py-0.5">
+                      <Clock className="h-3 w-3 text-slate-400" />
+                      {formatTime(cp.questionTimestamp)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-md px-2 py-0.5">
+                      {TYPE_ICONS[cp.type]}
+                      {TYPE_LABELS[cp.type]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700 text-sm max-w-[250px] truncate">{cp.question}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="inline-flex items-center gap-0.5">
+                      <button type="button" onClick={() => openEdit(cp)} title="Edit"
+                        className="rounded-md p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" onClick={() => handleToggleActive(cp)} title={cp.isActive ? "Disable" : "Enable"}
+                        className="rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition">
+                        {cp.isActive ? <ToggleRight className="h-4 w-4 text-emerald-500" /> : <ToggleLeft className="h-4 w-4" />}
+                      </button>
+                      <button type="button" onClick={() => handleDelete(cp._id)} title="Delete"
+                        className="rounded-md p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 transition">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -344,3 +344,13 @@ export async function saveVideoPosition(userId: string, moduleId: string, positi
     { upsert: true }
   );
 }
+
+// ─── Admin: Migrate checkpoints from temp module ID to real ID ────────────────
+
+export async function migrateCheckpoints(tempModuleId: string, realModuleId: string) {
+  const result = await VideoCheckpointModel.updateMany(
+    { moduleId: tempModuleId },
+    { $set: { moduleId: realModuleId } }
+  );
+  return { migrated: result.modifiedCount };
+}
