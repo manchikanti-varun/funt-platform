@@ -8,6 +8,7 @@ import { emitStudentMeRefresh } from "@/lib/studentMeEvents";
 import { sanitizeHtml, RICH_TEXT_VIEW_CLASS, shouldShowChapterDescription } from "@/lib/sanitizeHtml";
 import { AppPageShell, DataPanel } from "@/components/ui";
 import { useProtection } from "@/components/security/ProtectionContext";
+import { VideoCheckpointPlayer } from "@/components/VideoCheckpointPlayer";
 import { Check, CirclePlay, Lock, ShieldAlert, Award, CreditCard, AlertTriangle, ChevronRight } from "lucide-react";
 
 /**
@@ -81,6 +82,8 @@ interface ChapterItem {
   linkedQuizId?: string;
   hasQuiz?: boolean;
   quizCompleted?: boolean;
+  /** Original global module ID (used for video checkpoints) */
+  originalGlobalModuleId?: string;
 }
 
 interface MilestoneStatus {
@@ -1023,6 +1026,12 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                                     allow="autoplay; fullscreen" allowFullScreen />
                                   <div className="absolute top-0 right-0 w-[80px] h-[80px] z-10 bg-transparent pointer-events-auto" />
                                 </>
+                              ) : selected.originalGlobalModuleId ? (
+                                <VideoCheckpointPlayer
+                                  videoSrc={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)}
+                                  moduleId={selected.originalGlobalModuleId}
+                                  onVideoEnded={() => { if (!isPartCompleted("video")) void handleMarkPartComplete("video"); }}
+                                />
                               ) : (
                                 <video src={resolveMediaPlaybackUrl(selected.videoPlaybackUrl)} controls
                                   controlsList="nodownload noremoteplayback" disablePictureInPicture

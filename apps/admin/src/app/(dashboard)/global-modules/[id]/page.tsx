@@ -11,6 +11,7 @@ import { useAppDialog, EntityDetailLoadingScreen, EntityDetailShell } from "@/co
 import { RequireRoles } from "@/components/auth/RequireRoles";
 import { VideoUploadField } from "@/components/videos/VideoUploadField";
 import { ChapterHostedMedia } from "@/components/chapters/ChapterHostedMedia";
+import { VideoCheckpoints } from "@/components/chapters/VideoCheckpoints";
 import { makeUploadVideoFn } from "@/lib/uploadVideoToR2";
 import { makeUploadImageFn } from "@/lib/uploadImageToR2";
 
@@ -71,6 +72,14 @@ export default function EditGlobalChapterPage() {
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [uploadsInProgress, setUploadsInProgress] = useState(0);
+
+  // R2 video preview URL for checkpoint component
+  const [r2VideoPreviewUrl, setR2VideoPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!videoUrl.startsWith("r2://")) { setR2VideoPreviewUrl(null); return; }
+    api<{ previewUrl: string }>(`/api/admin/videos/preview?key=${encodeURIComponent(videoUrl)}`)
+      .then((r) => { if (r.success && r.data?.previewUrl) setR2VideoPreviewUrl(r.data.previewUrl); });
+  }, [videoUrl]);
 
   // Upload helper for images
   const uploadImageFn = useRef(makeUploadImageFn({ courseId: "global", moduleId: id }));
@@ -420,6 +429,12 @@ export default function EditGlobalChapterPage() {
                 {(videoUrl || youtubeUrl) && (
                   <div className="mt-3">
                     <ChapterHostedMedia youtubeUrl={youtubeUrl} videoUrl={videoUrl} />
+                  </div>
+                )}
+                {/* Interactive Checkpoints — only for R2 videos */}
+                {videoUrl.startsWith("r2://") && (
+                  <div className="mt-4">
+                    <VideoCheckpoints moduleId={id} videoPreviewUrl={r2VideoPreviewUrl} />
                   </div>
                 )}
               </div>

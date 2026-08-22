@@ -17,3 +17,4 @@ export * from "./globalAssignment.schema.js";
 export * from "./letter.schema.js";
 export * from "./contentProtection.schema.js";
 export * from "./progress.schema.js";
+export * from "./checkpoint.schema.js";

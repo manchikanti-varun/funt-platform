@@ -60,6 +60,7 @@ import { paymentPromiseRoutes } from "./routes/paymentPromise.routes.js";
 import { quizAdminRoutes, quizStudentRoutes } from "./routes/quiz.routes.js";
 import { franchiseAdminRoutes, franchiseRoutes } from "./routes/franchise.routes.js";
 import { referralRoutes } from "./routes/referral.routes.js";
+import { checkpointAdminRoutes, checkpointStudentRoutes } from "./routes/checkpoint.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -174,6 +175,8 @@ app.use("/api/student/quizzes", quizStudentRoutes);
 app.use("/api/franchise/admin", franchiseAdminRoutes);
 app.use("/api/franchise", franchiseRoutes);
 app.use("/api/referral", referralRoutes);
+app.use("/api/checkpoints", checkpointAdminRoutes);
+app.use("/api/student/checkpoints", checkpointStudentRoutes);
 app.use("/verify", verifyRoutes);
 app.use("/accept-offer", acceptOfferRoutes);
 
