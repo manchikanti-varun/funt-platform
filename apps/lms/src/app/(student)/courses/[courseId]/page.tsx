@@ -912,12 +912,16 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                           <div className="px-6 py-6">
                             <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
                             {/* DEBUG: temporary — remove after fixing images */}
-                            <div style={{background:'#fffbe6',border:'1px solid #faad14',borderRadius:'8px',padding:'8px',marginBottom:'12px',fontSize:'11px',fontFamily:'monospace'}}>
+                            <div style={{background:'#fffbe6',border:'1px solid #faad14',borderRadius:'8px',padding:'8px',marginBottom:'12px',fontSize:'11px',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>
                               <div>content length: {selected.content?.length ?? 0}</div>
-                              <div>has img in content: {String(selected.content?.includes?.('&lt;img') || selected.content?.includes?.('<img'))}</div>
-                              <div>description length: {selected.description?.length ?? 0}</div>
+                              <div>has img in raw content: {String(selected.content?.includes('<img'))}</div>
                               <div>API_URL: {API_URL}</div>
                               <div>sanitized has img: {String(sanitizeHtml(selected.content ?? '', API_URL).includes('<img'))}</div>
+                              <div>sanitized length: {sanitizeHtml(selected.content ?? '', API_URL).length}</div>
+                              <div>---first img tag in raw---</div>
+                              <div>{selected.content?.match(/<img[^>]*>/)?.[0]?.substring(0, 200) ?? 'NO IMG FOUND'}</div>
+                              <div>---first 100 chars of sanitized---</div>
+                              <div>{sanitizeHtml(selected.content ?? '', API_URL).substring(0, 100)}</div>
                             </div>
                             {shouldShowChapterDescription(selected.description, selected.content) && (
                               <div className={`text-slate-700 mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
