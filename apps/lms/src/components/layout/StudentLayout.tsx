@@ -23,7 +23,6 @@ import {
   IconKey,
   IconFaq,
 } from "@/components/icons/NavIcons";
-import { StateScreen } from "@/components/ui/StateScreen";
 import { ProtectionProvider } from "@/components/security/ProtectionContext";
 import { ContentProtectionProvider } from "@/components/security/ContentProtectionProvider";
 
@@ -329,12 +328,26 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
-        <StateScreen
-          tone="loading"
-          title="Checking your account"
-          description="Verifying your session and loading your personalized dashboard..."
-        />
+      <div className="flex h-screen min-h-screen overflow-hidden bg-slate-50">
+        {/* Show layout skeleton immediately for fast LCP */}
+        <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-slate-200/90 bg-white lg:flex">
+          <div className="flex shrink-0 flex-col items-center justify-center border-b border-slate-100/90 bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 px-5 py-7">
+            <img src="/funt-logo.png" alt="FUNT Learn" className="h-12 w-auto max-w-full object-contain sm:h-14" />
+            <span className="mt-2.5 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-500 sm:text-xs">Learn</span>
+          </div>
+          <div className="flex-1 px-4 py-5 space-y-3">
+            {[1,2,3,4,5].map((i) => <div key={i} className="h-10 rounded-xl bg-slate-100 animate-pulse" />)}
+          </div>
+        </aside>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-100 bg-white/80 backdrop-blur px-4 sm:px-6">
+            <div className="h-5 w-40 rounded bg-slate-100 animate-pulse" />
+            <div className="h-9 w-9 rounded-full bg-slate-100 animate-pulse" />
+          </header>
+          <main className="flex flex-1 items-center justify-center p-6">
+            <div className="spinner" />
+          </main>
+        </div>
       </div>
     );
   }
