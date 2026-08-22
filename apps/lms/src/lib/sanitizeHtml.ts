@@ -2,6 +2,7 @@
 // editor bundle (Tiptap, ProseMirror, DOMPurify) into the LMS read-only page.
 // The barrel import from the package caused a crash because the editor module
 // initialization code in DOMPurify 3.4.x fails in this React/Next.js version.
+// v2: Fixed img tag preservation in sanitizeAllowlist (Aug 2026)
 
 
 export const RICH_TEXT_VIEW_CLASS =
