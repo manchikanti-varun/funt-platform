@@ -262,14 +262,23 @@ function LMSTopbar({
 export function StudentLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<UserMe | null>(null);
+  const [user, setUser] = useState<UserMe | null>(() => {
+    // Hydrate from sessionStorage for instant render (avoids LCP delay)
+    if (typeof sessionStorage === "undefined") return null;
+    try {
+      const cached = sessionStorage.getItem("_lms_user");
+      if (cached) return JSON.parse(cached) as UserMe;
+    } catch { /* ignore */ }
+    return null;
+  });
   const [badgeCount, setBadgeCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!user); // skip loading if we have cached user
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const refreshUser = useCallback(async () => {
     const r = await api<UserMe>("/api/users/me");
     if (!r.success || !r.data) {
+      sessionStorage.removeItem("_lms_user");
       router.push("/login");
       return;
     }
@@ -278,14 +287,16 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
       return;
     }
     setUser(r.data);
+    // Persist to sessionStorage for instant next render
+    try { sessionStorage.setItem("_lms_user", JSON.stringify(r.data)); } catch { /* quota */ }
   }, [router]);
 
-  // Only fetch user ONCE on mount — not on every pathname change
+  // Fetch user on mount — if we have cached data, skip the loading state
   useEffect(() => {
     let cancelled = false;
     try { ensureCsrfToken(); } catch { /* ignore */ }
     refreshUser()
-      .catch(() => router.push("/login"))
+      .catch(() => { sessionStorage.removeItem("_lms_user"); router.push("/login"); })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
