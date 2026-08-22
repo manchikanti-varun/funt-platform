@@ -10,6 +10,8 @@ const nextConfig = {
     config.resolve.modules.push(path.resolve(__dirname, '../../node_modules'));
     return config;
   },
+  // Force clean rebuild — bust Vercel cache
+  generateBuildId: () => `build-${Date.now()}`,
 };
 
 module.exports = nextConfig;
