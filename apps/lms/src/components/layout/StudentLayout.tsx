@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { QRCodeSVG } from "qrcode.react";
 import { api, clearToken, ensureCsrfToken } from "@/lib/api";
 import { STUDENT_ME_REFRESH_EVENT } from "@/lib/studentMeEvents";
@@ -25,7 +26,11 @@ import {
 import { StateScreen } from "@/components/ui/StateScreen";
 import { ProtectionProvider } from "@/components/security/ProtectionContext";
 import { ContentProtectionProvider } from "@/components/security/ContentProtectionProvider";
-import { LiveChatWidget } from "@/components/support/LiveChatWidget";
+
+const LiveChatWidget = dynamic(
+  () => import("@/components/support/LiveChatWidget").then((m) => m.LiveChatWidget),
+  { ssr: false }
+);
 
 interface UserMe {
   id: string;
@@ -276,9 +281,9 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     setUser(r.data);
   }, [router]);
 
+  // Only fetch user ONCE on mount — not on every pathname change
   useEffect(() => {
     let cancelled = false;
-    // Fetch CSRF token in background (non-blocking, non-crashing)
     try { ensureCsrfToken(); } catch { /* ignore */ }
     refreshUser()
       .catch(() => router.push("/login"))
@@ -288,8 +293,10 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [refreshUser, pathname, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Refresh user data when tab becomes visible (soft refresh, no loading state)
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === "visible") void refreshUser().catch(() => {});
@@ -305,12 +312,16 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
     };
   }, [refreshUser]);
 
+  // Fetch badge count once, not on every user refresh
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     api<unknown[]>("/api/achievements/me")
-      .then((r) => setBadgeCount(Array.isArray(r.data) ? r.data.length : 0))
-      .catch(() => setBadgeCount(0));
-  }, [user]);
+      .then((r) => { if (!cancelled) setBadgeCount(Array.isArray(r.data) ? r.data.length : 0); })
+      .catch(() => { if (!cancelled) setBadgeCount(0); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!user]);
 
   useEffect(() => {
     setSidebarOpen(false);
