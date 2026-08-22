@@ -10,6 +10,45 @@ import { AppPageShell, DataPanel } from "@/components/ui";
 import { useProtection } from "@/components/security/ProtectionContext";
 import { Check, CirclePlay, Lock, ShieldAlert, Award, CreditCard, AlertTriangle, ChevronRight } from "lucide-react";
 
+/**
+ * Prepare chapter content HTML for rendering.
+ * Content is already server-side sanitized by the backend.
+ * This only rewrites r2:// media URLs to absolute API URLs.
+ */
+function prepareContentHtml(html: string, apiBase: string): string {
+  if (!html) return "";
+  let out = html;
+  const base = (apiBase ?? "").replace(/\/$/, "");
+  if (base) {
+    // Rewrite r2:// video URLs
+    out = out.replace(
+      /<video\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*)>/gi,
+      (_m: string, before: string, q: string, r2Key: string, after: string) =>
+        `<video${before} src=${q}${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}${q}${after}>`
+    );
+    // Rewrite r2:// image URLs
+    out = out.replace(
+      /<img\b([^>]*?)\ssrc=(["'])(r2:\/\/[^"']+)\2([^>]*?)>/gi,
+      (_m: string, before: string, q: string, r2Key: string, after: string) => {
+        const objectKey = r2Key.slice(5);
+        const url = objectKey.startsWith("images/")
+          ? `${base}/api/admin/images/serve/${objectKey}`
+          : `${base}/api/student/media/stream?key=${encodeURIComponent(r2Key)}`;
+        return `<img${before} src=${q}${url}${q}${after}>`;
+      }
+    );
+    // Rewrite relative /api/ paths to absolute
+    out = out.replace(
+      /\ssrc=(["'])(\/api\/[^"']+)\1/gi,
+      (_m: string, q: string, path: string) => ` src=${q}${base}${path}${q}`
+    );
+  }
+  // Strip dangerous script/event handlers only (defense-in-depth — backend already sanitized)
+  out = out.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  out = out.replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, "");
+  return out;
+}
+
 interface ChapterItem {
   order: number;
   title: string;
@@ -911,22 +950,10 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                         {hasLessons && (
                           <div className="px-6 py-6">
                             <p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Content</p>
-                            {/* DEBUG: temporary — remove after fixing images */}
-                            <div style={{background:'#fffbe6',border:'1px solid #faad14',borderRadius:'8px',padding:'8px',marginBottom:'12px',fontSize:'11px',fontFamily:'monospace',whiteSpace:'pre-wrap',wordBreak:'break-all'}}>
-                              <div>content length: {selected.content?.length ?? 0}</div>
-                              <div>has img in raw content: {String(selected.content?.includes('<img'))}</div>
-                              <div>API_URL: {API_URL}</div>
-                              <div>sanitized has img: {String(sanitizeHtml(selected.content ?? '', API_URL).includes('<img'))}</div>
-                              <div>sanitized length: {sanitizeHtml(selected.content ?? '', API_URL).length}</div>
-                              <div>---first img tag in raw---</div>
-                              <div>{selected.content?.match(/<img[^>]*>/)?.[0]?.substring(0, 200) ?? 'NO IMG FOUND'}</div>
-                              <div>---first 100 chars of sanitized---</div>
-                              <div>{sanitizeHtml(selected.content ?? '', API_URL).substring(0, 100)}</div>
-                            </div>
                             {shouldShowChapterDescription(selected.description, selected.content) && (
                               <div className={`text-slate-700 mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
                             )}
-                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content, API_URL) }} />}
+                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: prepareContentHtml(selected.content, API_URL) }} />}
                             {selected.hasContent && (
                               <div className="mt-6">
                                 {isPartCompleted("content") ? (
