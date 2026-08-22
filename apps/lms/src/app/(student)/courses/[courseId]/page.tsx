@@ -914,7 +914,7 @@ function CourseViewerPage({ defaultShowChapters = false }: { defaultShowChapters
                             {shouldShowChapterDescription(selected.description, selected.content) && (
                               <div className={`text-slate-700 mb-4 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.description, API_URL) }} />
                             )}
-                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content, API_URL) }} />}}
+                            {selected.content && <div className={`text-slate-800 ${RICH_TEXT_VIEW_CLASS}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(selected.content, API_URL) }} />}
                             {selected.hasContent && (
                               <div className="mt-6">
                                 {isPartCompleted("content") ? (
