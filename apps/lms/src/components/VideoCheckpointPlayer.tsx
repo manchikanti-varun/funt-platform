@@ -95,6 +95,9 @@ export function VideoCheckpointPlayer({
   const lastAllowedTimeRef = useRef(0);
   const triggeredInCycleRef = useRef<Set<string>>(new Set());
   const positionSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Previous playback time — used to detect when a checkpoint boundary is crossed
+  // between two timeupdate events (which fire only ~4x/sec, so a fixed window is unreliable).
+  const prevTimeRef = useRef(0);
 
   // ─── Load checkpoints + progress ───────────────────────────────────────────
 
@@ -119,11 +122,25 @@ export function VideoCheckpointPlayer({
   // ─── Restore position ─────────────────────────────────────────────────────
 
   const handleLoadedMetadata = useCallback(() => {
-    if (videoRef.current) {
-      setVideoDuration(videoRef.current.duration);
-      if (lastPosition > 0) videoRef.current.currentTime = lastPosition;
+    const video = videoRef.current;
+    if (!video) return;
+    setVideoDuration(video.duration);
+
+    if (lastPosition > 0) {
+      // Never restore past an uncompleted checkpoint — otherwise it would be silently skipped.
+      let target = lastPosition;
+      for (const cp of checkpoints) {
+        if (isCompleted(cp._id)) continue;
+        if (cp.questionTimestamp < target) {
+          target = Math.max(0, cp.questionTimestamp - 0.5);
+        }
+      }
+      video.currentTime = target;
+      prevTimeRef.current = target;
+      lastAllowedTimeRef.current = target;
     }
-  }, [lastPosition]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastPosition, checkpoints, progress]);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -150,7 +167,13 @@ export function VideoCheckpointPlayer({
       (cp) => !isCompleted(cp._id) && cp.questionTimestamp > currentAllowed && cp.questionTimestamp <= seekTarget
     );
     if (blockingCheckpoint) {
-      video.currentTime = Math.max(0, blockingCheckpoint.questionTimestamp - 0.5);
+      const clamped = Math.max(0, blockingCheckpoint.questionTimestamp - 0.5);
+      video.currentTime = clamped;
+      prevTimeRef.current = clamped;
+    } else {
+      // Legitimate seek (backward, or forward within already-watched region):
+      // resync prevTime so the crossing detector doesn't treat the jump as a cross.
+      prevTimeRef.current = video.currentTime;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkpoints, progress]);
@@ -161,13 +184,29 @@ export function VideoCheckpointPlayer({
     const video = videoRef.current;
     if (!video || checkpoints.length === 0 || checkpointState !== "idle") return;
     const currentTime = video.currentTime;
+    const prevTime = prevTimeRef.current;
+    prevTimeRef.current = currentTime;
     if (currentTime > lastAllowedTimeRef.current) lastAllowedTimeRef.current = currentTime;
 
+    // Find the EARLIEST uncompleted checkpoint whose timestamp was crossed since the
+    // previous timeupdate. Using a crossing test (prev < ts <= current) instead of a
+    // fixed 1-second window means checkpoints can't be skipped at high playback rates
+    // or when the browser fires timeupdate infrequently. checkpoints is sorted by
+    // questionTimestamp ascending, so the first match is the earliest.
     for (const cp of checkpoints) {
       if (isCompleted(cp._id)) continue;
       if (triggeredInCycleRef.current.has(cp._id)) continue;
-      if (currentTime >= cp.questionTimestamp && currentTime < cp.questionTimestamp + 1) {
+      // Trigger when the playhead reaches or passes the checkpoint. Guard against
+      // large forward jumps caused by seeking (seek protection handles those).
+      const crossed = prevTime < cp.questionTimestamp && currentTime >= cp.questionTimestamp;
+      const landedOn = currentTime >= cp.questionTimestamp && currentTime < cp.questionTimestamp + 0.5;
+      if (crossed || landedOn) {
         video.pause();
+        // Snap back to the checkpoint moment so the user doesn't see past it.
+        if (currentTime > cp.questionTimestamp + 0.25) {
+          video.currentTime = cp.questionTimestamp;
+          prevTimeRef.current = cp.questionTimestamp;
+        }
         triggeredInCycleRef.current.add(cp._id);
         setActiveCheckpoint(cp);
         setCheckpointState("showing");
@@ -259,7 +298,12 @@ export function VideoCheckpointPlayer({
     setCheckpointState("idle");
     setActiveCheckpoint(null);
     setAnswerResult(null);
-    if (videoRef.current) { videoRef.current.currentTime = reviewTime; videoRef.current.play(); }
+    if (videoRef.current) {
+      videoRef.current.currentTime = reviewTime;
+      // Resync so replaying up to the checkpoint re-triggers it correctly.
+      prevTimeRef.current = reviewTime;
+      videoRef.current.play();
+    }
   }
 
   function handleEnded() {
