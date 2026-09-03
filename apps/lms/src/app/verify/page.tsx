@@ -12,7 +12,11 @@ interface VerifyResult {
   certificateId?: string;
   studentName?: string;
   courseName?: string;
+  templateName?: string;
   issuedAt?: string;
+  status?: string;
+  /** Workshop certificate fields from fieldValues */
+  fieldValues?: Record<string, string>;
 }
 
 function VerifyCertificateContent() {
@@ -32,16 +36,43 @@ function VerifyCertificateContent() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/verify/${encodeURIComponent(id)}`);
+      // Workshop certificates start with WS-
+      const isWorkshop = id.toUpperCase().startsWith("WS-");
+      const endpoint = isWorkshop
+        ? `${API_BASE}/verify/workshop/${encodeURIComponent(id)}`
+        : `${API_BASE}/verify/${encodeURIComponent(id)}`;
+      const res = await fetch(endpoint);
       const data = (await res.json()) as VerifyResult & { data?: VerifyResult };
+      if (!res.ok) {
+        setResult({
+          valid: false,
+          message: data.message ?? (res.status === 404 ? "Certificate not found." : "Verification failed."),
+        });
+        return;
+      }
       const payload = data.data ?? data;
+      // For workshop certificates, extract student name from fieldValues
+      const fieldValues = payload.fieldValues ?? {};
+      const studentName =
+        payload.studentName ??
+        fieldValues.studentName ??
+        fieldValues.student_name ??
+        fieldValues.name ??
+        "—";
+      const courseName =
+        payload.courseName ??
+        payload.templateName ??
+        fieldValues.course ??
+        fieldValues.workshopName ??
+        "—";
       setResult({
         valid: payload.valid === true,
         message: payload.message,
         certificateId: payload.certificateId,
-        studentName: payload.studentName,
-        courseName: payload.courseName,
+        studentName,
+        courseName,
         issuedAt: payload.issuedAt,
+        status: payload.status,
       });
     } catch {
       setResult({ valid: false, message: "Verification request failed." });
@@ -90,6 +121,8 @@ function VerifyCertificateContent() {
                 </h1>
                 <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-black/70">
                   Enter a certificate ID to confirm it was issued by FUNT Learn. No account needed.
+                  <br />
+                  <span className="text-xs text-black/50">Works for both course certificates and workshop certificates (WS-xxx).</span>
                 </p>
               </div>
             </div>
@@ -112,7 +145,7 @@ function VerifyCertificateContent() {
                   type="text"
                   value={certId}
                   onChange={(e) => setCertId(e.target.value)}
-                  placeholder="e.g. CERT-26-000001"
+                  placeholder="e.g. CERT-26-000001 or WS-xxx"
                   autoComplete="off"
                   className="input min-h-[46px] flex-1 font-mono text-sm"
                 />
@@ -164,6 +197,20 @@ function VerifyCertificateContent() {
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-black/45">Course</dt>
                       <dd className="mt-1 text-sm font-semibold leading-snug text-black">{result.courseName ?? "—"}</dd>
                     </div>
+                    {result.status && (
+                      <div className="rounded-xl border border-black/[0.06] bg-white/80 px-4 py-3 shadow-sm sm:col-span-2">
+                        <dt className="text-[11px] font-bold uppercase tracking-wider text-black/45">Status</dt>
+                        <dd className="mt-1 text-sm font-semibold">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                            result.status === "ISSUED"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-rose-100 text-rose-700"
+                          }`}>
+                            {result.status}
+                          </span>
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
               ) : (

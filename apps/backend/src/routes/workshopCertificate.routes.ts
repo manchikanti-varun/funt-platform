@@ -15,13 +15,16 @@ import {
   getRegistry,
   verifyCertificate,
   revokeCertificate,
+  listMyWorkshopCertificates,
 } from "../controllers/workshopCertificate.controller.js";
 
 const router = Router();
 
-router.use(authMiddleware);
+// ─── Student endpoint (auth required, any role) ──────────────────────────
+router.get("/my", authMiddleware, listMyWorkshopCertificates);
 
-// All workshop certificate endpoints require admin or super_admin role
+// ─── Admin endpoints (auth + admin role required) ─────────────────────────
+router.use(authMiddleware);
 router.use(requireRoles(ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.SUB_ADMIN));
 
 // Template CRUD

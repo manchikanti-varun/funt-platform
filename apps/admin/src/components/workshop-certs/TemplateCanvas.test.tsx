@@ -17,8 +17,8 @@ class MockImage {
   }
 }
 
-// @ts-expect-error - override global Image
-globalThis.Image = MockImage as any;
+// Override global Image for testing
+globalThis.Image = MockImage as unknown as typeof Image;
 
 // Mock canvas getContext
 HTMLCanvasElement.prototype.getContext = vi.fn(() => ({

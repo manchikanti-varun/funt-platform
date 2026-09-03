@@ -228,3 +228,47 @@ export const revokeCertificate = asyncHandler(async (req: Request, res: Response
   const data = await service.revokeCertificate(certificateId);
   successRes(res, data, "Certificate revoked");
 });
+
+// ─── Public Verification (no auth required) ───────────────────────────────
+
+export const verifyWorkshopCertificatePublic = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { certificateId } = req.params;
+    if (!certificateId) throw new AppError("certificateId is required", 400);
+    const data = await service.verifyWorkshopCertificate(certificateId);
+    if (!data) {
+      res.status(404).json({ success: false, message: "Certificate not found or revoked" });
+      return;
+    }
+    // Extract student name from fieldValues for public display
+    const studentName =
+      data.fieldValues.studentName ??
+      data.fieldValues.student_name ??
+      data.fieldValues.name ??
+      "—";
+    successRes(res, {
+      valid: data.status === "ISSUED",
+      certificateId: data.certificateId,
+      templateName: data.templateName,
+      studentName,
+      fieldValues: data.fieldValues,
+      issuedAt: data.issuedAt,
+      status: data.status,
+    });
+  }
+);
+
+// ─── Student: List my workshop certificates ────────────────────────────────
+
+export const listMyWorkshopCertificates = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user?.userId;
+    if (!userId) throw new AppError("Unauthorized", 401);
+
+    // Get user name from the request (set by auth middleware)
+    const userName = (req.user as any)?.name ?? (req.user as any)?.email ?? "";
+
+    const certs = await service.listWorkshopCertificatesForStudent(userName, userId);
+    successRes(res, certs);
+  }
+);

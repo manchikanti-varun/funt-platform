@@ -18,15 +18,28 @@ interface MyCertificate {
   coinRewardPending: boolean;
 }
 
+interface WorkshopCertificate {
+  certificateId: string;
+  templateName: string;
+  fieldValues: Record<string, string>;
+  generatedAt: string;
+  status: string;
+}
+
 export default function CertificatesPage() {
   const [list, setList] = useState<MyCertificate[]>([]);
+  const [workshopList, setWorkshopList] = useState<WorkshopCertificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<MyCertificate[]>("/api/student/certificates").then((r) => {
-      if (r.success && Array.isArray(r.data)) setList(r.data);
+    Promise.all([
+      api<MyCertificate[]>("/api/student/certificates"),
+      api<WorkshopCertificate[]>("/api/workshop-certificates/my"),
+    ]).then(([certRes, workshopRes]) => {
+      if (certRes.success && Array.isArray(certRes.data)) setList(certRes.data);
+      if (workshopRes.success && Array.isArray(workshopRes.data)) setWorkshopList(workshopRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -99,10 +112,10 @@ export default function CertificatesPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </Link>
-        {list.length > 0 && (
+        {(list.length > 0 || workshopList.length > 0) && (
           <div className="shrink-0 rounded-2xl border border-indigo-200 bg-indigo-50 px-6 py-4 shadow-md shadow-indigo-900/10">
-            <p className="text-2xl font-bold tabular-nums text-indigo-700">{list.length}</p>
-            <p className="text-sm font-medium text-funt-ink">certificate{list.length !== 1 ? "s" : ""}</p>
+            <p className="text-2xl font-bold tabular-nums text-indigo-700">{list.length + workshopList.length}</p>
+            <p className="text-sm font-medium text-funt-ink">certificate{(list.length + workshopList.length) !== 1 ? "s" : ""}</p>
           </div>
         )}
       </div>
@@ -113,8 +126,54 @@ export default function CertificatesPage() {
         </div>
       )}
 
+      {/* Workshop Certificates Section */}
+      {workshopList.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-lg font-bold text-black">Workshop Certificates</h2>
+          <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+            {workshopList.map((c) => (
+              <article
+                key={c.certificateId}
+                className="flex flex-col rounded-2xl border border-violet-200 bg-gradient-to-br from-white via-slate-50 to-violet-50/40 shadow-md shadow-violet-900/10 transition hover:-translate-y-0.5 hover:shadow-lg hover:border-violet-300"
+              >
+                <div className="flex min-h-0 flex-1 flex-col p-5">
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600 shadow-inner ring-1 ring-violet-200/60">
+                      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-funt-ink">{c.templateName}</h3>
+                      <p className="mt-1 text-sm text-black/55">{formatDate(c.generatedAt)}</p>
+                      <p className="mt-2 rounded-lg border border-black/10 bg-white/80 px-2 py-1 font-mono text-xs text-black/50">{c.certificateId}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {Object.entries(c.fieldValues).filter(([k]) => !k.startsWith("_")).slice(0, 3).map(([key, val]) => (
+                          <span key={key} className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-600">
+                            {key}: {val}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex items-center gap-3 border-t border-black/5 pt-4">
+                    <Link
+                      href={`/verify?id=${encodeURIComponent(c.certificateId)}`}
+                      className="text-sm font-medium text-violet-600 hover:underline"
+                    >
+                      Verify
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Course Certificates Section */}
       <div>
-        {list.length === 0 ? (
+        {list.length === 0 && workshopList.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-gradient-to-b from-slate-50 to-white px-6 py-16 text-center shadow-md shadow-indigo-900/10">
             <span className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-50 text-indigo-400 shadow-inner ring-1 ring-indigo-200/50">
               <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

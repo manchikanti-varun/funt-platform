@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock the sub-components
 vi.mock("@/components/workshop-certs/TemplateCanvas", () => ({
-  TemplateCanvas: vi.fn(({ textFields, selectedFieldIndex, sampleValues, onFieldMove, onFieldSelect }: any) => (
+  TemplateCanvas: vi.fn(({ textFields, selectedFieldIndex, onFieldSelect }: any) => (
     <div data-testid="template-canvas">
       <span data-testid="field-count">{textFields.length}</span>
       <span data-testid="selected-field">{selectedFieldIndex ?? "none"}</span>
@@ -37,7 +37,7 @@ vi.mock("@/components/workshop-certs/TemplateCanvas", () => ({
 }));
 
 vi.mock("@/components/workshop-certs/FontUploader", () => ({
-  FontUploader: vi.fn(({ fonts, onChange }: any) => (
+  FontUploader: vi.fn(({ fonts }: any) => (
     <div data-testid="font-uploader">
       <span data-testid="font-count">{fonts.length}</span>
     </div>

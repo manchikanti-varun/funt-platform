@@ -441,3 +441,59 @@ export async function generateBulkWorkshopCertificates(
   await recordGeneration(templateId, recipients.length, generatedBy);
   return results;
 }
+
+// ─── Student: List my workshop certificates ────────────────────────────────
+
+export async function listWorkshopCertificatesForStudent(
+  userName: string,
+  userId: string
+) {
+  if (!userName && !userId) return [];
+
+  // Find all workshop certificates where the student's name matches any field value
+  // We search for certificates where studentName, name, or student_name matches
+  const nameRegex = userName ? new RegExp(userName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : null;
+
+  const query: Record<string, unknown>[] = [];
+  if (nameRegex) {
+    query.push(
+      { "fieldValues.studentName": nameRegex },
+      { "fieldValues.name": nameRegex },
+      { "fieldValues.student_name": nameRegex }
+    );
+  }
+
+  // Also search by userId if present in fieldValues
+  if (userId) {
+    query.push(
+      { "fieldValues.userId": userId },
+      { "fieldValues.studentId": userId }
+    );
+  }
+
+  if (query.length === 0) return [];
+
+  const certs = await WorkshopCertificateIssuedModel.find({
+    $or: query,
+    status: "ISSUED",
+  })
+    .sort({ generatedAt: -1 })
+    .lean()
+    .exec();
+
+  // Enrich with template name
+  const templateIds = [...new Set(certs.map((c) => c.templateId))];
+  const templates = await WorkshopTemplateModel.find({ _id: { $in: templateIds } })
+    .select("name")
+    .lean()
+    .exec();
+  const templateMap = new Map(templates.map((t) => [String(t._id), t.name]));
+
+  return certs.map((c) => ({
+    certificateId: c.certificateId,
+    templateName: templateMap.get(c.templateId) ?? "Unknown Workshop",
+    fieldValues: c.fieldValues,
+    generatedAt: c.generatedAt,
+    status: c.status,
+  }));
+}
