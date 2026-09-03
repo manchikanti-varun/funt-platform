@@ -61,6 +61,7 @@ import { quizAdminRoutes, quizStudentRoutes } from "./routes/quiz.routes.js";
 import { franchiseAdminRoutes, franchiseRoutes } from "./routes/franchise.routes.js";
 import { referralRoutes } from "./routes/referral.routes.js";
 import { checkpointAdminRoutes, checkpointStudentRoutes } from "./routes/checkpoint.routes.js";
+import { workshopCertificateRoutes } from "./routes/workshopCertificate.routes.js";
 
 const app = express();
 const { corsOrigins, isProduction } = getEnv();
@@ -177,6 +178,7 @@ app.use("/api/franchise", franchiseRoutes);
 app.use("/api/referral", referralRoutes);
 app.use("/api/checkpoints", checkpointAdminRoutes);
 app.use("/api/student/checkpoints", checkpointStudentRoutes);
+app.use("/api/workshop-certificates", workshopCertificateRoutes);
 app.use("/verify", verifyRoutes);
 app.use("/accept-offer", acceptOfferRoutes);
 

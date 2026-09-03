@@ -15,7 +15,9 @@
     "db:reset-users-dev": "tsx src/scripts/dropAllUsersAndSeedDevLogins.ts",
     "regen:test-cert": "tsx src/scripts/regenerateTestCertificate.ts",
     "seed:knowledge": "tsx src/scripts/seedKnowledgeArticles.ts",
-    "test:flow": "tsx src/scripts/testChapterCourseBatchEnrollment.ts"
+    "test:flow": "tsx src/scripts/testChapterCourseBatchEnrollment.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1114.0",
@@ -41,6 +43,7 @@
     "qrcode": "^1.5.4",
     "rate-limit-redis": "^4.3.1",
     "sanitize-html": "^2.13.0",
+    "sharp": "^0.35.3",
     "socket.io": "4.8.1",
     "zod": "^4.4.3"
   },
@@ -55,7 +58,10 @@
     "@types/pdfkit": "^0.13.5",
     "@types/qrcode": "^1.5.6",
     "@types/sanitize-html": "^2.11.0",
+    "@types/sharp": "^0.32.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "tsx": "^4.19.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.11"
   }
 }

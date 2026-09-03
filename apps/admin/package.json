@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "tsc --noEmit",
-    "clean": "rimraf .next"
+    "clean": "rimraf .next",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@funt-platform/auth-utils": "*",
@@ -30,14 +32,20 @@
     "socket.io-client": "4.8.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22.0.0",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.0",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.0",
     "rimraf": "^5.0.0",
     "tailwindcss": "^3.4.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.11"
   }
 }

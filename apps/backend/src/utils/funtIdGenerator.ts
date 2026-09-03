@@ -106,3 +106,11 @@ export async function generateLetterId(): Promise<string> {
   const seq = await nextSeq(key);
   return `${LETTER_ID_PREFIX}-${PAD(seq, 6)}`;
 }
+
+export const WORKSHOP_CERT_ID_PREFIX = "WCERT";
+
+export async function generateWorkshopCertId(): Promise<string> {
+  const key = `workshop_cert_${YY()}`;
+  const seq = await nextSeq(key);
+  return `${WORKSHOP_CERT_ID_PREFIX}-${YY()}-${PAD(seq, 6)}`;
+}

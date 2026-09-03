@@ -109,9 +109,14 @@ export function Sidebar({ roles }: SidebarProps) {
               Attendance
             </SidebarNavLink>
             {(isAdmin || isSubAdmin) && (
-              <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates") || (pathname.startsWith("/batches") && pathname.includes("/certificates"))}>
-                Certificates
-              </SidebarNavLink>
+              <>
+                <SidebarNavLink href="/certificates" isActive={pathname.startsWith("/certificates") || (pathname.startsWith("/batches") && pathname.includes("/certificates"))}>
+                  Certificates
+                </SidebarNavLink>
+                <SidebarNavLink href="/workshop-certificates" isActive={pathname.startsWith("/workshop-certificates")}>
+                  Workshop Certs
+                </SidebarNavLink>
+              </>
             )}
           </>
         )}
